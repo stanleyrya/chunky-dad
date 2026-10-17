@@ -4,11 +4,12 @@
   "slug": "beefdip",
   "status": "complete",
   "recon": {
-    "date": "2026-09-10",
+    "date": "2026-10-17",
     "method": [
       "static",
       "feed",
-      "flyer"
+      "flyer",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://beefdip.com/"
@@ -20,7 +21,7 @@
         "role": "listing",
         "rowsReturned": 23,
         "truthFlag": null,
-        "note": "Static curl, HTTP 200, 229373 bytes; one Elementor accordion with 9 day headers and 23 event blocks. Elementor 4.0.9 generator meta; no events plugin."
+        "note": "Static curl, HTTP 200, 229373 bytes; one Elementor accordion with 9 day headers and 23 event blocks. Elementor 4.0.9 generator meta; no events plugin. Re-read 2026-10-17 from the scraper's cache (fetched 2026-10-16T09:26Z): same 9 day headers and 23 cards; hero still says \"BeefDip Bear Week 2026\", day headers say 2027, the last header still reads \"SUNDAY JANUARY 31, 2029\". Run 20261017-054812 kept 27 rows: the 23 cards (every one weekday-pinned to 2027), the week itself twice (home page + planned-events), one misdated TIDAL WAVE twin and one venue-named row — see traps."
       },
       {
         "url": "https://beefdip.com/wp-json/wp/v2/pages/10997",
@@ -918,6 +919,36 @@
         "extracted": false,
         "kept": null
       }
+    },
+    {
+      "seenInRun": "20261017-054812",
+      "id": "tidal-wave-misdated-twin",
+      "label": "A second \"TIDAL WAVE\" record dated Sun Jan 31 beside the real Thu Jan 28 one",
+      "kind": "duplicate-listing",
+      "why": "The card says \"Thu Jan 28 • 12PM –6PM • Hotel Delfin\" once. Run 20261017-054812 saved TIDAL WAVE twice (2027-01-28 12:00 and 2027-01-31 12:00); the second row's clock belongs to HYDRATE POOL PARTY (same venue, same hour, Sun Jan 31). One card, one record.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "TIDAL WAVE – FUNDRAISER POOL PARTY\nThu Jan 28 • 12PM –6PM • Hotel Delfin"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "seenInRun": "20261017-054812",
+      "id": "tryst-hotel-as-title",
+      "label": "The DRAG BRUNCH card under the 2029 header extracted as an event titled \"The Tryst Hotel\"",
+      "kind": "announcement",
+      "why": "The card's heading is \"DRAG BRUNCH + ROOFTOP POOL\"; run 20261017-054812 saved a record whose title is only the venue name (sanity flag junk-title, 2027-01-31 11:00). The brunch is documented as drag-brunch-rooftop-pool-2027-01-31; a venue-named row is not a second event.",
+      "evidence": {
+        "url": "https://beefdip.com/planned-events/",
+        "quote": "DRAG BRUNCH + ROOFTOP POOL\nSunday, Jan 31 • 11AM / 1PM • The Tryst Hotel"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
     }
   ],
   "openQuestions": [
@@ -930,7 +961,12 @@
       "q": "HYDRATE POOL PARTY prints \"12AM–7PM\"; the file asserts 12:00 (noon). If the owner prefers literal reading, change startTime to 00:00.",
       "raisedOn": "2026-09-10",
       "blocking": false
+    },
+    {
+      "q": "Coordinates (2026-10-17): 15 of 27 kept rows have no pin. The run geocoded \"The Tryst Hotel, Zona Romántica, puerto vallarta\", \"Hotel Delfin, Calle Rodolfo Gomez 111, puerto vallarta\" and \"Delfin Beach Resort, …\" and Nominatim answered 0 results each; only CC Slaughters and Blue Chairs are curated bars. The page's own OFFICIAL VENUES block states the streets (Tryst Hotel — Insurgentes 123, Zona Romántica; Hotel Delfin — Francisco I. Madero 84; CC Slaughters — Lázaro Cárdenas 254; Blue Chairs Resort — Malecón 4) but the cards do not repeat them. A page-level venue directory feeding the address of every card that names that venue would be a generic win (any festival programme page has one); not built.",
+      "raisedOn": "2026-10-17",
+      "blocking": false
     }
   ],
-  "recheckAfter": "2026-12-01"
+  "recheckAfter": "2026-11-16"
 }

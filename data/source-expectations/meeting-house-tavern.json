@@ -3,12 +3,13 @@
   "source": "Meeting House Tavern",
   "slug": "meeting-house-tavern",
   "status": "complete",
-  "recheckAfter": "2026-10-19",
+  "recheckAfter": "2026-11-16",
   "recon": {
-    "date": "2026-09-19",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "static",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0"
@@ -26,21 +27,21 @@
         "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
         "kind": "json",
         "role": "feed",
-        "rowsReturned": 14,
+        "rowsReturned": 58,
         "truthFlag": "status: \"success\"; no paging — the widget's default arguments (start 0, end 0, incldateless true) request the organization's whole upcoming list in one response",
-        "note": "The URL the widget builds (widget.js: /events/events_by_organization/<pid>/<oid>/<start>/<end>/<topic>/<inclcal>/<incltopic>/<incldateless>/<inclThumbnail>/<promoterId>, served from events.ticketsauce.com). Rows are an id-keyed map under $.data; each row is an envelope { Event, EventTopic, Logo, Masthead, Organization, Photo, Partner }. Event carries name, summary/details (HTML), start/end (local wall clock) with start_utc/end_utc and timezone \"America/Chicago\", location (the venue name), address/city/state/postal_code, latitude/longitude, thumb_url, and url (the sickening.events event page, where tickets are sold). Every row is a dated instance; the feed states no recurrence rule (LIP SERVICE KARAOKE's weekly nights are separate rows with numbered slugs)."
+        "note": "The URL the widget builds (widget.js: /events/events_by_organization/<pid>/<oid>/<start>/<end>/<topic>/<inclcal>/<incltopic>/<incldateless>/<inclThumbnail>/<promoterId>, served from events.ticketsauce.com). Rows are an id-keyed map under $.data; each row is an envelope { Event, EventTopic, Logo, Masthead, Organization, Photo, Partner }. Event carries name, summary/details (HTML), start/end (local wall clock) with start_utc/end_utc and timezone \"America/Chicago\", location (the venue name), address/city/state/postal_code, latitude/longitude, thumb_url, and url (the sickening.events event page, where tickets are sold). Every row is a dated instance; the feed states no recurrence rule (LIP SERVICE KARAOKE's weekly nights are separate rows with numbered slugs). Re-read 2026-10-17 from the scraper's cache (fetched 2026-10-16T10:19:58.797Z): 58 rows, 14 distinct titles, 2026-10-16 → 2027-01-09; the feed is upcoming-only, so the September/early-October rows of the 2026-09-19 read are gone and the window has rolled forward. Every row carries Logo.url (artwork) and latitude/longitude; the rows were regenerated from the cached body. NOTE robots.txt on events.ticketsauce.com (read from the cache) says \"User-agent: * / Disallow: /events/events_by_organization\" and \"DisallowAITraining: /\": the configured door is disallowed for every crawler; the run fetched it under the \"configured source's own door, requested anyway\" policy (🤖 ROBOTS log line). Owner call."
       }
     ],
     "notes": "Meeting House Tavern (2Bears Tavern Group). Recon from one cached read of each door on 2026-09-19. 14 rows, 9 distinct titles, 2026-09-19 → 2026-10-24. The feed is upcoming-only; no past rows."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Feed door: the TicketSauce events_by_organization JSON answered 14 rows (all future, 2026-09-19 → 2026-10-24); every row is documented as a single because the feed states no rule (repeating nights are separate dated rows). The site's own /events page is a widget mount with no events in its HTML, so the feed is the only statement of the calendar. Distinct titles: POKÉMON RAID SOCIAL | POP'D! Vol. 10: Latin Divas, Fuego y Fama | POKER IN THE BOTTOM | LET'S GET GLAM BINGO | KARAOKE CABARET | FRIDAY NIGHT HOUSE PARTY | GROUP THERAPY (WITHOUT THE COPAY) | DRINKING AND DRAGONS | SIPS 'N' SPELLS.",
-    "publishedEventCount": 14,
-    "documentedEventCount": 14,
+    "basis": "Re-read 2026-10-17: the TicketSauce feed answered 58 rows (2026-10-16 → 2027-01-09); every row is documented as a single (the feed states no rule) — Earlier basis: Feed door: the TicketSauce events_by_organization JSON answered 14 rows (all future, 2026-09-19 → 2026-10-24); every row is documented as a single because the feed states no rule (repeating nights are separate dated rows). The site's own /events page is a widget mount with no events in its HTML, so the feed is the only statement of the calendar. Distinct titles: POKÉMON RAID SOCIAL | POP'D! Vol. 10: Latin Divas, Fuego y Fama | POKER IN THE BOTTOM | LET'S GET GLAM BINGO | KARAOKE CABARET | FRIDAY NIGHT HOUSE PARTY | GROUP THERAPY (WITHOUT THE COPAY) | DRINKING AND DRAGONS | SIPS 'N' SPELLS.",
+    "publishedEventCount": 58,
+    "documentedEventCount": 58,
     "occurrenceWindow": {
-      "start": "2026-09-19",
-      "end": "2026-12-18"
+      "start": "2026-10-16",
+      "end": "2027-01-09"
     },
     "pastListingsPresent": false,
     "knownGaps": []
@@ -54,300 +55,24 @@
   },
   "events": [
     {
-      "id": "pokemon-raid-social-2026-09-19",
-      "kind": "single",
-      "title": "POKÉMON RAID SOCIAL",
-      "description": "Pokémon Raid Social Raids • Trades • Community • Drinks Every Third Saturday • 2PM – 5PM Join Meeting House Tavern for Pokémon Raid Social — a free monthly Pokémon GO hangout where trainers can team up for raids, trade Pokémon, complete challenges, and meet fellow players in a fun, laid-back atmosphere. Hosted by Flops, this casual community meetup combines gaming, drinks, and social energy perfect for longtime trainers, competitive players, and newcomers alike. Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-09-19",
-      "startTime": "14:00",
-      "endDate": "2026-09-19",
-      "endTime": "17:00",
-      "ticketUrl": "https://www.sickening.events/e/pokémon-raid-social-2-4",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778279079/saas/logos/image_1778279070568_suzd1kpnd.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fe6427-5f68-490b-964a-00380a1e627c\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "pop-d-vol-10-latin-divas-fuego-y-fama-2026-09-19",
-      "kind": "single",
-      "title": "POP'D! Vol. 10: Latin Divas, Fuego y Fama",
-      "description": "ODDYSEE Presents POP'D! Vol. 10 Latin Divas Fuego y Fama Siente el fuego. Vive la fama. La pista de baile est&aacute; llamando. This month we're celebrating the icons of Latin pop, from timeless legends to today's global superstars. Expect fiery anthems, sing at the top of your lungs choruses, and a dancefloor that doesn't stop. Saturday, September 19th 9PM to 1AM No Cover &middot; 21+ DJ Pedrito Hosted By Ari Urso & Eduardo Third Saturdays at Meeting House Tavern, 5025 N Clark Street. Come dance. Come shine. Come get POP'D!",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-09-19",
-      "startTime": "21:00",
-      "endDate": "2026-09-20",
-      "endTime": "02:00",
-      "ticketUrl": "https://www.sickening.events/e/pop-d-vol-10-latin-divas-fuego-y-fama",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788374123/saas/logos/image_1788374116913_jv1n2xlhj.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"6a986c5b-34c4-45e9-83bc-00380a1e6195\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "poker-in-the-bottom-2026-09-20",
-      "kind": "single",
-      "title": "POKER IN THE BOTTOM",
-      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday • 7PM – 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new along. No gambling. No stress. Just a damn good game night. Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-09-20",
-      "startTime": "19:00",
-      "endDate": "2026-09-20",
-      "endTime": "21:00",
-      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-9",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fd7f2b-d28c-422d-8b95-00350a1e623c\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "let-s-get-glam-bingo-2026-09-23",
-      "kind": "single",
-      "title": "LET'S GET GLAM BINGO",
-      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday • 7:30PM – 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-09-23",
-      "startTime": "19:00",
-      "endDate": "2026-09-23",
-      "endTime": "22:30",
-      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-9",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fe3f5b-459c-4f91-bf97-00170a1e6282\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "karaoke-cabaret-2026-09-24",
-      "kind": "single",
-      "title": "KARAOKE CABARET",
-      "description": "KARAOKE CABARET Every Thursday Night 9PM – 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret — a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level — from power ballad divas to first-time mic grabbers. Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-09-24",
-      "startTime": "21:00",
-      "endDate": "2026-09-25",
-      "endTime": "01:00",
-      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-9",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fe51a3-0d94-4859-8616-5eef0a1e6170\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "friday-night-house-party-2026-09-25",
+      "id": "friday-night-house-party-2026-10-16",
       "kind": "single",
       "title": "FRIDAY NIGHT HOUSE PARTY",
-      "description": "Every Friday • 9PM–2AM House Party Cheap Drinks • No Cover • Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or cover charge. Free pool, darts, shuffleboard, board games, skee-ball, strong drinks, and nonstop music keep the party moving all night long. Start The Weekend",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
       "bar": "Meeting House Tavern",
       "address": "5025 North Clark Street, Chicago, IL 60640",
       "location": "41.973232, -87.667824",
-      "startDate": "2026-09-25",
+      "startDate": "2026-10-16",
       "startTime": "21:00",
-      "endDate": "2026-09-26",
+      "endDate": "2026-10-17",
       "endTime": "02:00",
-      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-10",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11",
       "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
       "sourceRung": "feed",
       "confidence": "high",
       "evidence": {
         "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fe72af-ac08-4988-91a5-00140a1e6282\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "group-therapy-without-the-copay-2026-09-26",
-      "kind": "single",
-      "title": "GROUP THERAPY (WITHOUT THE COPAY)",
-      "description": "GROUP THERAPY Without the Copay Every 4th Saturday • 2PM – 5PM Welcome to Group Therapy — the kind that comes with cocktails instead of co-pays. Join us for an afternoon of laughs, questionable answers, and communal chaos featuring Cards Against Humanity and other adult party games. Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973228, -87.667824",
-      "startDate": "2026-09-26",
-      "startTime": "14:00",
-      "endDate": "2026-09-26",
-      "endTime": "17:00",
-      "ticketUrl": "https://www.sickening.events/e/group-therapy-without-the-copay-2-4",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778279867/saas/logos/image_1778279858660_s1vc5hny6.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fe676f-9150-40ee-a766-60710a1e6016\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "poker-in-the-bottom-2026-09-27",
-      "kind": "single",
-      "title": "POKER IN THE BOTTOM",
-      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday • 7PM – 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new along. No gambling. No stress. Just a damn good game night. Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-09-27",
-      "startTime": "19:00",
-      "endDate": "2026-09-27",
-      "endTime": "21:00",
-      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-10",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fd80cf-90c4-4027-aa24-00140a1e6170\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "let-s-get-glam-bingo-2026-09-30",
-      "kind": "single",
-      "title": "LET'S GET GLAM BINGO",
-      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday • 7:30PM – 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-09-30",
-      "startTime": "19:00",
-      "endDate": "2026-09-30",
-      "endTime": "22:30",
-      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-10",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fe3ea7-121c-4826-9df9-6e360a1e6170\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "karaoke-cabaret-2026-10-01",
-      "kind": "single",
-      "title": "KARAOKE CABARET",
-      "description": "KARAOKE CABARET Every Thursday Night 9PM – 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret — a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level — from power ballad divas to first-time mic grabbers. Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-10-01",
-      "startTime": "21:00",
-      "endDate": "2026-10-02",
-      "endTime": "01:00",
-      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-10",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fe50b3-7fbc-41e9-9510-4c6b0a1e609d\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "drinking-and-dragons-2026-10-03",
-      "kind": "single",
-      "title": "DRINKING AND DRAGONS",
-      "description": "DRINKING AND DRAGONS TTRPG One-Shot Adventures Every 1st Saturday • 2PM – 6PM Fellow travelers, ho! Drinking and Dragons brings fantasy roleplay, epic quests, and tabletop adventure to Meeting House Tavern every first Saturday. Hosted by Rough Magic, professional Game Masters guide beginner-friendly one-shot adventures where no prior experience or preparation is required. Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-10-03",
-      "startTime": "14:00",
-      "endDate": "2026-10-03",
-      "endTime": "18:00",
-      "website": "https://events.humanitix.com/drinking-and-dragons-at-meeting-house-tavern-088bu41d?fbclid=IwY2xjawOp",
-      "ticketUrl": "https://www.sickening.events/e/drinking-and-dragons-2-4",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778280475/saas/logos/image_1778280469746_l14g27x3a.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fe694f-1968-4c2a-878b-18610a1e63c5\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "sips-n-spells-2026-10-10",
-      "kind": "single",
-      "title": "SIPS 'N' SPELLS",
-      "description": "SIP N' SPELLS EDH • Drinks • Raffles • Community 2nd Saturdays • 2PM – 5PM Shuffle up, sip something tasty, and sling some spells at Sip N' Spells — a laid-back Magic: The Gathering hangout built for casual games, good company, and community. Whether you're brewing a new deck, jumping into EDH, or just looking for a chill tabletop afternoon, pull up a chair and tap in. Meeting House Tavern",
-      "bar": "Meeting House Tavern",
-      "address": "5025 North Clark Street, Chicago, IL 60640",
-      "location": "41.973232, -87.667824",
-      "startDate": "2026-10-10",
-      "startTime": "14:00",
-      "endDate": "2026-10-10",
-      "endTime": "17:00",
-      "ticketUrl": "https://www.sickening.events/e/sips-n-spells-2-5",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778276419/saas/logos/image_1778276413840_btbtu4w6z.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69fe5ca7-a440-47c5-b084-00160a1e6170\"].Event"
+        "jsonPath": "$.data[\"6acae78b-31a4-4525-8c52-00310a1e6125\"].Event"
       },
       "expect": {
         "extracted": true
@@ -358,7 +83,7 @@
       "id": "pokemon-raid-social-2026-10-17",
       "kind": "single",
       "title": "POKÉMON RAID SOCIAL",
-      "description": "Pokémon Raid Social Raids • Trades • Community • Drinks Every Third Saturday • 2PM – 5PM Join Meeting House Tavern for Pokémon Raid Social — a free monthly Pokémon GO hangout where trainers can team up for raids, trade Pokémon, complete challenges, and meet fellow players in a fun, laid-back atmosphere. Hosted by Flops, this casual community meetup combines gaming, drinks, and social energy perfect for longtime trainers, competitive players, and newcomers alike. Meeting House Tavern",
+      "description": "Pok&eacute;mon Raid Social Raids &bull; Trades &bull; Community &bull; Drinks Every Third Saturday &bull; 2PM &ndash; 5PM Join Meeting House Tavern for Pok&eacute;mon Raid Social &mdash; a free monthly Pok&eacute;mon GO hangout where trainers can team up for raids, trade Pok&eacute;mon, complete challenges, and meet fellow players in a fun, laid-back atmosphere. Hosted by Flops, this casual commun",
       "bar": "Meeting House Tavern",
       "address": "5025 North Clark Street, Chicago, IL 60640",
       "location": "41.973232, -87.667824",
@@ -380,10 +105,185 @@
       "bearVerdict": null
     },
     {
+      "id": "pop-d-vol-11-2010-s-pop-pop-perfection-2026-10-17",
+      "kind": "single",
+      "title": "POP'D! Vol. 11: 2010's Pop, Pop Perfection",
+      "description": "ODDYSEE Presents POP'D! Vol. 11 2010's Pop Pop Perfection The hits, the icons. No skips, no shame, just pop perfection from the decade that gave us everything. Saturday, October 17th 9PM to 1AM &middot; No Cover &middot; 21+ Meeting House Tavern, 5025 N Clark",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-17",
+      "startTime": "21:00",
+      "endDate": "2026-10-18",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/pop-d-vol-11-2010s-pop-pop-perfection",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790273021/saas/logos/image_1790273017016_q36g0c14b.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6ab565e5-5784-4022-a8c7-00140a1e6223\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "wil-s-workshop-pumpkin-painting-2026-10-18",
+      "kind": "single",
+      "title": "Wil's Workshop Pumpkin Painting",
+      "description": "Wil's Workshop Pumpkin Painting No cover. Free pumpkins and supplies. Hosted by Wil Velez, with drink specials to sip on while you paint. Sunday, October 18th 3PM to 6PM No Cover Free Pumpkins and Supplies $7 Signature Margaritas &middot; $8 Wynks",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": null,
+      "startDate": "2026-10-18",
+      "startTime": "15:00",
+      "endDate": "2026-10-22",
+      "endTime": "18:00",
+      "ticketUrl": "https://www.sickening.events/e/wils-workshop-pumpkin-painting",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1791850805/saas/logos/image_1791850799159_9sk9peliz.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6ab2d362-56ec-44be-ba12-34710a1e62b9\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-10-18",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday &bull; 7PM &ndash; 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-18",
+      "startTime": "19:00",
+      "endDate": "2026-10-18",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-11-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaead3-0ddc-405b-899d-086b0a1e61ca\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jeopardy-bar-league-trivia-2026-10-20",
+      "kind": "single",
+      "title": "JEOPARDY! Bar League Trivia",
+      "description": "America's Favorite Quiz Show JEOPARDY! Bar League Grab your team and get ready for two hours of official JEOPARDY! trivia. Free to play, prizes on the line, and bragging rights up for grabs. Tuesdays at 7:30PM Meeting House Tavern, 5025 N Clark St",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-20",
+      "startTime": "19:30",
+      "endDate": "2026-10-20",
+      "endTime": "21:30",
+      "ticketUrl": "https://www.sickening.events/e/jeopardy-bar-league-trivia-2-11-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782877281/saas/logos/image_1782877198680_dakmi8cf4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae534-f510-441e-964a-134c0a1e62ab\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-10-21",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday &bull; 7:30PM &ndash; 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-21",
+      "startTime": "19:00",
+      "endDate": "2026-10-21",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-11-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae38f-7fc4-4855-819e-2dad0a1e60bb\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-10-22",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM &ndash; 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret &mdash; a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level &md",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-22",
+      "startTime": "21:00",
+      "endDate": "2026-10-23",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-11-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae084-cc78-4a93-8ce7-06030a1e627b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-10-23",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-23",
+      "startTime": "21:00",
+      "endDate": "2026-10-24",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae92f-9324-4117-9d45-5a110a1e60c4\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
       "id": "group-therapy-without-the-copay-2026-10-24",
       "kind": "single",
       "title": "GROUP THERAPY (WITHOUT THE COPAY)",
-      "description": "GROUP THERAPY Without the Copay Every 4th Saturday • 2PM – 5PM Welcome to Group Therapy — the kind that comes with cocktails instead of co-pays. Join us for an afternoon of laughs, questionable answers, and communal chaos featuring Cards Against Humanity and other adult party games. Meeting House Tavern",
+      "description": "GROUP THERAPY Without the Copay Every 4th Saturday &bull; 2PM &ndash; 5PM Welcome to Group Therapy &mdash; the kind that comes with cocktails instead of co-pays. Join us for an afternoon of laughs, questionable answers, and communal chaos featuring Cards Against Humanity and other adult party games. Meeting House Tavern",
       "bar": "Meeting House Tavern",
       "address": "5025 North Clark Street, Chicago, IL 60640",
       "location": "41.973228, -87.667824",
@@ -403,8 +303,1214 @@
         "extracted": true
       },
       "bearVerdict": null
+    },
+    {
+      "id": "jellyfish-rave-a-spongebob-themed-dance-party-2026-10-24",
+      "kind": "single",
+      "title": "Jellyfish Rave: A SpongeBob Themed Dance Party",
+      "description": "ODDYSEE Presents Jellyfish Rave A full blown SpongeBob themed dance party. Meeting House Tavern transforms into an underwater world of jellyfish, bubbles, and Bikini Bottom chaos. Costumes highly encouraged. Saturday, October 24th 9PM to 2AM &middot; Free Entry &middot; 21+ DJs Kaos &middot; Sudoku",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-24",
+      "startTime": "21:00",
+      "endDate": "2026-10-25",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/jellyfish-rave-a-spongebob-themed-dance-party",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790713608/saas/logos/image_1790713601648_2j506039j.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6abc1e52-ac90-4249-87c1-13e90a1e612e\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-10-25",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday &bull; 7PM &ndash; 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-25",
+      "startTime": "19:00",
+      "endDate": "2026-10-25",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae9e4-41f8-4413-b08a-04930a1e601e\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jeopardy-bar-league-trivia-2026-10-27",
+      "kind": "single",
+      "title": "JEOPARDY! Bar League Trivia",
+      "description": "America's Favorite Quiz Show JEOPARDY! Bar League Grab your team and get ready for two hours of official JEOPARDY! trivia. Free to play, prizes on the line, and bragging rights up for grabs. Tuesdays at 7:30PM Meeting House Tavern, 5025 N Clark St",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-27",
+      "startTime": "19:30",
+      "endDate": "2026-10-27",
+      "endTime": "21:30",
+      "ticketUrl": "https://www.sickening.events/e/jeopardy-bar-league-trivia-2-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782877281/saas/logos/image_1782877198680_dakmi8cf4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae624-fc0c-4d2b-9263-00160a1e629a\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-10-28",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday &bull; 7:30PM &ndash; 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-28",
+      "startTime": "19:00",
+      "endDate": "2026-10-28",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae2db-bedc-43fb-a86d-00440a1e6069\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "night-of-a-1000-bradleys-2026-10-29",
+      "kind": "single",
+      "title": "Night of a 1000 Bradleys",
+      "description": "Karaoke Cabaret Presents Night of a 1000 Bradleys A Halloween edition of Karaoke Cabaret at Meeting House Tavern. Grab the mic, take the stage, and get spooky. Thursday, October 29th 9PM Meeting House Tavern, 5025 N Clark",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-29",
+      "startTime": "21:00",
+      "endDate": "2026-10-30",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/night-of-a-1000-bradleys",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790621719/saas/logos/image_1790621714114_pjhg730g7.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6abab806-5924-496a-a442-2d5d0a1e62bc\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-10-30",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": "2026-10-31",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae83f-5b7c-46d7-bc80-002c0a1e61fd\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "chaos-curiosities-a-halloween-carnival-2026-10-31",
+      "kind": "single",
+      "title": "Chaos & Curiosities: A Halloween Carnival",
+      "description": "ODDYSEE Presents Chaos & Curiosities A Halloween Carnival Meeting House Tavern transforms into a twisted carnival filled with music, performances, games, prizes, dancing, and popcorn. Saturday, October 31st 9PM to 2AM &middot; Free Entry &middot; 21+ Music By SNDSCPE &middot; CATALYST",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-10-31",
+      "startTime": "21:00",
+      "endDate": "2026-11-01",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/chaos-curiosities-a-halloween-carnival",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1791681419/saas/logos/image_1791681412850_oebips8je.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae37a-50a8-4e9f-bf63-00140a1e629b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-11-01",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday &bull; 7PM &ndash; 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-01",
+      "startTime": "19:00",
+      "endDate": "2026-11-01",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaea98-fbb8-4814-b636-5d880a1e63c3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jeopardy-bar-league-trivia-2026-11-03",
+      "kind": "single",
+      "title": "JEOPARDY! Bar League Trivia",
+      "description": "America's Favorite Quiz Show JEOPARDY! Bar League Grab your team and get ready for two hours of official JEOPARDY! trivia. Free to play, prizes on the line, and bragging rights up for grabs. Tuesdays at 7:30PM Meeting House Tavern, 5025 N Clark St",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-03",
+      "startTime": "19:30",
+      "endDate": "2026-11-03",
+      "endTime": "21:30",
+      "ticketUrl": "https://www.sickening.events/e/jeopardy-bar-league-trivia-2-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782877281/saas/logos/image_1782877198680_dakmi8cf4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae6d7-0550-42cd-9242-11680a1e6279\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-11-04",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday &bull; 7:30PM &ndash; 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-04",
+      "startTime": "19:00",
+      "endDate": "2026-11-04",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae480-9168-4678-b4fd-00320a1e639b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-11-05",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM &ndash; 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret &mdash; a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level &md",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-05",
+      "startTime": "21:00",
+      "endDate": "2026-11-06",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae00c-c140-417e-9cbd-72000a1e612f\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-11-06",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-06",
+      "startTime": "21:00",
+      "endDate": "2026-11-07",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11-4",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae8f3-2df0-4329-82f0-6bd60a1e611a\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "drinking-and-dragons-2026-11-07",
+      "kind": "single",
+      "title": "DRINKING AND DRAGONS",
+      "description": "DRINKING AND DRAGONS TTRPG One-Shot Adventures Every 1st Saturday &bull; 2PM &ndash; 6PM Fellow travelers, ho! Drinking and Dragons brings fantasy roleplay, epic quests, and tabletop adventure to Meeting House Tavern every first Saturday. Hosted by Rough Magic, professional Game Masters guide beginner-friendly one-shot adventures where no prior experience or preparation is required. Meeting House ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-07",
+      "startTime": "14:00",
+      "endDate": "2026-11-07",
+      "endTime": "18:00",
+      "ticketUrl": "https://www.sickening.events/e/drinking-and-dragons-2-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778280475/saas/logos/image_1778280469746_l14g27x3a.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaec00-4e88-4aba-9064-00780a1e6069\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-11-08",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday &bull; 7PM &ndash; 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-08",
+      "startTime": "19:00",
+      "endDate": "2026-11-08",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaeb88-3fb4-4b9f-9244-73640a1e62ab\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jeopardy-bar-league-trivia-2026-11-10",
+      "kind": "single",
+      "title": "JEOPARDY! Bar League Trivia",
+      "description": "America's Favorite Quiz Show JEOPARDY! Bar League Grab your team and get ready for two hours of official JEOPARDY! trivia. Free to play, prizes on the line, and bragging rights up for grabs. Tuesdays at 7:30PM Meeting House Tavern, 5025 N Clark St",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-10",
+      "startTime": "19:30",
+      "endDate": "2026-11-10",
+      "endTime": "21:30",
+      "ticketUrl": "https://www.sickening.events/e/jeopardy-bar-league-trivia-2-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782877281/saas/logos/image_1782877198680_dakmi8cf4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae5ac-9cf4-41c9-a04f-00350a1e60af\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-11-11",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday &bull; 7:30PM &ndash; 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-11",
+      "startTime": "19:00",
+      "endDate": "2026-11-11",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae408-9de4-4053-b794-00400a1e613a\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-11-12",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM &ndash; 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret &mdash; a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level &md",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-12",
+      "startTime": "21:00",
+      "endDate": "2026-11-13",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae173-8600-491d-be9a-3d540a1e6069\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-11-13",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-13",
+      "startTime": "21:00",
+      "endDate": "2026-11-14",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae7c8-b214-415f-8ab1-605b0a1e60f8\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sips-n-spells-2026-11-14",
+      "kind": "single",
+      "title": "SIPS 'N' SPELLS",
+      "description": "SIP N' SPELLS EDH &bull; Drinks &bull; Raffles &bull; Community 2nd Saturdays &bull; 2PM &ndash; 5PM Shuffle up, sip something tasty, and sling some spells at Sip N' Spells &mdash; a laid-back Magic: The Gathering hangout built for casual games, good company, and community. Whether you're brewing a new deck, jumping into EDH, or just looking for a chill tabletop afternoon, pull up a chair and tap ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-14",
+      "startTime": "14:00",
+      "endDate": "2026-11-14",
+      "endTime": "17:00",
+      "ticketUrl": "https://www.sickening.events/e/sips-n-spells-2-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778276419/saas/logos/image_1778276413840_btbtu4w6z.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaec78-f64c-435e-97a5-002d0a1e6219\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-11-15",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday &bull; 7PM &ndash; 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-15",
+      "startTime": "19:00",
+      "endDate": "2026-11-15",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-11-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaea20-caf8-4bc9-9394-1aed0a1e627b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jeopardy-bar-league-trivia-2026-11-17",
+      "kind": "single",
+      "title": "JEOPARDY! Bar League Trivia",
+      "description": "America's Favorite Quiz Show JEOPARDY! Bar League Grab your team and get ready for two hours of official JEOPARDY! trivia. Free to play, prizes on the line, and bragging rights up for grabs. Tuesdays at 7:30PM Meeting House Tavern, 5025 N Clark St",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-17",
+      "startTime": "19:30",
+      "endDate": "2026-11-17",
+      "endTime": "21:30",
+      "ticketUrl": "https://www.sickening.events/e/jeopardy-bar-league-trivia-2-11-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782877281/saas/logos/image_1782877198680_dakmi8cf4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae69b-eb28-4ca9-a181-1ac10a1e627b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-11-18",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday &bull; 7:30PM &ndash; 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-18",
+      "startTime": "19:00",
+      "endDate": "2026-11-18",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-11-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae353-e874-48bd-bbcc-044a0a1e611a\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-11-19",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM &ndash; 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret &mdash; a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level &md",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-19",
+      "startTime": "21:00",
+      "endDate": "2026-11-20",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-11-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae228-d82c-40de-8b8c-002c0a1e60af\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-11-20",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-20",
+      "startTime": "21:00",
+      "endDate": "2026-11-21",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11-6",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae87b-0e34-4c3f-a385-5e150a1e62ab\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-11-22",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday &bull; 7PM &ndash; 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-22",
+      "startTime": "19:00",
+      "endDate": "2026-11-22",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-11-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaeb0f-160c-4737-a671-5f750a1e63c3\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jeopardy-bar-league-trivia-2026-11-24",
+      "kind": "single",
+      "title": "JEOPARDY! Bar League Trivia",
+      "description": "America's Favorite Quiz Show JEOPARDY! Bar League Grab your team and get ready for two hours of official JEOPARDY! trivia. Free to play, prizes on the line, and bragging rights up for grabs. Tuesdays at 7:30PM Meeting House Tavern, 5025 N Clark St",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-24",
+      "startTime": "19:30",
+      "endDate": "2026-11-24",
+      "endTime": "21:30",
+      "ticketUrl": "https://www.sickening.events/e/jeopardy-bar-league-trivia-2-11-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782877281/saas/logos/image_1782877198680_dakmi8cf4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae4bc-becc-45bd-a2a2-0c210a1e60bb\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-11-25",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday &bull; 7:30PM &ndash; 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-25",
+      "startTime": "19:00",
+      "endDate": "2026-11-25",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-11-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae264-c194-47b3-98dd-003a0a1e6219\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-11-26",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM &ndash; 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret &mdash; a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level &md",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-26",
+      "startTime": "21:00",
+      "endDate": "2026-11-27",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-11-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae0bf-65b4-421a-a9cc-3a5f0a1e6229\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-11-27",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-27",
+      "startTime": "21:00",
+      "endDate": "2026-11-28",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11-7",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae713-7ebc-43e4-87a9-00300a1e6069\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-11-29",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday &bull; 7PM &ndash; 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-11-29",
+      "startTime": "19:00",
+      "endDate": "2026-11-29",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-11-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae9a7-8c64-40e0-8d11-5ef80a1e6058\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jeopardy-bar-league-trivia-2026-12-01",
+      "kind": "single",
+      "title": "JEOPARDY! Bar League Trivia",
+      "description": "America's Favorite Quiz Show JEOPARDY! Bar League Grab your team and get ready for two hours of official JEOPARDY! trivia. Free to play, prizes on the line, and bragging rights up for grabs. Tuesdays at 7:30PM Meeting House Tavern, 5025 N Clark St",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-01",
+      "startTime": "19:30",
+      "endDate": "2026-12-01",
+      "endTime": "21:30",
+      "ticketUrl": "https://www.sickening.events/e/jeopardy-bar-league-trivia-2-11-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782877281/saas/logos/image_1782877198680_dakmi8cf4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae570-e664-4feb-abe3-2bdf0a1e60fe\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-12-02",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday &bull; 7:30PM &ndash; 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-02",
+      "startTime": "19:00",
+      "endDate": "2026-12-02",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-11-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae444-5d84-4dae-8373-00140a1e629b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-12-03",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM &ndash; 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret &mdash; a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level &md",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-03",
+      "startTime": "21:00",
+      "endDate": "2026-12-04",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-11-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae1af-5ce8-43d9-8d09-10d00a1e627b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-12-04",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-04",
+      "startTime": "21:00",
+      "endDate": "2026-12-05",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11-8",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae803-7f24-4603-991a-3e0b0a1e611a\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "drinking-and-dragons-2026-12-05",
+      "kind": "single",
+      "title": "DRINKING AND DRAGONS",
+      "description": "DRINKING AND DRAGONS TTRPG One-Shot Adventures Every 1st Saturday &bull; 2PM &ndash; 6PM Fellow travelers, ho! Drinking and Dragons brings fantasy roleplay, epic quests, and tabletop adventure to Meeting House Tavern every first Saturday. Hosted by Rough Magic, professional Game Masters guide beginner-friendly one-shot adventures where no prior experience or preparation is required. Meeting House ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-05",
+      "startTime": "14:00",
+      "endDate": "2026-12-05",
+      "endTime": "18:00",
+      "ticketUrl": "https://www.sickening.events/e/drinking-and-dragons-2-5-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778280475/saas/logos/image_1778280469746_l14g27x3a.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaec3b-6c48-4664-977a-1ac10a1e627b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-12-06",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday &bull; 7PM &ndash; 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-06",
+      "startTime": "19:00",
+      "endDate": "2026-12-06",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaea5b-38b4-414f-95ae-005a0a1e629b\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jeopardy-bar-league-trivia-2026-12-08",
+      "kind": "single",
+      "title": "JEOPARDY! Bar League Trivia",
+      "description": "America's Favorite Quiz Show JEOPARDY! Bar League Grab your team and get ready for two hours of official JEOPARDY! trivia. Free to play, prizes on the line, and bragging rights up for grabs. Tuesdays at 7:30PM Meeting House Tavern, 5025 N Clark St",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-08",
+      "startTime": "19:30",
+      "endDate": "2026-12-08",
+      "endTime": "21:30",
+      "ticketUrl": "https://www.sickening.events/e/jeopardy-bar-league-trivia-2-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782877281/saas/logos/image_1782877198680_dakmi8cf4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae660-a814-4cfa-b87b-1b430a1e611a\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-12-09",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday &bull; 7:30PM &ndash; 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-09",
+      "startTime": "19:00",
+      "endDate": "2026-12-09",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae317-6300-49cd-9397-003a0a1e6219\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-12-10",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM &ndash; 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret &mdash; a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level &md",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-10",
+      "startTime": "21:00",
+      "endDate": "2026-12-11",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae047-eb40-4950-94ef-5d650a1e612f\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-12-11",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-11",
+      "startTime": "21:00",
+      "endDate": "2026-12-12",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae8b8-9704-464b-834c-00160a1e61fd\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sips-n-spells-2026-12-12",
+      "kind": "single",
+      "title": "SIPS 'N' SPELLS",
+      "description": "SIP N' SPELLS EDH &bull; Drinks &bull; Raffles &bull; Community 2nd Saturdays &bull; 2PM &ndash; 5PM Shuffle up, sip something tasty, and sling some spells at Sip N' Spells &mdash; a laid-back Magic: The Gathering hangout built for casual games, good company, and community. Whether you're brewing a new deck, jumping into EDH, or just looking for a chill tabletop afternoon, pull up a chair and tap ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-12",
+      "startTime": "14:00",
+      "endDate": "2026-12-12",
+      "endTime": "17:00",
+      "ticketUrl": "https://www.sickening.events/e/sips-n-spells-2-6-2",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778276419/saas/logos/image_1778276413840_btbtu4w6z.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaecef-4e1c-4c66-9b3e-71eb0a1e6279\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "poker-in-the-bottom-2026-12-13",
+      "kind": "single",
+      "title": "POKER IN THE BOTTOM",
+      "description": "POKER IN THE BOTTOM Sunday Night Texas Hold'em Every Sunday &bull; 7PM &ndash; 9PM Slide into The Bottom for a night of cards, laughs, and low-pressure Texas Hold'em. It's completely free to play, beginner-friendly, and packed with fun for casual players and competitive card sharks alike. Learn the ropes, meet new table friends, compete for prizes, and score bonus chips when you bring someone new ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-13",
+      "startTime": "19:00",
+      "endDate": "2026-12-13",
+      "endTime": "21:00",
+      "ticketUrl": "https://www.sickening.events/e/poker-in-the-bottom-2-11-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778218789/saas/logos/image_1778218782761_l8zixygij.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaeb4c-4dc8-4f1b-9b03-5c3e0a1e60c4\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "jeopardy-bar-league-trivia-2026-12-15",
+      "kind": "single",
+      "title": "JEOPARDY! Bar League Trivia",
+      "description": "America's Favorite Quiz Show JEOPARDY! Bar League Grab your team and get ready for two hours of official JEOPARDY! trivia. Free to play, prizes on the line, and bragging rights up for grabs. Tuesdays at 7:30PM Meeting House Tavern, 5025 N Clark St",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-15",
+      "startTime": "19:30",
+      "endDate": "2026-12-15",
+      "endTime": "21:30",
+      "ticketUrl": "https://www.sickening.events/e/jeopardy-bar-league-trivia-2-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782877281/saas/logos/image_1782877198680_dakmi8cf4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae4f7-d2b8-4d42-bf32-006f0a1e60af\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "let-s-get-glam-bingo-2026-12-16",
+      "kind": "single",
+      "title": "LET'S GET GLAM BINGO",
+      "description": "LET'S GET GLAM BINGO A Burlesque Bingo Night Every Wednesday &bull; 7:30PM &ndash; 10:30PM Seating Begins at 7PM A weekly burlesque-themed bingo night mixing live performance, comedy, audience interaction, and classic bingo gameplay. Hosted by GlaMonster & Reggay Boots Meeting House Tavern",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-16",
+      "startTime": "19:00",
+      "endDate": "2026-12-16",
+      "endTime": "22:30",
+      "ticketUrl": "https://www.sickening.events/e/lets-get-glam-bingo-2-11-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778265474/saas/logos/image_1778265467269_xsys27ruo.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae29f-3630-490b-a8f4-00c30a1e6219\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-cabaret-2026-12-17",
+      "kind": "single",
+      "title": "KARAOKE CABARET",
+      "description": "KARAOKE CABARET Every Thursday Night 9PM &ndash; 1AM Grab the mic and take center stage every Thursday night at Karaoke Cabaret &mdash; a high-energy weekly karaoke party filled with big vocals, crowd favorites, cocktails, and unapologetic queer nightlife energy. Hosted by Bradley K8 Olsen with music powered by Creaoke Karaoke, this late-night singalong welcomes performers of every skill level &md",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-17",
+      "startTime": "21:00",
+      "endDate": "2026-12-18",
+      "endTime": "01:00",
+      "ticketUrl": "https://www.sickening.events/e/karaoke-cabaret-2-11-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778272055/saas/logos/image_1778272048156_au23dtvgx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae0fb-9fbc-462e-a965-00580a1e636a\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "friday-night-house-party-2026-12-18",
+      "kind": "single",
+      "title": "FRIDAY NIGHT HOUSE PARTY",
+      "description": "Every Friday &bull; 9PM&ndash;2AM House Party Cheap Drinks &bull; No Cover &bull; Great Music House Party brings the chaotic fun, cheap drinks, and carefree energy of a late-night house party to Meeting House Tavern every Friday night. Expect throwback party vibes, singalong anthems, casual dancefloor energy, and a packed room full of people looking to kick off the weekend without the attitude or ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2026-12-18",
+      "startTime": "21:00",
+      "endDate": "2026-12-19",
+      "endTime": "02:00",
+      "ticketUrl": "https://www.sickening.events/e/friday-night-house-party-2-11-11-10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778274499/saas/logos/image_1778274493852_qjeq18r98.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae750-8134-46e6-8848-002c0a1e626e\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "drinking-and-dragons-2027-01-02",
+      "kind": "single",
+      "title": "DRINKING AND DRAGONS",
+      "description": "DRINKING AND DRAGONS TTRPG One-Shot Adventures Every 1st Saturday &bull; 2PM &ndash; 6PM Fellow travelers, ho! Drinking and Dragons brings fantasy roleplay, epic quests, and tabletop adventure to Meeting House Tavern every first Saturday. Hosted by Rough Magic, professional Game Masters guide beginner-friendly one-shot adventures where no prior experience or preparation is required. Meeting House ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2027-01-02",
+      "startTime": "14:00",
+      "endDate": "2027-01-02",
+      "endTime": "18:00",
+      "ticketUrl": "https://www.sickening.events/e/drinking-and-dragons-2-5-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778280475/saas/logos/image_1778280469746_l14g27x3a.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaebc3-e150-4fe7-9c03-5bcb0a1e6279\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "sips-n-spells-2027-01-09",
+      "kind": "single",
+      "title": "SIPS 'N' SPELLS",
+      "description": "SIP N' SPELLS EDH &bull; Drinks &bull; Raffles &bull; Community 2nd Saturdays &bull; 2PM &ndash; 5PM Shuffle up, sip something tasty, and sling some spells at Sip N' Spells &mdash; a laid-back Magic: The Gathering hangout built for casual games, good company, and community. Whether you're brewing a new deck, jumping into EDH, or just looking for a chill tabletop afternoon, pull up a chair and tap ",
+      "bar": "Meeting House Tavern",
+      "address": "5025 North Clark Street, Chicago, IL 60640",
+      "location": "41.973232, -87.667824",
+      "startDate": "2027-01-09",
+      "startTime": "14:00",
+      "endDate": "2027-01-09",
+      "endTime": "17:00",
+      "ticketUrl": "https://www.sickening.events/e/sips-n-spells-2-6-3",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778276419/saas/logos/image_1778276413840_btbtu4w6z.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe50-50d4-48fb-9a04-12a60a1e618f/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acaecb3-003c-43fc-9b7a-134c0a1e62ab\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
     }
   ],
   "traps": [],
-  "openQuestions": []
+  "openQuestions": [
+    {
+      "q": "2026-10-17: run 20261017-054812 extracted all 58 rows and kept 0 — every title is under a manual not_bear verdict or an AI drop (JEOPARDY!, bingo, poker, karaoke cabaret, house parties). The feed grew from 14 to 58 rows since 2026-09-19 because the venue now publishes each weekly night as its own row three months out.",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    }
+  ]
 }

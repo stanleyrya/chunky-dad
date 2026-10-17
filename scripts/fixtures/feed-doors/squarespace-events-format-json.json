@@ -1,0 +1,128 @@
+{
+  "collection": {
+    "typeName": "events-stacked",
+    "title": "Upcoming Events",
+    "urlId": "events",
+    "itemCount": 85
+  },
+  "pagination": {
+    "nextPage": true,
+    "nextPageOffset": 1778540233043,
+    "nextPageUrl": "/events?offset=1778540233043",
+    "pageSize": 30
+  },
+  "upcoming": [
+    {
+      "id": "6a9d865243bc6a532c9632d5",
+      "recordType": 12,
+      "urlId": "bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hj37w",
+      "title": "Bear Tea  - Meet MA Bear 2027! ",
+      "startDate": 1792353600580,
+      "endDate": 1792375200580,
+      "fullUrl": "/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb-z836t-hj37w",
+      "assetUrl": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1792023605688-CCBOGFYIZAZPQHHX1CLK/IMG_20261014_142514.jpg",
+      "excerpt": "<p style=\"white-space:pre-wrap;\" data-rte-preserve-empty=\"true\">Join us every <strong>third Sunday</strong> Bear Tea from <strong>4–10 p.m.</strong> Come early to enjoy <strong>Club Café’s Sunday Fund",
+      "location": {
+        "mapZoom": 12,
+        "mapLat": 42.3486155,
+        "mapLng": -71.0723826,
+        "markerLat": 40.7207559,
+        "markerLng": -74.0007613,
+        "addressTitle": "Club Cafe",
+        "addressLine1": "209 Columbus Avenue",
+        "addressLine2": "Boston, MA, 02116",
+        "addressCountry": "United States"
+      }
+    },
+    {
+      "id": "6a88718dccb3b538952ddf51",
+      "recordType": 12,
+      "urlId": "monthly-membership-meetings-c2j2s-mh34s-etr7g-ag59f-hdw47-j2x48-m4cfa-wtbgw-3theh-mrgps",
+      "title": "Monthly Membership Meetings ",
+      "startDate": 1793836800686,
+      "endDate": 1793842200686,
+      "fullUrl": "/events/monthly-membership-meetings-c2j2s-mh34s-etr7g-ag59f-hdw47-j2x48-m4cfa-wtbgw-3theh-mrgps",
+      "assetUrl": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1769728793226-8A5WVXQH5GOKAIOLS977/meetings.png",
+      "excerpt": "<p style=\"white-space:pre-wrap;\" data-rte-preserve-empty=\"true\">We’d love for you to join us for our <strong>monthly Mass Bears and Cubs virtual membership meeting</strong>! These meetings are a great",
+      "location": {
+        "mapZoom": 12,
+        "mapLat": 40.7207559,
+        "mapLng": -74.0007613,
+        "markerLat": 40.7207559,
+        "markerLng": -74.0007613,
+        "addressTitle": "Online/Virtual",
+        "addressLine1": "",
+        "addressLine2": "",
+        "addressCountry": ""
+      }
+    },
+    {
+      "id": "6aa1c1195c4abc652731c19c",
+      "recordType": 12,
+      "urlId": "bear-boutique",
+      "title": "Bear Boutique",
+      "startDate": 1794762000015,
+      "endDate": 1794778200015,
+      "fullUrl": "/events/bear-boutique",
+      "assetUrl": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788985781733-JOS8YWKYEKC37MHG09E3/Bear+Boutique+IG.jpg",
+      "excerpt": "<p style=\"white-space:pre-wrap;\" data-rte-preserve-empty=\"true\">Bear Boutique returns to Club Café on Sunday, November 15, 2026. Mass Bears and Cubs’ annual marketplace opens the holiday shopping seas",
+      "location": {
+        "mapZoom": 12,
+        "mapLat": 42.3486155,
+        "mapLng": -71.0723826,
+        "markerLat": 42.3486155,
+        "markerLng": -71.0723826,
+        "addressTitle": "Club Cafe",
+        "addressLine1": "209 Columbus Avenue",
+        "addressLine2": "Boston, Massachusetts, 02116",
+        "addressCountry": "United States"
+      }
+    }
+  ],
+  "past": [
+    {
+      "id": "69cfd2d219d08c1a204479bd",
+      "recordType": 12,
+      "urlId": "bears-at-the-beach-2026",
+      "title": "Bears at the Beach 2026 ",
+      "startDate": 1785596400177,
+      "endDate": 1785614400177,
+      "fullUrl": "/events/bears-at-the-beach-2026",
+      "assetUrl": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1775227799650-83Y1UMZBC1WA0EESSK2D/Beachsavethedate.jpg",
+      "excerpt": "<p style=\"white-space:pre-wrap;\" data-rte-preserve-empty=\"true\">The Bears take over DCR Nantasket Beach again this year on Saturday, August 1st, for our Bears At The Beach event! Our annual beach day ",
+      "location": {
+        "mapZoom": 12,
+        "mapLat": 40.7207559,
+        "mapLng": -74.0007613,
+        "markerLat": 40.7207559,
+        "markerLng": -74.0007613,
+        "addressTitle": "Nantasket Beach",
+        "addressLine1": "",
+        "addressLine2": "Hull, MA",
+        "addressCountry": ""
+      }
+    },
+    {
+      "id": "69e3fe96ab5137345ea35e04",
+      "recordType": 12,
+      "urlId": "ma-bear-contest-2027",
+      "title": "MA Bear Contest 2027",
+      "startDate": 1791673200874,
+      "endDate": 1791691200874,
+      "fullUrl": "/events/ma-bear-contest-2027",
+      "assetUrl": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1788710519978-CYIYJKOWBJ49WYHNBNJO/contest.png",
+      "excerpt": "<p style=\"white-space:pre-wrap;\" data-rte-preserve-empty=\"true\">Join us on Saturday, October 10, 2026, at The Alley Bar, 14 Pi Alley, Boston, for the <strong>MA Bear Contest 2027</strong>!</p><p style",
+      "location": {
+        "mapZoom": 12,
+        "mapLat": 42.3581324,
+        "mapLng": -71.0588204,
+        "markerLat": 40.7207559,
+        "markerLng": -74.0007613,
+        "addressTitle": "The Alley Bar",
+        "addressLine1": "14 Pi Alley",
+        "addressLine2": "Boston, MA, 02108",
+        "addressCountry": "United States"
+      }
+    }
+  ]
+}
