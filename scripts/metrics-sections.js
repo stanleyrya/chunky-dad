@@ -600,7 +600,7 @@ function assessSourceHealth(records, options = {}) {
             lostRemoved,
             lostSetAside,
             lostStillListed,
-            audit: audit ? { date: audit.date || '', run_id: audit.run_id || '', missing: Array.isArray(audit.missing) ? audit.missing : [], fake: Array.isArray(audit.fake) ? audit.fake : [], wrong: Array.isArray(audit.wrong) ? audit.wrong : [], still: Array.isArray(audit.still) ? audit.still : [], note: audit.note || '', ai: audit.ai || '', page: audit.page || null } : null,
+            audit: audit ? { date: audit.date || '', run_id: audit.run_id || '', missing: Array.isArray(audit.missing) ? audit.missing : [], fake: Array.isArray(audit.fake) ? audit.fake : [], wrong: Array.isArray(audit.wrong) ? audit.wrong : [], still: Array.isArray(audit.still) ? audit.still : [], note: audit.note || '', ai: audit.ai || '', reason: audit.reason || '', page: audit.page || null } : null,
             auditOpen: !!audit && ((Array.isArray(audit.missing) && audit.missing.length > 0) || (Array.isArray(audit.fake) && audit.fake.length > 0) || (Array.isArray(audit.wrong) && audit.wrong.length > 0) || lostStillListed > 0),
             suspected,
             listingGone,
@@ -1255,7 +1255,10 @@ function buildHostAuditHtml(row) {
     const fake = list(Array.isArray(audit.fake) ? audit.fake : [], (item) => `<li><b>${escapeHtml(item.title)}</b>${item.reason ? ` <span class="cell-subtitle">— ${escapeHtml(item.reason)}</span>` : ''}</li>`);
     const wrong = list(Array.isArray(audit.wrong) ? audit.wrong : [], (item) => `<li><b>${escapeHtml(item.title)}</b>${item.issue ? ` <span class="cell-subtitle">— ${escapeHtml(item.issue)}</span>` : ''}</li>`);
     const still = list(Array.isArray(audit.still) ? audit.still : [], (item) => `<li>${formatStillHtml(item.verdict)} <b>${escapeHtml(item.title)}</b>${item.line && item.verdict === 'still-listed' ? ` <span class="cell-subtitle">“${escapeHtml(String(item.line).slice(0, 80))}”</span>` : ''}</li>`);
-    const aiNote = audit.ai === 'ok' ? '' : (audit.ai === 'no-page' ? 'The listing page could not be fetched; nothing to compare.' : (audit.ai === 'failed' ? 'The model gave no usable answer; the still-on-site checks above did not need it.' : 'Only the lost series were checked (loss confirmed outside the rotation).'));
+    const aiNote = audit.ai === 'ok' ? '' : (audit.ai === 'no-page'
+        ? (audit.reason === 'door-is-feed' ? 'The parser reads a feed (JSON or ICS), not a page: the lost series were looked for in the feed, the model was not asked.'
+            : (audit.reason === 'page-names-no-events' ? 'The pages\u2019 readable text names none of the extracted events (a JS-rendered calendar or a door found from the page): the model was not asked about text the events are not in.' : 'The listing page could not be fetched; nothing to compare.'))
+        : (audit.ai === 'failed' ? 'The model gave no usable answer; the still-on-site checks above did not need it.' : 'Only the lost series were checked (loss confirmed outside the rotation).'));
     return `
         <div class="muted audit-meta">Audit ${escapeHtml(audit.date || '—')}${audit.run_id ? ` · run ${escapeHtml(formatSourceRun(audit.run_id))}` : ''}${audit.page && audit.page.url ? ` · <a href="${escapeHtml(audit.page.url)}" target="_blank" rel="noopener">the page</a>${audit.page.fetchedAt ? ` fetched ${escapeHtml(String(audit.page.fetchedAt).slice(0, 10))}` : ''}` : ''}</div>
         <div class="audit-grid">

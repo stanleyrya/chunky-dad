@@ -1178,18 +1178,20 @@ test('pickAuditHosts: troubled/lost first, then two-plus quality badges, then th
     ledgerLineForAudit('b.example'),
     ledgerLineForAudit('lost.example', { lost: [{ title: 'Bear Night', bear: true, since: '20261007-052319', seen: 5, days: ['2026-10-18'], new: 0 }] }),
     ledgerLineForAudit('dead.example', { status: 'dead', extracted: 0, events: 0, bear: 0, upcoming: 0, page_errors: 1, errors: ['HTTP 403'] }),
-    ledgerLineForAudit('messy.example', { quality: Object.assign(ledgerLineForAudit('x').quality, { time: 10, desc: 0 }) }),
+    ledgerLineForAudit('messy.example', { quality: Object.assign(ledgerLineForAudit('x').quality, { image: 10, desc: 0 }) }),
+    ledgerLineForAudit('thin.example', { quality: Object.assign(ledgerLineForAudit('x').quality, { time: 10 }) }),
     ledgerLineForAudit('feed.example', { parsers: ['Club'] }),
     ledgerLineForAudit('site.example', { parsers: ['Club'], extracted: 0, events: 0, bear: 0, upcoming: 0, status: 'empty' })
   ]);
   const empty = sourceAudit.emptySourceAuditStore();
   const picks = sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 3 });
-  assert.deepEqual(picks.map(pick => pick.host), ['dead.example', 'lost.example', 'messy.example']);
+  assert.deepEqual(picks.map(pick => pick.host), ['dead.example', 'lost.example', 'thin.example'], 'a sparse host (time on 10% of its kept events) is trouble: front of the line with the dead and the lost');
   assert.match(picks[0].reason, /^dead since/);
-  assert.equal(picks[2].reason, '2 quality signals off');
-  const audited = { ...empty, hosts: { 'dead.example': { date: '2026-10-08' }, 'lost.example': { date: '2026-10-07' }, 'messy.example': { date: '2026-10-01' }, 'a.example': { date: '2026-10-02' } } };
+  assert.match(picks[2].reason, /^sparse since/);
+  assert.equal(sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 4 })[3].reason, '2 quality signals off', 'soft fields off (image, description) are the second band');
+  const audited = { ...empty, hosts: { 'dead.example': { date: '2026-10-08' }, 'thin.example': { date: '2026-10-08' }, 'lost.example': { date: '2026-10-07' }, 'messy.example': { date: '2026-10-01' }, 'a.example': { date: '2026-10-02' } } };
   const next = sourceAudit.pickAuditHosts(health, audited, { today: '2026-10-08', cap: 3 });
-  assert.deepEqual(next.map(pick => pick.host), ['lost.example', 'messy.example', 'b.example'], 'today’s host waits; within the rest, never audited beats audited a week ago');
+  assert.deepEqual(next.map(pick => pick.host), ['lost.example', 'messy.example', 'b.example'], 'today’s hosts wait; within the rest, never audited beats audited a week ago');
   assert.equal(next[2].reason, 'never audited');
   assert.ok(!sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 10 }).some(pick => pick.host === 'site.example'), 'a companion is never picked');
   assert.equal(sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 1 }).length, 1);
