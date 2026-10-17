@@ -1466,3 +1466,49 @@ test('buildDeck: an aggregator\'s copy the pointed-at site does not list is a ca
   assert.equal(deck.cards[1].display.aggregatorUnbacked, null);
   assert.equal(deck.cards[1].display.imageReusedFrom, null);
 });
+
+// ---------------------------------------------------------------------------
+// "Gone from its source" cards (SharedCore.buildGoneFromSourceCandidates):
+// kind 'gone', exact key, a right swipe the phone executes as a removal, a
+// left swipe that keeps the saved event (mode 'keep', never a fix note).
+// ---------------------------------------------------------------------------
+
+test('buildDeck: a gone-from-source candidate is a card of kind gone under its own key; an approval waits for the phone until the ledger says deleted; a keep is a decided card, not a fix note', () => {
+  const candidate = {
+    key: 'gone|nyc|UID1', kind: 'gone', city: 'nyc', uid: 'UID1', identifier: 'UID1', title: 'Gone Party',
+    startDate: iso(FUTURE), endDate: iso(FUTURE + 3 * 3600 * 1000), timezone: 'America/New_York', bar: 'Rockbar',
+    host: 'furball.nyc', source: 'Furball', siteEvents: 7, horizonDay: '2030-12-01', reason: 'gone', misses: 2,
+    instead: { sameNight: [{ title: 'Other Night', startDate: iso(FUTURE), day: '2030-10-03', bar: 'Rockbar', samePlace: true, similar: false, titleOverlap: 0 }], sameTitle: [] }
+  };
+  const past = { ...candidate, key: 'gone|nyc|OLD', uid: 'OLD', startDate: '2020-01-01T02:00:00.000Z', endDate: '2020-01-01T05:00:00.000Z' };
+  const payload = runPayload({ goneFromSource: { candidates: [candidate, past], state: {}, summary: {} } });
+  const deck = deckOf(payload);
+  assert.equal(deck.counts.gone, 1);
+  assert.equal(deck.counts.pastSkipped, 1, 'a night that has passed is no longer a card');
+  assert.equal(deck.cards.length, 1);
+  assert.equal(deck.cards[0].kind, 'gone');
+  assert.equal(deck.cards[0].key, 'gone|nyc|UID1');
+  assert.equal(deck.cards[0].proposal.reason, 'gone');
+  assert.equal(deck.cards[0].proposal.misses, 2);
+
+  const now = new Date(Date.UTC(2030, 0, 2));
+  const approved = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'gone|nyc|UID1', kind: 'gone', verdict: 'approve', snapshot: candidate }, { now }));
+  assert.equal(approved.decisions[0].kind, 'gone', 'the kind survives the store');
+  const pending = deckOf(payload, approved);
+  assert.equal(pending.cards.length, 0);
+  assert.equal(pending.decided[0].kind, 'gone');
+  assert.equal(pending.decided[0].pendingExecute, true, 'handed to the phone on the next execute');
+  assert.equal(pending.decided[0].executed, null);
+  const done = deckOf(payload, approved, { writtenLedger: { 'gone|nyc|UID1': { executedAt: '2030-01-03T00:00:00.000Z', action: 'deleted', title: 'Gone Party' } } });
+  assert.deepEqual(done.decided[0].executed, { at: '2030-01-03T00:00:00.000Z', as: 'deleted' });
+  assert.equal(done.decided[0].pendingExecute, false);
+
+  const kept = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'gone|nyc|UID1', kind: 'gone', verdict: 'reject', snapshot: candidate, reason: { tags: ['still happening'], text: 'saw the flyer', mode: 'keep' } }, { now }));
+  const keptDeck = deckOf(payload, kept);
+  assert.equal(keptDeck.cards.length, 0);
+  assert.equal(keptDeck.decided[0].decision.reason.mode, 'keep');
+  assert.equal(keptDeck.counts.waiting, 0, 'a keep is not a "needs a fix" note');
+  assert.ok(rq.GONE_REASON_TAGS.includes('still happening'));
+  const text = rq.formatRejectionsText(kept);
+  assert.ok(text.includes('[KEPT] GONE Gone Party — 2030-10-04 @ Rockbar [Furball] kept on the calendar (furball.nyc has not listed it for 2 runs) {still happening} — saw the flyer'), text);
+});

@@ -980,8 +980,76 @@ function renderReviewLinkHistory(entry, proposal, display) {
     return '';
 }
 
+// A "gone from its source" card: the saved event as the calendar holds
+// it, the source's read this run (how many events, how far ahead), how
+// many runs it has been missing, why it is here (gone / the extra copy of
+// a twin / moved / date moved), what the site lists instead that night,
+// the same name on other nights, and the audit's deep check when there is
+// one. Right swipe = the phone removes it on the next execute; left swipe
+// = keep it.
+function renderReviewGoneCard(entry, ctx = {}) {
+    const p = entry && entry.proposal ? entry.proposal : {};
+    const adapter = ctx.adapter;
+    const tz = p.timezone || null;
+    const wholeDay = p.isAllDay ? 'all-day' : '';
+    const dateLine = formatReviewDateLine(p.startDate, p.endDate, tz, { wholeDay });
+    const cityConfig = adapter && adapter.cities && p.city ? adapter.cities[p.city] : null;
+    const calendarName = cityConfig && typeof cityConfig.calendar === 'string' ? cityConfig.calendar : '';
+    const horizon = p.horizonDay ? reviewDateParts(`${p.horizonDay}T12:00:00Z`, 'UTC') : null;
+    const readLine = `${escapeHtmlText(p.source || p.host || 'the source')} read ${escapeHtmlText(p.host || p.site || '')} this run — ${Number(p.siteEvents) || 0} event${Number(p.siteEvents) === 1 ? '' : 's'}${horizon ? `, listings through ${escapeHtmlText(horizon.day)}` : ''} — and has not listed this one for <b>${Number(p.misses) || 0} run${Number(p.misses) === 1 ? '' : 's'}</b> in a row`;
+    const reasonLine = p.reason === 'duplicate' && p.duplicateOf
+        ? `<div class="line">👯 The site does list it — and the run matched that to the saved “${escapeHtmlText(p.duplicateOf.title || '')}” (${escapeHtmlText(String(p.duplicateOf.uid || '').slice(0, 8))}…). This record (${escapeHtmlText(String(p.uid || '').slice(0, 8))}…) is the extra copy.</div>`
+        : p.reason === 'moved'
+        ? '<div class="line">📍 The site lists it that night at another place — it moved, or the saved place is wrong. The new place is on its own card.</div>'
+        : p.reason === 'date-moved'
+        ? '<div class="line">📆 The site lists the same name on other nights only — the date moved, or this night is over.</div>'
+        : '';
+    const night = (row) => {
+        const parts = reviewDateParts(row.startDate, tz);
+        return parts ? parts.time : '';
+    };
+    const sameNight = Array.isArray(p.instead && p.instead.sameNight) ? p.instead.sameNight : [];
+    const sameTitle = Array.isArray(p.instead && p.instead.sameTitle) ? p.instead.sameTitle : [];
+    const insteadRows = sameNight.map((row) => {
+        const flag = row.samePlace && row.similar ? ' <span class="muted">— same place, same name</span>'
+            : row.samePlace ? ' <span class="muted">— same place</span>'
+            : row.similar ? ' <span class="muted">— similar name, other place</span>'
+            : row.dropped ? ' <span class="muted">— dropped as not bear</span>' : '';
+        return `<li>${escapeHtmlText(row.title || '')}${night(row) ? ` <span class="muted">${escapeHtmlText(night(row))}</span>` : ''}${row.bar ? ` <span class="muted">at ${escapeHtmlText(row.bar)}</span>` : ''}${flag}</li>`;
+    }).join('');
+    const movedRows = sameTitle.map((row) => {
+        const parts = reviewDateParts(row.startDate, tz);
+        return `<li>${escapeHtmlText(row.title || '')}${parts ? ` <span class="muted">— ${escapeHtmlText(parts.day)}</span>` : ''}${row.bar ? ` <span class="muted">at ${escapeHtmlText(row.bar)}</span>` : ''}</li>`;
+    }).join('');
+    const deep = p.deepCheck && p.deepCheck.verdict
+        ? `<div class="line muted">🔎 deep check${p.deepCheck.at ? ` (${escapeHtmlText(String(p.deepCheck.at).slice(0, 10))})` : ''}: ${escapeHtmlText(p.deepCheck.verdict === 'site-removed' ? 'the site removed it' : p.deepCheck.verdict)}</div>`
+        : '';
+    const chips = [
+        reviewChip(ctx, 'website', '🔗', p.url),
+        reviewChip(ctx, 'tickets', '🎟', p.ticketUrl),
+        p.cover ? `<span class="chip">💵 ${escapeHtmlText(p.cover)}</span>` : ''
+    ].filter(Boolean).join('');
+    const description = String(p.description || '');
+    return `<div class="card-body">
+  ${renderReviewThumb({}, p.image)}
+  <div class="kind-row"><span class="kind kind-gone">🕳️ ${p.reason === 'duplicate' ? 'Extra copy of a saved event' : 'Gone from its source'}</span><span class="muted reason">→ remove from the calendar · ← keep</span></div>
+  <h2>${escapeHtmlText(p.title)}</h2>
+  <div class="line">📅 ${escapeHtmlText(dateLine)}</div>
+  ${renderReviewRouteLine(ctx, { bar: p.bar, address: p.address, city: p.city, coordinates: p.location })}
+  <div class="line muted">${calendarName ? `📱 ${escapeHtmlText(calendarName)} · ` : ''}saved event ${escapeHtmlText(String(p.uid || '').slice(0, 8))}…</div>
+  <div class="line">${readLine}</div>
+  ${reasonLine}
+  ${deep}
+  ${insteadRows ? `<div class="label">That night the site lists</div><ul class="sources">${insteadRows}</ul>` : '<div class="line muted">That night the site lists nothing.</div>'}
+  ${movedRows ? `<div class="label">Same name on other nights</div><ul class="sources">${movedRows}</ul>` : ''}
+  ${chips ? `<div class="chips">${chips}</div>` : ''}
+  ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
+</div>`;
+}
+
 function renderReviewCard(entry, ctx = {}) {
     if (entry && entry.kind === 'bar') return renderReviewBarCard(entry, ctx);
+    if (entry && entry.kind === 'gone') return renderReviewGoneCard(entry, ctx);
     const proposal = entry && entry.proposal ? entry.proposal : {};
     const display = entry && entry.display ? entry.display : {};
     const adapter = ctx.adapter;
@@ -1262,6 +1330,7 @@ function renderReviewPage(deck, options = {}) {
         counts: deck.counts,
         lastExecution: deck.lastExecution || null,
         tags: reviewQueue.REVIEW_REASON_TAGS,
+        goneTags: reviewQueue.GONE_REASON_TAGS,
         executeLink: scriptLink,
         friends: Array.isArray(deck.friends) ? deck.friends : [],
         adviceBase: deck.adviceBase || reviewQueue.ADVICE_PAGE_DEFAULT_BASE,
@@ -1423,6 +1492,8 @@ body { overscroll-behavior-y:none; }
 .kind-merge { background:rgba(255,107,53,.16); color:var(--accent); }
 .kind-bar { background:rgba(80,120,255,.14); color:#4a6cf7; }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
+.kind-gone { background:rgba(122,92,199,.16); color:#7a5cc7; }
+.sheet.gone .sheet-modes .mode-notbear, .sheet.gone .sheet-modes .mode-never, .sheet.gone .sheet-fix-note { display:none; }
 .curated { color:var(--ok); font-weight:700; }
 .bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
 .missing-cal { margin:8px 16px 0; padding:8px 12px; border:1px solid var(--no); border-radius:10px; font-size:13px; background:var(--card); }
@@ -1862,14 +1933,14 @@ window.__startDeck = function () {
     if (join && series) join.onclick = function () { delete solo[series.key]; toast('Folded back — one swipe decides them all'); render(); };
   }
   function counts() {
-    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, dropped: 0 };
+    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, gone: 0, dropped: 0 };
     queue.forEach(function (c) { out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
     return out;
   }
   function renderFilters() {
     var c = counts();
     var html = '';
-    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['dropped', 'Not bear']].forEach(function (pair) {
+    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['gone', 'Gone'], ['dropped', 'Not bear']].forEach(function (pair) {
       html += '<span class="pill' + (filter === pair[0] ? ' on' : '') + '" data-f="' + pair[0] + '">' + pair[1] + ' <b>' + (c[pair[0]] || 0) + '</b></span>';
     });
     document.getElementById('filters').innerHTML = html;
@@ -1939,6 +2010,7 @@ window.__startDeck = function () {
   function renderExecute() {
     var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped' && d.pendingExecute; }).length;
     var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
+    var removals = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'gone' && d.pendingExecute; }).length;
     var el = document.getElementById('execute');
     var last = deck.lastExecution;
     // The phone's own tally of the approvals it was handed (the run file's
@@ -1960,7 +2032,7 @@ window.__startDeck = function () {
       ? '<small>🖼️ ' + picturesWaiting.length + ' of these wait' + (picturesWaiting.length === 1 ? 's' : '') + ' for the pictures PR' + (picturesWaiting[0].picture.pr && picturesWaiting[0].picture.pr.url ? ' <a href="' + escapeHtml(picturesWaiting[0].picture.pr.url) + '">#' + escapeHtml(String(picturesWaiting[0].picture.pr.number || '')) + '</a>' : '') + ' — merge it first, or they are written without their flyer.</small>'
       : '';
     if (approved > 0 && deck.executeLink) {
-      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals, and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
+      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
     } else {
       el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
     }
@@ -2200,7 +2272,7 @@ window.__startDeck = function () {
     var html = order.length === 0 ? '<div class="empty">Nothing here. 🐻</div>' : '';
     order.forEach(function (name) {
       var g = groups[name];
-      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'series' ? 'series' : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
+      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'series' ? 'series' : k === 'gone' ? 'gone' : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
       html += '<div class="src" data-s="' + escapeHtml(name) + '"><h4>' + escapeHtml(name) + ' <small>' + g.cards.length + ' card' + (g.cards.length === 1 ? '' : 's') + ' · ' + escapeHtml(kinds) + '</small></h4>'
         + '<div class="facts">' + (Object.keys(g.hosts).length ? 'links: ' + top(g.hosts, 4) + '<br>' : 'links: none<br>') + (Object.keys(g.places).length ? 'where: ' + top(g.places, 4) : 'where: nothing placed') + '</div>'
         + '<div class="sacts"><button type="button" data-act="list">List these</button><button type="button" data-act="stack">Review these</button><button type="button" class="ok" data-act="approve">Approve all ' + g.cards.length + '</button><button type="button" class="no" data-act="reject">Not yet, all ' + g.cards.length + '…</button></div></div>';
@@ -2256,7 +2328,7 @@ window.__startDeck = function () {
   function notBearItem(item, quiet) {
     var c = item.cards[0];
     if (c.kind === 'dropped') { decide(item, 'reject', null, 'gone-left'); return; }
-    if (c.kind === 'bar') { if (!quiet) { pending = item; openSheet(item); } return; }
+    if (c.kind === 'bar' || c.kind === 'gone') { if (!quiet) { pending = item; openSheet(item); } return; }
     decide(item, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     if (!quiet) toast('Not bear — final');
   }
@@ -2383,7 +2455,7 @@ window.__startDeck = function () {
       var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
       if (friendMode) { toast(verdict === 'approve' ? 'Looks right — got it' : 'Noted'); return; }
-      toast((card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      toast((card.kind === 'gone' ? (verdict === 'approve' ? 'Removal approved — the phone takes it off the calendar on the next execute' : 'Kept on the calendar') : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
       renderDecided(); renderExecute(); renderWaiting();
     }).catch(function (error) {
       toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' ' + unitOf(item.series, left.length) + ' back on the stack)' : ''));
@@ -2442,19 +2514,23 @@ window.__startDeck = function () {
   function openSheet(item) {
     var card = item.bulk ? item.bulk[0].cards[0] : item.cards[0];
     var isDropped = !item.bulk && card.kind === 'dropped';
-    document.getElementById('sheet-fix').querySelector('b').textContent = isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
-    document.getElementById('sheet-fix').querySelector('span').textContent = isDropped
+    var isGone = !item.bulk && card.kind === 'gone';
+    sheet.classList.toggle('gone', isGone);
+    document.getElementById('sheet-fix').querySelector('b').textContent = isGone ? '✅ Keep it on the calendar' : isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
+    document.getElementById('sheet-fix').querySelector('span').textContent = isGone
+      ? 'The saved event stays as it is. Say why, so the read can be fixed if the source is the problem.'
+      : isDropped
       ? 'It IS ours, and the card is wrong. The next run keeps it; it waits, and comes back by itself once the card changes.'
       : 'Good event, wrong card. It waits, and comes back by itself once the card changes.';
     document.getElementById('sheet-notbear').querySelector('span').textContent = isDropped ? 'Right call. Final — every night of this party.' : 'Not ours. Final — every night of this party.';
     document.getElementById('sheet-title').textContent = item.bulk
       ? item.label + ' — the same answer for every one'
       : (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '');
-    sheetTags.innerHTML = deck.tags.filter(function (t) { return t !== 'not bear'; }).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
+    sheetTags.innerHTML = (isGone ? (deck.goneTags || []) : deck.tags.filter(function (t) { return t !== 'not bear'; })).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
     document.getElementById('sheet-text').placeholder = 'Anything else (optional)';
-    document.getElementById('sheet-heading').textContent = friendMode ? 'What’s not right?' : 'Not yet — why?';
+    document.getElementById('sheet-heading').textContent = isGone ? 'Keep it — why?' : friendMode ? 'What’s not right?' : 'Not yet — why?';
     if (friendMode) {
       document.getElementById('sheet-fix').querySelector('span').textContent = 'A real bear event, but something on the card is wrong. Tap what, add a note.';
       document.getElementById('sheet-notbear').querySelector('span').textContent = 'Not a bear crowd.';
@@ -2621,6 +2697,8 @@ window.__startDeck = function () {
     sheet.classList.remove('open'); fitSheet(); pending = null;
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
+    // A gone card's only answer is "keep" (its left swipe is not a rejection).
+    if (!card.bulk && card.cards[0].kind === 'gone') mode = 'keep';
     var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
     // A bulk answer: every item of the set gets this reason.
     if (card.bulk) {
@@ -2634,7 +2712,7 @@ window.__startDeck = function () {
     // On a not-bear card, "not bear" is the plain confirmation it always was.
     if (card.cards[0].kind === 'dropped') { decide(card, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
     decide(card, 'reject', reason, 'gone-left');
-    toast(mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
+    toast(mode === 'keep' ? 'Kept on the calendar' : mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
   }
   document.getElementById('sheet-fix').onclick = function () { answerSheet('fix'); };
   document.getElementById('sheet-notbear').onclick = function () { answerSheet('not-bear'); };
@@ -2642,7 +2720,7 @@ window.__startDeck = function () {
   function notBearTop() {
     var c = topItem(); if (!c) return;
     if (c.cards[0].kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }
-    if (c.cards[0].kind === 'bar') { pending = c; openSheet(c); return; }
+    if (c.cards[0].kind === 'bar' || c.cards[0].kind === 'gone') { pending = c; openSheet(c); return; }
     decide(c, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     toast('Not bear — final');
   }

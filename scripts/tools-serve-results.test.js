@@ -2021,3 +2021,62 @@ test('run-once stall guard: a run that prints nothing for the quiet window is fa
   assert.match(runOnce.clockPrefix(new Date(2026, 9, 9, 5, 7, 9)), /^05:07:09$/);
   assert.ok(typeof runOnce.describeActiveResources() === 'string');
 });
+
+test('review routes: a gone-from-source card renders with its reason and the Gone pill; a left swipe stores a keep; the rejections text labels it KEPT', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-gone-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  const fixture = reviewRunFixture('20300101-051500');
+  fixture.goneFromSource = {
+    candidates: [{
+      key: 'gone|nyc|UID9', kind: 'gone', city: 'nyc', uid: 'UID9', identifier: 'UID9', title: 'BLUF NYC HARD',
+      startDate: '2030-10-11T02:00:00.000Z', endDate: '2030-10-11T06:00:00.000Z', timezone: 'America/New_York', bar: 'Eagle NYC', address: '554 W 28th St',
+      host: 'eagle-ny.com', site: 'eagle-ny.com', source: 'Eagle NYC', siteEvents: 21, horizonDay: '2031-01-03', misses: 2, reason: 'gone',
+      deepCheck: { verdict: 'site-removed', at: '2030-01-01T00:00:00.000Z' },
+      instead: { sameNight: [{ title: 'Bad Boy', startDate: '2030-10-11T02:00:00.000Z', day: '2030-10-10', bar: 'Eagle NYC', samePlace: true, similar: false, titleOverlap: 0 }], sameTitle: [] }
+    }],
+    state: {}, summary: { candidates: 1 }
+  };
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(fixture));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const page = await request(state, 'GET', '/review');
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes('Gone from its source'), 'the gone card renders');
+    assert.ok(page.body.includes('has not listed this one for'), 'the streak is on the card');
+    assert.ok(page.body.includes('the site removed it'), 'the deep check is on the card');
+    assert.ok(page.body.includes('Bad Boy') && page.body.includes('same place'), 'what the site lists instead that night');
+    assert.ok(page.body.includes("['gone', 'Gone']"), 'the Gone pill');
+    assert.ok(page.body.includes('"goneTags"') || page.body.includes('goneTags:'), 'keep-sheet chips shipped');
+    const deck = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(deck.counts.gone, 1);
+    const card = deck.cards.find((entry) => entry.kind === 'gone');
+    assert.equal(card.key, 'gone|nyc|UID9');
+    const kept = await request(state, 'POST', '/review/decide', JSON.stringify({
+      key: card.key, kind: 'gone', verdict: 'reject', runId: deck.runId, snapshot: card.proposal,
+      reason: { tags: ['still happening'], text: 'they posted the flyer', mode: 'keep' }
+    }));
+    assert.equal(kept.status, 200, kept.body);
+    const stored = JSON.parse(fs.readFileSync(reviewQueue.getDecisionsPath(dir), 'utf8'));
+    assert.equal(stored.decisions[0].kind, 'gone');
+    assert.equal(stored.decisions[0].reason.mode, 'keep');
+    const after = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(after.counts.gone, 0, 'kept cards leave the stack');
+    assert.equal(after.counts.waiting, 0, 'a keep is not a fix note');
+    const rejections = await request(state, 'GET', '/review/rejections');
+    assert.ok(rejections.body.includes('[KEPT] GONE BLUF NYC HARD — 2030-10-11 @ Eagle NYC [Eagle NYC] kept on the calendar (eagle-ny.com has not listed it for 2 runs) {still happening} — they posted the flyer'), rejections.body);
+    const cleared = await request(state, 'POST', '/review/decide', JSON.stringify({ key: card.key, verdict: 'clear' }));
+    assert.equal(JSON.parse(cleared.body).removed, true);
+    const approved = await request(state, 'POST', '/review/decide', JSON.stringify({ key: card.key, kind: 'gone', verdict: 'approve', runId: deck.runId, snapshot: card.proposal }));
+    assert.equal(approved.status, 200, approved.body);
+    const pending = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(pending.decided[0].pendingExecute, true, 'an approved removal waits for the phone');
+    const executePage = await request(state, 'GET', '/review');
+    assert.ok(executePage.body.includes('removes only the approved gone cards it can still verify'), 'the execute footer says what a removal does');
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

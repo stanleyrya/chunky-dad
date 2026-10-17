@@ -16450,6 +16450,125 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   // safety, so the flag is cleared HERE, for this execution only, and the
   // override is logged. Returns the counts; never throws.
   // ---------------------------------------------------------------------
+  // ── Approved removals ("gone from its source") ────────────────────────
+  // The ONE place the scraper removes a calendar event, and only on the
+  // owner's approval of a gone card (tools/review-queue.js kind 'gone').
+  // Positive verification before every remove: the live record is found
+  // by the card's identifier or uid in a window around its night, carries
+  // the same title and the same night, and is not recurring. Anything
+  // else is withheld with its reason — a card is never a licence to
+  // remove whatever sits at that slot now.
+  async applyGoneDeletions(results, approved, ledger) {
+    const out = { attempted: 0, deleted: 0, withheld: 0, failed: 0, alreadyDone: 0, cities: [], rows: [], notes: [] };
+    const list = Array.isArray(approved) ? approved : [];
+    if (list.length === 0) return out;
+    if (typeof CalendarEvent === "undefined" || typeof Calendar === "undefined") {
+      out.notes.push("no calendar API in this environment");
+      console.log("📱 Scriptable: 🗑️ Approved removals skipped — no calendar API in this environment");
+      return out;
+    }
+    const entries = ledger && ledger.entries && typeof ledger.entries === "object" ? ledger.entries : {};
+    const foldTitle = (value) => String(value || "").toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+    for (const { candidate, decision } of list) {
+      const title = String(candidate.title || "");
+      const written = entries[candidate.key];
+      if (written && String(written.executedAt || "") >= String((decision && decision.stampedAt) || "")) {
+        out.alreadyDone++;
+        continue;
+      }
+      out.attempted++;
+      try {
+        const calendarName = this.getCalendarName(candidate.city);
+        const calendar = await this.getOrCreateCalendar(calendarName);
+        const startMs = SharedCore.toEpochMillis(candidate.startDate);
+        if (startMs === null) throw new Error("the card has no start");
+        const endMsRaw = SharedCore.toEpochMillis(candidate.endDate);
+        const endMs = endMsRaw === null ? startMs : Math.max(startMs, endMsRaw);
+        const dayMs = 24 * 60 * 60 * 1000;
+        const live = await CalendarEvent.between(new Date(startMs - 1.5 * dayMs), new Date(endMs + 1.5 * dayMs), [calendar]);
+        const uid = String(candidate.uid || "");
+        const identifier = String(candidate.identifier || "");
+        const matches = (Array.isArray(live) ? live : []).filter((record) => {
+          const id = String((record && record.identifier) || "");
+          if (!id) return false;
+          if (identifier && id === identifier) return true;
+          return Boolean(uid) && this.parseScriptableIdentifier(id).uid === uid;
+        });
+        if (matches.length !== 1) {
+          out.withheld++;
+          const why = matches.length === 0 ? "no saved event with that identifier around that night any more" : `${matches.length} records share that identifier (a series)`;
+          out.notes.push(`"${title}": ${why}`);
+          console.log(`📱 Scriptable: ⏸️ Removal withheld for "${title}" (${candidate.city}) — ${why}`);
+          continue;
+        }
+        const target = matches[0];
+        const sameTitle = foldTitle(target.title) === foldTitle(title);
+        const liveStart = SharedCore.toEpochMillis(target.startDate);
+        const sameNight = liveStart !== null && Math.abs(liveStart - startMs) <= dayMs;
+        const recurring = Array.isArray(target.recurrenceRules) && target.recurrenceRules.length > 0;
+        if (!sameTitle || !sameNight || recurring) {
+          out.withheld++;
+          const why = recurring ? "the saved record is a recurring event" : !sameTitle ? `the saved record is now titled "${target.title}"` : "the saved record moved to another night";
+          out.notes.push(`"${title}": ${why}`);
+          console.log(`📱 Scriptable: ⏸️ Removal withheld for "${title}" (${candidate.city}) — ${why}; the card no longer describes it`);
+          continue;
+        }
+        target.remove();
+        out.deleted++;
+        out.rows.push({ key: candidate.key, action: "deleted", title });
+        if (!out.cities.includes(candidate.city)) out.cities.push(candidate.city);
+        console.log(`📱 Scriptable: 🗑️ Removed "${title}" (${candidate.city}, ${String(candidate.startDate || "").slice(0, 10)}) — gone from ${candidate.host || candidate.source || "its source"}, approved on the deck`);
+      } catch (error) {
+        out.failed++;
+        out.notes.push(`"${title}": ${error.message}`);
+        console.log(`📱 Scriptable: ✗ Removal failed for "${title}" (${candidate.city}): ${error.message}`);
+      }
+    }
+    if (out.rows.length > 0) {
+      await this.recordWrittenLedger(ledger, out.rows, new Date().toISOString(), results.savedRunId || results.sourceRunId || null);
+    }
+    return out;
+  }
+
+  describeGoneDeletionLines(deletions) {
+    const d = deletions && typeof deletions === "object" ? deletions : {};
+    return [
+      d.deleted > 0 ? `🗑️ Removed ${d.deleted} (gone from their source, approved on the deck)` : "",
+      d.withheld > 0 ? `⏸️ ${d.withheld} removal(s) withheld — the saved event no longer matches the card` : "",
+      d.failed > 0 ? `⚠️ ${d.failed} removal(s) FAILED` : "",
+      d.alreadyDone > 0 ? `✅ ${d.alreadyDone} removed by an earlier execution` : "",
+    ].filter(Boolean);
+  }
+
+  // An execute that did removals and nothing else still leaves the full
+  // trail: executions[] on the run file, the log, the metrics, and a
+  // snapshot of the calendars it changed.
+  async settleGoneOnlyExecution(results, deletions, options = {}) {
+    if (!Array.isArray(results.savedRunExecutions)) results.savedRunExecutions = [];
+    results.savedRunExecutions.push({
+      executedAt: new Date().toISOString(),
+      via: "owner-review",
+      runAgeAtExecution: options.ageLabel || "",
+      analyzed: 0,
+      executable: 0,
+      processed: 0,
+      failed: deletions.failed || 0,
+      deleted: deletions.deleted || 0,
+      deleteWithheld: deletions.withheld || 0,
+      deleteFailed: deletions.failed || 0,
+      actionCounts: { create: 0, update: 0, skip: 0, failed: deletions.failed || 0, processed: 0, analyzed: 0, delete: deletions.deleted || 0 },
+      ownerReview: null,
+    });
+    results.runContext = { ...(results.runContext || {}), type: "manual", trigger: "owner-review" };
+    const lines = this.describeGoneDeletionLines(deletions).join("\n") || "Nothing removed.";
+    await this.persistExecutedSavedRunSnapshot(results);
+    await this.runPostRunHousekeeping(results, 30, { logRunId: options.logRunId, pruneRuns: true });
+    if (options.quiet) return;
+    await this.postSavedRunExecutionNotification("Calendar Updated", lines);
+    if (Array.isArray(deletions.cities) && deletions.cities.length > 0) await this.writeCalendarSnapshots(deletions.cities);
+    await this.presentSavedRunExecutionNotice("Calendar Updated", lines);
+  }
+
   async executeReviewedSavedRun(results, decisions) {
     const executeStartedAt = Date.now();
     const summary = {
@@ -16473,10 +16592,24 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         : [];
       const store = Array.isArray(decisions) ? decisions : [];
       const ageLabel = this.describeSavedRunAgeLabel(results);
-      console.log(
-        `📱 Scriptable: 🃏 Reviewed-run execution starting — run is ${ageLabel}, ${savedEvents.length} saved event(s), ${store.length} owner decision(s). Saved intents are NEVER written; a fresh live-calendar analysis decides everything below.`,
+      // "Gone from its source" cards the owner approved for removal: the
+      // run's candidates (SharedCore.buildGoneFromSourceCandidates) that
+      // carry an approve decision of kind 'gone'. Exact key only.
+      const goneCandidates = results && results.goneFromSource && Array.isArray(results.goneFromSource.candidates)
+        ? results.goneFromSource.candidates
+        : [];
+      const goneApprovalByKey = new Map(
+        store
+          .filter((decision) => decision && decision.verdict === "approve" && decision.kind === "gone" && typeof decision.key === "string")
+          .map((decision) => [decision.key, decision]),
       );
-      if (savedEvents.length === 0) {
+      const goneApproved = goneCandidates
+        .filter((candidate) => candidate && typeof candidate === "object" && goneApprovalByKey.has(candidate.key))
+        .map((candidate) => ({ candidate, decision: goneApprovalByKey.get(candidate.key) }));
+      console.log(
+        `📱 Scriptable: 🃏 Reviewed-run execution starting — run is ${ageLabel}, ${savedEvents.length} saved event(s), ${store.length} owner decision(s)${goneApproved.length > 0 ? `, ${goneApproved.length} approved removal(s)` : ""}. Saved intents are NEVER written; a fresh live-calendar analysis decides everything below.`,
+      );
+      if (savedEvents.length === 0 && goneApproved.length === 0) {
         await this.presentSavedRunExecutionNotice(
           "Nothing to Execute",
           `This run (${ageLabel}) has no analyzable events, so there is nothing to write.`,
@@ -16571,6 +16704,13 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // selected none of them and the phone reported "Created 0".
       const reviewStore = typeof core.rekeyOwnerDecisions === "function" ? core.rekeyOwnerDecisions(store) : store;
       const ledger = await this.loadWrittenLedger();
+      // Approved removals first: independent of the analysis below, and a
+      // replacement the site lists under a new name is then created after
+      // the stale record is gone.
+      const deletions = await this.applyGoneDeletions(results, goneApproved, ledger);
+      summary.deleted = deletions.deleted;
+      summary.deleteWithheld = deletions.withheld;
+      summary.deleteFailed = deletions.failed;
       const approvedKeys = new Set(
         reviewStore
           .filter((decision) => decision && decision.verdict === "approve" && typeof decision.key === "string")
@@ -16632,6 +16772,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       );
       if (selected.length === 0) {
         stopPhaseTimers();
+        if (deletions.attempted > 0 || deletions.alreadyDone > 0) {
+          await this.settleGoneOnlyExecution(results, deletions, { logRunId, ageLabel });
+          return summary;
+        }
         await this.presentSavedRunExecutionNotice(
           summary.alreadyWritten > 0 ? "Nothing New to Write" : "Nothing Approved",
           `None of this run's ${savedEvents.length} event(s) has an approval on the Mac's review deck (${store.length} decision(s) loaded). Swipe right on the cards you want written, then tap Execute again.`,
@@ -16671,9 +16815,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         );
       } catch (error) {
         stopPhaseTimers();
+        if (deletions.attempted > 0) await this.settleGoneOnlyExecution(results, deletions, { logRunId, ageLabel, quiet: true });
         await this.presentSavedRunExecutionNotice(
           "Live Analysis Failed",
-          `Could not re-analyze this run against the live calendar (${error.message}). Nothing was written.`,
+          `Could not re-analyze this run against the live calendar (${error.message}). Nothing was written${deletions.deleted > 0 ? `; ${deletions.deleted} approved removal(s) were done first` : ""}.`,
         );
         return summary;
       }
@@ -16749,6 +16894,10 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       }
 
       if (freshExecutable.length === 0) {
+        if (deletions.attempted > 0 || deletions.alreadyDone > 0) {
+          await this.settleGoneOnlyExecution(results, deletions, { logRunId, ageLabel });
+          return summary;
+        }
         await this.presentSavedRunExecutionNotice(
           "Nothing to Write",
           `${counts.approved} approved, ${counts.awaiting} still awaiting review, ${counts.rejected} rejected. After the live re-analysis nothing is eligible for a calendar write, so nothing was written.`,
@@ -16803,6 +16952,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
           ...raw,
           skip: (raw.skip || 0) + withheldCount,
           analyzed: mergedPlan.length,
+          ...(deletions.deleted > 0 ? { delete: deletions.deleted } : {}),
         };
         summary.created = raw.create || 0;
         summary.updated = raw.update || 0;
@@ -16819,6 +16969,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         executable: freshExecutable.length,
         processed: processedCount,
         failed: failureCount,
+        ...(deletions.attempted > 0 ? { deleted: deletions.deleted, deleteWithheld: deletions.withheld, deleteFailed: deletions.failed } : {}),
         actionCounts: this.lastExecutionActionCounts || null,
         ownerReview: { ...counts },
       });
@@ -16860,6 +17011,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       const noticeLines = [
           `➕ Created ${summary.created}`,
           `🔄 Updated ${summary.updated}`,
+          ...this.describeGoneDeletionLines(deletions),
           `🃏 Approved ${counts.approved} · ${summary.skipped} not approved (skipped)`,
           summary.alreadyWritten > 0 ? `✅ ${summary.alreadyWritten} written by this run's earlier execution` : "",
           counts.awaiting || counts.rejected ? `⏸️ Approval no longer matches ${counts.awaiting} · rejected ${counts.rejected}` : "",
@@ -16881,7 +17033,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       // plan's cities (every city of an 882-row run → 94 calendars, 16 s,
       // and the step that killed the app on 2026-09-27) are not what
       // changed; the Mac's next run reads the rest from the last snapshot.
-      await this.writeCalendarSnapshots(this.collectSnapshotCities({ analyzedEvents: freshExecutable }));
+      await this.writeCalendarSnapshots([...new Set([...this.collectSnapshotCities({ analyzedEvents: freshExecutable }), ...deletions.cities])]);
       void persistedAt;
       // The log on disk was written by the housekeeping above, so it ended
       // before the snapshot lines; write it again so a later reader sees
@@ -17320,6 +17472,11 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         ...(Array.isArray(results.newVenueCandidates) &&
         results.newVenueCandidates.length > 0
           ? { newVenueCandidates: results.newVenueCandidates }
+          : {}),
+        // "Gone from its source" cards and their streak state (the Mac
+        // computes them; a phone re-save of a Mac run keeps them).
+        ...(results.goneFromSource && typeof results.goneFromSource === "object"
+          ? { goneFromSource: results.goneFromSource }
           : {}),
         ...(Array.isArray(results.savedRunExecutions) &&
         results.savedRunExecutions.length > 0

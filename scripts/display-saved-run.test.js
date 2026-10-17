@@ -140,3 +140,10 @@ test('refreshCalendarSnapshots: nothing missing reads as a plain success; an old
   assert.equal(await display.refreshCalendarSnapshots(), null);
   assert.deepEqual(errors, ['Adapter too old']);
 });
+
+test('buildResultsLike threads the run\'s gone-from-source cards through so the reviewed execute can act on approved removals', () => {
+  const display = new SavedRunDisplay();
+  const gone = { candidates: [{ key: 'gone|nyc|UID1', kind: 'gone', title: 'Gone Party' }], state: { nyc: { UID1: { misses: 2 } } }, summary: { candidates: 1 } };
+  assert.deepEqual(display.buildResultsLike({ ...savedPayload(), goneFromSource: gone }, { readOnly: false }).goneFromSource, gone);
+  assert.equal(display.buildResultsLike(savedPayload(), { readOnly: false }).goneFromSource, null, 'older runs have none');
+});
