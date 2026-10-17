@@ -397,7 +397,7 @@ test('module exposes the Sources builders on both export surfaces', () => {
     assert.equal(typeof MetricsSections[name], 'function', name);
     assert.equal(typeof exported[name], 'function', name);
   });
-  assert.deepEqual(exported.SOURCE_VERDICT_ORDER, ['dead', 'stopped', 'shrunk', 'drift', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok']);
+  assert.deepEqual(exported.SOURCE_VERDICT_ORDER, ['dead', 'stopped', 'shrunk', 'sparse', 'drift', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok']);
   assert.equal(MetricsSections.SOURCE_VERDICT_LABELS.drift, 'Drift');
   assert.equal(MetricsSections.SOURCE_VERDICT_LABELS.lost, 'Lost');
   ['buildLostListHtml', 'buildSourcesMoversSpec', 'buildSourcesMoversHtml', 'buildLostPerRunChartSpec'].forEach(name => assert.equal(typeof exported[name], 'function', name));
@@ -1016,4 +1016,79 @@ test('audit on the page: the Lost column note, the lost list’s Site column, th
   assert.match(card, /One miss\./);
   assert.match(MetricsSections.buildHostAuditHtml(health.rows.find(row => row.host === 'unchecked.example')), /No audit of this host yet/);
   assert.equal(MetricsSections.formatStillHtml('unknown'), '<span class="still-chip still-unknown">unknown</span>');
+});
+
+// ---------------------------------------------------------------------------
+// Sparse: the host delivers events but not usable ones (a core field under
+// half), and the flagged chip: one sanity flag code on half the kept events
+// run after run. Both read the `quality` block the ledger writes every run.
+// ---------------------------------------------------------------------------
+
+function qualityBlock(overrides = {}) {
+  return Object.assign({ n: 20, time: 100, place: 100, coords: 90, url: 100, image: 50, desc: 60, flags: {}, bear: { extracted: 40, kept: 20, ai_dropped: 2, manual_dropped: 0, top_reason: '' }, dedup: { removed: 0, pct: 0 }, stability: 90, horizon_days: 30, runs_since_new: 1, errors: {}, churn: { merges: 0, changed: 0, fields: {} } }, overrides);
+}
+
+function buildQualityLedger() {
+  const runs = [0, 1, 2, 3, 4, 5, 6, 7].map(index => [`2026100${index + 1}-050000`, `2026-10-0${index + 1}T09:00:00.000Z`]);
+  const lines = [];
+  runs.forEach(([run_id, finished_at], index) => {
+    const last = index === runs.length - 1;
+    const line = (host, extra) => lines.push(buildLedgerLine(Object.assign({ run_id, finished_at, host, parsers: [host], extracted: 60, events: 20, bear: 20, upcoming: 10, lost: [], aggregator: false, url: `https://${host}/` }, extra)));
+    // 87 kept, a place on 10% of them, every run (calendar.google.com).
+    line('thin.example', { extracted: 300, events: 87, bear: 74, quality: qualityBlock({ n: 87, place: 10 }) });
+    // Same thing on an aggregator: never a verdict, a flag chip.
+    line('agg.example', { aggregator: true, quality: qualityBlock({ url: 7 }) });
+    // Sparse for six runs, fixed on the latest: clears at once.
+    line('fixed.example', { quality: qualityBlock({ place: last ? 90 : 10 }) });
+    // Two kept events with no time: judged by nothing.
+    line('tiny.example', { extracted: 2, events: 2, bear: 2, quality: qualityBlock({ n: 2, time: 0 }) });
+    // Sparse AND under half the baseline on the latest run: volume wins.
+    line('both.example', { extracted: last ? 10 : 60, quality: qualityBlock({ time: 20 }) });
+    // One flag on 14 of 21 kept events, every run (eagle-ny.com).
+    line('habit.example', { events: 21, bear: 21, quality: qualityBlock({ n: 21, flags: { 'cover-self-contradictory': 14, 'span-fully-past': 1 } }) });
+    // The same flag in two runs only: a blip, no chip.
+    line('blip.example', { quality: qualityBlock({ flags: index >= 6 ? { 'junk-title': 20 } : {} }) });
+    line('clean.example', { quality: qualityBlock() });
+  });
+  return MetricsSections.assessSourceHealth(lines, { now: new Date('2026-10-08T12:00:00.000Z') });
+}
+
+test('sparse verdict: a core field under 50% of kept events over the window and on the latest line, kept ≥ 5; after shrunk, before drift; aggregators wear it as a flag; a fixed parser clears it at once', () => {
+  const health = buildQualityLedger();
+  const rowOf = host => health.rows.find(row => row.host === host);
+  const thin = rowOf('thin.example');
+  assert.equal(thin.verdict, 'sparse');
+  assert.deepEqual(thin.sparse, { field: 'place', pct: 10, latest: 10, kept: 87 * 8, runs: 8 });
+  assert.equal(thin.since, '20261001-050000', 'sparse since the first run the field was under the line');
+  assert.deepEqual(thin.flags, []);
+  const agg = rowOf('agg.example');
+  assert.equal(agg.verdict, 'ok', 'an aggregator is never alerted');
+  assert.deepEqual(agg.flags, ['sparse']);
+  assert.equal(agg.sparse.field, 'url');
+  assert.equal(rowOf('fixed.example').verdict, 'ok', 'the latest line is judged too: a fix shows the next run');
+  assert.equal(rowOf('fixed.example').sparse, null);
+  assert.equal(rowOf('tiny.example').verdict, 'ok', 'under 5 kept events nothing is judged');
+  assert.equal(rowOf('both.example').verdict, 'shrunk', 'volume outranks sparse');
+  assert.deepEqual(rowOf('both.example').flags, ['sparse'], 'and sparse rides as a flag');
+  assert.equal(rowOf('clean.example').verdict, 'ok');
+  assert.equal(health.counts.sparse, 1);
+  assert.ok(health.troubled >= 2);
+  const order = MetricsSections.SOURCE_VERDICT_ORDER;
+  assert.ok(order.indexOf('sparse') === order.indexOf('shrunk') + 1 && order.indexOf('drift') === order.indexOf('sparse') + 1);
+  assert.equal(MetricsSections.SOURCE_VERDICT_LABELS.sparse, 'Sparse');
+  // The chip names the field on the table, for the verdict and for the flag.
+  const html = MetricsSections.buildSourcesTableHtml(health, {});
+  assert.ok(html.includes('verdict-chip verdict-sparse">Sparse · place 10%</span>'), html.match(/verdict-sparse[^<]*/g));
+  assert.ok(html.includes('verdict-chip verdict-sparse">Sparse · url 7%</span>'), 'the aggregator flag chip names its field too');
+  assert.ok(html.includes('verdict-chip verdict-shrunk">Shrunk</span><span class="verdict-chip verdict-sparse">Sparse · time 20%</span>'));
+  // Counters, widget, host page.
+  assert.ok(MetricsSections.buildSourceCountersHtml(health).includes('Sparse</span><span class="metric-chip-value">1'));
+  const widget = MetricsSections.buildSourceWidgetSummary(health, { limit: 5 });
+  const item = widget.items.find(entry => entry.host === 'thin.example');
+  assert.equal(item.detail, 'place 10% · Oct 1 05:00');
+  const hostHtml = MetricsSections.buildHostQualityHtml(thin);
+  assert.ok(hostHtml.includes('Sparse · place 10%') && hostHtml.includes('place on 10% of 696 kept events over 8 ok runs'));
+  // Direct: a latest line that is not ok, or no quality, judges nothing.
+  assert.equal(MetricsSections.assessSparseFields([buildLedgerLine({ status: 'dead', quality: qualityBlock({ place: 0 }) })]), null);
+  assert.equal(MetricsSections.assessSparseFields([buildLedgerLine({})]), null);
 });

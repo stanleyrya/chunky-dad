@@ -1224,7 +1224,7 @@ a { color:var(--accent); }
 .badge { font-size:12px; padding:2px 8px; border-radius:6px; background:var(--bg); border:1px solid var(--line); color:var(--ink); }
 .badge.verdict { font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
 .badge.v-dead, .badge.v-stopped { color:var(--no); border-color:var(--no); }
-.badge.v-shrunk, .badge.v-empty { color:var(--accent-soft); border-color:var(--accent-soft); }
+.badge.v-shrunk, .badge.v-empty, .badge.v-sparse { color:var(--accent-soft); border-color:var(--accent-soft); }
 .badge.v-lost { color:var(--lost); border-color:var(--lost); }
 .badge.v-ok { color:var(--ok); border-color:var(--ok); }
 .badge.quality { color:var(--accent-soft); }

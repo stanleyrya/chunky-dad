@@ -178,7 +178,7 @@ test('assessSourceHealth: verdicts, trouble-first order, since, baseline', () =>
   assert.equal(verdictOf('lagsite.example').verdict, 'empty', 'a sibling that answered in an older run is no alibi for this run');
   assert.equal(verdictOf('lagfeed.example').verdict, 'ok');
   assert.deepEqual(health.rows.map((r) => r.verdict), ['dead', 'stopped', 'shrunk', 'empty', 'empty', 'vanished', 'quiet', 'companion', 'ok', 'ok', 'ok']);
-  assert.deepEqual([...new Set(health.rows.map((r) => r.verdict))], SOURCE_VERDICT_ORDER.filter((verdict) => verdict !== 'lost' && verdict !== 'drift'), 'no line in this fixture carries losses or drift');
+  assert.deepEqual([...new Set(health.rows.map((r) => r.verdict))], SOURCE_VERDICT_ORDER.filter((verdict) => verdict !== 'lost' && verdict !== 'drift' && verdict !== 'sparse'), 'no line in this fixture carries losses, drift or a quality block');
   assert.equal(health.troubled, 7, 'companion is not trouble');
   assert.equal(health.hosts, 11);
   assert.equal(verdictOf('steady.example').series.length, 5);
@@ -494,6 +494,7 @@ test('buildSourceLedger: per-host signals (structured vs AI route, pages) ride o
   const health = assessSourceHealth([...bigger.hosts['eaglela.com'].signals_history.map((signals, index) => ({ ...row, run_id: `2026100${index + 1}-050000`, finished_at: `2026-10-0${index + 1}T05:00:00Z`, drift: [], signals })), row], { now });
   assert.equal(health.rows.find((r) => r.host === 'eaglela.com').verdict, 'drift');
   assert.ok(SOURCE_VERDICT_ORDER.indexOf('drift') > SOURCE_VERDICT_ORDER.indexOf('shrunk') && SOURCE_VERDICT_ORDER.indexOf('drift') < SOURCE_VERDICT_ORDER.indexOf('lost'));
+  assert.ok(SOURCE_VERDICT_ORDER.indexOf('sparse') > SOURCE_VERDICT_ORDER.indexOf('shrunk') && SOURCE_VERDICT_ORDER.indexOf('sparse') < SOURCE_VERDICT_ORDER.indexOf('drift'), 'sparse sits after shrunk (volume first) and before drift');
 });
 
 test('buildSourceLedger: the gone-from-source streak state rides in source-upcoming.json — the run that checked carries the new state, any other run carries the previous one', () => {

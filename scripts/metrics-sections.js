@@ -249,7 +249,12 @@ function buildQualityTrendData(records) {
 // 'drift' = the host still yields rows but a signal it used to give (its
 // structured door, its pages) collapsed to nothing (SharedCore.assessHostDrift):
 // the read is thinner than its count says.
-const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'drift', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok'];
+// 'sparse' = the host delivers events but not usable ones: a core field
+// (time, place, url) on under half of the kept events, over the window and
+// on the latest line (calendar.google.com kept 87 events with a place on
+// 10% of them for weeks under an 'ok' verdict). Ranks under shrunk (volume
+// first) and above drift. An aggregator wears it as a flag chip, like lost.
+const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'sparse', 'drift', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok'];
 // Slow-decline clause for 'shrunk': the latest SLOW_DECLINE_RUNS ok runs all
 // below SLOW_DECLINE_RATIO × the peak of the last SLOW_DECLINE_WINDOW ok runs
 // (precinctdtla.com 160 → 98 for three runs never crossed the ½-median line).
@@ -258,6 +263,14 @@ const SLOW_DECLINE_RUNS = 3;
 const SLOW_DECLINE_WINDOW = 14;
 const SLOW_DECLINE_MIN_PEAK = 10;
 const SOURCE_UNTROUBLED_VERDICTS = ['ok', 'companion'];
+// 'sparse': a core field under SPARSE_SHARE % of kept events, judged over
+// the ok lines of the baseline window (weighted by kept count) AND on the
+// latest line, so a fixed parser clears it the next run. The latest line
+// needs SPARSE_MIN_KEPT kept events: a host keeping one or two is judged by
+// nothing.
+const SPARSE_FIELDS = ['time', 'place', 'url'];
+const SPARSE_SHARE = 50;
+const SPARSE_MIN_KEPT = 5;
 
 function parseSourceLedger(text) {
     const records = [];
@@ -395,6 +408,41 @@ function summarizeOwnerDecisions(store, rows) {
     return out;
 }
 
+function qualityLinesOf(lines) {
+    return (Array.isArray(lines) ? lines : []).filter((line) => line && line.status === 'ok'
+        && line.quality && typeof line.quality === 'object' && (Number(line.quality.n) || 0) > 0);
+}
+
+// The worst sparse core field over the window, or null. `lines` = the
+// baseline window's ok lines then the latest line (which must be ok).
+function assessSparseFields(lines) {
+    const all = Array.isArray(lines) ? lines : [];
+    const latestLine = all[all.length - 1];
+    if (!latestLine || latestLine.status !== 'ok') return null;
+    const okLines = qualityLinesOf(all);
+    if (!okLines.length || okLines[okLines.length - 1] !== latestLine) return null;
+    const latestN = Number(latestLine.quality.n) || 0;
+    if (latestN < SPARSE_MIN_KEPT) return null;
+    let worst = null;
+    SPARSE_FIELDS.forEach((field) => {
+        const latestPct = Number(latestLine.quality[field]);
+        if (!Number.isFinite(latestPct) || latestPct >= SPARSE_SHARE) return;
+        let kept = 0;
+        let withField = 0;
+        okLines.forEach((line) => {
+            const n = Number(line.quality.n) || 0;
+            const pct = Number(line.quality[field]);
+            if (!Number.isFinite(pct)) return;
+            kept += n;
+            withField += Math.round((n * pct) / 100);
+        });
+        const pct = kept > 0 ? Math.round((100 * withField) / kept) : latestPct;
+        if (pct >= SPARSE_SHARE) return;
+        if (!worst || pct < worst.pct) worst = { field, pct, latest: latestPct, kept, runs: okLines.length };
+    });
+    return worst;
+}
+
 function assessSourceHealth(records, options = {}) {
     const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
     const staleAfterDays = Number.isFinite(options.staleAfterDays) ? options.staleAfterDays : 3;
@@ -451,6 +499,7 @@ function assessSourceHealth(records, options = {}) {
         const slowDecline = latest.status === 'ok' && recentOk.length === SLOW_DECLINE_RUNS && peak >= SLOW_DECLINE_MIN_PEAK
             && recentOk.every((line) => (Number(line.extracted) || 0) < peak * SLOW_DECLINE_RATIO);
         const underHalf = (line) => baseline !== null && baseline >= 4 && (Number(line.extracted) || 0) < baseline / 2;
+        const sparse = assessSparseFields([...earlier, latest]);
         let verdict = 'ok';
         let since = null;
         if (latest.status === 'dead') {
@@ -459,6 +508,8 @@ function assessSourceHealth(records, options = {}) {
             verdict = 'stopped';
         } else if (underHalf(latest) || slowDecline) {
             verdict = 'shrunk';
+        } else if (sparse && !aggregator) {
+            verdict = 'sparse';
         } else if (Array.isArray(latest.drift) && latest.drift.length > 0) {
             verdict = 'drift';
         } else if (hasLoss && !aggregator) {
@@ -480,11 +531,20 @@ function assessSourceHealth(records, options = {}) {
             }
         } else if (verdict === 'lost') {
             since = openLost.map((entry) => entry.since).filter(Boolean).sort()[0] || latest.run_id || null;
+        } else if (verdict === 'sparse') {
+            // Walk back over the ok lines whose field was already under the line.
+            for (let index = lines.length - 1; index >= 0; index -= 1) {
+                const line = lines[index];
+                const pct = line.quality && typeof line.quality === 'object' ? Number(line.quality[sparse.field]) : NaN;
+                if (line.status !== 'ok' || !Number.isFinite(pct) || pct >= SPARSE_SHARE) break;
+                since = line.run_id || line.finished_at || since;
+            }
         }
         // The other axis as a flag chip: a shrunk/dead host that also lost
         // expected events, or an aggregator whose losses are recorded only.
         const flags = [];
         if (hasLoss && verdict !== 'lost') flags.push('lost');
+        if (sparse && verdict !== 'sparse') flags.push('sparse');
         const parsers = Array.isArray(latest.parsers) ? latest.parsers : [];
         rows.push({
             host,
@@ -493,6 +553,7 @@ function assessSourceHealth(records, options = {}) {
             flags,
             since,
             baseline,
+            sparse,
             latest,
             vanished,
             lost,
@@ -601,6 +662,7 @@ const SOURCE_VERDICT_LABELS = {
     dead: 'Dead',
     stopped: 'Stopped',
     shrunk: 'Shrunk',
+    sparse: 'Sparse',
     drift: 'Drift',
     lost: 'Lost',
     empty: 'Empty',
@@ -708,6 +770,13 @@ function sortSourceRows(rows, sortState) {
     return list;
 }
 
+// "Sparse · place 10%": the verdict chip names the field it is about.
+function formatSparseLabel(row) {
+    const sparse = row && row.sparse ? row.sparse : null;
+    if (!sparse) return sourceVerdictLabel('sparse');
+    return `${sourceVerdictLabel('sparse')} · ${sparse.field} ${sparse.latest}%`;
+}
+
 function buildVerdictChipHtml(verdict, options = {}) {
     const label = options.label || sourceVerdictLabel(verdict);
     const safeVerdict = String(verdict || 'unknown').replace(/[^a-z]/g, '');
@@ -812,7 +881,7 @@ function buildSourcesTableHtml(health, options = {}) {
             ? [lostLabel, sinceLabel].filter(Boolean).join(' · ')
             : [sinceLabel || vanishedLabel || companionLabel, lostLabel].filter(Boolean).join(' · ');
         const flagChips = (Array.isArray(row.flags) ? row.flags : [])
-            .map((flag) => buildVerdictChipHtml(flag, { label: flag === 'lost' && row.aggregator ? 'Lost · aggregator' : sourceVerdictLabel(flag) }))
+            .map((flag) => buildVerdictChipHtml(flag, { label: flag === 'lost' && row.aggregator ? 'Lost · aggregator' : (flag === 'sparse' ? formatSparseLabel(row) : sourceVerdictLabel(flag)) }))
             .join('');
         const series = Array.isArray(row.series) ? row.series.map((line) => line.extracted) : [];
         const rowAttrs = [
@@ -835,7 +904,7 @@ function buildSourcesTableHtml(health, options = {}) {
               ${parserLabel ? `<div class="cell-subtitle">${escapeHtml(parserLabel)}</div>` : ''}
             </td>
             <td class="verdict-cell">
-              ${buildVerdictChipHtml(row.verdict)}${flagChips}
+              ${buildVerdictChipHtml(row.verdict, row.verdict === 'sparse' ? { label: formatSparseLabel(row) } : {})}${flagChips}
               ${verdictNote ? `<div class="cell-subtitle">${escapeHtml(verdictNote)}</div>` : ''}
             </td>
             <td class="num trio-cell"><div class="cell-title">${extracted} · ${bear} · ${upcoming}</div></td>
@@ -1097,8 +1166,11 @@ function buildHostQualityHtml(row) {
     const summary = quality.offCount
         ? `${quality.offCount} signal${quality.offCount === 1 ? '' : 's'} over a threshold: ${quality.badges.map((badge) => badge.chip || badge.label).join(', ')}`
         : 'Every signal inside its threshold.';
+    const thin = row.sparse
+        ? `<div class="quality-summary"><span class="verdict-chip verdict-sparse">${escapeHtml(formatSparseLabel(row))}</span> <span class="muted">${escapeHtml(`${row.sparse.field} on ${row.sparse.pct}% of ${row.sparse.kept} kept events over ${row.sparse.runs} ok runs (under ${SPARSE_SHARE}% on the latest too)`)}</span></div>`
+        : '';
     return `
-        <div class="muted quality-summary">${escapeHtml(summary)}</div>
+        <div class="muted quality-summary">${escapeHtml(summary)}</div>${thin}
         <div class="metrics-grid quality-grid">${tiles}
         </div>`;
 }
@@ -1174,6 +1246,7 @@ function buildSourceWidgetSummary(health, options = {}) {
         else if (row.since) detail = `${sourceVerdictLabel(row.verdict).toLowerCase()} · ${formatSourceRun(row.since)}`;
         else if (row.verdict === 'companion') detail = 'companion';
         else detail = sourceVerdictLabel(row.verdict).toLowerCase();
+        if (row.verdict === 'sparse' && row.sparse) detail = `${row.sparse.field} ${row.sparse.latest}%${row.since ? ` · ${formatSourceRun(row.since)}` : ''}`;
         return {
             host: row.host,
             parsers: Array.isArray(row.parsers) ? row.parsers : [],
@@ -2168,6 +2241,8 @@ const MetricsSections = {
     buildQualityTrendData,
     SOURCE_VERDICT_LABELS,
     SOURCE_LEDGER_EMPTY_MESSAGE,
+    assessSparseFields,
+    formatSparseLabel,
     SOURCE_SORT_KEYS,
     sourceVerdictLabel,
     sourceVerdictRank,
@@ -2228,6 +2303,8 @@ if (typeof module !== 'undefined' && module.exports) {
         buildQualityTrendData,
         SOURCE_VERDICT_LABELS,
         SOURCE_LEDGER_EMPTY_MESSAGE,
+        assessSparseFields,
+        formatSparseLabel,
         SOURCE_SORT_KEYS,
         sourceVerdictLabel,
         sourceVerdictRank,

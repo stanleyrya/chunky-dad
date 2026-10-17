@@ -140,7 +140,7 @@ function findingsQueue(store) {
 // troubled ones taking the front of the line more often).
 // ---------------------------------------------------------------------------
 function auditBand(row) {
-    if (['dead', 'stopped', 'shrunk', 'lost'].includes(row.verdict)) return 0;
+    if (['dead', 'stopped', 'shrunk', 'sparse', 'lost'].includes(row.verdict)) return 0;
     if (row.quality && row.quality.offCount >= 2) return 1;
     return 2;
 }

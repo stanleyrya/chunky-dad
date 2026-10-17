@@ -50,6 +50,7 @@ const SOURCE_VERDICT_COLORS = {
   dead: BRAND.danger,
   stopped: '#ff9f43',
   shrunk: BRAND.warning,
+  sparse: '#f0a04b',
   drift: '#c8a2ff',
   lost: '#ff7eb6',
   empty: '#9b8cff',
