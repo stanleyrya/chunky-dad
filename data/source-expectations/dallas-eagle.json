@@ -5,10 +5,11 @@
   "status": "complete",
   "recheckAfter": "2026-10-05",
   "recon": {
-    "date": "2026-09-21",
+    "date": "2026-10-17",
     "method": [
       "static",
-      "feed"
+      "feed",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://www.thedallaseagle.com/events/"
@@ -18,40 +19,41 @@
         "url": "https://www.thedallaseagle.com/events/",
         "kind": "html",
         "role": "listing",
-        "rowsReturned": 0,
-        "truthFlag": "Are you 21?",
-        "note": "Since about 2026-09-18 every page answers with a server-side age question: a form with a hidden nonce and one \"Yes\" button that POSTs to itself and sets a one-year cookie. The scraper confirms once per run and reads the page behind it."
+        "rowsReturned": 20,
+        "truthFlag": "\"Load More\" button under 20 cards (mecListView pagination: loadmore, limit 20); the last card is Wed, Oct 28 7pm Underwear Happy Hour, then \"No event found!\"",
+        "note": "Live curl 2026-10-17 (desktop UA, HTTP 200, 262,094 bytes). The age-gate form (\"Are you 21? Yes / No\") is server-side and still lets the page body through: the MEC list skin follows it. 20 cards from \"Happening Now\" Sat, Oct 17 1:30pm Dungeons & Doms to Wed, Oct 28 7pm Underwear Happy Hour; the \"Get your tickets\" strip above the schedule repeats Sat, Oct 17 9pm UniTEA Presents: REDLINE with DJ Apthout. Two cards changed since the 2026-10-15 page cache: \"Dirty Pop\" is now \"Dirty Pop with DJ Drew G\" and Oct 24 \"Fright Night with DJ Drew G\" is now \"Chains of the Deep with DJ Drew G\"; a second Market on the Strip card appeared on Oct 24."
       },
       {
-        "url": "https://www.thedallaseagle.com/events/#behind-the-gate",
-        "kind": "html",
-        "role": "listing",
-        "rowsReturned": 19,
-        "truthFlag": "mecListView({ start_date: \"2026-09-20\", end_date: \"2026-12-17\", offset: \"19\", limit: \"20\", pagination: \"loadmore\" })",
-        "note": "Redesigned site (custom theme): a MEC \"full calendar\" widget opened on its LIST skin — one card per dated event (day, start time, title, flyer, link to the dated event post), with Monthly / List tabs and a Load-more button. The month grid the 2026-09-10 recon documented is no longer on the page."
-      },
-      {
-        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_skin=monthly",
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_skin=monthly&page=https%3A%2F%2Fwww.thedallaseagle.com%2Fevents%2F",
         "kind": "form-post",
         "role": "feed",
-        "rowsReturned": 19,
-        "truthFlag": "mecMonthlyView({ active_month: {year: \"2026\", month: \"09\"}, next_month: {year: \"2026\", month: \"10\"} })",
-        "note": "The widget's own Monthly tab, replayed (action=mec_full_calendar_switch_skin&skin=monthly&<atts>): the September month grid with its mecMonthlyView settings, after which the month-feed replay serves October (9 event posts, all already on the list), November and December (no events). The list's Load-more call answered count 0 twice: nothing is published past 2026-10-02."
+        "rowsReturned": 37,
+        "truthFlag": "mecMonthlyView grid for 2026-10: 37 titled cards on 14 dated cells (Oct 15 – Oct 31)",
+        "note": "Scraper page cache (storage/pages/www.thedallaseagle.com/wp-admin__admin-ajax.php--q-1yhr9l0.json, fetched 2026-10-15T09:22:48Z): the widget's Monthly tab replayed as the scraper does (action=mec_full_calendar_switch_skin&skin=monthly). Every cell lists each event with title, start/end ('1:00 pm - 6:00 pm' or 'Start from: October 31, 2026 - 9:00 pm End at: November 1, 2026 - 2:00 am') and the opening of its description. Oct 15–16 (3 cards) had passed by the recon date and are counted, not enumerated."
+      },
+      {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2026-11",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 1,
+        "truthFlag": "navigator \"October November 2026 December\"; one card in the \"1\" cell",
+        "note": "Scraper page cache (fetched 2026-10-15T09:22:51Z): the November grid holds only SHOCK Therapy with DJ Dan Slater, drawn in Nov 1 because it ends there; December 2026 (fetched 2026-10-16) and January 2027 feeds hold no cards at all. Nothing is published past Oct 31."
       }
-    ],
-    "notes": "Recon on 2026-09-21 from one cached read of the listing behind the gate, one of the monthly skin and the scraper's own cached month feeds. 18 cards on or after 2026-09-21; the venue publishes about two weeks ahead (last dated post 2026-10-02)."
+    ]
   },
   "coverage": {
     "confidence": "high",
-    "basis": "The list skin's 19 cards are everything the site publishes today: the monthly skin and the October–December month feeds list the same posts and nothing later. Every card is one dated post, so every entry is a single; standing nights (Underwear Happy Hour, Karaoke, trivia) appear as one post per week, and the repeat wording on their posts was not re-read for this recon.",
-    "publishedEventCount": 18,
-    "documentedEventCount": 18,
+    "basis": "Three doors agree: the live list skin (20 cards Oct 17–28, then \"No event found!\" behind Load More), the cached October month skin (every October night with its times, read 2026-10-15) and the November/December/January month feeds (one Oct 31 spill-over, then nothing). Oct 17–28 are documented from the live list; Oct 28 evening through Oct 31 from the cached skin, which the live list has not reached yet. Every card is one dated post (the standing nights are posted week by week), so every entry is a single; 28 upcoming on the recon date, 3 past (Oct 15–16) counted here.",
+    "publishedEventCount": 28,
+    "documentedEventCount": 28,
     "occurrenceWindow": {
-      "start": "2026-09-21",
-      "end": "2026-12-20"
+      "start": "2026-10-17",
+      "end": "2027-01-15"
     },
     "pastListingsPresent": true,
-    "knownGaps": []
+    "knownGaps": [
+      "The live list page shows 20 cards per Load More page; the Oct 28 evening and Oct 29–31 entries rest on the 2026-10-15/16 page cache, not on a live read today (the monthly skin is a form POST that was not replayed by hand). A rename like Fright Night → Chains of the Deep could have happened there too."
+    ]
   },
   "defaults": {
     "city": "dallas",
@@ -65,151 +67,18 @@
   },
   "events": [
     {
-      "id": "motley-clue-trivia-2026-09-22",
+      "id": "the-market-on-the-strip-eagle-edition-2026-10-17",
       "kind": "single",
-      "title": "Motley Clue Trivia",
-      "startDate": "2026-09-22",
-      "startTime": "20:00",
-      "website": "https://www.thedallaseagle.com/events/motley-clue-trivia-2026-09-22/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-6e7d5a1299449418bec06544929d7fa6f965a490fb3aecde8ee0024bb9e6a39d.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Tue, Sep 22 8pm Motley Clue Trivia"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "underwear-happy-hour-2026-09-23",
-      "kind": "single",
-      "title": "Underwear Happy Hour",
-      "startDate": "2026-09-23",
-      "startTime": "19:00",
-      "website": "https://www.thedallaseagle.com/events/underwear-happy-hour-2026-09-23/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-a76d8703b1b40b64ccee8f095eac93e90ab8f29b7f6b684219f452990ca07b3a.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Wed, Sep 23 7pm Underwear Happy Hour"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "the-floor-watch-party-2026-09-23",
-      "kind": "single",
-      "title": "The Floor Watch Party",
-      "startDate": "2026-09-23",
-      "startTime": "19:00",
-      "website": "https://www.thedallaseagle.com/events/the-floor-watch-party-2026-09-23/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-3b19c61f5f450751ce1085f317f874511ed1753b3720b6438598b9854313648c.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Wed, Sep 23 7pm The Floor Watch Party"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "underwear-night-and-contest-with-dj-michael-jon-2026-09-23",
-      "kind": "single",
-      "title": "Underwear Night and Contest with DJ Michael Jon",
-      "startDate": "2026-09-23",
-      "startTime": "21:00",
-      "website": "https://www.thedallaseagle.com/events/underwear-night-and-contest-2026-09-23/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-b46907900e278f7abb5c99dda86ecd768d16747e3f039357c10c449b740d0876.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Wed, Sep 23 9pm Underwear Night and Contest with DJ Michael Jon"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "karaoke-2026-09-24",
-      "kind": "single",
-      "title": "Karaoke",
-      "startDate": "2026-09-24",
-      "startTime": "19:00",
-      "website": "https://www.thedallaseagle.com/events/karaoke-2026-09-24/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-233e2dd6940ff7e866ca62a8d5015d751f3fc78253816dd0746e1a51213b30fc.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Thu, Sep 24 7pm Karaoke"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "frequency-featuring-george-flores-2026-09-24",
-      "kind": "single",
-      "title": "Frequency featuring George Flores",
-      "startDate": "2026-09-24",
-      "startTime": "22:00",
-      "website": "https://www.thedallaseagle.com/events/frequency-featuring-george-flores-2026-09-24/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-c3dd128bd855e336bfd9977e24ba251bec793a8a8df0ea3880d8a13824c3e762.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Thu, Sep 24 10pm Frequency featuring George Flores"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "pet-night-with-dj-vicky-kuba-2026-09-25",
-      "kind": "single",
-      "title": "Pet Night with DJ Vicky Kuba",
-      "startDate": "2026-09-25",
-      "startTime": "21:00",
-      "website": "https://www.thedallaseagle.com/events/pet-night-2026-09-25/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-bf7e193ab4864e3eef5bb2f1f307d84d3ae115eed5cca3fed8e919e3a993f628.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Fri, Sep 25 9pm Pet Night with DJ Vicky Kuba"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "the-market-on-the-strip-eagle-edition-2026-09-26",
-      "kind": "single",
-      "title": "The Market on the Strip – Eagle Edition",
-      "startDate": "2026-09-26",
+      "title": "The Market on the Strip: Eagle Edition",
+      "startDate": "2026-10-17",
       "startTime": "13:00",
-      "website": "https://www.thedallaseagle.com/events/the-market-on-the-strip-eagle-edition-2026-09-26/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/plugins/dallas-eagle-core/includes/de-releases/calendar-detail-cd5e85b-v34/assets/images/dallas-eagle-promo-fallback-7ecec6bdc1f8.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
+      "endTime": "18:00",
+      "website": "https://www.thedallaseagle.com/events/the-market-on-the-strip-eagle-edition-2026-10-17/",
+      "sourceRung": "page-cache",
       "confidence": "high",
       "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Sat, Sep 26 1pm The Market on the Strip – Eagle Edition"
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_skin=monthly&page=https%3A%2F%2Fwww.thedallaseagle.com%2Fevents%2F",
+        "quote": "17 The Market on the Strip: Eagle Edition 1:00 pm - 6:00 pm"
       },
       "expect": {
         "extracted": true
@@ -217,18 +86,18 @@
       "bearVerdict": null
     },
     {
-      "id": "dungeons-doms-2026-09-26",
+      "id": "dungeons-doms-2026-10-17",
       "kind": "single",
       "title": "Dungeons & Doms",
-      "startDate": "2026-09-26",
+      "startDate": "2026-10-17",
       "startTime": "13:30",
-      "website": "https://www.thedallaseagle.com/events/dungeons-doms-2026-09-26/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-615e93d74ffdb0b3312d2c47768be769cbec4a6ad7a132bd50ba45eafced9948.webp?lossy=2&strip=1&webp=1",
+      "endTime": "16:30",
+      "website": "https://www.thedallaseagle.com/events/dungeons-doms-2026-10-17/",
       "sourceRung": "static",
       "confidence": "high",
       "evidence": {
         "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Sat, Sep 26 1:30pm Dungeons & Doms"
+        "quote": "Sat, Oct 17 1:30pm Dungeons & Doms"
       },
       "expect": {
         "extracted": true
@@ -236,18 +105,18 @@
       "bearVerdict": null
     },
     {
-      "id": "shock-therapy-with-dj-dan-slater-2026-09-26",
+      "id": "uclse-drag-show-2026-10-17",
       "kind": "single",
-      "title": "SHOCK Therapy with DJ Dan Slater",
-      "startDate": "2026-09-26",
-      "startTime": "22:00",
-      "website": "https://www.thedallaseagle.com/events/shock-therapy-2026-09-26/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-4c6d10d6f3e8a76e23d0f90e22fb9bcf7451644d2728d7dcb058b8a29c7032a0.webp?lossy=2&strip=1&webp=1",
+      "title": "UCLSE Drag Show",
+      "startDate": "2026-10-17",
+      "startTime": "17:00",
+      "endTime": "20:30",
+      "website": "https://www.thedallaseagle.com/events/uclse-drag-show-2026-10-17/",
       "sourceRung": "static",
       "confidence": "high",
       "evidence": {
         "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Sat, Sep 26 10pm SHOCK Therapy with DJ Dan Slater"
+        "quote": "Sat, Oct 17 5pm UCLSE Drag Show"
       },
       "expect": {
         "extracted": true
@@ -255,37 +124,58 @@
       "bearVerdict": null
     },
     {
-      "id": "sweet-tea-with-dj-luke-dice-2026-09-27",
+      "id": "unitea-presents-redline-with-dj-apthout-2026-10-17",
       "kind": "single",
-      "title": "Sweet Tea with DJ Luke Dice",
-      "startDate": "2026-09-27",
-      "startTime": "16:00",
-      "website": "https://www.thedallaseagle.com/events/sweet-tea-2026-09-27/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-77c47edffcf16d20621762e6c24fd2a31cc9775553dc6107bb0de929cab373b5.webp?lossy=2&strip=1&webp=1",
+      "title": "UniTEA Presents: REDLINE with DJ Apthout",
+      "startDate": "2026-10-17",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-18",
       "sourceRung": "static",
       "confidence": "high",
       "evidence": {
         "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Sun, Sep 27 4pm Sweet Tea with DJ Luke Dice"
+        "quote": "Sat, Oct 17 9pm UniTEA Presents: REDLINE with DJ Apthout"
       },
       "expect": {
         "extracted": true
       },
-      "bearVerdict": null
+      "bearVerdict": null,
+      "note": "Ticketed on posh.vip (https://posh.vip/e/unitea-presents-redline); the monthly skin states \"Start from: October 17, 2026 - 9:00 pm End at: October 18, 2026 - 2:00 am\"."
     },
     {
-      "id": "motley-clue-trivia-2026-09-29",
+      "id": "dirty-pop-with-dj-drew-g-2026-10-18",
+      "kind": "single",
+      "title": "Dirty Pop with DJ Drew G",
+      "startDate": "2026-10-18",
+      "startTime": "17:00",
+      "endTime": "02:00",
+      "endDate": "2026-10-19",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Sun, Oct 18 5pm Dirty Pop with DJ Drew G"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Titled \"Dirty Pop\" on the 2026-10-15 month skin (\"Start from: October 18, 2026 - 5:00 pm End at: October 19, 2026 - 2:00 am\"); the DJ was added to the title between 2026-10-15 and 2026-10-17."
+    },
+    {
+      "id": "motley-clue-trivia-2026-10-20",
       "kind": "single",
       "title": "Motley Clue Trivia",
-      "startDate": "2026-09-29",
+      "startDate": "2026-10-20",
       "startTime": "20:00",
-      "website": "https://www.thedallaseagle.com/events/motley-clue-trivia-2026-09-29/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-df6dc5400a19effa862b3dea90576b9506142aa97c978de22213a40d8279a4f1.webp?lossy=2&strip=1&webp=1",
+      "endTime": "22:00",
+      "website": "https://www.thedallaseagle.com/events/motley-clue-trivia-2026-10-20/",
       "sourceRung": "static",
       "confidence": "high",
       "evidence": {
         "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Tue, Sep 29 8pm Motley Clue Trivia"
+        "quote": "Tue, Oct 20 8pm Motley Clue Trivia"
       },
       "expect": {
         "extracted": true
@@ -293,75 +183,39 @@
       "bearVerdict": null
     },
     {
-      "id": "underwear-happy-hour-2026-09-30",
-      "kind": "single",
-      "title": "Underwear Happy Hour",
-      "startDate": "2026-09-30",
-      "startTime": "19:00",
-      "website": "https://www.thedallaseagle.com/events/underwear-happy-hour-2026-09-30/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/de-promo-launch/c20d67aaa6fa7bdcc4c1c6a87fabe7eb7d253aafff85046a3e2619cc4dadc1fd/promo-c20d67aaa6fa7bdcc4c1c6a87fabe7eb7d253aafff85046a3e2619cc4dadc1fd.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Wed, Sep 30 7pm Underwear Happy Hour"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "the-floor-watch-party-2026-09-30",
-      "kind": "single",
-      "title": "The Floor Watch Party",
-      "startDate": "2026-09-30",
-      "startTime": "19:00",
-      "website": "https://www.thedallaseagle.com/events/the-floor-watch-party-2026-09-30/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-649308430019240b35dc9c60ddfff9e0091d22212dbb26e79a8d1603b54adf06.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Wed, Sep 30 7pm The Floor Watch Party"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "jocktoberfest-with-dj-drew-g-2026-09-30",
-      "kind": "single",
-      "title": "Jocktoberfest! with DJ Drew G",
-      "startDate": "2026-09-30",
-      "startTime": "21:00",
-      "website": "https://www.thedallaseagle.com/events/jocktoberfest-2026-09-30/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-9d8f6ab19fb5a8089b8db292cf83363b2c0d3a0ff0c773063f99ec6b5792024c.webp?lossy=2&strip=1&webp=1",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Wed, Sep 30 9pm Jocktoberfest! with DJ Drew G"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "karaoke-2026-10-01",
+      "id": "karaoke-2026-10-20",
       "kind": "single",
       "title": "Karaoke",
-      "startDate": "2026-10-01",
+      "startDate": "2026-10-20",
+      "startTime": "22:00",
+      "endTime": "00:00",
+      "endDate": "2026-10-21",
+      "website": "https://www.thedallaseagle.com/events/karaoke-2026-10-20/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Tue, Oct 20 10pm Karaoke"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Month skin: \"Start from: October 20, 2026 - 10:00 pm End at: October 21, 2026 - 12:00 am\"."
+    },
+    {
+      "id": "underwear-happy-hour-2026-10-21",
+      "kind": "single",
+      "title": "Underwear Happy Hour",
+      "startDate": "2026-10-21",
       "startTime": "19:00",
-      "website": "https://www.thedallaseagle.com/events/karaoke-2026-10-01/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/de-promo-launch/ca3363c3137aae68c8ab12a71c7cc07b2f1f5c43a2fb2f36236690951d5e3283/promo-ca3363c3137aae68c8ab12a71c7cc07b2f1f5c43a2fb2f36236690951d5e3283.webp?lossy=2&strip=1&webp=1",
+      "endTime": "21:00",
+      "website": "https://www.thedallaseagle.com/events/underwear-happy-hour-2026-10-21/",
       "sourceRung": "static",
       "confidence": "high",
       "evidence": {
         "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Thu, Oct 1 7pm Karaoke"
+        "quote": "Wed, Oct 21 7pm Underwear Happy Hour"
       },
       "expect": {
         "extracted": true
@@ -369,18 +223,18 @@
       "bearVerdict": null
     },
     {
-      "id": "dallas-eagle-s-big-3-strip-down-for-the-big-d-2026-10-02",
+      "id": "the-floor-watch-party-2026-10-21",
       "kind": "single",
-      "title": "Dallas Eagle’s Big 3: Strip Down for the Big D!",
-      "startDate": "2026-10-02",
-      "startTime": "19:30",
-      "website": "https://www.thedallaseagle.com/events/dallas-eagles-big-3-strip-down-for-the-big-d-2026-10-02/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-b0ca8310f51812fc86870704d9eb806918a6f4bf027591dd13e84b0d7989d1fe.webp?lossy=2&strip=1&webp=1",
+      "title": "The Floor Watch Party",
+      "startDate": "2026-10-21",
+      "startTime": "19:00",
+      "endTime": "20:00",
+      "website": "https://www.thedallaseagle.com/events/the-floor-watch-party-2026-10-21/",
       "sourceRung": "static",
       "confidence": "high",
       "evidence": {
         "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Fri, Oct 2 7:30pm Dallas Eagle’s Big 3: Strip Down for the Big D!"
+        "quote": "Wed, Oct 21 7pm The Floor Watch Party"
       },
       "expect": {
         "extracted": true
@@ -388,25 +242,379 @@
       "bearVerdict": null
     },
     {
-      "id": "dallas-eagle-anniversary-with-dj-tdon-2026-10-02",
+      "id": "underwear-night-and-contest-2026-10-21",
       "kind": "single",
-      "title": "Dallas Eagle Anniversary with DJ TDon",
-      "startDate": "2026-10-02",
+      "title": "Underwear Night and Contest",
+      "startDate": "2026-10-21",
       "startTime": "21:00",
-      "website": "https://www.thedallaseagle.com/events/dallas-eagle-anniversary-2026-10-02/",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/2026/09/promo-50fab21f95e9328cdee6d2d80cba8b33ce0c8da9db004789a78ac5d752e78b4a.webp?lossy=2&strip=1&webp=1",
+      "website": "https://www.thedallaseagle.com/events/underwear-night-and-contest-2026-10-21/",
       "sourceRung": "static",
       "confidence": "high",
       "evidence": {
         "url": "https://www.thedallaseagle.com/events/",
-        "quote": "Fri, Oct 2 9pm Dallas Eagle Anniversary with DJ TDon"
+        "quote": "Wed, Oct 21 9pm Underwear Night and Contest"
       },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null
+    },
+    {
+      "id": "the-traitors-watch-party-2026-10-22",
+      "kind": "single",
+      "title": "The Traitors Watch Party",
+      "startDate": "2026-10-22",
+      "startTime": "19:00",
+      "endTime": "20:00",
+      "website": "https://www.thedallaseagle.com/events/the-traitors-watch-party-2026-10-22/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Thu, Oct 22 7pm The Traitors Watch Party"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-2026-10-22",
+      "kind": "single",
+      "title": "Karaoke",
+      "startDate": "2026-10-22",
+      "startTime": "20:00",
+      "endTime": "23:00",
+      "website": "https://www.thedallaseagle.com/events/karaoke-2026-10-22/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Thu, Oct 22 8pm Karaoke"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "unity-night-pets-and-pups-with-dj-boost-2026-10-23",
+      "kind": "single",
+      "title": "Unity Night: Pets and Pups with DJ Boost",
+      "startDate": "2026-10-23",
+      "startTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Fri, Oct 23 9pm Unity Night: Pets and Pups with DJ Boost"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-market-on-the-strip-eagle-edition-2026-10-24",
+      "kind": "single",
+      "title": "The Market on the Strip: Eagle Edition",
+      "startDate": "2026-10-24",
+      "startTime": "13:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Sat, Oct 24 1pm The Market on the Strip: Eagle Edition"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Not on the 2026-10-15 month skin (which listed the Market on Oct 17 and Oct 31); added to the list between 2026-10-15 and 2026-10-17."
+    },
+    {
+      "id": "lost-souls-happy-hour-2026-10-24",
+      "kind": "single",
+      "title": "Lost Souls Happy Hour",
+      "startDate": "2026-10-24",
+      "startTime": "13:00",
+      "endTime": "15:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Sat, Oct 24 1pm Lost Souls Happy Hour"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dallas-eagle-af-2026-10-24",
+      "kind": "single",
+      "title": "Dallas Eagle AF",
+      "startDate": "2026-10-24",
+      "startTime": "15:00",
+      "endTime": "17:00",
+      "website": "https://www.thedallaseagle.com/events/dallas-eagle-af-2026-10-24/",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Sat, Oct 24 3pm Dallas Eagle AF"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "chains-of-the-deep-with-dj-drew-g-2026-10-24",
+      "kind": "single",
+      "title": "Chains of the Deep with DJ Drew G",
+      "startDate": "2026-10-24",
+      "startTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Sat, Oct 24 9pm Chains of the Deep with DJ Drew G"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Titled \"Fright Night with DJ Drew G\" on the 2026-10-15 month skin (\"Start from: October 24, 2026 - 9:00 pm\"); renamed between 2026-10-15 and 2026-10-17. The run of 2026-10-17 05:48 still carried the old title from its cached page."
+    },
+    {
+      "id": "sunday-funday-with-dj-michael-jon-2026-10-25",
+      "kind": "single",
+      "title": "Sunday Funday with DJ Michael Jon",
+      "startDate": "2026-10-25",
+      "startTime": "17:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Sun, Oct 25 5pm Sunday Funday with DJ Michael Jon"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "motley-clue-trivia-2026-10-27",
+      "kind": "single",
+      "title": "Motley Clue Trivia",
+      "startDate": "2026-10-27",
+      "startTime": "20:00",
+      "endTime": "22:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Tue, Oct 27 8pm Motley Clue Trivia"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-2026-10-27",
+      "kind": "single",
+      "title": "Karaoke",
+      "startDate": "2026-10-27",
+      "startTime": "22:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Tue, Oct 27 10pm Karaoke"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "underwear-happy-hour-2026-10-28",
+      "kind": "single",
+      "title": "Underwear Happy Hour",
+      "startDate": "2026-10-28",
+      "startTime": "19:00",
+      "endTime": "21:00",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Wed, Oct 28 7pm Underwear Happy Hour"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-floor-watch-party-2026-10-28",
+      "kind": "single",
+      "title": "The Floor Watch Party",
+      "startDate": "2026-10-28",
+      "startTime": "19:00",
+      "endTime": "20:00",
+      "sourceRung": "page-cache",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_skin=monthly&page=https%3A%2F%2Fwww.thedallaseagle.com%2Fevents%2F",
+        "quote": "28 Underwear Happy Hour 7:00 pm - 9:00 pm The Floor Watch Party 7:00 pm - 8:00 pm"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "underwear-night-and-contest-2026-10-28",
+      "kind": "single",
+      "title": "Underwear Night and Contest",
+      "startDate": "2026-10-28",
+      "startTime": "21:00",
+      "sourceRung": "page-cache",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_skin=monthly&page=https%3A%2F%2Fwww.thedallaseagle.com%2Fevents%2F",
+        "quote": "Underwear Night and Contest Start from: October 28, 2026 - 9:00 pm"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-traitors-watch-party-2026-10-29",
+      "kind": "single",
+      "title": "The Traitors Watch Party",
+      "startDate": "2026-10-29",
+      "startTime": "19:00",
+      "endTime": "20:00",
+      "sourceRung": "page-cache",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_skin=monthly&page=https%3A%2F%2Fwww.thedallaseagle.com%2Fevents%2F",
+        "quote": "29 The Traitors Watch Party 7:00 pm - 8:00 pm"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "karaoke-2026-10-29",
+      "kind": "single",
+      "title": "Karaoke",
+      "startDate": "2026-10-29",
+      "startTime": "20:00",
+      "endTime": "23:00",
+      "sourceRung": "page-cache",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_skin=monthly&page=https%3A%2F%2Fwww.thedallaseagle.com%2Fevents%2F",
+        "quote": "29 The Traitors Watch Party 7:00 pm - 8:00 pm Karaoke 8:00 pm - 11:00 pm"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "unity-night-onyx-with-dj-philip-webb-2026-10-30",
+      "kind": "single",
+      "title": "Unity Night: Onyx with DJ Philip Webb",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "sourceRung": "page-cache",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_skin=monthly&page=https%3A%2F%2Fwww.thedallaseagle.com%2Fevents%2F",
+        "quote": "Unity Night: Onyx with DJ Philip Webb Start from: October 30, 2026 - 9:00 pm"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-market-on-the-strip-eagle-edition-2026-10-31",
+      "kind": "single",
+      "title": "The Market on the Strip: Eagle Edition",
+      "startDate": "2026-10-31",
+      "startTime": "13:00",
+      "endTime": "18:00",
+      "sourceRung": "page-cache",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_skin=monthly&page=https%3A%2F%2Fwww.thedallaseagle.com%2Fevents%2F",
+        "quote": "31 The Market on the Strip: Eagle Edition 1:00 pm - 6:00 pm"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "shock-therapy-with-dj-dan-slater-2026-10-31",
+      "kind": "single",
+      "title": "SHOCK Therapy with DJ Dan Slater",
+      "startDate": "2026-10-31",
+      "startTime": "21:00",
+      "endTime": "02:00",
+      "endDate": "2026-11-01",
+      "sourceRung": "page-cache",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2026-11",
+        "quote": "SHOCK Therapy with DJ Dan Slater Start from: October 31, 2026 - 9:00 pm End at: November 1, 2026 - 2:00 am"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "The November month feed draws this Oct 31 night in its \"1\" cell because it ends on Nov 1; the October skin lists it under 31 as well."
     }
   ],
-  "traps": [],
+  "traps": [
+    {
+      "id": "age-gate-form",
+      "kind": "navigation",
+      "label": "\"Welcome to Dallas Eagle — Are you 21? You must be 21 or older to enter. Yes / No. We’ll remember your answer on this device for one year.\"",
+      "why": "A server-side age question printed at the top of every page. Nothing in it is an event; the listing follows it in the same HTML, so no cookie is needed to read the calendar.",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/events/",
+        "quote": "Are you 21? You must be 21 or older to enter. Yes No We’ll remember your answer on this device for one year."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261017-054812"
+    },
+    {
+      "id": "month-feed-spillover-cell",
+      "kind": "duplicate-listing",
+      "label": "The November month feed draws the Oct 31 SHOCK Therapy card in its \"1\" cell",
+      "why": "MEC places a night that ends after midnight in the cell of its END day on the next month grid, so the same post appears in the October grid under 31 and in the November grid under 1. One event, stated twice with its full \"Start from: October 31, 2026 - 9:00 pm\" clock both times — the reader must date it Oct 31, never Nov 1.",
+      "evidence": {
+        "url": "https://www.thedallaseagle.com/wp-admin/admin-ajax.php?mec_month_feed=2026-11",
+        "quote": "1 SHOCK Therapy with DJ Dan Slater Start from: October 31, 2026 - 9:00 pm End at: November 1, 2026 - 2:00 am"
+      },
+      "expect": {
+        "extracted": true,
+        "note": "Correct behaviour is ONE record dated Oct 31 21:00 local (run 20261017-054812: one record, startDate 2026-11-01T02:00Z = Oct 31 9pm CDT). Two SHOCK Therapy records, or one dated Nov 1, is the failure."
+      },
+      "seenInRun": "20261017-054812"
+    }
+  ],
   "openQuestions": []
 }

@@ -357,6 +357,27 @@ class BasicDataNormalizer extends BaseNormalizer {
 }
 
 class BarDataNormalizer extends BaseNormalizer {
+    // A bar name that is a curated bar's own website host ("hereticatlanta"
+    // for The Heretic at hereticatlanta.com): a venue site's pages are read
+    // with the domain as the venue often enough, and no other rung
+    // canonicalizes that spelling, so the same night read off two of the
+    // site's pages carried two bar names and never folded (run
+    // 20261017-054812: "Nightshift w/ Phox…" at "hereticatlanta" beside
+    // "NIGHTSHIFT" at "The Heretic"). Compares the host's first label and the
+    // whole host, letters-and-digits only; a label under five characters is
+    // too short to be a name. No URL parser: this also runs on the phone.
+    static barNameIsWebsiteHost(normalizedBarName, website) {
+        if (!normalizedBarName || typeof website !== 'string' || !website.trim()) return false;
+        const host = website.trim().toLowerCase()
+            .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
+            .split(/[/?#]/)[0]
+            .replace(/^www\./, '');
+        const label = host.split('.')[0];
+        if (!label || label.length < 5) return false;
+        const normalize = (value) => value.replace(/[^a-z0-9]/g, '');
+        return normalizedBarName === normalize(label) || normalizedBarName === normalize(host);
+    }
+
     normalize(event) {
         if (!event || typeof event !== 'object') return event;
 
@@ -376,6 +397,7 @@ class BarDataNormalizer extends BaseNormalizer {
         if (!cityBars || !Array.isArray(cityBars)) return event;
 
         let matchedBar = null;
+        let barWasSiteHost = false;
 
         const normalizeStr = str => str.replace(/[^a-z0-9]/g, '');
 
@@ -399,6 +421,11 @@ class BarDataNormalizer extends BaseNormalizer {
                     if (typeof b.name !== 'string') return false;
                     return normalizeStr(b.name.toLowerCase()).includes(normalizedEventBar);
                 });
+            }
+            // The venue spelled as its own domain (see barNameIsWebsiteHost).
+            if (!matchedBar) {
+                matchedBar = cityBars.find(b => BarDataNormalizer.barNameIsWebsiteHost(normalizedEventBar, b.website)) || null;
+                if (matchedBar) barWasSiteHost = true;
             }
         }
 
@@ -479,6 +506,13 @@ class BarDataNormalizer extends BaseNormalizer {
 
         if (matchedBar) {
             let modified = false;
+
+            if (barWasSiteHost && typeof matchedBar.name === 'string' && matchedBar.name.trim() !== ''
+                && event.bar !== matchedBar.name) {
+                console.log(`🐻 BarDataNormalizer: bar "${event.bar}" is the website host of curated bar "${matchedBar.name}" — canonicalized`);
+                event.bar = matchedBar.name;
+                modified = true;
+            }
 
             // Set bar name if not already set (since we matched by address/location/description/title)
             if (matchedBar.name && (!event.bar || event.bar.trim() === '' || descriptionWasVenue || titleWasVenue)) {

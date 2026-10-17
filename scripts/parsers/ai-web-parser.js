@@ -1463,17 +1463,12 @@ class AiWebParser {
             // home page is a link hub with the Elfsight embed in a shared
             // block (crawl from the root, 2026-10-08): the widget published
             // 92 nights and the hub route returned none of them.
-            const doorReadSources = new Set(['squarespace', 'eventon', 'wix', 'mec', 'elfsight', 'dice']);
-            const useStructuredEvents = parserConfig.discoveryOnly !== true
-                && (pageClassification !== 'link-aggregator' || doorReadSources.has(structuredSource))
-                && structuredEvents.length > 0
-                // A multi-event page with a single structured node likely marks up only its
-                // featured event — fall through to segment extraction for full coverage.
-                // The page's OWN flight data is its whole listing however short
-                // (whereto.party's one-event city hubs: Paris, Toulouse — the
-                // fall-through read the hub's header as an event and the one
-                // card a second time, run 20261012-214806).
-                && (pageClassification !== 'multi-event-page' || structuredEvents.length >= 2 || structuredSource === 'page-data');
+            const useStructuredEvents = AiWebParser.shouldReadStructuredEvents({
+                discoveryOnly: parserConfig.discoveryOnly === true,
+                pageClassification,
+                structuredSource,
+                structuredCount: structuredEvents.length
+            });
             if (useStructuredEvents) {
                 // "skipping OCR" was true when this route read no images at
                 // all; the events' own artwork is OCR'd below, so the line
@@ -10186,6 +10181,32 @@ class AiWebParser {
         const nextEnd = Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 1) / 1000 + clockOffset - 1;
         return { ...sc, fixed_month: String(target.getUTCMonth() + 1), fixed_year: String(target.getUTCFullYear()),
             focus_start_date_range: String(nextStart), focus_end_date_range: String(nextEnd) };
+    }
+
+    // Which route reads a page: its structured events, or the segment/AI
+    // pass. A link hub's own JSON-LD / page data is not read (bearracuda.com
+    // marks up a partial set on its hub; the detail pages are read instead)
+    // — but a calendar DOOR the page itself opened (a widget boot, a
+    // collection twin, a month grid) is the site's complete calendar
+    // whatever the HTML shell around it reads as (Rockbar's home page, crawl
+    // from the root 2026-10-08: the widget published 92 nights and the hub
+    // route returned none of them). A multi-event page with a single JSON-LD
+    // node likely marks up only its featured event — fall through to segment
+    // extraction for full coverage — but the page's OWN flight data
+    // (whereto.party's one-event city hubs, run 20261012-214806) and a
+    // door's single row are the whole listing however short: a quiet EventON
+    // calendar answered its month replay with ONE card (woofsatlanta.com,
+    // run 20261017-054812), the fall-through re-read that card by AI, dated
+    // it from an undated flyer, dropped it as a date orphan, and shipped the
+    // page's business-hours block as an event titled "Facebook" instead.
+    static shouldReadStructuredEvents({ discoveryOnly = false, pageClassification = '', structuredSource = null, structuredCount = 0 } = {}) {
+        const DOOR_READ_SOURCES = new Set(['squarespace', 'eventon', 'wix', 'mec', 'elfsight', 'dice']);
+        if (discoveryOnly || !structuredSource || !(structuredCount > 0)) return false;
+        const isDoor = DOOR_READ_SOURCES.has(structuredSource);
+        if (pageClassification === 'link-aggregator' && !isDoor) return false;
+        if (pageClassification === 'multi-event-page' && structuredCount < 2
+            && structuredSource !== 'page-data' && !isDoor) return false;
+        return true;
     }
 
     // The answer's event cards, made readable by the ordinary structured-data

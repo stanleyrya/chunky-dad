@@ -28636,3 +28636,42 @@ test('a replaced primary picture takes its stale crop with it: the saved orienta
   assert.ok(!finalEvent.imageVertical, `stale crop dropped: ${finalEvent.imageVertical}`);
   assert.ok(logs.some(line => line.includes('dropped imageVertical — a crop of the replaced primary picture')), logs.join('\n'));
 });
+
+// ---------------------------------------------------------------------------
+// A calendar door's single row IS the listing (woofsatlanta.com, run
+// 20261017-054812: the EventON month replay answered with one card, the
+// multi-event fall-through re-read it by AI, dated it from an undated flyer,
+// dropped it as a date orphan, and shipped the business-hours block as an
+// event titled "Facebook"). The fixture is that month's one card, verbatim.
+// ---------------------------------------------------------------------------
+test('a calendar door that answers with one card on a multi-event page is read structurally, not re-read by the AI', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { AiWebParser } = require('./parsers/ai-web-parser');
+  const parser = new AiWebParser({ normalizeUrl: (u) => u });
+  parser.core = createCore();
+  const feedCard = fs.readFileSync(path.join(__dirname, 'fixtures', 'eventon-month-feed-single-card.html'), 'utf8');
+  const normalized = parser.normalizeEventOnCalendarHtml(feedCard);
+  assert.match(normalized, /"startDate": "2026-11-13T21:30:00"/, 'the fixed offset is dropped, the wall clock kept');
+  const events = parser.extractEventsFromJsonLd(normalized, 'https://venue.example/calendar/', null);
+  assert.equal(events.length, 1, 'the month replay holds exactly one card');
+  assert.equal(events[0].title, 'FAFO Fridays');
+  assert.ok(events[0].startDate instanceof Date && !Number.isNaN(events[0].startDate.getTime()));
+  assert.ok(!/\/var\/ri-/.test(String(events[0].url || events[0].website || '')), 'the per-night /var/ri- tail is not an address');
+
+  // One door row on a multi-event page is the listing.
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: 'eventon', structuredCount: events.length }), true);
+  for (const door of ['squarespace', 'wix', 'mec', 'elfsight', 'dice']) {
+    assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: door, structuredCount: 1 }), true, door);
+  }
+  // A lone JSON-LD node on a multi-event page still falls through (featured-event markup) …
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: 'jsonld', structuredCount: 1 }), false);
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: 'jsonld', structuredCount: 2 }), true);
+  // … the page's own flight data does not, a link hub's own JSON-LD is never read, a door on a hub is.
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: 'page-data', structuredCount: 1 }), true);
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'link-aggregator', structuredSource: 'jsonld', structuredCount: 5 }), false);
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'link-aggregator', structuredSource: 'elfsight', structuredCount: 1 }), true);
+  // Discovery-only parsers and empty sets never take the structured route.
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ discoveryOnly: true, pageClassification: 'multi-event-page', structuredSource: 'eventon', structuredCount: 3 }), false);
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'event-page', structuredSource: 'jsonld', structuredCount: 0 }), false);
+});
