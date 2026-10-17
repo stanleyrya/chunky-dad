@@ -4879,3 +4879,42 @@ test('city patterns: Lynnwood is Seattle, and Westfield is Indianapolis only whe
   assert.equal(normalizer.matchCityInText('Westfield, NJ'), null);
   assert.equal(normalizer.matchCityInText('Westfield, MA 01085'), null);
 });
+
+// ---------------------------------------------------------------------------
+// A bar spelled as the venue's own domain is that venue (hereticatlanta.com,
+// run 20261017-054812: "Witch Please" and "Nightshift w/ Phox…" at bar
+// "hereticatlanta" beside their flyer twins at "The Heretic" — never folded).
+// ---------------------------------------------------------------------------
+test('BarDataNormalizer reads a bar named as a curated bar\'s own website host as that bar', () => {
+  const core = new SharedCore({ atlanta: { timezone: 'America/New_York', patterns: ['atlanta'] } }, {
+    eventSchema: EventSchema,
+    bars: {
+      atlanta: [{
+        name: 'The Heretic',
+        address: '2069 Cheshire Bridge Rd NE, Atlanta, GA 30324',
+        coordinates: '33.8115012, -84.3552779',
+        website: 'https://hereticatlanta.com'
+      }]
+    }
+  });
+  const normalizer = new BarDataNormalizer(core);
+
+  const asLabel = { title: 'Witch Please', city: 'atlanta', bar: 'hereticatlanta' };
+  normalizer.normalize(asLabel);
+  assert.equal(asLabel.bar, 'The Heretic');
+  assert.equal(asLabel.address, '2069 Cheshire Bridge Rd NE, Atlanta, GA 30324');
+
+  const asHost = { title: 'Nightshift w/ Phox, Goonz & Mike Bradley', city: 'atlanta', bar: 'Hereticatlanta.com' };
+  normalizer.normalize(asHost);
+  assert.equal(asHost.bar, 'The Heretic');
+
+  // A bar that is neither the name nor the host is left alone.
+  const other = { title: "Ritual's", city: 'atlanta', bar: "Ritual's" };
+  normalizer.normalize(other);
+  assert.equal(other.bar, "Ritual's");
+
+  assert.equal(BarDataNormalizer.barNameIsWebsiteHost('eaglenyc', 'www.eaglenyc.com/events'), true);
+  assert.equal(BarDataNormalizer.barNameIsWebsiteHost('eaglenyccom', 'https://www.eaglenyc.com/'), true);
+  assert.equal(BarDataNormalizer.barNameIsWebsiteHost('bar', 'https://bar.com'), false, 'a four-letter label is not a name');
+  assert.equal(BarDataNormalizer.barNameIsWebsiteHost('eagle', ''), false);
+});
