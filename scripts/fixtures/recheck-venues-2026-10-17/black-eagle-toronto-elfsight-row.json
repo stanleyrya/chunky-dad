@@ -1,0 +1,42 @@
+{
+  "_about": "One row of the Elfsight boot payload for widget e5a158fb-806e-4349-9a16-7546cf9cd113 (blackeagletoronto.com) as cached 2026-10-17. location is empty on every row of the widget; the venue is the site.",
+  "id": "d74c2d50-b38b-4d01-b274-aed725887401",
+  "name": "BLUF TORONTO",
+  "start": {
+    "type": "datetime",
+    "date": "2026-10-31",
+    "time": "18:00"
+  },
+  "end": {
+    "type": "datetime",
+    "date": "2026-10-31",
+    "time": "21:00"
+  },
+  "timeZone": "America/Toronto",
+  "repeatPeriod": "noRepeat",
+  "isAllDay": false,
+  "location": [],
+  "tags": [
+    {
+      "tagName": "• • • • • • • • • • • • • • • • • •"
+    },
+    {
+      "tagName": "LEATHER SOCIAL FROM 6PM TO 9PM"
+    }
+  ],
+  "description": "<div><span>LEATHER SOCIAL</span><br><span>FROM 6PM TO 8:30PM</span></div>",
+  "coverImage": {
+    "url": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a27a2733-eeb3-478c-b88f-30a073835666/BLUF-Toronto-Social-2026-10-31-900sq.jpg",
+    "name": "BLUF Toronto Social 2026-10-31 900sq.jpg",
+    "size": 139652,
+    "type": "image/jpeg",
+    "extension": "jpg",
+    "width": 900,
+    "height": 900,
+    "meta": {
+      "width": 900,
+      "height": 900
+    }
+  },
+  "actions": []
+}

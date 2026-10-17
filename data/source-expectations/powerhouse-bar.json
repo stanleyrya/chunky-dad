@@ -4,7 +4,7 @@
   "slug": "powerhouse-bar",
   "status": "complete",
   "recon": {
-    "date": "2026-09-12",
+    "date": "2026-10-17",
     "method": [
       "feed",
       "static",
@@ -69,6 +69,14 @@
         "rowsReturned": 34,
         "truthFlag": null,
         "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /events/ listing from the home page and read it through the Tribe REST door (/wp-json/tribe/events/v1/events, a well-known route the home page's WordPress markers point at — 34 rows): 34 events, 1 bear in 12 s — the https://powerhousebar.com/events/ config read 34/1 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-12."
+      },
+      {
+        "rowsReturned": 24,
+        "truthFlag": "total 24, total_pages 1 (was 57 / 2 on 2026-09-12)",
+        "note": "Live read 2026-10-17 (one curl). 24 rows 2026-10-16..2027-02-24 over 21 titles; 16 rows carry a description, 8 do not — Chub Rub (2026-10-17 17:00–21:00, image present, cost \"at door\", description \"\" and excerpt \"\") is one of the 8. The run's description 0% on its one kept event is the site. Not listed today: T – Dance, Cuir (2nd-Friday series, no row in the window), WHORROR, What the Fuck!, Rubber Ducky (past one-offs).",
+        "url": "https://powerhousebar.com/wp-json/tribe/events/v1/events?per_page=50",
+        "kind": "tribe-rest",
+        "role": "feed"
       }
     ],
     "notes": "WordPress + The Events Calendar (Tribe) 6.17.3, confirmed by the working /wp-json/tribe/events/v1/events endpoint and the ICS PRODID. REST rows carry no series key and no recurrence field, yet 20 titles repeat on a fixed cadence and each recurring title has a Tribe /all/ index (Chub Rub verified) — the site runs Tribe recurrence with per-occurrence rows. Weekly titles (Shirts Off Sundays, PILLOWS) are only pre-expanded ~6 weeks ahead (last row 2026-10-26); monthly titles 2–3 months ahead. Cadence text, where the site publishes it, is in the description (\"Every Third Saturday\", \"Every 4th Friday\", \"Every First Saturday\", \"Every first Sunday!\", \"every second Wednesday\", \"every third Wednesday\", \"Every FIRST WEDNESDAY\", \"The Monday drag party\"); nine repeating titles publish no cadence text and are grouped from their dates with the occurrence-URL quoted as the structural statement. All 57 rows are at the bar itself (1347 Folsom St) with real coordinates. The 2026-09-12 trial run kept 3 records (Chub Rub ×2, FLEX) and bear-dropped 54."
@@ -83,7 +91,7 @@
   },
   "coverage": {
     "confidence": "high",
-    "basis": "REST feed page 1 (total 57, total_pages 2) + page 2 from the scraper page cache = 57 rows, 57 distinct ids, Sep 11 2026 – Feb 24 2027. The configured /events/ list shows the first 12 of them statically and links pages 2–3; the ICS export carries 30 of them (Sep 12 – Oct 12) with identical wall-clock times; zero conflicts between doors. Collapse: 20 titles repeat on a provable cadence (2 weekly, 18 monthly nth-weekday; 50 rows) → 20 series; 7 rows are one-offs or unprovable pairs (Rubber Ducky, FLEX, Black Brown and Kinky, NUTZ, SHAGGIN, The Playpen ×2) → 7 singles. publishedEventCount = 27. Every occurrence is a dated feed row (origin listed); the window end 2026-12-31 exceeds every listed series date, and no rule-derived dates are added beyond what the site lists. Past listings: the list view links a \"Previous Events\" view (/events/list/?eventDisplay=past) and the Chub Rub /all/ index shows one past instance (2026-05-16); the past view itself was not read (no request budget), so the count is unknown.",
+    "basis": "REST feed page 1 (total 57, total_pages 2) + page 2 from the scraper page cache = 57 rows, 57 distinct ids, Sep 11 2026 – Feb 24 2027. The configured /events/ list shows the first 12 of them statically and links pages 2–3; the ICS export carries 30 of them (Sep 12 – Oct 12) with identical wall-clock times; zero conflicts between doors. Collapse: 20 titles repeat on a provable cadence (2 weekly, 18 monthly nth-weekday; 50 rows) → 20 series; 7 rows are one-offs or unprovable pairs (Rubber Ducky, FLEX, Black Brown and Kinky, NUTZ, SHAGGIN, The Playpen ×2) → 7 singles. publishedEventCount = 27. Every occurrence is a dated feed row (origin listed); the window end 2026-12-31 exceeds every listed series date, and no rule-derived dates are added beyond what the site lists. Past listings: the list view links a \"Previous Events\" view (/events/list/?eventDisplay=past) and the Chub Rub /all/ index shows one past instance (2026-05-16); the past view itself was not read (no request budget), so the count is unknown. Re-read 2026-10-17: 24 rows, Chub Rub without a description at the source. Run 20261017-054812: 24 extracted, 1 kept (Chub Rub, bear), 23 dropped by the manual verdict store as not bear: Trade, BEATPIG, Shirts Off Sundays ×2, Cocktailgate, PILLOWS ×2, BoysTown, Stank, LICK IT, Carne Fresca, Fan-Dumb, FLEX, Black Brown and Kinky, NUTZ, Wild Cards, TRAVIESO, Powerblouse!, PRIMAL, HOUSE PARTY, The Playpen ×2, SHAGGIN.",
     "publishedEventCount": 27,
     "documentedEventCount": 27,
     "occurrenceWindow": {
@@ -94,7 +102,8 @@
     "knownGaps": [
       "The past view (/events/list/?eventDisplay=past) was not read; how many past rows the site keeps is unknown (REST with start_date=2000-01-01 would answer it in one call).",
       "Weekly series occurrences stop where the feed's pre-expansion stops (2026-10-25 Shirts Off Sundays, 2026-10-26 PILLOWS); November–December Sundays/Mondays are not asserted.",
-      "Event-page descriptions were taken from REST; only two occurrence pages (t-dance 2026-09-11, chub-rub /all/) were opened."
+      "Event-page descriptions were taken from REST; only two occurrence pages (t-dance 2026-09-11, chub-rub /all/) were opened.",
+      "2026-10-17: the feed lists 24 rows / 21 titles; five documented entries are no longer published (T – Dance, Cuir, WHORROR, What the Fuck!, Rubber Ducky — past or outside the server window). Kept as documented history; the counts no longer match until the file is re-cut to the live window."
     ]
   },
   "events": [

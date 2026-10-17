@@ -5,10 +5,11 @@
   "status": "complete",
   "recheckAfter": "2026-10-19",
   "recon": {
-    "date": "2026-09-19",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "static",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://eagle-ny.com/"
@@ -109,13 +110,29 @@
         "rowsReturned": 98,
         "truthFlag": null,
         "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /calendarofevents/ listing from the home page and read it through the Tribe REST door (/wp-json/tribe/events/v1/events, 50 of 454 rows per page, paged to the horizon): 98 events, 10 bear in 15 s — the https://eagle-ny.com/calendarofevents/ config read 98/10 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-19."
+      },
+      {
+        "rowsReturned": 50,
+        "truthFlag": "total 649, total_pages 13 (was 453 / 10 on 2026-09-19)",
+        "note": "Live read 2026-10-17 (one curl). Rows 2026-10-16..2026-11-14. image:false and description:\"\" on all 50 rows, cost:\"\" on all 50 — the bar writes its door policy into the TITLE (\"🍺 BEER BLAST | 🎧 DJ ERIK ELIAS | NO COVER TILL 9PM | $20 COVER AT 9PM\"). The feed is the whole listing; only page 1 re-read today (request budget).",
+        "url": "https://eagle-ny.com/wp-json/tribe/events/v1/events?per_page=50",
+        "kind": "tribe-rest",
+        "role": "feed"
+      },
+      {
+        "rowsReturned": 2,
+        "truthFlag": "JSON-LD \"description\":\"\" on both; og:image identical on both pages",
+        "note": "Scraper page cache (dj-duron-10-cash-cover-3 2026-10-16, into-5/2026-10-11 2026-10-12): no featured image (no tribe-events-event-image, no wp-post-image), tribe-events-single-event-description empty, og:image = /wp-content/uploads/2023/03/MrEagle2017_001.jpg on BOTH pages — a site-wide default the og-image rung correctly refuses. The site publishes no image and no description for any event, anywhere.",
+        "url": "https://eagle-ny.com/calendarofevents/<slug>/",
+        "kind": "html",
+        "role": "event"
       }
     ],
     "notes": "Recon from one cached read of each door on 2026-09-19. 453 rows across 10 REST pages, 47 distinct titles, 2026-09-18 → 2028-09-19. The bar posts every DJ night as a dated row two years ahead."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Feed door: The Events Calendar REST route, 10 pages × 50 = 453 rows (total 453 reconciles), all future from the server's default start. Every row is a single: the feed states no recurrence (no series route, no rrule keys). 346 rows start after the 2026-12-18 horizon and are documented with expect.extracted \"unknown\" — the reader keeps one-offs past the horizon but drops repeating titles' far rows. The listing HTML was not enumerated separately: the parser adopts this feed as its door.",
+    "basis": "Feed door: The Events Calendar REST route, 10 pages × 50 = 453 rows (total 453 reconciles), all future from the server's default start. Every row is a single: the feed states no recurrence (no series route, no rrule keys). 346 rows start after the 2026-12-18 horizon and are documented with expect.extracted \"unknown\" — the reader keeps one-offs past the horizon but drops repeating titles' far rows. The listing HTML was not enumerated separately: the parser adopts this feed as its door. Re-read 2026-10-17 (page 1): image 0/50, description 0/50, cost \"\"/50 — the run's image 0% / description 0% is the site, not the reader. 13 of 21 kept events carried the sanity flag cover-self-contradictory because the cover read from the title (\"No cover till 9PM, $20 cover at 9PM\") is a time-tiered price; the flag's clock-blind test is corrected on branch audit/recheck-venues (isTieredCoverText).",
     "publishedEventCount": 453,
     "documentedEventCount": 453,
     "occurrenceWindow": {
@@ -123,7 +140,9 @@
       "end": "2026-12-18"
     },
     "pastListingsPresent": false,
-    "knownGaps": []
+    "knownGaps": [
+      "2026-10-17: the feed now declares total 649 (13 pages) against the 453 rows enumerated on 2026-09-19 — the server window rolled forward and weekly titles were pre-expanded further out. Pages 2–13 were not re-read today (request budget); the 196 new rows are undocumented. Re-enumerate from the feed when the budget allows (every row is a single; the feed states no series)."
+    ]
   },
   "defaults": {
     "city": "nyc",
@@ -10447,5 +10466,11 @@
     }
   ],
   "traps": [],
-  "openQuestions": []
+  "openQuestions": [
+    {
+      "q": "The feed's cost is \"\" on every row while the title states the door policy (\"NO COVER TILL 9PM | $20 COVER AT 9PM\", \"$25 CASH COVER\"). The run's AI read of the title yields the cover; should the feed reader derive cover from a title's trailing \"| $N COVER\" / \"NO COVER\" segments deterministically instead (and strip them from the title)?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    }
+  ]
 }

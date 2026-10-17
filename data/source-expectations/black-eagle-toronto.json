@@ -5,10 +5,12 @@
   "status": "complete",
   "recheckAfter": "2026-10-19",
   "recon": {
-    "date": "2026-09-19",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "static",
+      "page-cache",
+      "classification-cache"
     ],
     "parserUrlsAtRecon": [
       "https://www.blackeagletoronto.com/"
@@ -29,21 +31,39 @@
         "rowsReturned": 255,
         "truthFlag": "the boot payload carries the widget's entire event list: 255 entries, past and future, no paging",
         "note": "Elfsight event-calendar app. Entries: name, start/end { date, time }, timeZone per entry, repeatPeriod (noRepeat 220, nthDayInMonth 21, custom 13, lastDayInMonth 1), repeat* fields, description, coverImage, actions (link buttons), isAllDay. No venue field: the widget is the bar's own calendar."
+      },
+      {
+        "rowsReturned": 267,
+        "truthFlag": "267 rows (was 255); 65 live = 31 noRepeat with end >= 2026-10-17 + 34 repeating; location [] on every row",
+        "note": "Scraper page cache fetched 2026-10-17 09:39Z by run 20261017-054812. New since 2026-09-19: singles EAGLE EVENT - TBA 10/30, REDLITE 10/24, STUD 54 - 1 YEAR ANNIVERSARY 11/06, BLUF TORONTO 10/31 (18:00–21:00, tags \"LEATHER SOCIAL FROM 6PM TO 9PM\", description \"LEATHER SOCIAL FROM 6PM TO 8:30PM\"); the widget also still carries five 2025 custom repeats (EAGLE PATIO BBQ, SOS TORONTO, EAGLE BBQ ×2, VIDEO DANCE PARTY). DADDY NEXT DOOR rows carry timeZone \"America/Miquelon\" (UTC-3) — the run's 2026-12-13T00:00Z for a 21:00 night is two hours early for Toronto. One row saved as scripts/fixtures/recheck-venues-2026-10-17/black-eagle-toronto-elfsight-row.json.",
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "kind": "json",
+        "role": "feed"
+      },
+      {
+        "rowsReturned": 0,
+        "truthFlag": "run log: classification multi-event-page",
+        "note": "Page cache 2026-10-17 09:39Z. Static HTML holds no events (the Elfsight embed). Run 20261017-054812: 228 rows extracted, 114 folded (the same widget read on http:// and https:// roots), 15 kept; the 6 BLUF TORONTO records had no bar and no pin because their title named the city first and the site-identity venue fill only ran when the city was unresolved (fixed on branch audit/recheck-venues: fillVenueFromSiteIdentityInResolvedCity). The audit AI's \"not the JSON asked for\" was the model, not the page (1,250 chars of shell text).",
+        "url": "https://www.blackeagletoronto.com/",
+        "kind": "html",
+        "role": "listing"
       }
     ],
     "notes": "Recon from one cached read of each door on 2026-09-19. 255 widget entries: 37 future singles, 22 repeating entries with a window occurrence, 194 entries already over (counted, not enumerated), 0 repeating entries with nothing in the window."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Feed door: the Elfsight boot payload lists every entry the widget renders (255). Documented: every entry that is upcoming (37 singles) or repeats into the window (22 series, occurrences by rule). 194 entries ended before 2026-09-19 and are counted as past listings. The page's own HTML carries none of this.",
-    "publishedEventCount": 59,
-    "documentedEventCount": 59,
+    "basis": "Feed door: the Elfsight boot payload lists every entry the widget renders (255). Documented: every entry that is upcoming (37 singles) or repeats into the window (22 series, occurrences by rule). 194 entries ended before 2026-09-19 and are counted as past listings. The page's own HTML carries none of this. Re-read 2026-10-17 from the run's cache of the boot payload. Place truth: the widget publishes no location on any row — the venue is the site, and every kept event should carry the curated Black Eagle Toronto.",
+    "publishedEventCount": 63,
+    "documentedEventCount": 63,
     "occurrenceWindow": {
       "start": "2026-09-19",
       "end": "2026-12-18"
     },
     "pastListingsPresent": true,
-    "knownGaps": []
+    "knownGaps": [
+      "2026-10-17: five 2025/early-2026 rows with repeatPeriod \"custom\" that the widget still carries (EAGLE PATIO BBQ 2026-06-14, SOS TORONTO 2025-07-05, EAGLE BBQ 2025-07-06 and 2025-05-25, VIDEO DANCE PARTY 2025-06-06) are not enumerated: they publish no future date and are not counted as published — judged stale repeats, to be confirmed against the rendered widget before becoming traps."
+    ]
   },
   "defaults": {
     "city": "toronto",
@@ -1689,8 +1709,103 @@
         "note": "Starts after the parser's 90-day feed horizon (2026-12-18); a repeating title's rows past the horizon are dropped by the feed reader, a one-off is kept."
       },
       "bearVerdict": null
+    },
+    {
+      "id": "eagle-event-tba-2026-10-30",
+      "kind": "single",
+      "title": "EAGLE EVENT - TBA",
+      "description": "9PM / NO COVER",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/4c8de8cb-81e7-4cf9-a3c6-65deb19d1239/BLACK-EAGLE-VideoTo_GIF.gif",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17 (cached boot of run 20261017-054812). Row flagged isAllDay with start=end 21:00; tags \"DJ's DELICIOUS & PRINCE BATRICK\", \"9PM-CLOSE • NO COVER\" — the reader's own-text clock rule reads 21:00. An unnamed night; the title is the venue's own wording.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[0]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "redlite-2026-10-24",
+      "kind": "single",
+      "title": "REDLITE",
+      "description": null,
+      "startDate": "2026-10-24",
+      "startTime": "21:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/43f71a9d-35c8-4a97-bf80-32cbd1126958/Redlight-2026-10-24-800sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17. Row clock 11:16 (creation time) flagged isAllDay; the tag states \"9PM • $10 BEFORE 10:30PM / $15 AFTER\" and the actions[] link is instagram.com/macho_toronto (a promoter page, never fetched). Documented as the tag states: 21:00.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[11]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "bluf-toronto-2026-10-31",
+      "kind": "single",
+      "title": "BLUF TORONTO",
+      "description": "LEATHER SOCIAL FROM 6PM TO 8:30PM",
+      "startDate": "2026-10-31",
+      "startTime": "18:00",
+      "endTime": "21:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a27a2733-eeb3-478c-b88f-30a073835666/BLUF-Toronto-Social-2026-10-31-900sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17. The row's end is 21:00 and its tag says \"6PM TO 9PM\" while the description says \"TO 8:30PM\" (see openQuestions). Kept by run 20261017-054812 with no bar/pin (the venue-fill gap fixed on branch audit/recheck-venues). Fixture: scripts/fixtures/recheck-venues-2026-10-17/black-eagle-toronto-elfsight-row.json.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[16]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "stud-54-1-year-anniversary-2026-11-06",
+      "kind": "single",
+      "title": "STUD 54 - 1 YEAR ANNIVERSARY",
+      "description": null,
+      "startDate": "2026-11-06",
+      "startTime": "21:00",
+      "endTime": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/52952282-d7e3-46f7-b423-84df0b8927fc/Stud54-2026-11-800sq.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17. isAllDay with start=end 21:00; tags \"MOJO PRESENTS\", \"DJ PHILIPPE + DYLAN THOMAS\", \"9PM • $10 BEFORE 10PM / $15 AFTER 10PM\". The dated anniversary edition of the documented STUD 54 singles.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=e5a158fb-806e-4349-9a16-7546cf9cd113",
+        "jsonPath": "$.data.widgets[\"e5a158fb-806e-4349-9a16-7546cf9cd113\"].data.settings.events[22]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
     }
   ],
   "traps": [],
-  "openQuestions": []
+  "openQuestions": [
+    {
+      "q": "DADDY NEXT DOOR rows state timeZone \"America/Miquelon\" (UTC-3/-2) while every other row says America/Toronto; the reader trusts the per-row zone, so the night lands two hours early. Should a per-row widget zone that disagrees with the venue's curated city zone yield to the city (report-only flag first)?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    },
+    {
+      "q": "BLUF TORONTO 2026-10-31: the tag says \"6PM TO 9PM\", the description \"6PM TO 8:30PM\", the row end 21:00. The reader keeps the row's end; which text should win when the site disagrees with itself?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    }
+  ]
 }

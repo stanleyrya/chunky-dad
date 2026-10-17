@@ -1505,7 +1505,17 @@ class LocationNormalizer extends BaseNormalizer {
     backfillCityFromIdentitySignals(event, options = {}) {
         if (!event || !this.core) return event;
         const currentCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
-        if (currentCity && currentCity !== 'unknown') return event;
+        if (currentCity && currentCity !== 'unknown') {
+            // The city is settled, but the VENUE may not be: a title that
+            // names its city ("BLUF TORONTO" on blackeagletoronto.com, run
+            // 20261017-054812 — 6 of 15 kept events with no bar and no pin
+            // while their siblings got "Black Eagle Toronto" from this very
+            // rung) resolved the city one rung earlier, and the venue fill
+            // below never ran because it rode on the city fill. Same curated
+            // record, same fail-closed gates, city must agree.
+            this.fillVenueFromSiteIdentityInResolvedCity(event, currentCity);
+            return event;
+        }
         const title = event.title || 'unknown';
 
         if (typeof this.core.findCuratedCityByWebsiteHost === 'function'
@@ -1542,6 +1552,32 @@ class LocationNormalizer extends BaseNormalizer {
             console.log(`🗺️ LocationNormalizer: Backfilled city "${normalizedCity}" for "${title}" from the parser config's declared city`);
         }
         return event;
+    }
+
+    // The venue half of the site-identity rung for an event whose city is
+    // already known: the host's single curated claimant fills bar, address
+    // and pin exactly as fillVenueFromCuratedSiteIdentity does, PROVIDED it
+    // sits in the event's own city — a claimant elsewhere says the listing
+    // is a venue site announcing a party out of town, and is left alone.
+    // Silent when there is nothing to fill (the event names a bar already).
+    fillVenueFromSiteIdentityInResolvedCity(event, currentCity) {
+        if (!event || !this.core || typeof this.core.findCuratedCityByWebsiteHost !== 'function'
+            || typeof this.core.getWebsiteHostKey !== 'function') return false;
+        if (typeof event.bar === 'string' && event.bar.trim()) return false;
+        const seenHosts = [];
+        for (const candidate of [event.website, event.url, event._sourcePageUrl]) {
+            const hostKey = this.core.getWebsiteHostKey(candidate);
+            if (!hostKey || seenHosts.includes(hostKey)) continue;
+            seenHosts.push(hostKey);
+            const match = this.core.findCuratedCityByWebsiteHost(hostKey);
+            if (!match || match.ambiguousCities) continue;
+            if (String(match.city || '').toLowerCase() !== currentCity) {
+                console.log(`🗺️ LocationNormalizer: Venue backfill skipped for "${event.title || 'unknown'}" — site ${hostKey} is a curated venue in ${match.city}, the event is in ${currentCity}`);
+                return false;
+            }
+            return this.fillVenueFromCuratedSiteIdentity(event, match, hostKey, event.title || 'unknown');
+        }
+        return false;
     }
 
     // Site identity resolves a curated VENUE, not merely a city (run

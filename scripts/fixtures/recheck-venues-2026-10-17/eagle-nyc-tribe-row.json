@@ -1,0 +1,17 @@
+{
+  "_about": "One row of https://eagle-ny.com/wp-json/tribe/events/v1/events?per_page=50 as read 2026-10-17. The bar writes its door policy in the title; the feed has no cost, image or description.",
+  "id": 32531,
+  "title": "🍺 BEER BLAST | 🎧 DJ ERIK ELIAS | NO COVER TILL 9PM | $20 COVER AT 9PM",
+  "start_date": "2026-10-18 17:00:00",
+  "end_date": "2026-10-18 22:00:00",
+  "all_day": false,
+  "cost": "",
+  "image": false,
+  "description": "",
+  "excerpt": "",
+  "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-%f0%9f%98%8a-no-cover-till-9pm-%f0%9f%92%b020-cover-at-9pm-15-3/",
+  "venue": {
+    "venue": "The Eagle NYC",
+    "city": "New York"
+  }
+}

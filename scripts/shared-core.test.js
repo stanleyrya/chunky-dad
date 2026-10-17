@@ -28636,3 +28636,41 @@ test('a replaced primary picture takes its stale crop with it: the saved orienta
   assert.ok(!finalEvent.imageVertical, `stale crop dropped: ${finalEvent.imageVertical}`);
   assert.ok(logs.some(line => line.includes('dropped imageVertical — a crop of the replaced primary picture')), logs.join('\n'));
 });
+
+// ---------------------------------------------------------------------------
+// Venue recheck 2026-10-17 (fixtures under scripts/fixtures/recheck-venues-2026-10-17)
+
+test('sanity: a time-tiered door price is one price, not a contradiction', () => {
+  const core = createSanityCore();
+  // Eagle NYC writes its door policy in the title; the run's extraction reads
+  // the cover out of it verbatim and 13 of 21 kept events flagged every run.
+  const row = require('./fixtures/recheck-venues-2026-10-17/eagle-nyc-tribe-row.json');
+  const tieredFromTitle = row.title.split('|').slice(-2).map(part => part.trim()).join(', ');
+  assert.equal(tieredFromTitle, 'NO COVER TILL 9PM, $20 COVER AT 9PM');
+  for (const cover of [tieredFromTitle, 'No cover till 9PM, $20 cover at 9PM', 'FREE before 10pm / $10 after', '$10 after midnight, free before']) {
+    assert.deepEqual(sanityCodes(core, { title: 'BEER BLAST', cover }), [], `a tiered cover must not flag: ${JSON.stringify(cover)}`);
+  }
+  // No clock and no condition: still the contradiction the flag was written for.
+  assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover: '$10, NO COVER' }), ['cover-self-contradictory']);
+  assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover: 'FREE / $15' }), ['cover-self-contradictory']);
+  // A clock alone, or a condition alone, is not a tier either.
+  assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover: 'No cover 9pm $20' }), ['cover-self-contradictory']);
+});
+
+test('applyAggregatorWebsitePointers leaves a calendar-door row alone when the embedding page classified link-aggregator', () => {
+  const core = createCore();
+  // rockbarnyc.com's home page is a Squarespace socials hub (classified
+  // link-aggregator) that carries the venue's Elfsight calendar. No widget
+  // row has a link of its own, so the page is the only address a night has.
+  const row = require('./fixtures/recheck-venues-2026-10-17/rockbar-elfsight-row.json');
+  assert.deepEqual(row.actions, [], 'the fixture row carries no per-event link');
+  const urlClassifications = { 'https://www.rockbarnyc.com/': 'link-aggregator' };
+  const page = 'https://www.rockbarnyc.com/';
+  const doorRow = { title: row.name, source: 'elfsight', website: page, url: page, ticketUrl: '', _sourcePageUrl: page };
+  const proseRow = { title: 'Rockbar', source: 'ai-web', website: page, url: page, ticketUrl: '', _sourcePageUrl: page };
+  core.applyAggregatorWebsitePointers([doorRow, proseRow], urlClassifications);
+  assert.equal(doorRow.website, page, 'the door published this row: the page is its listing, not a copy');
+  assert.equal(doorRow.url, page);
+  assert.equal(proseRow.website, '', 'a prose read of the same hub page is still a copy and clears');
+  assert.equal(proseRow.url, '');
+});
