@@ -3,12 +3,13 @@
   "source": "XL Bears",
   "slug": "xl-bears",
   "status": "complete",
-  "recheckAfter": "2026-10-20",
+  "recheckAfter": "2026-11-16",
   "recon": {
-    "date": "2026-09-20",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "static",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://calendar.google.com/calendar/ical/xl.bears.seattle%40gmail.com/public/basic.ics"
@@ -35,15 +36,15 @@
         "kind": "ics",
         "role": "feed",
         "rowsReturned": 152,
-        "truthFlag": "152 VEVENTs, no paging; 148 ended more than 30 days before recon",
-        "note": "The calendar's public iCalendar export (text/calendar). Wall-clock DTSTART with TZID, monthly RRULEs for the standing socials, LOCATION as \"Venue, street, city\". Read by the scraper as a machine door; the archive is dropped."
+        "truthFlag": "whole calendar in one body; 152 VEVENTs, 3 not archived (the three running monthly series)",
+        "note": "Re-read 2026-10-17 from the scraper's cache (fetched 2026-10-17T09:40Z). LOCATION is \"Venue, street, city, state zip\" on 149 of 152 records (the venue IS the leading segment, which icsRecordToFeedRow reads as the bar); GEO, ATTACH and URL absent on every record — no coordinates or artwork published. Run 20261017-054812 kept 9 rows = the 3 series × 3 months, each with bar and location, none with image (the feed has none)."
       }
     ],
     "notes": "Recon from one cached read of each door on 2026-09-20. 152 VEVENTs: 148 archive, 3 live series, 0 upcoming singles, 1 recent past singles, 0 series with nothing in the window."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Feed door: the iCalendar export read whole. Every record live on 2026-09-20 is documented — series as ONE entry each with the rule's dates in the window, dated records as singles. 148 archive records and 1 recent past singles are counted as past listings. The rendered Google Calendar embed was not read (JavaScript); the iCalendar is the same calendar.",
+    "basis": "Re-read 2026-10-17: the cached feed still holds exactly three running series (Game Night 2SU, XL Bear Bust 4FR, Spa Day 3SA); 149 archive records — Earlier basis: Feed door: the iCalendar export read whole. Every record live on 2026-09-20 is documented — series as ONE entry each with the rule's dates in the window, dated records as singles. 148 archive records and 1 recent past singles are counted as past listings. The rendered Google Calendar embed was not read (JavaScript); the iCalendar is the same calendar.",
     "publishedEventCount": 3,
     "documentedEventCount": 3,
     "occurrenceWindow": {

@@ -21804,7 +21804,7 @@ test('a one-line row keeps the flyer its own markup carries behind an image-opti
 });
 
 // massbearsandcubs.org/events?format=json, run 20260929-091555 (rows trimmed).
-test('Squarespace: a name with no street line on the template\'s own marker takes no pin, and an event starts on the second', () => {
+test('Squarespace: a map pin on the template\'s own marker takes no pin (address or not), and an event starts on the second', () => {
   const parser = createParser();
   const marker = { markerLat: 40.7207559, markerLng: -74.0007613 };
   const rows = [
@@ -21841,10 +21841,18 @@ test('Squarespace: a name with no street line on the template\'s own marker take
     { location: { markerLat: 47.6150949, markerLng: -122.3158456, mapLat: 47.6150949, mapLng: -122.3158456, addressTitle: 'The Cuff', addressLine1: '1533 13th Ave' } }
   ];
   assert.equal(parser.findSquarespaceTemplateMarker(together), '');
-  // Without a learned marker, or with a street line beneath the name, the pin stands as before.
+  // Without a learned marker the pin stands as before.
   assert.equal(parser.buildEventFromSquarespaceItem(rows[2], 'https://www.massbearsandcubs.example/events').location, '40.7207559, -74.0007613');
-  const withLine = { ...rows[2], location: { ...rows[2].location, addressTitle: 'Office', addressLine1: '459 Broadway', addressLine2: 'New York, NY' } };
-  assert.equal(parser.buildEventFromSquarespaceItem(withLine, 'https://www.massbearsandcubs.example/events', { templateMarker }).location, '40.7207559, -74.0007613');
+  // With a learned marker, an address beneath the name does NOT keep the
+  // template pin: "Bears at the Beach 2026" at "Nantasket Beach" / "Hull, MA"
+  // carried map == marker == the New York default and shipped to the calendar
+  // in Manhattan (run 20261017-054812). The address is kept and geocodes on
+  // its own; the platform's untouched pin is never a place.
+  const withLine = { ...rows[2], location: { ...rows[2].location, addressTitle: 'Nantasket Beach', addressLine1: '', addressLine2: 'Hull, MA' } };
+  const beach = parser.buildEventFromSquarespaceItem(withLine, 'https://www.massbearsandcubs.example/events', { templateMarker });
+  assert.equal(beach.location, undefined, 'the template marker is not a pin for Hull, MA');
+  assert.equal(beach.bar, 'Nantasket Beach');
+  assert.equal(beach.address, 'Hull, MA');
 });
 
 // ---------------------------------------------------------------------------

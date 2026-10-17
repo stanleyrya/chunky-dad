@@ -9886,21 +9886,25 @@ class AiWebParser {
         // 20260913-152123) carried only 40.7207559, -74.0007613 — Squarespace's
         // own New York default — and geocoded to 443–459 Broadway while its
         // flyer says 60 Rowes Wharf, Boston.
-        // …and so is a location with a name and no street line whose map pin
-        // IS the template's marker (findSquarespaceTemplateMarker): the
-        // monthly meetings at "Online/Virtual" carried that pin, were
+        // …and so is ANY location whose map pin IS the template's marker
+        // (findSquarespaceTemplateMarker), whatever its address lines say:
+        // the monthly meetings at "Online/Virtual" carried that pin, were
         // reverse-geocoded to "459, Broadway, Little Italy, Lower
-        // Manhattan" and shipped with that address (run 20260929-091555).
-        // A street line beneath the name is the editor stating a place, and
-        // keeps its pin whatever it equals.
+        // Manhattan" and shipped with that address (run 20260929-091555);
+        // "Bears at the Beach 2026" at "Nantasket Beach" / "Hull, MA" carried
+        // the same New York pin beside a real locality line and shipped to
+        // the calendar at 40.7207559, -74.0007613 (run 20261017-054812)
+        // because the guard used to stand down for a row with an address.
+        // The address is the editor stating a place; the pin is the
+        // platform stating nothing — the address geocodes on its own.
         const pickCoordinate = (...values) => values.map(Number).find(value => Number.isFinite(value) && value !== 0);
         const statesPlace = Boolean(clean(location.addressTitle) || addressParts.length > 0);
         let lat = statesPlace ? pickCoordinate(location.mapLat, location.markerLat) : undefined;
         let lng = statesPlace ? pickCoordinate(location.mapLng, location.markerLng) : undefined;
         const templateMarker = options && typeof options.templateMarker === 'string' ? options.templateMarker : '';
-        if (templateMarker && addressParts.length === 0 && Number.isFinite(lat) && Number.isFinite(lng)
+        if (templateMarker && Number.isFinite(lat) && Number.isFinite(lng)
             && `${lat.toFixed(5)},${lng.toFixed(5)}` === templateMarker) {
-            console.log(`🟦 SQUARESPACE: "${title}" carries the template's own marker (${lat}, ${lng}) and no street line — an untouched map, not a place; no pin taken`);
+            console.log(`🟦 SQUARESPACE: "${title}" carries the template's own marker (${lat}, ${lng})${addressParts.length ? ` beside the address "${addressParts.join(', ')}"` : ' and no street line'} — an untouched map, not a place; no pin taken${addressParts.length ? ', the address geocodes on its own' : ''}`);
             lat = undefined;
             lng = undefined;
         }

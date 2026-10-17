@@ -4,7 +4,7 @@
   "slug": "bears-sitges-week",
   "status": "complete",
   "recon": {
-    "date": "2026-09-10",
+    "date": "2026-10-17",
     "method": [
       "static",
       "rendered",
@@ -22,7 +22,7 @@
         "role": "listing",
         "rowsReturned": 48,
         "truthFlag": "11 day headers (JUEVES- 03 … DOMINGO - 13); header block \"PROGRAMA oficial / BEARS SITGES WEEK 2026 / Del 3 al 13 de SEPTIEMBRE\"; 79 h-time markers in the programme block",
-        "note": "Configured parser URL. Static curl with a Chrome UA returns the full server-rendered WordPress page (1,863,820 bytes; generator \"WordPress 6.9.7\" + \"WooCommerce 10.5.3\", theme Avada/fusion). The whole programme is plain paragraphs inside one Avada accordion — one <a> per day header, activities as <p> lines with the time as a leading \"19h.\" / \"20 h:\" / \"20:30h a 03:30h\" token and the venue inline. Saved as page.html / page.txt / page.headers."
+        "note": "Configured parser URL. Static curl with a Chrome UA returns the full server-rendered WordPress page (1,863,820 bytes; generator \"WordPress 6.9.7\" + \"WooCommerce 10.5.3\", theme Avada/fusion). The whole programme is plain paragraphs inside one Avada accordion — one <a> per day header, activities as <p> lines with the time as a leading \"19h.\" / \"20 h:\" / \"20:30h a 03:30h\" token and the venue inline. Saved as page.html / page.txt / page.headers. Re-read 2026-10-17 from the scraper's cache (fetched 2026-10-16T09:21Z): still the 2026 programme (\"PROGRAMA oficial BEARS SITGES WEEK 2026 / Del 3 al 13 de SEPTIEMBRE\"); no 2027 content. Every documented event is now in the past, which is why the ledger shows horizon 0 days."
       },
       {
         "url": "https://bearssitges.org/bears-sitges-week/",
@@ -135,6 +135,22 @@
         "rowsReturned": 0,
         "truthFlag": null,
         "note": "\"PACKS SOLD OUT ... BEAR POOL PARTY + BEAR T-DANCE + DRAG BRUNCH an VILLAGE VIP ZONE TICKETS VISIT WWW.BEARSEVENTS.COM\". Status banner (trap)."
+      },
+      {
+        "url": "https://www.bearsevents.com/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Read live 2026-10-17 (robots.txt allows /). Announces the next edition only as dates: \"SITGES BEAR WEEK 2027 – SEPT 3 -12!\" / \"Running from Friday 3rd September, 2027 to Sunday 12th September, 2027.\" No programme, no event rows. Offers a Tribe calendar export link."
+      },
+      {
+        "url": "https://www.bearsevents.com/events/?ical=1",
+        "kind": "ics",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "empty body (HTTP 200, 0 bytes, text/html) — The Events Calendar answers nothing when no upcoming event exists",
+        "note": "Read live 2026-10-17. The 2027 week has no published events yet on bearsevents.com either."
       }
     ],
     "notes": "MULTI-EVENT PAGE. One WordPress page carries the entire 11-day official programme as plain text — 11 day headers with day-of-month only, the month and year stated once in the header block (\"PROGRAMA oficial / BEARS SITGES WEEK 2026 / Del 3 al 13 de SEPTIEMBRE\"). This is exactly the \"festival-programme trap\" the parser config warns about: an AI page classifier that sees \"one overarching event\" and reroutes to single-event extraction misses the schedule — the config keeps ai.classifyPages false so the heuristic multi-event path is used. The parser is automationEnabled: false, so it does NOT appear in scheduled runs (the 2026-09-09 run has no \"Bears Sitges Week\" parserResult); expect.extracted describes a manual run of this parser. Platform: WordPress 6.9.7 + Avada + WooCommerce, confirmed by a working /wp-json/wp/v2/pages/7256 endpoint; there is no events plugin — the \"tribe-events\" CSS hits are theme noise and the Tribe REST / ?ical=1 doors were not tried on instruction (known 404s). Text is Spanish with one English day (11) and bilingual fragments. Time tokens take many shapes: \"19h.\", \"20 h:\", \"1h a 06h\", \"01:00h a 06:00\", \"21:30h to 03:30h\", \"20:30h. a 03:00h\" — and on the 9th–13th the market's time sits in its own paragraph above the title. Half the 01h parties are written \"1h\" (no leading zero). Three ticket hrefs are typos of bearsevents.com (wwww., bearssevents, and one href that is literally the event sentence). The page contains three stale-year tokens (\"INAUGURACIÓN ... 2025\", \"US: CITIZENS ... 2025\", \"Copyright 2025\") and the linked map PDF prints 2027 festival dates."
@@ -1450,7 +1466,17 @@
       "q": "The four BeefMince/Bearcave parties are marked belongsToSource \"BEEFMINCE\" (the club's own parser at beefmince.com/events). If that source documents the Sitges parties, add sameEventAs links here; the beefmince.json file was still not-started on 2026-09-10.",
       "raisedOn": "2026-09-10",
       "blocking": false
+    },
+    {
+      "q": "Next edition (2026-10-17): bearsevents.com announces Bears Sitges Week 2027 for 3–12 September 2027 (dates only); bearssitges.org still shows the 2026 programme. Nothing to extract until a programme is published — \"horizon 0 days\" is correct, not a miss. Re-check both doors monthly from 2027-06.",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    },
+    {
+      "q": "Coordinates (2026-10-17): run 20261017-054812 pinned 3 of 38 rows (the three BEEFMINCE Bear Cave nights, via the curated bar). The page states no street for Hotel Calipolis, Bear-Village, Bears Bar, BEARS DISCO, Le Patio, Hotel MiM, Rosa or Espai Joan Tarrida, so there is nothing to geocode; the official map PDF (BEARMAP-2026-SEPT-WEB.pdf) places them. Whether a venue-name + city geocode should be attempted when a record has a bar and a city but no address is a product call — today the pin ladder does not try it.",
+      "raisedOn": "2026-10-17",
+      "blocking": false
     }
   ],
-  "recheckAfter": "2026-09-14"
+  "recheckAfter": "2026-11-16"
 }

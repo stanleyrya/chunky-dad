@@ -585,6 +585,142 @@ function listingUrlsForHost(results, host, configuredUrl) {
     return urls.slice(0, 3);
 }
 
+// A machine door is not a page. The audit reads a host's listing through
+// readableTextFromHtml and hands the model the first PAGE_TEXT_CAP characters
+// — right for a page, wrong for a feed: an iCalendar export is the calendar's
+// whole history oldest-first (calendar.google.com, 270 921 chars → the first
+// 6 000 were 2023 nights, and the 2026-10-12 audit concluded "no events on or
+// after today"), and a ticketing JSON is one event's nested envelope after
+// another (events.ticketsauce.com, 687 658 chars → the first 6 000 were
+// SMOOCH's row alone, and the 2026-10-17 audit called every other extracted
+// event unverifiable). Both audits judged the scraper by a window that never
+// held the feed's events. A feed body is therefore rendered the way the
+// scraper itself reads it — one line per record, "start | title | place",
+// records that ended more than FEED_TEXT_HISTORY_DAYS ago left out (the
+// archive, as readMachineDoorBody treats it), running series kept — and only
+// then capped. HTML, and anything that is neither JSON nor iCalendar, returns
+// null so the caller falls through to the page reader.
+const FEED_TEXT_HISTORY_DAYS = 30;
+
+function feedRecordsFromBody(body) {
+    const text = String(body || '').trim();
+    if (!text) return null;
+    if (/BEGIN:VCALENDAR/i.test(text.slice(0, 512))) {
+        const SharedCore = loadSharedCore();
+        const records = SharedCore.parsePublishedCalendarIcs(text) || [];
+        return records.map((record) => ({
+            title: record.summary || '',
+            start: record.start && record.start.date instanceof Date ? record.start.date : null,
+            end: record.end && record.end.date instanceof Date ? record.end.date : null,
+            place: record.location || '',
+            rrule: record.rrule || '',
+            historical: SharedCore.isHistoricalCalendarRecord(record, Date.now())
+        }));
+    }
+    if (text[0] !== '{' && text[0] !== '[') return null;
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (_) { return null; }
+    const normalizeKey = (key) => String(key || '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+    const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+    const textOf = (value) => (typeof value === 'string' ? value : (isPlainObject(value) && typeof value.text === 'string' ? value.text : '')).trim();
+    // The same shapes shared-core's countJsonApiEventObjects accepts as a
+    // start: an ISO-ish string, an epoch in milliseconds, { millis }, or a
+    // when-container whose .start is one of those.
+    const dateOf = (value) => {
+        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value.trim())) {
+            const parsedDate = new Date(value.trim().replace(' ', 'T'));
+            return Number.isNaN(parsedDate.getTime()) ? new Date(value.trim().slice(0, 10)) : parsedDate;
+        }
+        if (typeof value === 'number' && value > 1e11 && value < 1e13) return new Date(value);
+        if (isPlainObject(value) && typeof value.millis === 'number' && value.millis > 1e11 && value.millis < 1e13) return new Date(value.millis);
+        if (isPlainObject(value) && value.start !== undefined) return dateOf(value.start);
+        return null;
+    };
+    const isStartKey = (key) => /(^|_)starts?(_(at|date|time|datetime|utc))?$/.test(key) || /(^|_)(date|datetime|when)(_|$)/.test(key);
+    const isEndKey = (key) => /(^|_)ends?(_(at|date|time|datetime|utc))?$/.test(key);
+    const titleOf = (obj) => {
+        for (const key of Object.keys(obj)) {
+            const normalized = normalizeKey(key);
+            if ((/^(name|title|summary|listing_title)$/.test(normalized) || /^(event|listing|show|party|performance)_(title|name)$/.test(normalized)) && textOf(obj[key])) return textOf(obj[key]);
+        }
+        return '';
+    };
+    const startOf = (obj) => {
+        for (const key of Object.keys(obj)) {
+            const normalized = normalizeKey(key);
+            if (!isStartKey(normalized) || isEndKey(normalized)) continue;
+            const date = dateOf(obj[key]);
+            if (date && !Number.isNaN(date.getTime())) return date;
+        }
+        return null;
+    };
+    const endOf = (obj) => {
+        for (const key of Object.keys(obj)) {
+            if (!isEndKey(normalizeKey(key))) continue;
+            const date = dateOf(obj[key]);
+            if (date && !Number.isNaN(date.getTime())) return date;
+        }
+        return null;
+    };
+    const placeOf = (obj) => {
+        const parts = [];
+        for (const key of Object.keys(obj)) {
+            const normalized = normalizeKey(key);
+            const value = obj[key];
+            if (/^(venue|venue_name|location|location_name|place|address_title)$/.test(normalized)) {
+                if (textOf(value)) parts.push(textOf(value));
+                else if (isPlainObject(value)) { const name = textOf(value.name) || textOf(value.title) || textOf(value.address_title) || textOf(value.addressTitle); if (name) parts.push(name); }
+            }
+            if (/^(city|address_line2|addressline2)$/.test(normalized) && textOf(value)) parts.push(textOf(value));
+        }
+        return parts.filter((part, index) => parts.indexOf(part) === index).join(', ');
+    };
+    const records = [];
+    const visit = (value, depth) => {
+        if (depth > 8 || value === null || value === undefined) return;
+        if (Array.isArray(value)) { value.forEach((item) => visit(item, depth + 1)); return; }
+        if (!isPlainObject(value)) return;
+        let view = value;
+        // One level of attribute wrapper (JSON:API attributes, Tockify
+        // content) and the envelope shape ({ Event: {…}, Logo, … }): the
+        // event-ish keys live one level down.
+        for (const key of Object.keys(value)) {
+            if (/^(content|attributes|properties|fields)$/.test(normalizeKey(key)) && isPlainObject(value[key])) view = Object.assign({}, value, value[key]);
+        }
+        if (!titleOf(view)) {
+            const members = Object.values(value).filter((member) => isPlainObject(member) && titleOf(member) && startOf(member));
+            if (members.length === 1) view = Object.assign({}, value, members[0]);
+        }
+        const title = titleOf(view);
+        const start = startOf(view);
+        if (title && start) {
+            const end = endOf(view);
+            const ended = (end || start).getTime();
+            records.push({ title, start, end, place: placeOf(view), rrule: '', historical: ended < Date.now() - FEED_TEXT_HISTORY_DAYS * 24 * 60 * 60 * 1000 });
+            return;
+        }
+        Object.values(value).forEach((member) => visit(member, depth + 1));
+    };
+    visit(parsed, 0);
+    return records;
+}
+
+function readableTextFromFeedBody(body, cap = PAGE_TEXT_CAP) {
+    const records = feedRecordsFromBody(body);
+    if (!records) return null;
+    const stamp = (date) => (date instanceof Date && !Number.isNaN(date.getTime()) ? date.toISOString().slice(0, 16).replace('T', ' ') : '');
+    const current = records.filter((record) => !record.historical).sort((a, b) => (a.start ? a.start.getTime() : 0) - (b.start ? b.start.getTime() : 0));
+    const archived = records.length - current.length;
+    const lines = [`Machine feed: ${records.length} record(s), ${current.length} current${archived ? `, ${archived} ended more than ${FEED_TEXT_HISTORY_DAYS} days ago (not shown)` : ''}. One line per record: start | title | place${current.some((record) => record.rrule) ? ' | repeats' : ''}.`];
+    for (const record of current) {
+        lines.push([stamp(record.start), String(record.title).replace(/\s+/g, ' ').trim(), String(record.place).replace(/\s+/g, ' ').trim(), record.rrule ? `repeats ${record.rrule}` : ''].filter(Boolean).join(' | '));
+    }
+    let text = lines.join('\n');
+    const full = text.length;
+    if (cap > 0 && text.length > cap) text = `${text.slice(0, cap)}\u2026`;
+    return { text, chars: full, truncated: cap > 0 && full > cap, records: records.length, current: current.length };
+}
+
 async function fetchListingText(adapter, url, options = {}) {
     if (!adapter || typeof adapter.fetchData !== 'function' || !url) return { page: null, reason: 'no adapter or url' };
     const reviewQueue = require(path.join(__dirname, 'review-queue'));
@@ -595,7 +731,8 @@ async function fetchListingText(adapter, url, options = {}) {
         return { page: null, reason: error && error.message ? error.message : String(error) };
     }
     if (!page || typeof page.html !== 'string' || !page.html) return { page: null, reason: 'empty page' };
-    const readable = reviewQueue.readableTextFromHtml(page.html, options.pageTextCap || PAGE_TEXT_CAP);
+    const cap = options.pageTextCap || PAGE_TEXT_CAP;
+    const readable = readableTextFromFeedBody(page.html, cap) || reviewQueue.readableTextFromHtml(page.html, cap);
     return { page: { url: page.url || url, fetchedAt: page.fetchedAt || new Date().toISOString(), chars: readable.chars, text: readable.text }, reason: '' };
 }
 
@@ -762,6 +899,9 @@ async function runSourceAudit(options = {}) {
 }
 
 module.exports = {
+    FEED_TEXT_HISTORY_DAYS,
+    feedRecordsFromBody,
+    readableTextFromFeedBody,
     SOURCE_AUDIT_FILE_NAME,
     SOURCE_AUDIT_PASS,
     STILL_VERDICTS,

@@ -3,12 +3,13 @@
   "source": "Jackhammer",
   "slug": "jackhammer",
   "status": "complete",
-  "recheckAfter": "2026-10-19",
+  "recheckAfter": "2026-11-16",
   "recon": {
-    "date": "2026-09-19",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "static",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0"
@@ -26,21 +27,21 @@
         "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
         "kind": "json",
         "role": "feed",
-        "rowsReturned": 18,
+        "rowsReturned": 14,
         "truthFlag": "status: \"success\"; no paging — the widget's default arguments (start 0, end 0, incldateless true) request the organization's whole upcoming list in one response",
-        "note": "The URL the widget builds (widget.js: /events/events_by_organization/<pid>/<oid>/<start>/<end>/<topic>/<inclcal>/<incltopic>/<incldateless>/<inclThumbnail>/<promoterId>, served from events.ticketsauce.com). Rows are an id-keyed map under $.data; each row is an envelope { Event, EventTopic, Logo, Masthead, Organization, Photo, Partner }. Event carries name, summary/details (HTML), start/end (local wall clock) with start_utc/end_utc and timezone \"America/Chicago\", location (the venue name), address/city/state/postal_code, latitude/longitude, thumb_url, and url (the sickening.events event page, where tickets are sold). Every row is a dated instance; the feed states no recurrence rule (LIP SERVICE KARAOKE's weekly nights are separate rows with numbered slugs)."
+        "note": "The URL the widget builds (widget.js: /events/events_by_organization/<pid>/<oid>/<start>/<end>/<topic>/<inclcal>/<incltopic>/<incldateless>/<inclThumbnail>/<promoterId>, served from events.ticketsauce.com). Rows are an id-keyed map under $.data; each row is an envelope { Event, EventTopic, Logo, Masthead, Organization, Photo, Partner }. Event carries name, summary/details (HTML), start/end (local wall clock) with start_utc/end_utc and timezone \"America/Chicago\", location (the venue name), address/city/state/postal_code, latitude/longitude, thumb_url, and url (the sickening.events event page, where tickets are sold). Every row is a dated instance; the feed states no recurrence rule (LIP SERVICE KARAOKE's weekly nights are separate rows with numbered slugs). Re-read 2026-10-17 from the scraper's cache (fetched 2026-10-16T10:18:59.355Z): 14 rows, 11 distinct titles, 2026-10-16 → 2026-11-27; the feed is upcoming-only, so the September/early-October rows of the 2026-09-19 read are gone and the window has rolled forward. Every row carries Logo.url (artwork) and latitude/longitude; the rows were regenerated from the cached body. NOTE robots.txt on events.ticketsauce.com (read from the cache) says \"User-agent: * / Disallow: /events/events_by_organization\" and \"DisallowAITraining: /\": the configured door is disallowed for every crawler; the run fetched it under the \"configured source's own door, requested anyway\" policy (🤖 ROBOTS log line). Owner call."
       }
     ],
     "notes": "Jackhammer (2Bears Tavern Group). Recon from one cached read of each door on 2026-09-19. 18 rows, 9 distinct titles, 2026-09-19 → 2026-11-27. The feed is upcoming-only; no past rows."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Feed door: the TicketSauce events_by_organization JSON answered 18 rows (all future, 2026-09-19 → 2026-11-27); every row is documented as a single because the feed states no rule (repeating nights are separate dated rows). The site's own /events page is a widget mount with no events in its HTML, so the feed is the only statement of the calendar. Distinct titles: GOLDILOXX Chicago | LIP SERVICE KARAOKE | BEAR HAPPY HOUR | Fetish Friday: GEAR | HIM | The Kennel: Celebrating 2 Years | BELLY UP | SMOOCH | FUZZED.",
-    "publishedEventCount": 18,
-    "documentedEventCount": 18,
+    "basis": "Re-read 2026-10-17: the TicketSauce feed answered 14 rows (2026-10-16 → 2026-11-27); every row is documented as a single (the feed states no rule) — Earlier basis: Feed door: the TicketSauce events_by_organization JSON answered 18 rows (all future, 2026-09-19 → 2026-11-27); every row is documented as a single because the feed states no rule (repeating nights are separate dated rows). The site's own /events page is a widget mount with no events in its HTML, so the feed is the only statement of the calendar. Distinct titles: GOLDILOXX Chicago | LIP SERVICE KARAOKE | BEAR HAPPY HOUR | Fetish Friday: GEAR | HIM | The Kennel: Celebrating 2 Years | BELLY UP | SMOOCH | FUZZED.",
+    "publishedEventCount": 14,
+    "documentedEventCount": 14,
     "occurrenceWindow": {
-      "start": "2026-09-19",
-      "end": "2026-12-18"
+      "start": "2026-10-16",
+      "end": "2026-11-27"
     },
     "pastListingsPresent": false,
     "knownGaps": []
@@ -54,260 +55,10 @@
   },
   "events": [
     {
-      "id": "goldiloxx-chicago-2026-09-19",
-      "kind": "single",
-      "title": "GOLDILOXX Chicago",
-      "description": "The Experience GOLDILOXX brings a unique nightlife experience to Chicago, blending social interaction, dancefloor energy, and unexpected connections into one unforgettable night. Upon arrival, choose a color-coded cup that reflects your vibe and connect with others throughout the evening. Choose Your Vibe Blue — Feeling Bold Pink — Flirty Energy Orange — Open to Connection Green — Taking It All In The Space Two floors. Two different vibes. Dance, mingle, connect, and explore throughout the night. The Music DJs from NYC and Chicago bringing nonstop energy from start to finish. Extras Go-Go Dancers All Night Clothing Check Available Come ready. Stay late.",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-09-19",
-      "startTime": "21:00",
-      "endDate": "2026-09-20",
-      "endTime": "05:00",
-      "ticketUrl": "https://www.sickening.events/e/goldiloxx-chicago",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782170656/saas/logos/image_1782170650341_uohz6tayi.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"6a39c3b9-40ac-48fe-a235-19eb0a1e60d0\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "lip-service-karaoke-2026-09-23",
-      "kind": "single",
-      "title": "LIP SERVICE KARAOKE",
-      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night—where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-09-23",
-      "startTime": "21:00",
-      "endDate": "2026-09-24",
-      "endTime": "01:00",
-      "ticketUrl": "https://www.sickening.events/e/lip-service-karaoke-2-11-11-4",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778879433/saas/logos/image_1778879428163_h8a550dwt.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"6a83f957-488c-4dc4-9f08-0e870a1e608c\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "bear-happy-hour-2026-09-24",
-      "kind": "single",
-      "title": "BEAR HAPPY HOUR",
-      "description": "Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly social built for bears, friends, and admirers to connect, unwind, and ease into the night. Whether you're stopping by after work or settling in for the evening, expect a relaxed, welcoming atmosphere with plenty of opportunity to meet new people and catch up with familiar faces. This is a low-pressure, high-vibe space centered on community and conversation.",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-09-24",
-      "startTime": "18:00",
-      "endDate": "2026-09-24",
-      "endTime": "22:00",
-      "ticketUrl": "https://www.sickening.events/e/bear-happy-hour-3-4",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788990083/saas/logos/image_1788990077939_b0x763vwp.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69cf6359-1ab4-4020-99d5-00130a1e637d\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "fetish-friday-gear-2026-09-25",
-      "kind": "single",
-      "title": "Fetish Friday: GEAR",
-      "description": "FETISH FRIDAY: GEAR Fourth Friday of the Month | 9PM–4AM GEAR is your monthly invitation to suit up and step into the scene. Dedicated to showcasing leather, rubber, harnesses, hoods, and everything in between, Fetish Friday: GEAR creates a space where expression, confidence, and community come together. Whether you're building a collection or trying your first piece, this night is about showing up, exploring, and being part of the energy. Expect a packed room, bold looks, and a crowd that understands the assignment. Dress Encouraged: Leather, rubber, harnesses, gear, or your interpretation of the theme",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-09-25",
-      "startTime": "21:00",
-      "endDate": "2026-09-26",
-      "endTime": "04:00",
-      "ticketUrl": "https://www.sickening.events/e/fetish-friday-gear-3-3",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775349482/saas/logos/image_1775349476669_zvjm59kex.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69d1b109-4a34-4399-b7e8-00740a1e63f4\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "him-2026-09-26",
-      "kind": "single",
-      "title": "HIM",
-      "description": "Him TransMasc Dance Party HIM is a TransMasc dance party presented by the TransMasc Society of Chicago, at Jackhammer and The Hole, for a night built entirely around community, music, and dancefloor energy. A stacked lineup of DJs and performers keeps the night moving from the first beat to the last. Come support the community, dance all night, and be part of a space built for and by TransMasc folks. Saturday, September 26th 9PM DJs Kaos &middot; Avi Wavi &middot; Daigroovie Performers Troy &middot; Butch Dream Daddy &middot; Andy Chaz &middot; Devyn-Marshall Sinclair &middot; Mak &middot; Juniper Faewild &middot; Penis Envy &middot; Nasty Navi Jackhammer and The Hole. Presented by the TransMasc Society of Chicago.",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-09-26",
-      "startTime": "21:00",
-      "endDate": "2026-09-27",
-      "endTime": "05:00",
-      "ticketUrl": "https://www.sickening.events/e/him",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1788213702/saas/logos/image_1788213696852_0whfu1kyd.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"6a95f9b7-f748-46e2-a6e3-60840a1e6304\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "lip-service-karaoke-2026-09-30",
-      "kind": "single",
-      "title": "LIP SERVICE KARAOKE",
-      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night—where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-09-30",
-      "startTime": "21:00",
-      "endDate": "2026-10-01",
-      "endTime": "01:00",
-      "ticketUrl": "https://www.sickening.events/e/lip-service-karaoke-2-11-11-5",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778879433/saas/logos/image_1778879428163_h8a550dwt.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"6a83f82c-9e6c-431e-a9b7-28710a1e62b4\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "the-kennel-celebrating-2-years-2026-10-02",
-      "kind": "single",
-      "title": "The Kennel: Celebrating 2 Years",
-      "description": "The Kennel Celebrating 2 Years Friday, October 2nd 9PM - 4AM Music By Vanquish &middot; JasperHoney420 Ryan Cezanne &middot; Arthrotica Hosted By Ruby &middot; Rubber Excel &middot; Wilde Photon &middot; Tracer &middot; Grayson",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-10-02",
-      "startTime": "21:00",
-      "endDate": "2026-10-03",
-      "endTime": "04:00",
-      "ticketUrl": "https://www.sickening.events/e/the-kennel-2year-anniversary",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1789155605/saas/logos/image_1789155599834_v7ahnmxnd.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"69d33691-0d00-472b-b14f-3ad20a1e6263\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "belly-up-2026-10-03",
-      "kind": "single",
-      "title": "BELLY UP",
-      "description": "Belly UP - Fall - Up Saturday, Oct 3rd 9PM to 5AM No Cover Before 10PM Music By Jesse Mercado &middot; Tim Arnold Saint Mason &middot; Suzi Sudoku",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-10-03",
-      "startTime": "21:00",
-      "endDate": "2026-10-04",
-      "endTime": "05:00",
-      "ticketUrl": "https://www.sickening.events/e/belly-up-7",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1789160398/saas/logos/image_1789160392228_3pzylt0yu.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"6aa46b6d-347c-4e0f-bb33-4a330a1e600b\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "lip-service-karaoke-2026-10-07",
-      "kind": "single",
-      "title": "LIP SERVICE KARAOKE",
-      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night—where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-10-07",
-      "startTime": "21:00",
-      "endDate": "2026-10-08",
-      "endTime": "01:00",
-      "ticketUrl": "https://www.sickening.events/e/lip-service-karaoke-2-11-11-6",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778879433/saas/logos/image_1778879428163_h8a550dwt.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"6a83f91b-2c78-4e25-9854-35dc0a1e636c\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "lip-service-karaoke-2026-10-14",
-      "kind": "single",
-      "title": "LIP SERVICE KARAOKE",
-      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night—where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
-      "bar": "Jackhammer",
-      "address": "6406 North Clark Street, Chicago, IL 60626",
-      "location": "41.998409, -87.671036",
-      "startDate": "2026-10-14",
-      "startTime": "21:00",
-      "endDate": "2026-10-15",
-      "endTime": "01:00",
-      "ticketUrl": "https://www.sickening.events/e/lip-service-karaoke-2-11-11-7",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778879433/saas/logos/image_1778879428163_h8a550dwt.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
-        "jsonPath": "$.data[\"6a83f7b3-bef4-4870-8b94-3ec30a1e62ca\"].Event"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
       "id": "smooch-2026-10-16",
       "kind": "single",
       "title": "SMOOCH",
-      "description": "Smooch SMOOCH is an underground queer makeout party. Low lights. Heavy sound. This is a night for flirting, getting close, and kissing away the world. Friday, October 16th 9PM to 4AM Jackhammer, in partnership with The Hole.",
+      "description": "Smooch An underground queer makeout party. Low lights, heavy sound. This is a night for flirting, getting close, and kissing away the world. Friday, October 16th 9PM to 4AM Jackhammer &middot; The Hole",
       "bar": "Jackhammer",
       "address": "6406 North Clark Street, Chicago, IL 60626",
       "location": "41.998409, -87.671036",
@@ -329,10 +80,35 @@
       "bearVerdict": null
     },
     {
+      "id": "daddy-pop-halloween-edition-2026-10-17",
+      "kind": "single",
+      "title": "Daddy Pop: Halloween Edition",
+      "description": "Daddy Pop Jackhammer and The Hole get sweet and spooky for a Halloween edition of Daddy Pop. Candy, costumes, and a dance floor full of treats. Friday, October 17th 9PM to 4AM Music By Tracy McKenzie &middot; DJ ADAM EL",
+      "bar": "Jackhammer",
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "location": "41.998409, -87.671036",
+      "startDate": "2026-10-17",
+      "startTime": "21:00",
+      "endDate": "2026-10-18",
+      "endTime": "04:00",
+      "ticketUrl": "https://www.sickening.events/e/daddy-pop-halloween-edition",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1791850847/saas/logos/image_1791850841802_psdek2vhr.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acae9f7-0490-4016-bdd4-1f330a1e636a\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
       "id": "fuzzed-2026-10-18",
       "kind": "single",
       "title": "FUZZED",
-      "description": "Chicago's Premier Furry Party Get Fuzzed Get Fuzzed is Chicago's premier furry party, and it's back at Jackhammer for a night full of live energy, good music, and plenty of local furries to meet, party, and hang out with. Fursuits and furry gear are encouraged, not required, so come exactly as you are. This is a space built for community first, costume second. Sunday, September 13th 6PM to 2AM Jackhammer Chicago.",
+      "description": "Chicago's Premier Furry Party Get Fuzzed Chicago's premier furry party returns to Jackhammer. Fursuits and furry gear encouraged, and a room full of the local furry community ready to meet, party, and hang out. Sunday, OCTOBER 18th 6PM to 2AM",
       "bar": "Jackhammer",
       "address": "6406 North Clark Street, Chicago, IL 60626",
       "location": "41.998409, -87.671036",
@@ -341,7 +117,7 @@
       "endDate": "2026-10-19",
       "endTime": "02:00",
       "ticketUrl": "https://www.sickening.events/e/fuzzed-8",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1789525285/saas/logos/image_1789525278361_rtcgyw9eh.webp",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790022582/saas/logos/image_1790022575965_ib32d46y3.webp",
       "sourceRung": "feed",
       "confidence": "high",
       "evidence": {
@@ -357,7 +133,7 @@
       "id": "lip-service-karaoke-2026-10-21",
       "kind": "single",
       "title": "LIP SERVICE KARAOKE",
-      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night—where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
+      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night&mdash;where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
       "bar": "Jackhammer",
       "address": "6406 North Clark Street, Chicago, IL 60626",
       "location": "41.998409, -87.671036",
@@ -382,7 +158,7 @@
       "id": "bear-happy-hour-2026-10-22",
       "kind": "single",
       "title": "BEAR HAPPY HOUR",
-      "description": "Bear Happy Hour Fourth Thursday of the Month | 6PM–10PM Bear Happy Hour is a monthly social built for bears, friends, and admirers to connect, unwind, and ease into the night. Whether you're stopping by after work or settling in for the evening, expect a relaxed, welcoming atmosphere with plenty of opportunity to meet new people and catch up with familiar faces. This is a low-pressure, high-vibe space centered on community and conversation.",
+      "description": "Bear Happy Hour Fourth Thursday of the Month | 6PM&ndash;10PM Bear Happy Hour is a monthly social built for bears, friends, and admirers to connect, unwind, and ease into the night. Whether you're stopping by after work or settling in for the evening, expect a relaxed, welcoming atmosphere with plenty of opportunity to meet new people and catch up with familiar faces. This is a low-pressure, high-",
       "bar": "Jackhammer",
       "address": "6406 North Clark Street, Chicago, IL 60626",
       "location": "41.998409, -87.671036",
@@ -407,7 +183,7 @@
       "id": "fetish-friday-gear-2026-10-23",
       "kind": "single",
       "title": "Fetish Friday: GEAR",
-      "description": "FETISH FRIDAY: GEAR Fourth Friday of the Month | 9PM–4AM GEAR is your monthly invitation to suit up and step into the scene. Dedicated to showcasing leather, rubber, harnesses, hoods, and everything in between, Fetish Friday: GEAR creates a space where expression, confidence, and community come together. Whether you're building a collection or trying your first piece, this night is about showing up, exploring, and being part of the energy. Expect a packed room, bold looks, and a crowd that understands the assignment. Dress Encouraged: Leather, rubber, harnesses, gear, or your interpretation of the theme",
+      "description": "FETISH FRIDAY: GEAR Fourth Friday of the Month | 9PM&ndash;4AM GEAR is your monthly invitation to suit up and step into the scene. Dedicated to showcasing leather, rubber, harnesses, hoods, and everything in between, Fetish Friday: GEAR creates a space where expression, confidence, and community come together. Whether you're building a collection or trying your first piece, this night is about sho",
       "bar": "Jackhammer",
       "address": "6406 North Clark Street, Chicago, IL 60626",
       "location": "41.998409, -87.671036",
@@ -429,10 +205,35 @@
       "bearVerdict": null
     },
     {
+      "id": "diaper-up-jurassic-playground-2026-10-24",
+      "kind": "single",
+      "title": "Diaper Up: Jurassic Playground",
+      "description": "Diaper Up! Jurassic Playground The gates are open. Towering creatures, wild energy, and a dance floor millions of years in the making, with Pup Jupiter guiding the expedition and GNAW on the soundtrack. Saturday, October 24th 9PM to 5AM",
+      "bar": "Jackhammer",
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "location": "41.998409, -87.671036",
+      "startDate": "2026-10-24",
+      "startTime": "21:00",
+      "endDate": "2026-10-25",
+      "endTime": "05:00",
+      "ticketUrl": "https://www.sickening.events/e/diaper-up-jurassic-playground",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790626947/saas/logos/image_1790626940722_k00mgig8f.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6abac772-414c-4743-84f2-684e0a1e6257\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
       "id": "lip-service-karaoke-2026-10-28",
       "kind": "single",
       "title": "LIP SERVICE KARAOKE",
-      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night—where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
+      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night&mdash;where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
       "bar": "Jackhammer",
       "address": "6406 North Clark Street, Chicago, IL 60626",
       "location": "41.998409, -87.671036",
@@ -454,10 +255,60 @@
       "bearVerdict": null
     },
     {
+      "id": "rough-trade-2026-10-30",
+      "kind": "single",
+      "title": "ROUGH TRADE",
+      "description": "Rough Trade Jackhammer and The Hole get rough. Blue collar gear, tool belts, and hard working energy take over the dance floor. Friday, October 30th 9PM to 4AM Music By Redux (CT & Wyser) &middot; Andy &middot; Blake",
+      "bar": "Jackhammer",
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "location": "41.998322, -87.670959",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": "2026-10-31",
+      "endTime": "04:00",
+      "ticketUrl": "https://www.sickening.events/e/rough-trade-5",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1792020254/saas/logos/image_1792020248983_pne0g8ukd.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6ac418a1-4bf4-4600-8a04-00990a1e61eb\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "primal-halloween-howl-2026-10-31",
+      "kind": "single",
+      "title": "PRIMAL HALLOWEEN HOWL",
+      "description": "Primal Howl The moon is full and the fog is rolling in. Jackhammer and The Hole howl all night with music, costumes, and primal energy. Saturday, October 31st 9PM to 5AM Music By Ale Maes &middot; Jon McCray &middot; Saint Mason &middot; Blu9",
+      "bar": "Jackhammer",
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "location": "41.998322, -87.670959",
+      "startDate": "2026-10-31",
+      "startTime": "21:00",
+      "endDate": "2026-11-01",
+      "endTime": "05:00",
+      "ticketUrl": "https://www.sickening.events/e/primal-halloween-howl",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1792021329/saas/logos/image_1792021320802_biezlyv4j.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6ac41f4e-53bc-428f-aac4-06b70a1e628e\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
       "id": "lip-service-karaoke-2026-11-04",
       "kind": "single",
       "title": "LIP SERVICE KARAOKE",
-      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night—where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
+      "description": "Lip Service: Kinky Karaoke at Jackhammer Hosted by Tim Bell Every Wednesday | 9PM Step up, take the mic, and let it out. Lip Service is Chicago's kinkiest karaoke night&mdash;where bold performances, uninhibited energy, and a packed bar come together every Wednesday at Jackhammer. Whether you're here to sing, scream, or simply watch the chaos unfold, this is your midweek release.",
       "bar": "Jackhammer",
       "address": "6406 North Clark Street, Chicago, IL 60626",
       "location": "41.998409, -87.671036",
@@ -479,10 +330,60 @@
       "bearVerdict": null
     },
     {
+      "id": "belly-up-coat-drive-2026-11-07",
+      "kind": "single",
+      "title": "BELLY UP + COAT DRIVE",
+      "description": "Belly Up BeefyBoy presents a night of free snacks and full bellies at Jackhammer and The Hole, with a coat drive benefiting North Side Housing and Supportive Services. Saturday, November 7th 9PM to 5AM Music By Jesse Mercado &middot; Aman Ster &middot; Tim Arnold &middot; Suzi Sudoku + Coat Drive",
+      "bar": "Jackhammer",
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "location": "41.998322, -87.670959",
+      "startDate": "2026-11-07",
+      "startTime": "21:00",
+      "endDate": "2026-11-08",
+      "endTime": "05:00",
+      "ticketUrl": "https://www.sickening.events/e/belly-up-9",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1791953470/saas/logos/image_1791953463044_k80dt1ejx.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6acb1ad6-74ec-4b9f-b169-5e150a1e62ab\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "qts-farius-queer-trance-party-2026-11-21",
+      "kind": "single",
+      "title": "QTS: Farius' Queer Trance Party",
+      "description": "Farius' Queer Trance Party QTS Led by the euphoric vision of Farius, QTS takes over Jackhammer for a night built for movement and guided by the sound of trance and high energy club cuts. Presence is everything. Leave the ego at the door. Fall Tour 2026 November 21st Jackhammer, Chicago",
+      "bar": "Jackhammer",
+      "address": "6406 North Clark Street, Chicago, IL 60626",
+      "location": "41.998409, -87.671036",
+      "startDate": "2026-11-21",
+      "startTime": "21:00",
+      "endDate": "2026-11-22",
+      "endTime": "05:00",
+      "ticketUrl": "https://www.sickening.events/e/qts-farius-queer-trance-party",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1790354209/saas/logos/image_1790354203745_3gchtdld5.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://events.ticketsauce.com/events/events_by_organization/60a71c30-a1e8-48e8-a5b0-1f640ad1e030/69c6fe8a-a974-4c8f-b95a-61830a1e61fc/0/0/0/false/false/true/true/0",
+        "jsonPath": "$.data[\"6ab6a310-ef54-4a4d-9908-03ee0a1e629d\"].Event"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
       "id": "fetish-friday-gear-2026-11-27",
       "kind": "single",
       "title": "Fetish Friday: GEAR",
-      "description": "FETISH FRIDAY: GEAR Fourth Friday of the Month | 9PM–4AM GEAR is your monthly invitation to suit up and step into the scene. Dedicated to showcasing leather, rubber, harnesses, hoods, and everything in between, Fetish Friday: GEAR creates a space where expression, confidence, and community come together. Whether you're building a collection or trying your first piece, this night is about showing up, exploring, and being part of the energy. Expect a packed room, bold looks, and a crowd that understands the assignment. Dress Encouraged: Leather, rubber, harnesses, gear, or your interpretation of the theme",
+      "description": "FETISH FRIDAY: GEAR Fourth Friday of the Month | 9PM&ndash;4AM GEAR is your monthly invitation to suit up and step into the scene. Dedicated to showcasing leather, rubber, harnesses, hoods, and everything in between, Fetish Friday: GEAR creates a space where expression, confidence, and community come together. Whether you're building a collection or trying your first piece, this night is about sho",
       "bar": "Jackhammer",
       "address": "6406 North Clark Street, Chicago, IL 60626",
       "location": "41.998409, -87.671036",
@@ -505,5 +406,11 @@
     }
   ],
   "traps": [],
-  "openQuestions": []
+  "openQuestions": [
+    {
+      "q": "Daily audit of 2026-10-17 (\"The only event listed on the page is SMOOCH…\"): the audit read the raw 687 658-character JSON through the HTML text reader and capped it at 6 000 characters — SMOOCH's envelope alone — then judged every other extracted row unverifiable. The run extracted all 14 rows (5 kept, 9 dropped as not bear by the manual store or the AI). Fixed on branch audit/recheck-feeds: tools/source-audit.js renders a JSON or iCalendar door as one line per current record before the cap (scripts/feed-door-shapes.test.js).",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    }
+  ]
 }
