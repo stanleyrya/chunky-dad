@@ -1355,7 +1355,7 @@ function buildSourceWidgetSummary(health, options = {}) {
 // both render it through buildSourceYieldTableHtml.
 const YIELD_FIELDS = [['time', 't', 'time'], ['place', 'p', 'place'], ['coords', 'c', 'coordinates'], ['url', 'u', 'link'], ['image', 'i', 'image'], ['desc', 'd', 'description']];
 const YIELD_SORT_KEYS = ['host', 'extracted', 'bear', 'yield', 'lowest'];
-const YIELD_DEFAULT_SORT = { key: 'lowest', direction: 'asc' };
+const YIELD_DEFAULT_SORT = { key: 'yield', direction: 'asc' };
 const YIELD_RUNS = 7;
 
 function buildSourceYieldRows(records, options = {}) {
@@ -1425,15 +1425,16 @@ function buildSourceYieldRows(records, options = {}) {
     return { runs: runIds, rows: sortSourceYieldRows(rows, YIELD_DEFAULT_SORT) };
 }
 
-// Lowest field first by default (a null lowest — nothing kept — last);
-// yield asc puts the hosts that keep the least of what they extract first.
+// Yield asc by default: the hosts that keep the least of what they extract
+// first (0% — thedallaseagle.com, hereticatlanta.com — ahead of a host with
+// a weak field); then the lowest field (nothing kept last), then the host.
 function sortSourceYieldRows(rows, sortState) {
     const list = Array.isArray(rows) ? rows.slice() : [];
     const key = sortState && YIELD_SORT_KEYS.includes(sortState.key) ? sortState.key : YIELD_DEFAULT_SORT.key;
     const direction = sortState && sortState.direction === 'desc' ? -1 : 1;
     const num = (value, missing) => (Number.isFinite(Number(value)) && value !== null ? Number(value) : missing);
     const lowestOf = (row) => (row.lowest ? row.lowest.pct : 101);
-    const baseOrder = (a, b) => lowestOf(a) - lowestOf(b) || num(a.yield, 101) - num(b.yield, 101) || String(a.host).localeCompare(String(b.host));
+    const baseOrder = (a, b) => num(a.yield, 101) - num(b.yield, 101) || lowestOf(a) - lowestOf(b) || String(a.host).localeCompare(String(b.host));
     list.sort((a, b) => {
         let diff = 0;
         if (key === 'host') diff = String(a.host).localeCompare(String(b.host));

@@ -1126,7 +1126,7 @@ test('flagged chip: one sanity flag code on ≥ 50% of kept events in ≥ 3 of t
 // lowest field — one table the phone and the Mac both render.
 // ---------------------------------------------------------------------------
 
-test('buildSourceYieldRows: the last N runs of the ledger per host — medians, yield %, weighted field shares, the lowest field, a gap for a run without a line; sorted lowest field first', () => {
+test('buildSourceYieldRows: the last N runs of the ledger per host — medians, yield %, weighted field shares, the lowest field, a gap for a run without a line; sorted lowest yield first', () => {
   const runs = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(index => [`2026100${index}-050000`, `2026-10-0${index}T09:00:00.000Z`]);
   const lines = [];
   runs.forEach(([run_id, finished_at], index) => {
@@ -1163,8 +1163,9 @@ test('buildSourceYieldRows: the last N runs of the ledger per host — medians, 
   assert.equal(dead.okRuns, 6);
   assert.equal(dead.latestStatus, 'dead');
   assert.equal(dead.extracted, 40, 'medians over the ok runs only');
-  assert.deepEqual(data.rows.map(row => row.host).slice(0, 2), ['rock.example', 'lodge.example'], 'lowest field first (url 0 and image 0 tie), then the lower yield (13% before 25%)');
-  assert.equal(data.rows[data.rows.length - 1].host, 'old.example', 'nothing judged sorts last');
+  assert.deepEqual(data.rows.map(row => row.host).slice(0, 3), ['dead.example', 'rock.example', 'lodge.example'], 'lowest yield first (10%, 13%, 25%): the hosts that keep the least of what they extract lead');
+  assert.deepEqual(MetricsSections.sortSourceYieldRows(data.rows, { key: 'lowest', direction: 'asc' }).map(row => row.host).slice(0, 2), ['rock.example', 'lodge.example'], 'by lowest field: url 0 and image 0 tie, the lower yield breaks it');
+  assert.equal(MetricsSections.sortSourceYieldRows(data.rows, { key: 'lowest', direction: 'asc' }).pop().host, 'old.example', 'nothing judged sorts last');
   // Sort keys.
   assert.deepEqual(MetricsSections.sortSourceYieldRows(data.rows, { key: 'yield', direction: 'asc' }).map(row => row.host).slice(0, 3), ['dead.example', 'rock.example', 'lodge.example'], '10%, 13%, 25%');
   assert.deepEqual(MetricsSections.sortSourceYieldRows(data.rows, { key: 'extracted', direction: 'desc' }).map(row => row.host)[0], 'lodge.example');

@@ -1251,7 +1251,7 @@ ${verdictCss}
 <div class="wrap">
 <p class="intro">The source ledger (metrics/sources.ndjson, one line per run per website) as the phone's Sources view reads it: ${esc(troubled)}. Read only.</p>
 <div class="card"><h2>Sources</h2><div class="sub">one row per website host, trouble first · Extr · Bear · Up = the latest run</div>${counters}${sourcesTable}</div>
-<div class="card"><h2>Yield</h2><div class="sub">bear kept / extracted (medians over the last ${esc(String(yieldData.runs.length))} runs) · bars = share of kept events with a time, place, coordinates, link, image, description · lowest field first</div>${yieldTable}</div>
+<div class="card"><h2>Yield</h2><div class="sub">bear kept / extracted (medians over the last ${esc(String(yieldData.runs.length))} runs) · bars = share of kept events with a time, place, coordinates, link, image, description · lowest yield first</div>${yieldTable}</div>
 </div>
 <script>
 (function () {

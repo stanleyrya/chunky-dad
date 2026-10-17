@@ -3181,7 +3181,7 @@ class MetricsDisplay {
             sortState: MetricsSections.YIELD_DEFAULT_SORT,
             hostUrl: row => this.buildHostUrl(row.host),
             faviconUrl: row => this.getHostFaviconUrl(row)
-          }), escapeHtml(`bear kept / extracted (medians over the last ${yieldData.runs.length} runs) · bars = share of kept events with a time, place, coordinates, link, image, description · lowest field first; tap a header to sort`)));
+          }), escapeHtml(`bear kept / extracted (medians over the last ${yieldData.runs.length} runs) · bars = share of kept events with a time, place, coordinates, link, image, description · lowest yield first; tap a header to sort`)));
         }
       }
       return cards;
@@ -4799,13 +4799,13 @@ ${verdictCss}
         rows.forEach(row => sourceList.appendChild(row));
       };
 
-      // Yield: lowest field first, then the lowest yield, then the host —
-      // the order buildSourceYieldRows produces; blanks (nothing kept) last.
-      const yieldSortState = { key: 'lowest', direction: 'asc' };
+      // Yield: lowest yield first, then the lowest field, then the host —
+      // the order buildSourceYieldRows produces; blanks last.
+      const yieldSortState = { key: 'yield', direction: 'asc' };
       const yieldNumber = (value, missing) => (value === '' || value === undefined ? missing : parseNumber(value));
       const yieldBaseOrder = (aData, bData) => (
-        (yieldNumber(aData.yieldLowest, 101) - yieldNumber(bData.yieldLowest, 101))
-        || (yieldNumber(aData.yieldYield, 101) - yieldNumber(bData.yieldYield, 101))
+        (yieldNumber(aData.yieldYield, 101) - yieldNumber(bData.yieldYield, 101))
+        || (yieldNumber(aData.yieldLowest, 101) - yieldNumber(bData.yieldLowest, 101))
         || String(aData.yieldHost || '').localeCompare(String(bData.yieldHost || ''))
       );
       const sortYieldRows = () => {
