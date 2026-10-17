@@ -246,7 +246,10 @@ function buildQualityTrendData(records) {
 // independent: a row wears the worse one as its verdict and the other as a
 // flag chip. 'vanished' is the one-run blip (seen last run, gone now) and
 // ranks below empty: it is a detail, not trouble.
-const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok'];
+// 'drift' = the host still yields rows but a signal it used to give (its
+// structured door, its pages) collapsed to nothing (SharedCore.assessHostDrift):
+// the read is thinner than its count says.
+const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'drift', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok'];
 // Slow-decline clause for 'shrunk': the latest SLOW_DECLINE_RUNS ok runs all
 // below SLOW_DECLINE_RATIO × the peak of the last SLOW_DECLINE_WINDOW ok runs
 // (precinctdtla.com 160 → 98 for three runs never crossed the ½-median line).
@@ -456,6 +459,8 @@ function assessSourceHealth(records, options = {}) {
             verdict = 'stopped';
         } else if (underHalf(latest) || slowDecline) {
             verdict = 'shrunk';
+        } else if (Array.isArray(latest.drift) && latest.drift.length > 0) {
+            verdict = 'drift';
         } else if (hasLoss && !aggregator) {
             verdict = 'lost';
         } else if (latestExtracted === 0 && latest.status === 'empty') {
@@ -596,6 +601,7 @@ const SOURCE_VERDICT_LABELS = {
     dead: 'Dead',
     stopped: 'Stopped',
     shrunk: 'Shrunk',
+    drift: 'Drift',
     lost: 'Lost',
     empty: 'Empty',
     vanished: 'Vanished',

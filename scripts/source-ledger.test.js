@@ -178,7 +178,7 @@ test('assessSourceHealth: verdicts, trouble-first order, since, baseline', () =>
   assert.equal(verdictOf('lagsite.example').verdict, 'empty', 'a sibling that answered in an older run is no alibi for this run');
   assert.equal(verdictOf('lagfeed.example').verdict, 'ok');
   assert.deepEqual(health.rows.map((r) => r.verdict), ['dead', 'stopped', 'shrunk', 'empty', 'empty', 'vanished', 'quiet', 'companion', 'ok', 'ok', 'ok']);
-  assert.deepEqual([...new Set(health.rows.map((r) => r.verdict))], SOURCE_VERDICT_ORDER.filter((verdict) => verdict !== 'lost'), 'no line in this fixture carries losses');
+  assert.deepEqual([...new Set(health.rows.map((r) => r.verdict))], SOURCE_VERDICT_ORDER.filter((verdict) => verdict !== 'lost' && verdict !== 'drift'), 'no line in this fixture carries losses or drift');
   assert.equal(health.troubled, 7, 'companion is not trouble');
   assert.equal(health.hosts, 11);
   assert.equal(verdictOf('steady.example').series.length, 5);
@@ -458,4 +458,143 @@ test('buildSourceLedger: an event is attributed to the page it was read off when
   const built = SharedCore.buildSourceLedger(payload, { now: new Date('2026-10-06T12:00:00Z') });
   const venue = built.records.find((r) => r.host === 'venue.example');
   assert.equal(venue.events, 2, 'both rows land on the venue: one by the page it was read off, one by the parser\'s primary host');
+});
+
+// ---------------------------------------------------------------------------
+// Host signals, drift, and "gone from its source" (2026-10-17): what a host
+// gave besides rows, the verdict when a signal collapses, and the report-only
+// candidates for saved events a first-party source no longer lists.
+// ---------------------------------------------------------------------------
+
+function signalsPayload(extractionSource) {
+  const payload = samplePayload();
+  payload.analyzedEvents = payload.analyzedEvents.map((event) => (event.website && event.website.includes('eaglela.com') ? { ...event, _extractionSource: extractionSource } : event));
+  return payload;
+}
+
+test('buildSourceLedger: per-host signals (structured vs AI route, pages) ride on the line and in the state; a structured door that collapses to nothing is DRIFT, and the health verdict says so', () => {
+  const now = new Date('2026-10-06T12:00:00Z');
+  const structured = SharedCore.buildSourceLedger(signalsPayload('jsonld'), { now });
+  const eagle = structured.records.find((r) => r.host === 'eaglela.com');
+  assert.deepEqual(eagle.signals, { structured: 2, ai: 0, pages: 2, extracted: 4 });
+  assert.deepEqual(eagle.drift, [], 'no history yet — nothing to drift from');
+  assert.equal(structured.upcoming.hosts['eaglela.com'].signals_history.length, 1, 'the state remembers this run\'s signals');
+
+  // Three ok runs through the JSON-LD door, then a run read by the AI route only.
+  const history = { hosts: { 'eaglela.com': { ...structured.upcoming.hosts['eaglela.com'], signals_history: [eagle.signals, eagle.signals, eagle.signals] } } };
+  const collapsed = SharedCore.buildSourceLedger(signalsPayload('ai'), { now, previousUpcoming: history });
+  const after = collapsed.records.find((r) => r.host === 'eaglela.com');
+  assert.deepEqual(after.signals, { structured: 0, ai: 2, pages: 2, extracted: 4 });
+  assert.deepEqual(after.drift, [{ signal: 'structured', before: 2, now: 0 }].filter(() => false).concat([]), 'a median of 2 is under the floor of 3 — one small host\'s two rows are not a door');
+  const bigger = { hosts: { 'eaglela.com': { ...history.hosts['eaglela.com'], signals_history: [{ structured: 6, ai: 0, pages: 2, extracted: 6 }, { structured: 5, ai: 0, pages: 2, extracted: 5 }, { structured: 7, ai: 1, pages: 2, extracted: 8 }] } } };
+  const drifted = SharedCore.buildSourceLedger(signalsPayload('ai'), { now, previousUpcoming: bigger });
+  const row = drifted.records.find((r) => r.host === 'eaglela.com');
+  assert.deepEqual(row.drift, [{ signal: 'structured', before: 6, now: 0 }]);
+  assert.equal(drifted.upcoming.hosts['eaglela.com'].signals_history.length, 4);
+  const health = assessSourceHealth([...bigger.hosts['eaglela.com'].signals_history.map((signals, index) => ({ ...row, run_id: `2026100${index + 1}-050000`, finished_at: `2026-10-0${index + 1}T05:00:00Z`, drift: [], signals })), row], { now });
+  assert.equal(health.rows.find((r) => r.host === 'eaglela.com').verdict, 'drift');
+  assert.ok(SOURCE_VERDICT_ORDER.indexOf('drift') > SOURCE_VERDICT_ORDER.indexOf('shrunk') && SOURCE_VERDICT_ORDER.indexOf('drift') < SOURCE_VERDICT_ORDER.indexOf('lost'));
+});
+
+test('buildSourceLedger: the gone-from-source streak state rides in source-upcoming.json — the run that checked carries the new state, any other run carries the previous one', () => {
+  const now = new Date('2026-10-06T12:00:00Z');
+  const previousUpcoming = { hosts: {}, gone: { la: { 'uid-1': { title: 'Old', day: '2026-10-20', misses: 1 } } } };
+  const carried = SharedCore.buildSourceLedger(samplePayload(), { now, previousUpcoming });
+  assert.deepEqual(carried.upcoming.gone, previousUpcoming.gone);
+  const checked = SharedCore.buildSourceLedger(samplePayload({ goneFromSource: { candidates: [], state: { la: { 'uid-2': { title: 'New', day: '2026-10-21', misses: 2 } } }, summary: {} } }), { now, previousUpcoming });
+  assert.deepEqual(Object.keys(checked.upcoming.gone.la), ['uid-2']);
+});
+
+test('buildGoneFromSourceCandidates: a saved event pointing into a site a first-party source read, that nothing matched, is a miss; the second miss is a card with what the site lists instead — matched, beyond-horizon, series, thin-read and unattributed records never are', () => {
+  const { EventSchema } = require('./event-schema');
+  const core = new SharedCore({ la: { timezone: 'America/Los_Angeles', patterns: ['la'] } }, { eventSchema: EventSchema });
+  const site = (title, day, extra = {}) => ({ title, startDate: `${day}T05:00:00.000Z`, bar: 'Eagle LA', city: 'la', timezone: 'America/Los_Angeles', website: `https://eaglela.com/events/${title.toLowerCase().replace(/\s+/g, '-')}/`, isBearEvent: true, ...extra });
+  const parserResults = [{
+    name: 'Eagle LA', totalEvents: 3, config: { name: 'Eagle LA', urls: ['https://eaglela.com/events/'] },
+    urlClassifications: { 'https://eaglela.com/events/': 'multi-event-page' },
+    events: [site('BLUF LA', '2026-10-24'), site('Underwear Night Party', '2026-10-25', { bar: 'Precinct DTLA' }), site('Bear Night', '2026-11-20')]
+  }];
+  const saved = (uid, title, day, extra = {}) => ({
+    identifier: `cal:${uid}`, title, startDate: new Date(`${day}T05:00:00.000Z`), endDate: new Date(`${day}T09:00:00.000Z`), location: '34.0, -118.0',
+    notes: `bar: Eagle LA\naddress: 4219 Santa Monica Blvd\nwebsite: https://eaglela.com/events/${title.toLowerCase().replace(/\s+/g, '-')}/`, url: '', isAllDay: false, ...extra
+  });
+  const savedByCity = { la: { events: [
+    saved('A', 'BLUF LA', '2026-10-24'),
+    saved('B', 'Underwear Night', '2026-10-25'),
+    saved('C', 'Far Future Party', '2026-12-31'),
+    saved('D', 'Weekly Beer Bust', '2026-10-26', { series: true }),
+    saved('E', 'Elsewhere Party', '2026-10-27', { notes: 'bar: Other Bar\nwebsite: https://elsewhere.example/party/' }),
+    saved('F', 'Already Happened', '2026-09-01')
+  ] } };
+  const results = { parserResults, analyzedEvents: [{ ...site('BLUF LA', '2026-10-24'), _action: 'merge', _existingEvent: { identifier: 'cal:A', title: 'BLUF LA' } }] };
+  const now = new Date('2026-10-06T12:00:00Z');
+
+  const first = core.buildGoneFromSourceCandidates(results, savedByCity, { now });
+  assert.equal(first.candidates.length, 0, 'one miss is not a card');
+  assert.deepEqual(first.state.la.B && { misses: first.state.la.B.misses, day: first.state.la.B.day, host: first.state.la.B.host }, { misses: 1, day: '2026-10-24', host: 'eaglela.com' });
+  assert.equal(first.state.la.A, undefined, 'the matched saved event has no streak');
+  assert.equal(first.state.la.C, undefined, 'beyond the furthest night the source showed — outside its statement');
+  assert.equal(first.state.la.D, undefined, 'a series occurrence is never a candidate');
+  assert.equal(first.state.la.E, undefined, 'a site nobody read this run covers nothing');
+  assert.deepEqual({ saved: first.summary.saved, attributed: first.summary.attributed, seen: first.summary.seen, firstMisses: first.summary.firstMisses, beyondHorizon: first.summary.beyondHorizon, series: first.summary.series },
+    { saved: 5, attributed: 3, seen: 1, firstMisses: 1, beyondHorizon: 1, series: 1 });
+
+  const second = core.buildGoneFromSourceCandidates(results, savedByCity, { now: new Date('2026-10-07T12:00:00Z'), previousUpcoming: { hosts: {}, gone: first.state } });
+  assert.equal(second.candidates.length, 1);
+  const card = second.candidates[0];
+  assert.equal(card.key, 'gone|la|B');
+  assert.equal(card.kind, 'gone');
+  assert.equal(card.misses, 2);
+  assert.equal(card.uid, 'B');
+  assert.equal(card.identifier, 'cal:B');
+  assert.equal(card.host, 'eaglela.com');
+  assert.equal(card.source, 'Eagle LA');
+  assert.equal(card.horizonDay, '2026-11-19', 'local day of the furthest night the source showed');
+  assert.equal(card.bar, 'Eagle LA');
+  assert.equal(card.instead.sameNight.length, 1, 'the site lists one thing that night');
+  assert.equal(card.instead.sameNight[0].title, 'Underwear Night Party');
+  assert.equal(card.instead.sameNight[0].samePlace, false);
+  assert.equal(card.reason, 'moved', 'similar name at another place that night: the event moved (or the saved place is wrong)');
+
+  // The site lists it at the SAME place and the run gave that row to another
+  // saved record: this one is the extra copy — a duplicate card.
+  const twinSite = { parserResults: [{ ...parserResults[0], events: [site('BLUF LA', '2026-10-24'), site('Underwear Night', '2026-10-25'), site('Bear Night', '2026-11-20')] }],
+    analyzedEvents: [...results.analyzedEvents, { ...site('Underwear Night', '2026-10-25'), _action: 'merge', _existingEvent: { identifier: 'cal:B2', title: 'Underwear Night (copy)' } }] };
+  const duplicate = core.buildGoneFromSourceCandidates(twinSite, savedByCity, { now: new Date('2026-10-07T12:00:00Z'), previousUpcoming: { hosts: {}, gone: first.state } });
+  assert.equal(duplicate.candidates.length, 1);
+  assert.equal(duplicate.candidates[0].reason, 'duplicate');
+  assert.deepEqual(duplicate.candidates[0].duplicateOf, { identifier: 'cal:B2', uid: 'B2', title: 'Underwear Night (copy)' });
+  // …and when the run proposes that row as NEW instead, the gate failed to
+  // fold two records of one event: logged as an identity miss, never a card.
+  const gap = { parserResults: twinSite.parserResults, analyzedEvents: [...results.analyzedEvents, { ...site('Underwear Night', '2026-10-25'), _action: 'new' }] };
+  const identity = core.buildGoneFromSourceCandidates(gap, savedByCity, { now: new Date('2026-10-07T12:00:00Z'), previousUpcoming: { hosts: {}, gone: first.state } });
+  assert.equal(identity.candidates.length, 0);
+  assert.equal(identity.summary.identityMisses, 1);
+  assert.equal(identity.identityMisses[0].proposal, 'new');
+  assert.equal(identity.state.la.B.misses, 1, 'frozen — the site lists it');
+
+  // A thin read freezes the streak: neither counted nor cleared.
+  const thinHistory = { hosts: { 'eaglela.com': { history: [1, 2, 3, 4].map((n) => ({ run_id: `r${n}`, upcoming: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [`e${i}|eagle la|2026-10-2${i % 9}`, { day: '2026-10-20' }])) })) } }, gone: first.state };
+  const thin = core.buildGoneFromSourceCandidates(results, savedByCity, { now: new Date('2026-10-07T12:00:00Z'), previousUpcoming: thinHistory });
+  assert.equal(thin.candidates.length, 0);
+  assert.equal(thin.state.la.B.misses, 1, 'frozen at the previous count');
+  assert.equal(thin.summary.suppressedThin, 1);
+
+  // A host in drift freezes the streak the same way.
+  const driftHistory = { hosts: { 'eaglela.com': { signals_history: [{ structured: 6, pages: 1, extracted: 6 }, { structured: 6, pages: 1, extracted: 6 }, { structured: 6, pages: 1, extracted: 6 }] } }, gone: first.state };
+  const drift = core.buildGoneFromSourceCandidates(results, savedByCity, { now: new Date('2026-10-07T12:00:00Z'), previousUpcoming: driftHistory });
+  assert.equal(drift.candidates.length, 0);
+  assert.equal(drift.summary.suppressedDrift, 1);
+
+  // Seen again: the streak clears.
+  const seenAgain = core.buildGoneFromSourceCandidates({ parserResults, analyzedEvents: [...results.analyzedEvents, { ...site('Underwear Night', '2026-10-25'), _action: 'merge', _existingEvent: { identifier: 'cal:B' } }] }, savedByCity, { now: new Date('2026-10-07T12:00:00Z'), previousUpcoming: { hosts: {}, gone: first.state } });
+  assert.equal(seenAgain.candidates.length, 0);
+  assert.equal(seenAgain.state.la, undefined);
+});
+
+test('savedEventUid: EventKit "<calendar>:<uid>" and a bare ICS uid both yield the uid; a recurrence suffix is cut', () => {
+  assert.equal(SharedCore.savedEventUid('ABCD:7848F567-25CF'), '7848F567-25CF');
+  assert.equal(SharedCore.savedEventUid('7848F567-25CF'), '7848F567-25CF');
+  assert.equal(SharedCore.savedEventUid('ABCD:7848F567/RID=1234'), '7848F567');
+  assert.equal(SharedCore.savedEventUid(''), '');
 });
