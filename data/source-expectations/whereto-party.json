@@ -3,11 +3,11 @@
   "source": "whereto.party",
   "slug": "whereto-party",
   "status": "complete",
-  "recheckAfter": "2026-10-06",
   "recon": {
-    "date": "2026-09-22",
+    "date": "2026-10-17",
     "method": [
-      "static"
+      "static",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://whereto.party/cities"
@@ -17,29 +17,37 @@
         "url": "https://whereto.party/cities",
         "kind": "html",
         "role": "sitemap",
-        "rowsReturned": 59,
-        "truthFlag": "59 /in/<slug> links (42 cities + their countries)",
-        "note": "The cities directory: no cards of its own, a link per city and per country. The crawl follows them (discoveryAllowedPatterns whereto.party/in/); a city the site adds is read on its own."
+        "rowsReturned": 75,
+        "truthFlag": "75 /in/<slug> links (cities and their countries)",
+        "note": "The cities directory as cached 2026-10-15 (124 KB): no cards of its own (the AI classifier files it as a link-aggregator), a link per city and per country. The crawl follows them under discoveryAllowedPatterns whereto.party/in/ (maxAdditionalUrls 60); 62 city/country pages are in the cache this week. Its flight data lists 54 rows of city stats, from which the page-data reader built 2 records in run 20261017-054812 (\"The Magic of Tomorrowland\" with no venue — a directory row, not a card)."
       },
       {
         "url": "https://whereto.party/in/tokyo",
         "kind": "html",
         "role": "listing",
-        "rowsReturned": 18,
-        "truthFlag": "18 cards, no paging",
-        "note": "One city page, as every city page is: server-rendered Next.js cards — title (the flyer alt), \"City · Venue\", \"Weekday, D Month YYYY · HH:MM – HH:MM\" (or a date range), price, flyer, a link to the card's own /events/<slug> page (which only repeats the card and is not crawled)."
+        "rowsReturned": 20,
+        "truthFlag": "initialHasMore: true, initialNextOffset: 25",
+        "note": "The representative city page as cached 2026-10-17T18:45Z: 20 server-rendered cards — title (the flyer alt), \"Tokyo · Venue\", \"Weekday, D Month YYYY · HH:MM – HH:MM\", price, flyer, a link to the card's own /events/<slug> page. The flight data says more rows exist (offset 25) behind /api/events, which robots.txt disallows — the first page is the site's answer. The 20 Tokyo cards today are all 2026-10-17 (the page shows the coming week first)."
+      },
+      {
+        "url": "https://whereto.party/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "Disallow: /admin, /api/, /edit/, /confirm/, /posted; Allow: /",
+        "note": "Cached 2026-10-17. One wildcard group by design (the file says so)."
       }
     ],
-    "notes": "Aggregator of nightlife worldwide, submitted by organizers. Recon from cached reads of /cities and /in/tokyo on 2026-09-22. Tokyo is documented card by card as the representative city page; the other 58 pages have the same shape."
+    "notes": "Recheck 2026-10-17 from the page cache. Every /in/ page has the same shape; Tokyo is documented card by card. Run 20261017-054812: 62 pages, 398 rows, 25 kept, 234 AI-dropped — the cities are all inside the configured scope (the directory's own links); 42 of 267 rows carry city \"unknown\" because the page's city (Toulouse, Osaka, Kuala Lumpur, Lisbon, Taoyuan …) has no scraper-cities key, which is correct. Sixteen rows titled \"Where to party in <City>\" (the page's own h1, fused with the first card) and \"Up next\"/\"Tomorrow\" section labels are reader artefacts, not cards."
   },
   "coverage": {
     "confidence": "medium",
-    "basis": "The Tokyo page's 18 upcoming cards, every one. The other city pages are read by the same crawl and the same reader but are not enumerated here: ~40 pages × ~20 cards of mostly non-bear nightlife, homogeneous in shape — the source is an aggregator whose records never win a field, and its value is discovery. publishedEventCount counts the documented page.",
-    "publishedEventCount": 18,
-    "documentedEventCount": 18,
+    "basis": "The Tokyo page's 20 cards, every one. The other ~60 city pages are read by the same crawl and the same reader but are not enumerated here (homogeneous shape; aggregator records never win a field). publishedEventCount counts the documented page.",
+    "publishedEventCount": 20,
+    "documentedEventCount": 20,
     "occurrenceWindow": {
-      "start": "2026-09-22",
-      "end": "2026-12-21"
+      "start": "2026-10-17",
+      "end": "2027-01-15"
     },
     "pastListingsPresent": false,
     "knownGaps": []
@@ -47,468 +55,571 @@
   "defaults": {},
   "events": [
     {
-      "id": "day-3-closing-happy-ball-2026-09-22",
+      "id": "depth-guzenji-s-60th-birthday-celebration-2026-10-17",
       "kind": "single",
-      "title": "Day 3 - Closing｜HAPPY BALL",
-      "bar": "DJ BAR Bridge SHINJUKU",
+      "title": "depth -Guzenji's 60th Birthday Celebration",
+      "bar": "高円寺 Music Bar C-Studio",
       "city": "tokyo",
       "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-22",
+      "startDate": "2026-10-17",
+      "startTime": "15:00",
+      "endDate": "2026-10-17",
+      "endTime": "22:00",
+      "cover": "1,500 JPY",
+      "image": "https://cdn.whereto.party/media/events/ba346a4b-2b91-479b-bcee-f8296abaab7d.jpg",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/depth-guzenjis-60th-birthday-celebration (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "depth -Guzenji's 60th Birthday Celebration · Sat, 17 October 2026 | · | 15:00 – 22:00"
+      }
+    },
+    {
+      "id": "shibuya-rockin-house-vol-67-2026-10-17",
+      "kind": "single",
+      "title": "SHIBUYA ROCKIN' HOUSE vol.67",
+      "bar": "Another Dimension",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "16:00",
+      "endDate": "2026-10-17",
+      "endTime": "22:00",
+      "cover": "1,500 JPY",
+      "image": "https://cdn.whereto.party/media/events/b7d6b0bf-fb89-4453-abcb-43acf2668623.png",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/shibuya-rockin-house-vol67 (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "SHIBUYA ROCKIN' HOUSE vol.67 · Sat, 17 October 2026 | · | 16:00 – 22:00"
+      }
+    },
+    {
+      "id": "transonic-pop-collection-2026-10-17",
+      "kind": "single",
+      "title": "TRANSONIC POP COLLECTION",
+      "bar": "heavysick ZERO",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "17:00",
+      "endDate": "2026-10-17",
+      "endTime": "23:00",
+      "cover": "4,000 JPY",
+      "image": "https://cdn.whereto.party/media/events/a212bb23-f6eb-4ec2-9afd-5d183cca7805.jpg",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/transonic-pop-collection (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "TRANSONIC POP COLLECTION · Sat, 17 October 2026 | · | 17:00 – 23:00"
+      }
+    },
+    {
+      "id": "discoball-in-shimokita-2026-10-17",
+      "kind": "single",
+      "title": "Discoball in Shimokita",
+      "bar": "Coaster Craft Beer & Kitchen",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "19:00",
+      "endDate": "2026-10-17",
+      "endTime": "22:00",
+      "cover": "Free",
+      "image": "https://cdn.whereto.party/media/events/8d7c6860-7dba-490c-ba49-ef568a5ca791.jpg",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/discoball-in-shimokita (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "Discoball in Shimokita · Sat, 17 October 2026 | · | 19:00 – 22:00"
+      }
+    },
+    {
+      "id": "monadology-feat-cup-string-from-aus-2026-10-17",
+      "kind": "single",
+      "title": "Monadology feat. Cup & String from AUS",
+      "bar": "UTOPIA / DYSTOPIA",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
       "startTime": "20:00",
-      "endDate": "2026-09-23",
-      "endTime": "04:00",
-      "image": "https://cdn.whereto.party/media/events/0b8dfd8e-1131-4bed-ac20-e4512aad5ea1.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/muscle-beach-tokyo-returns/day-3-closing-happy-ball (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "Day 3 - Closing｜HAPPY BALL · Tue, 22 September 2026 | · | 20:00 – 04:00"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "nether-tokyo-vol-2-2026-09-22",
-      "kind": "single",
-      "title": "NETHER TOKYO vol.2",
-      "bar": "ZEROTOKYO",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-22",
-      "startTime": "23:00",
-      "endDate": "2026-09-23",
-      "endTime": "04:30",
-      "cover": "¥1,500 ADV / ¥2,500 door",
-      "image": "https://cdn.whereto.party/media/events/acabcb94-1c2a-4084-87a0-049d97531bcd.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/nether-tokyo-vol2 (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "NETHER TOKYO vol.2 · Tue, 22 September 2026 | · | 23:00 – 04:30"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "masato-hayashi-onemanlive-after-party-2026-09-23",
-      "kind": "single",
-      "title": "Masato Hayashi OneManLive \"暴走東京\" After Party",
-      "bar": "ZEROTOKYO",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-23",
-      "startTime": "23:00",
-      "endDate": "2026-09-24",
-      "endTime": "04:30",
-      "cover": "¥1,500-2,500",
-      "image": "https://cdn.whereto.party/media/events/c617b71d-d502-4505-9866-48fd7fdee28f.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/masato-hayashi-onemanlive-after-party (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "Masato Hayashi OneManLive \"暴走東京\" After Party · Wed, 23 September 2026 | · | 23:00 – 04:30"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "shower-candy-2026-09-25",
-      "kind": "single",
-      "title": "SHOWER CANDY",
-      "bar": "ArcH",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-25",
-      "startTime": "21:00",
-      "endDate": null,
-      "endTime": null,
-      "cover": "¥2,000",
-      "image": "https://cdn.whereto.party/media/events/1746cac5-079a-480c-bb43-a0e6ab43eb7a.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/shower-candy-prac (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "SHOWER CANDY · Fri, 25 September 2026 | · | 21:00"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "eagle-tokyo-blue-friday-fiesta-2026-09-25",
-      "kind": "single",
-      "title": "[EAGLE TOKYO BLUE] FRIDAY FIESTA",
-      "bar": "EAGLE TOKYO BLUE",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-25",
-      "startTime": "22:00",
-      "endDate": null,
-      "endTime": null,
-      "image": "https://cdn.whereto.party/media/events/daf2c4ae-ff1d-40ce-add3-017172b47b38.png",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/eagle-tokyo-blue-friday-fiesta-ngbp (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "[EAGLE TOKYO BLUE] FRIDAY FIESTA · Fri, 25 September 2026 | · | 22:00"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "neon-stars-vol-02-2026-09-25",
-      "kind": "single",
-      "title": "NEON STARS Vol.02",
-      "bar": "ZEROTOKYO",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-25",
-      "startTime": "23:00",
-      "endDate": "2026-09-26",
-      "endTime": "04:30",
-      "cover": "¥2,000-2,500",
-      "image": "https://cdn.whereto.party/media/events/af9ebdcc-30ae-4603-8e78-0caf09da3be9.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/neon-stars-vol02 (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "NEON STARS Vol.02 · Fri, 25 September 2026 | · | 23:00 – 04:30"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "pop-pop-bunnies-2nd-step-2026-09-26",
-      "kind": "single",
-      "title": "POP POP BUNNIES -2nd STEP-",
-      "bar": "ArcH",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-26",
-      "startTime": "21:00",
-      "endDate": "2026-09-27",
+      "endDate": "2026-10-18",
       "endTime": "05:00",
-      "cover": "¥3,000 / ¥3,300 door / ¥1,500 (late)",
-      "image": "https://cdn.whereto.party/media/events/193f0591-5bc0-4505-911b-062ee154b375.webp",
+      "cover": "2,000 JPY",
+      "image": "https://cdn.whereto.party/media/events/cd260674-cbb0-4e0c-b076-b8f0b7bdc68f.jpg",
       "website": null,
       "sourceRung": "static",
       "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/pop-pop-bunnies-2nd-step (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "POP POP BUNNIES -2nd STEP- · Sat, 26 September 2026 | · | 21:00 – 05:00"
-      },
       "expect": {
         "extracted": true
       },
-      "bearVerdict": null
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/monadology-feat-cup-string-from-aus (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "Monadology feat. Cup & String from AUS · Sat, 17 October 2026 | · | 20:00 – 05:00"
+      }
     },
     {
-      "id": "eagle-tokyo-blue-starrfukker-2026-09-26",
+      "id": "liquid-2026-10-17",
       "kind": "single",
-      "title": "[EAGLE TOKYO BLUE] STARRFUKKER",
-      "bar": "EAGLE TOKYO BLUE",
+      "title": "LIQUID",
+      "bar": "suree",
       "city": "tokyo",
       "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-26",
+      "startDate": "2026-10-17",
+      "startTime": "20:00",
+      "endDate": "2026-10-17",
+      "endTime": "23:00",
+      "cover": "1,500 JPY",
+      "image": "https://cdn.whereto.party/media/events/5f6f7452-7c22-446d-944f-7d4f081b93bc.png",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/liquid (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "LIQUID · Sat, 17 October 2026 | · | 20:00 – 23:00"
+      }
+    },
+    {
+      "id": "counter-club-7th-anniversary-day6-2026-10-17",
+      "kind": "single",
+      "title": "COUNTER CLUB 7TH ANNIVERSARY DAY6",
+      "bar": "COUNTER CLUB",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "21:00",
+      "endDate": null,
+      "endTime": null,
+      "cover": "2,000 JPY",
+      "image": "https://cdn.whereto.party/media/events/51299c54-cf1d-489c-bc68-ffdd087587b3.jpg",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/counter-club-7th-anniversary-day6 (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "COUNTER CLUB 7TH ANNIVERSARY DAY6 · Sat, 17 October 2026 | · | 21:00"
+      }
+    },
+    {
+      "id": "a-long-night-of-music-3-2026-10-17",
+      "kind": "single",
+      "title": "'a long night of music' #3",
+      "bar": "wineshop human nature",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "21:00",
+      "endDate": "2026-10-18",
+      "endTime": "05:00",
+      "cover": "1,000 JPY",
+      "image": "https://cdn.whereto.party/media/events/957eaf88-5ea4-434e-b3ef-9442fd4a2913.jpg",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/a-long-night-of-music-3 (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "'a long night of music' #3 · Sat, 17 October 2026 | · | 21:00 – 05:00"
+      }
+    },
+    {
+      "id": "querico-anniversary-lil-louis-2026-10-17",
+      "kind": "single",
+      "title": "QUERICO ANNIVERSARY - LIL LOUIS",
+      "bar": "Midnight East",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
       "startTime": "22:00",
       "endDate": null,
       "endTime": null,
-      "image": "https://cdn.whereto.party/media/events/7573290c-28b4-4977-8a40-b2ec6c419ed0.png",
+      "cover": "4,470 JPY",
+      "image": "https://cdn.whereto.party/media/events/a6436785-1412-422a-903f-e23085e58e31.jpg",
       "website": null,
       "sourceRung": "static",
       "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/eagle-tokyo-blue-starrfukker-gbrz (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "[EAGLE TOKYO BLUE] STARRFUKKER · Sat, 26 September 2026 | · | 22:00"
-      },
       "expect": {
         "extracted": true
       },
-      "bearVerdict": null
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/querico-anniversary-lil-louis (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "QUERICO ANNIVERSARY - LIL LOUIS · Sat, 17 October 2026 | · | 22:00"
+      }
     },
     {
-      "id": "urban-jam-2026-09-26",
+      "id": "oculto-2026-10-17",
       "kind": "single",
-      "title": "Urban Jam",
-      "bar": "ZEROTOKYO",
+      "title": "OCULTO",
+      "bar": "Traffic Tokyo 六本木 西麻布店",
       "city": "tokyo",
       "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-26",
-      "startTime": "23:00",
-      "endDate": "2026-09-27",
-      "endTime": "04:30",
-      "cover": "¥3,500-4,000",
-      "image": "https://cdn.whereto.party/media/events/7947bab6-69d1-4322-bf5b-726261ec1984.jpeg",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": "2026-10-18",
+      "endTime": "06:00",
+      "cover": "1,500-2,500 JPY advance / 3,000 JPY door",
+      "image": "https://cdn.whereto.party/media/events/e0b1496e-23d7-4b5b-9f40-e123d35f0f5d.jpg",
       "website": null,
       "sourceRung": "static",
       "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/urban-jam (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "Urban Jam · Sat, 26 September 2026 | · | 23:00 – 04:30"
-      },
       "expect": {
         "extracted": true
       },
-      "bearVerdict": null
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/oculto-experimentaldark-psy (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "OCULTO · Sat, 17 October 2026 | · | 22:00 – 06:00"
+      }
     },
     {
-      "id": "intention-2026-09-26",
+      "id": "r3fract-presents-1st-anniversary-counter-attack-2026-10-17",
       "kind": "single",
-      "title": "INTENTION",
+      "title": "R3FRACT presents: 1st Anniversary & Counter Attack",
+      "bar": "R Lounge",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": null,
+      "endTime": null,
+      "cover": "2,500 JPY advance / 3,000 JPY door",
+      "image": "https://cdn.whereto.party/media/events/08821201-e45c-4d7b-92c6-39c81b6bae43.png",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/r3fract-presents-1st-anniversary-counter-attack (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "R3FRACT presents: 1st Anniversary & Counter Attack · Sat, 17 October 2026 | · | 22:00"
+      }
+    },
+    {
+      "id": "moda-2026-10-17",
+      "kind": "single",
+      "title": "MODA",
+      "bar": "Z MARUYAMA",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": "2026-10-18",
+      "endTime": "04:30",
+      "cover": "2,000 JPY",
+      "image": "https://cdn.whereto.party/media/events/03070061-5131-4b6a-941c-bc7791fab127.jpg",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/moda (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "MODA · Sat, 17 October 2026 | · | 22:00 – 04:30"
+      }
+    },
+    {
+      "id": "miss-monique-2026-10-17",
+      "kind": "single",
+      "title": "MISS MONIQUE",
+      "bar": "Zouk Tokyo",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": "2026-10-18",
+      "endTime": "04:30",
+      "cover": null,
+      "image": "https://cdn.whereto.party/media/events/b822dba9-e107-4f6a-8124-4ade7b62c102.jpg",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/miss-monique (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "MISS MONIQUE · Sat, 17 October 2026 | · | 22:00 – 04:30"
+      }
+    },
+    {
+      "id": "eagle-tokyko-blue-starrfukker-2026-10-17",
+      "kind": "single",
+      "title": "[EAGLE TOKYKO BLUE] STARRFUKKER",
+      "bar": "EAGLE TOKYO BLUE",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": null,
+      "endTime": null,
+      "cover": null,
+      "image": "https://cdn.whereto.party/media/events/a441184b-091b-49c8-932b-4c7bb7166baf.png",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/eagle-tokyko-blue-starrfukker (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "[EAGLE TOKYKO BLUE] STARRFUKKER · Sat, 17 October 2026 | · | 22:00"
+      }
+    },
+    {
+      "id": "hven-presents-team-boogies-night-2026-10-17",
+      "kind": "single",
+      "title": "HVEN presents: Team Boogies Night",
+      "bar": "HVEN",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": "2026-10-18",
+      "endTime": "05:00",
+      "cover": "1,500 JPY online / 2,500 JPY door",
+      "image": "https://cdn.whereto.party/media/events/6db90722-9468-4444-a242-56af7210120b.png",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/hven-presents-team-boogies-night (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "HVEN presents: Team Boogies Night · Sat, 17 October 2026 | · | 22:00 – 05:00"
+      }
+    },
+    {
+      "id": "opioid-2026-10-17",
+      "kind": "single",
+      "title": "OPIOID",
+      "bar": "Enter",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": null,
+      "endTime": null,
+      "cover": "2,000 JPY / 1,500 JPY after hours",
+      "image": "https://cdn.whereto.party/media/events/dede9ad9-cbd2-4bff-957b-137afd6ddc49.png",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/opioid (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "OPIOID · Sat, 17 October 2026 | · | 22:00"
+      }
+    },
+    {
+      "id": "volojza-some-dad-rap-songs-mirrors-w-release-party-2026-10-17",
+      "kind": "single",
+      "title": "VOLOJZA『Some Dad Rap Songs』&『Mirrors』W Release Party",
+      "bar": "FORESTLIMIT",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": null,
+      "endTime": null,
+      "cover": "2,500 JPY",
+      "image": "https://cdn.whereto.party/media/events/38707a36-0ddb-4871-9b87-8dd05bc87141.jpg",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/volojzasome-dad-rap-songsmirrorsw-release-party (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "VOLOJZA『Some Dad Rap Songs』&『Mirrors』W Release Party · Sat, 17 October 2026 | · | 22:00"
+      }
+    },
+    {
+      "id": "eagle-tokyo-blue-ryugu-2026-10-17",
+      "kind": "single",
+      "title": "[EAGLE TOKYO BLUE] RYUGU",
+      "bar": "EAGLE TOKYO BLUE",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": null,
+      "endTime": null,
+      "cover": null,
+      "image": "https://cdn.whereto.party/media/events/c2fc4c44-afca-4d44-9b4d-d7fb6afb4781.png",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/eagle-tokyo-blue-ryugu-rdqy (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "[EAGLE TOKYO BLUE] RYUGU · Sat, 17 October 2026 | · | 22:00"
+      }
+    },
+    {
+      "id": "self-talk-guro-det-with-fushiming-2026-10-17",
+      "kind": "single",
+      "title": "'Self-talk' - guro.det with Fushiming",
+      "bar": "KOARA",
+      "city": "tokyo",
+      "timezone": "Asia/Tokyo",
+      "startDate": "2026-10-17",
+      "startTime": "22:00",
+      "endDate": null,
+      "endTime": null,
+      "cover": "1,500 JPY",
+      "image": "https://cdn.whereto.party/media/events/8641d22f-b2f4-4582-abbc-0357b414a9ee.jpg",
+      "website": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/self-talk-gurodet-with-fushiming (an aggregator page, never the event's website).",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "'Self-talk' - guro.det with Fushiming · Sat, 17 October 2026 | · | 22:00"
+      }
+    },
+    {
+      "id": "session-25th-anniversary-2026-10-17",
+      "kind": "single",
+      "title": "SESSION 25TH ANNIVERSARY",
       "bar": "WOMB",
       "city": "tokyo",
       "timezone": "Asia/Tokyo",
-      "startDate": "2026-09-26",
+      "startDate": "2026-10-17",
       "startTime": "23:00",
-      "endDate": "2026-09-27",
+      "endDate": "2026-10-18",
       "endTime": "04:30",
-      "cover": "¥3000 / ¥3500 door",
-      "image": "https://cdn.whereto.party/media/events/b0794ea4-c6b0-41e1-9421-02b83d8112c2.jpeg",
+      "cover": "3,500 JPY online / 4,000 JPY door",
+      "image": "https://cdn.whereto.party/media/events/22f2eece-8316-4f79-ae35-9d54858aa198.jpg",
       "website": null,
       "sourceRung": "static",
       "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/intention (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "INTENTION · Sat, 26 September 2026 | · | 23:00 – 04:30"
-      },
       "expect": {
         "extracted": true
       },
-      "bearVerdict": null
-    },
-    {
-      "id": "butterfly-effect-special-feat-subtronics-2026-10-02",
-      "kind": "single",
-      "title": "Butterfly Effect Special feat. Subtronics",
-      "bar": "ZEROTOKYO",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-10-02",
-      "startTime": "23:00",
-      "endDate": "2026-10-03",
-      "endTime": "04:30",
-      "cover": "¥4,000-7,500",
-      "image": "https://cdn.whereto.party/media/events/0877d2c2-daa0-4223-ae03-a3b907f1d28c.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/butterfly-effect-special-feat-subtronics (an aggregator page, never the event's website).",
+      "bearVerdict": null,
+      "note": "Card links to its own page https://whereto.party/events/session-25th-anniversary (an aggregator page, never the event's website).",
       "evidence": {
         "url": "https://whereto.party/in/tokyo",
-        "quote": "Butterfly Effect Special feat. Subtronics · Fri, 2 October 2026 | · | 23:00 – 04:30"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "noppo-2026-10-03",
-      "kind": "single",
-      "title": "NOPPO~高身長専ナイト",
-      "bar": "ArcH",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-10-03",
-      "startTime": "21:00",
-      "endDate": "2026-10-04",
-      "endTime": "04:00",
-      "image": "https://cdn.whereto.party/media/events/41100759-a824-4028-b60c-be241a328718.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/noppo (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "NOPPO~高身長専ナイト · Sat, 3 October 2026 | · | 21:00 – 04:00"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "soundgate-2026-10-10",
-      "kind": "single",
-      "title": "SOUNDGATE",
-      "bar": "ZEROTOKYO",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-10-10",
-      "startTime": "23:00",
-      "endDate": "2026-10-11",
-      "endTime": "04:30",
-      "cover": "¥3,500–4,000",
-      "image": "https://cdn.whereto.party/media/events/fb48bcc2-c8ef-4894-9f2a-a3284ac1f2d5.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/soundgate (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "SOUNDGATE · Sat, 10 October 2026 | · | 23:00 – 04:30"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "black-safari-infinity-2026-10-10",
-      "kind": "single",
-      "title": "BLACK SAFARI — INFINITY ♾️",
-      "bar": "T2 SHINJUKU (Nightclub)",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-10-10",
-      "startTime": null,
-      "endDate": null,
-      "endTime": null,
-      "image": "https://cdn.whereto.party/media/events/67b3124c-2334-463a-a180-19d060550717.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/black-safari-infinity (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "BLACK SAFARI — INFINITY ♾️ · Sat, 10 October 2026 | | | |"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "taiiku-matsuri-2026-10-11",
-      "kind": "single",
-      "title": "体イク祭 (Taiiku Matsuri)",
-      "bar": "EAGLE TOKYO BLUE",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-10-11",
-      "startTime": "18:00",
-      "endDate": "2026-10-12",
-      "endTime": "00:00",
-      "cover": "¥2,000",
-      "image": "https://cdn.whereto.party/media/events/e188a0a8-27db-4661-85b9-db6431e6e857.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/taiiku-matsuri (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "体イク祭 (Taiiku Matsuri) · Sun, 11 October 2026 | · | 18:00 – 00:00"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "avalon-contact-2026-10-11",
-      "kind": "single",
-      "title": "AVALON -CONTACT-",
-      "bar": "Club Camelot Night Club",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-10-11",
-      "startTime": "22:00",
-      "endDate": null,
-      "endTime": null,
-      "image": "https://cdn.whereto.party/media/events/a9bb3e9c-7a70-4f48-89bc-b22ed7fc71ee.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/avalon-contact (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "AVALON -CONTACT- · Sun, 11 October 2026 | · | 22:00"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "special-guest-dj-lost-frequencies-2026-10-16",
-      "kind": "single",
-      "title": "Special Guest DJ: Lost Frequencies",
-      "bar": "CÉ LA VI TOKYO",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-10-16",
-      "startTime": "22:00",
-      "endDate": "2026-10-17",
-      "endTime": "04:30",
-      "image": "https://cdn.whereto.party/media/events/4b094ecb-f7e2-473c-b00f-b22cf35bd1bc.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/special-guest-dj-lost-frequencies (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "Special Guest DJ: Lost Frequencies · Fri, 16 October 2026 | · | 22:00 – 04:30"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
-      "id": "mother-2026-10-16",
-      "kind": "single",
-      "title": "MOTHER",
-      "bar": "ArcH",
-      "city": "tokyo",
-      "timezone": "Asia/Tokyo",
-      "startDate": "2026-10-16",
-      "startTime": "22:00",
-      "endDate": "2026-10-17",
-      "endTime": "04:00",
-      "cover": "¥1,500-2,500",
-      "image": "https://cdn.whereto.party/media/events/5a3f767a-1eb4-4047-8daf-61916ee2679e.jpeg",
-      "website": null,
-      "sourceRung": "static",
-      "confidence": "high",
-      "note": "Card links to its own page https://whereto.party/events/mother (an aggregator page, never the event's website).",
-      "evidence": {
-        "url": "https://whereto.party/in/tokyo",
-        "quote": "MOTHER · Fri, 16 October 2026 | · | 22:00 – 04:00"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
+        "quote": "SESSION 25TH ANNIVERSARY · Sat, 17 October 2026 | · | 23:00 – 04:30"
+      }
     }
   ],
-  "traps": [],
+  "traps": [
+    {
+      "id": "city-page-heading-as-event",
+      "kind": "navigation",
+      "label": "\"Where to party in Toulouse\" (the page h1: eyebrow \"Where to party in\" + \"Toulouse\") read as an event with the first card's venue",
+      "why": "The city page's heading is not a card. Run 20261017-054812 carries 16 such rows (Toulouse, Port Adelaide, Belgium, Brussels, Paris, India, Kolkata, Lombok Utara, Hakuba, Osaka, Manila, Taguig, Porto, Spain, Madrid, Taoyuan), each dated like the page's first card — the flat splitter fused the heading with the card below it on one-card pages.",
+      "evidence": {
+        "url": "https://whereto.party/in/toulouse",
+        "quote": "Where to party in Toulouse | whereto.party"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261017-054812"
+    },
+    {
+      "id": "section-labels",
+      "kind": "navigation",
+      "label": "\"Up next\", \"Tomorrow\", \"Don't see your city?\"",
+      "why": "Section labels and the submit prompt between the cards; the daily audit flagged \"Tomorrow\" and \"Don't see your city?\" as non-events on 2026-10-17 and an earlier run carried \"Up next\" as a title.",
+      "evidence": {
+        "url": "https://whereto.party/in/tokyo",
+        "quote": "Up next"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261017-054812"
+    },
+    {
+      "id": "country-pages-repeat-city-cards",
+      "kind": "duplicate-listing",
+      "label": "/in/australia, /in/japan, /in/philippines … list the same cards as their cities",
+      "why": "The directory links countries beside cities; a country page is the union of its city pages (Australia = Sydney + Melbourne + Brisbane + …), so every card is read twice and folds in dedup.",
+      "evidence": {
+        "url": "https://whereto.party/cities",
+        "quote": "All cities | whereto.party"
+      },
+      "expect": {
+        "extracted": true,
+        "note": "Read twice and deduplicated — correct behaviour."
+      },
+      "seenInRun": "20261017-054812"
+    }
+  ],
   "openQuestions": [
     "2026-10-01: each city page ships its first 20 rows as flight data (initialHasMore/initialNextOffset) and loads the rest from /api/events?offset=&limit=&city_id= (read off the page's own bundle); robots.txt says \"Disallow: /api/\", so the scraper reads the first page only (the site's answer). Sydney holds 38 rows, Melbourne/Tokyo/Bangkok also say more."
   ]

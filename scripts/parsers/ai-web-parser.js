@@ -1880,7 +1880,10 @@ class AiWebParser {
                 this.applyJsonApiStructuredEnrichment(events, jsonApiEvents, sourceUrl);
             }
 
-            const keptEvents = this.filterEventsByDiscoveryAllowlist(events, sourceUrl, parserConfig);
+            const allowedEvents = this.filterEventsByDiscoveryAllowlist(events, sourceUrl, parserConfig);
+            // A record named after a button or a photo caption, and after
+            // nothing else on the page, is page furniture the model adopted.
+            const keptEvents = this.dropPageFurnitureTitledEvents(allowedEvents, effectiveHtmlData && effectiveHtmlData.html, sourceUrl);
             // A page that places its cards in its own prose (see
             // placeEventsAtPageStatedVenue).
             this.placeEventsAtPageStatedVenue(keptEvents, effectiveHtmlData, parserConfig);
@@ -3300,6 +3303,88 @@ class AiWebParser {
     // description and no link of its own, is that sibling's sub-heading.
     // Fails closed: any token the sibling's title does not carry, any
     // description, any link, or another day keeps the record.
+    // Page furniture a model adopts as an event name: the label of a button
+    // ("Load More" on eaglemanchester.com's home page, run 20261017-054812,
+    // dated by an invented repeat) and the caption under a photo ("Robert
+    // Valin, photo by Catalin Stelian", "PLPN Flag – Photo Credit: …",
+    // "Bears enjoying a cold pint in Halifax" — bearworldmag.com's recap
+    // articles, same run; each became a dated "event" the owner had to judge).
+    // The test is where the words live, not what they say: a title whose
+    // every occurrence on the page is inside a <button>/<input type=submit>
+    // (or its aria-label) or inside a <figcaption> is that control's label or
+    // that picture's caption. A caption that names a party the article's own
+    // prose also names passes untouched — the prose carries it. Fails open
+    // on any page without such elements.
+    dropPageFurnitureTitledEvents(events, html, sourceUrl = '') {
+        const list = Array.isArray(events) ? events.filter(Boolean) : [];
+        const furniture = this.collectPageFurnitureTexts(html);
+        if (list.length === 0 || (furniture.buttons.size === 0 && furniture.captions.length === 0)) return list;
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+        const prose = ` ${fold(furniture.prose)} `;
+        const kept = [];
+        for (const event of list) {
+            const title = fold(event.title);
+            if (!title || prose.includes(` ${title} `)) { kept.push(event); continue; }
+            let reason = '';
+            if (furniture.buttons.has(title)) reason = 'the label of a button';
+            else if (furniture.captions.some(caption => caption === title
+                || (caption.startsWith(`${title} `) && /^(photo|picture|image|credit|by|courtesy|pictured)\b/.test(caption.slice(title.length + 1))))) {
+                reason = 'the caption under a photo';
+            }
+            if (!reason) { kept.push(event); continue; }
+            console.log(`🪑 FURNITURE: "${event.title}" is ${reason} on ${sourceUrl || 'this page'} and appears nowhere else on the page — not an event`);
+        }
+        return kept;
+    }
+
+    // The page's control labels and photo captions, each folded, plus the
+    // page's text with those elements removed (so "appears nowhere else" can
+    // be asked). Button labels: <button> text, aria-label on buttons and
+    // role=button elements, submit/button inputs' value. Captions:
+    // <figcaption> text. Scripts and styles are never text.
+    collectPageFurnitureTexts(html) {
+        const source = String(html || '');
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+        const textOf = (markup) => fold(this.decodeBasicEntities(this.stripTags(String(markup || ''))));
+        const attr = (tag, name) => {
+            const match = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i').exec(tag);
+            return match ? (match[1] !== undefined ? match[1] : match[2]) : '';
+        };
+        const buttons = new Set();
+        const captions = [];
+        if (!source || !/<(?:button|figcaption|input)\b|role\s*=\s*["']button["']/i.test(source)) {
+            return { buttons, captions, prose: '' };
+        }
+        let prose = source.replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ');
+        prose = prose.replace(/<button\b([^>]*)>([\s\S]*?)<\/button>/gi, (whole, tag, inner) => {
+            const label = textOf(inner) || fold(this.decodeBasicEntities(attr(tag, 'aria-label')));
+            if (label) buttons.add(label);
+            const aria = fold(this.decodeBasicEntities(attr(tag, 'aria-label')));
+            if (aria) buttons.add(aria);
+            return ' ';
+        });
+        prose = prose.replace(/<input\b[^>]*>/gi, (tag) => {
+            if (/\stype\s*=\s*["'](?:submit|button|reset)["']/i.test(tag)) {
+                const label = fold(this.decodeBasicEntities(attr(tag, 'value'))) || fold(this.decodeBasicEntities(attr(tag, 'aria-label')));
+                if (label) buttons.add(label);
+            }
+            return ' ';
+        });
+        prose = prose.replace(/<([a-z][a-z0-9]*)\b([^>]*\brole\s*=\s*["']button["'][^>]*)>([\s\S]*?)<\/\1>/gi, (whole, name, tag, inner) => {
+            const label = textOf(inner) || fold(this.decodeBasicEntities(attr(tag, 'aria-label')));
+            if (label) buttons.add(label);
+            return ' ';
+        });
+        prose = prose.replace(/<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/gi, (whole, inner) => {
+            const caption = textOf(inner);
+            if (caption) captions.push(caption);
+            return ' ';
+        });
+        return { buttons, captions, prose: this.decodeBasicEntities(this.stripTags(prose)) };
+    }
+
     foldSubheadingEvents(events, sourceUrl = '') {
         const list = Array.isArray(events) ? events.filter(Boolean) : [];
         if (list.length < 2 || !this.core || typeof this.core.getCrossSourceTitleTokens !== 'function') return list;
@@ -15600,11 +15685,47 @@ class AiWebParser {
     // collected so a row can pick one its own master actually has.
     readImageUrlTemplateFromPage(body, ids) {
         const source = String(body || '');
+        const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // The page renders whatever cards are on its board that day, so the
+        // exact ids the feed just handed us are usually NOT among its URLs
+        // (tockify.com/thotyssey: 12 cards of one day against a feed of 394
+        // rows — images arrived on 4 runs of 10 and vanished on the others as
+        // the board turned over). The template does not depend on which
+        // asset is shown: every URL of the same OWNER carries the same shape,
+        // so a URL of the feed's ownerId followed by an id-shaped segment
+        // (same length and alphabet as the feed's own ids) teaches it too.
+        // The exact-id match is still tried first.
+        const attempts = [];
         for (const [id, record] of ids) {
-            const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const match = source.match(new RegExp(`https?://[^"'\\s\\\\<>]*${escaped}[^"'\\s\\\\<>]*`, 'i'));
-            if (!match) continue;
-            let template = match[0];
+            const match = source.match(new RegExp(`https?://[^"'\\s\\\\<>]*${escape(id)}[^"'\\s\\\\<>]*`, 'i'));
+            if (match) attempts.push({ url: match[0], id, record });
+        }
+        if (attempts.length === 0) {
+            const owners = new Map();
+            for (const [id, record] of ids) {
+                if (record && record.ownerId && !owners.has(record.ownerId)) owners.set(record.ownerId, id);
+            }
+            for (const [ownerId, sampleId] of owners) {
+                const alphabet = /^[0-9a-f]+$/i.test(sampleId) ? '[0-9a-f]' : '[A-Za-z0-9_-]';
+                const shape = `${alphabet}{${sampleId.length}}`;
+                // The page may render the same owner's assets from more than
+                // one CDN host (a header image on one, the cards on another):
+                // the shape most of its URLs share is the calendar's.
+                const tally = new Map();
+                for (const found of source.matchAll(new RegExp(`https?://[^"'\\s\\\\<>]*${escape(ownerId)}/(${shape})(?![A-Za-z0-9])[^"'\\s\\\\<>]*`, 'gi'))) {
+                    const key = found[0].split(found[1]).join('{id}').replace(/(\d{2,4})(?=\D*$)/, '{size}');
+                    const entry = tally.get(key) || { count: 0, url: found[0], id: found[1] };
+                    entry.count += 1;
+                    tally.set(key, entry);
+                }
+                const best = [...tally.values()].sort((a, b) => b.count - a.count)[0];
+                if (!best) continue;
+                attempts.push({ url: best.url, id: best.id, record: { ownerId }, learnedFromOwner: true });
+                break;
+            }
+        }
+        for (const { url, id, record } of attempts) {
+            let template = url;
             if (record.ownerId && template.includes(record.ownerId)) {
                 template = template.split(record.ownerId).join('{ownerId}');
             }
@@ -15616,7 +15737,6 @@ class AiWebParser {
             // Every size this page renders for the same shape: the template is
             // rebuilt as a pattern by escaping its literal parts and letting
             // the ids and the size stand in as groups.
-            const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const familySource = withPlaceholders
                 .split(/(\{ownerId\}|\{id\}|\{size\})/)
                 .map(part => {

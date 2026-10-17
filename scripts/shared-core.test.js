@@ -23125,8 +23125,8 @@ test('SPA door: a shell with no endpoint that ships its events in its own bundle
   assert.equal(opened.dataDoor.inline, true);
   const rows = JSON.parse(opened.html).events;
   assert.equal(rows.length, 5);
-  assert.equal(rows.find(r => r.title === 'Dirty Alley').region_label, 'Folsom Street Fair', 'the group code is read back to its printed label');
-  assert.equal(rows.find(r => r.title === 'Bears Are Animals').region_label, 'NYC', 'rows with no code belong to the one menu entry no code names');
+  assert.equal(rows.find(r => r.title === 'Dirty Alley').group_label, 'Folsom Street Fair', 'the group code is read back to its printed label');
+  assert.equal(rows.find(r => r.title === 'Bears Are Animals').group_label, 'NYC', 'rows with no code belong to the one menu entry no code names');
   const tea = rows.find(r => r.title === 'Tea Dance');
   assert.equal(tea.ticket_url, undefined, 'a social profile is not a ticket page');
   assert.equal(tea.website_url, 'https://www.instagram.com/boatslip/');
@@ -28711,4 +28711,53 @@ test('applyAggregatorWebsitePointers leaves a calendar-door row alone when the e
   assert.equal(doorRow.url, page);
   assert.equal(proseRow.website, '', 'a prose read of the same hub page is still a copy and clears');
   assert.equal(proseRow.url, '');
+});
+
+// ── Recheck 2026-10-17 (aggregators): the SPA bundle reader's venue slot and
+// grouping code, from verbatim gathrparty.com bundle objects ──────────────────
+test('inline data: a venue slot holding a name and its street line yields both, and the grouping code never travels as `region`', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const fixture = fs.readFileSync(path.join(__dirname, 'fixtures', 'recheck-aggregators-2026-10-17', 'gathr-bundle-excerpt.js'), 'utf8');
+  const { events } = new Function(`${fixture}\nreturn { events, regions };`)();
+  const now = new Date('2026-10-17T12:00:00Z');
+  const byTitle = (title) => events.find((event) => event.title === title);
+  const rowOf = (title) => SharedCore.inlineEventObjectToFeedRows(byTitle(title), now, {})[0];
+
+  // "<Name> <street>" — the half the run lost (bar blank on 7 kept records).
+  const cannonball = rowOf('Cannon Ball Bear Week Pool Party');
+  assert.equal(cannonball.venue, 'Boatslip Resort');
+  assert.equal(cannonball.address, '161 Commercial St.');
+  // "<street> (<Name>)".
+  const reddy = rowOf('Reddy Freddy Ptown Bear Week');
+  assert.equal(reddy.venue, 'Purgatory');
+  assert.equal(reddy.address, '9 Carver St');
+  // A bare street line stays an address of a place the list does not name.
+  const bbq = rowOf('Bear Week BBQ & Pool Party');
+  assert.equal(bbq.venue, undefined);
+  assert.equal(bbq.address, '161 Commercial St');
+  const bearParty = rowOf('The Bear Party');
+  assert.equal(bearParty.venue, undefined);
+  assert.equal(bearParty.address, '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues');
+  // A named venue is untouched; placeholders stay out.
+  assert.equal(rowOf('Rockstrap').venue, 'Rockbar');
+  assert.equal(rowOf('Rockstrap').address, undefined);
+  assert.equal(rowOf('PBG Wiener Roast').venue, undefined, '"TBD" is not a place');
+  assert.equal(rowOf('Bear Happy Hour').venue, undefined, '"TBA" is not a place');
+
+  // The grouping code: `group`, so the JSON-API reader's addressRegion key
+  // (`region`) never picks it up — the run shipped address "PT" on 83 rows.
+  assert.equal(cannonball.group, 'PT');
+  assert.equal(cannonball.region, undefined);
+  assert.equal(rowOf('Rockstrap').group, undefined);
+});
+
+test('splitVenueNameAndStreet: the three shapes a list types into one venue slot', () => {
+  const street = /\d{1,5}\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.' ]{2,40}\b(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pl|place|way|ln|lane|hwy|highway|pkwy|ct|court|sq|square)\b\.?/i;
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('Boatslip Resort 161 Commercial St.', street), { venue: 'Boatslip Resort', address: '161 Commercial St.' });
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('9 Carver St (Purgatory)', street), { venue: 'Purgatory', address: '9 Carver St' });
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', street), { venue: '', address: '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues' });
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('Provincetown II — MacMillan Pier', street), { venue: 'Provincetown II — MacMillan Pier', address: '' }, 'no street line: a name');
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('The Eagle, 554 W 28th St, New York', street), { venue: 'The Eagle', address: '554 W 28th St, New York' });
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('', street), { venue: '', address: '' });
 });

@@ -19633,8 +19633,16 @@ class SharedCore {
         const venue = text(obj.venue) || text(obj.location) || text(obj.place);
         // A "venue" that is a street line ("232 W 37th St, 2nd Fl. b/w 7th &
         // 8th Avenues") is the address of a place the list does not name.
-        if (venue && /^\d{1,5}\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.' ]{2,40}\b(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pl|place|way|ln|lane|hwy|highway|pkwy|ct|court|sq|square)\b/i.test(venue)) row.address = venue;
-        else if (venue && !/^(tba|tbd|various\b.*|location shared.*)$/i.test(venue)) row.venue = venue;
+        // The same slot also carries a name AND its street in one string —
+        // "Boatslip Resort 161 Commercial St." or "9 Carver St (Purgatory)"
+        // (gathrparty.com, recheck 2026-10-17: 9 kept records lost their bar
+        // because the whole string read as an address) — so the two halves
+        // are split: the name is the venue, the street line the address.
+        const streetLine = /\d{1,5}\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.' ]{2,40}\b(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pl|place|way|ln|lane|hwy|highway|pkwy|ct|court|sq|square)\b\.?/i;
+        const placeholderVenue = /^(tba|tbd|various\b.*|location shared.*)$/i;
+        const split = SharedCore.splitVenueNameAndStreet(venue, streetLine);
+        if (split.address) row.address = split.address;
+        if (split.venue && !placeholderVenue.test(split.venue)) row.venue = split.venue;
         const description = text(obj.about) || text(obj.description) || text(obj.details);
         if (description) row.description = description;
         const image = text(obj.image) || text(obj.flyer) || text(obj.poster);
@@ -19646,7 +19654,12 @@ class SharedCore {
         else if (/^https?:\/\//i.test(ticket)) row.ticket_url = ticket;
         const price = text(obj.price) || text(obj.cover);
         if (price) row.price_text = price;
-        if (text(obj.region)) row.region = text(obj.region);
+        // The list's own grouping code ("PT", "FL") travels under `group`,
+        // never `region`: the JSON-API reader reads `region` as the address
+        // region (schema.org addressRegion), and gathrparty.com's codes shipped
+        // as the address "PT" on 83 of its rows (recheck 2026-10-17). The
+        // spelled-out label (group_label) is what names the city.
+        if (text(obj.region)) row.group = text(obj.region);
         // A weekday list is a weekly repeat; with an ordinal it is monthly.
         const weekdays = Array.isArray(obj.recurringDays) ? obj.recurringDays.filter(day => Number.isInteger(day) && day >= 0 && day <= 6) : [];
         if (weekdays.length > 0) {
@@ -19657,6 +19670,33 @@ class SharedCore {
             else if (!text(obj.recurringType) || text(obj.recurringType).toLowerCase() === 'weekly') row.rrule = `FREQ=WEEKLY;BYDAY=${weekdays.map(day => codes[day]).join(',')}`;
         }
         return row;
+    }
+
+    // One "venue" string → { venue, address }. Three shapes a list types into
+    // its venue slot, told apart by where the street line sits:
+    //   "232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues" → address only;
+    //   "Boatslip Resort 161 Commercial St."           → venue + address;
+    //   "9 Carver St (Purgatory)"                      → address + venue.
+    // Anything the street-line pattern does not match is a venue name.
+    static splitVenueNameAndStreet(value, streetLine) {
+        const venue = String(value || '').trim();
+        if (!venue) return { venue: '', address: '' };
+        const match = streetLine.exec(venue);
+        if (!match) return { venue, address: '' };
+        const before = venue.slice(0, match.index).replace(/[\s,–—-]+$/, '').trim();
+        const after = venue.slice(match.index + match[0].length).trim();
+        const street = match[0].trim();
+        if (match.index === 0) {
+            // A trailing "(Name)" names the place; anything else after the
+            // street line (floor, cross streets, city) is part of the address.
+            const named = /^\(([^()]{2,60})\)\s*$/.exec(after);
+            if (named) return { venue: named[1].trim(), address: street };
+            return { venue: '', address: venue };
+        }
+        // A name before the street line: the name must read as words (a
+        // sentence-free label), or the whole string stays an address.
+        if (!/^[\p{L}\p{N}][\p{L}\p{N}'’&.\- ]{1,59}$/u.test(before)) return { venue: '', address: venue };
+        return { venue: before, address: after ? `${street}${/^[,;]/.test(after) ? '' : ' '}${after}`.trim() : street };
     }
 
     // One object → its rows. A repeat that keeps a different clock on
@@ -19719,7 +19759,7 @@ class SharedCore {
             for (const obj of objects) rows.push(...SharedCore.inlineEventObjectToFeedRows(obj, now, { anchorMs }));
             // A short code the rows carry (region:"PT") is spelled out
             // somewhere in the same bundle (PT:"Provincetown Bear Week").
-            const usedCodes = new Set(rows.map(row => row.region).filter(Boolean));
+            const usedCodes = new Set(rows.map(row => row.group).filter(Boolean));
             for (const code of usedCodes) {
                 if (labels[code] || !/^[A-Za-z0-9_-]{1,12}$/.test(code)) continue;
                 const label = new RegExp(`[{,]\\s*["']?${code}["']?\\s*:\\s*"([^"]{3,80})"`).exec(bundle);
@@ -19741,8 +19781,8 @@ class SharedCore {
         }
         if (rows.length < 3) return htmlData;
         for (const row of rows) {
-            if (row.region && labels[row.region]) row.region_label = labels[row.region];
-            else if (!row.region && defaultLabel) row.region_label = defaultLabel;
+            if (row.group && labels[row.group]) row.group_label = labels[row.group];
+            else if (!row.group && defaultLabel) row.group_label = defaultLabel;
         }
         await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl} ships its events inside its own bundle — ${rows.length} inline event object(s) read (${rows.filter(row => row.rrule).length} repeating)`);
         return {

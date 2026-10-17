@@ -4,10 +4,10 @@
   "slug": "the-bear-calendar",
   "status": "complete",
   "recon": {
-    "date": "2026-09-10",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://thebearcalendar.com/events/"
@@ -17,1035 +17,93 @@
         "url": "https://thebearcalendar.com/feed.json",
         "kind": "json",
         "role": "feed",
-        "rowsReturned": 66,
-        "truthFlag": "count: 66; generated_at: 2026-09-08T05:15:16.069Z",
-        "note": "events[] carries slug, title, start/end, tz, all_day, recurrence + rrule, category, badges, venue, city/region/country, organizer, price, ticket_url, website_url, image, date_status. tz is the string \"UTC\" on 61 of 66 rows while the times are plainly local wall-clock."
+        "rowsReturned": 68,
+        "truthFlag": "count: 68; generated_at: 2026-10-13T05:39:35.427Z",
+        "note": "As the scraper's page cache holds it (fetched 2026-10-16T09:47Z). 20 rows all_day (no clock — the 29% \"time missing\" is the site's own), 15 with rrule, 63 labelled tz \"UTC\" over local wall-clock times, no description field at all (the 4% description coverage is the feed's shape), no coordinates. 5 clocked rows span more than one day with the site's own stated end (runs, cruises, weekenders): Northern Exposure 2026-10-14 18:00 → 10-18 17:00, Adventure Bears Panama Canal Cruise 10-30 19:00 → 11-11 12:00, Bärenpaadiie XXL 2027-01-14 18:00 → 01-17 15:00, Bearadise IBFF Bear Week 2027-01-22 → 01-31 — the run's duration-implausible / improbable-overnight-span flags on them are the scraper's heuristics, not misread ends."
       },
       {
         "url": "https://thebearcalendar.com/feed.ics",
         "kind": "ics",
         "role": "feed",
-        "rowsReturned": 66,
+        "rowsReturned": 68,
         "truthFlag": null,
-        "note": "66 VEVENTs, UID = <slug>@thebearcalendar.com; DTSTART/DTEND are floating local times (no TZID); 19 carry RRULE; all-day rows use VALUE=DATE with exclusive DTEND. Same 66 slugs as feed.json, zero delta."
-      },
-      {
-        "url": "https://thebearcalendar.com/feed.csv",
-        "kind": "csv",
-        "role": "feed",
-        "rowsReturned": 66,
-        "truthFlag": null,
-        "note": "same 66 slugs; no rrule column."
+        "note": "Cached 2026-10-16T09:47Z beside the JSON; the MACHINE DOOR line of run 20261017-054812 reports 68 ics rows, 8 fields/row, same slugs."
       },
       {
         "url": "https://thebearcalendar.com/events/",
         "kind": "html",
         "role": "listing",
-        "rowsReturned": 66,
-        "truthFlag": "Showing 66 of 66 upcoming events",
-        "note": "The configured parser url. Server-rendered Astro; 66 unique /events/<slug>/ hrefs in exactly feed.json order, preceded in the DOM by 19 filter links (/events/?type=…, ?city=…, ?range=…). Cards show only title, city/country, type and a date/recurrence label — no time, venue or outbound link; those live on the per-event pages. No pagination, no past section, no JSON-LD on the listing."
+        "rowsReturned": 68,
+        "truthFlag": null,
+        "note": "The configured url, cached 2026-10-16T09:47Z (73 KB): the listing the feed door is found behind (🚪 MACHINE DOOR → feed.json). Cards carry title, city/country, type and a date label only."
       },
       {
-        "url": "https://thebearcalendar.com/feeds/",
+        "url": "https://thebearcalendar.com/events/tummy-tuesday-pv-bear-happy-hour-at-playroom-2026/",
         "kind": "html",
-        "role": "other",
-        "rowsReturned": 42,
-        "truthFlag": null,
-        "note": "42 .ics links: /feed.ics, 5 /feed/type/*.ics, 36 /feed/organizer/*.ics (the brief expected 38 organizer feeds; 36 on 2026-09-10). Per-city counts on this page sum to the same 66."
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/type/bar-night.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 19,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/type/party.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 19,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/type/run.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 19,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/type/cruise.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 9,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/type/pride.ics",
-        "kind": "ics",
-        "role": "feed",
+        "role": "event",
         "rowsReturned": 1,
         "truthFlag": null,
-        "note": "belgium-bearpride-bear-folies-2026-2026 is in both party.ics and pride.ics, so the five type feeds hold 67 rows over 66 unique UIDs."
-      },
-      {
-        "url": "https://thebearcalendar.com/sitemap.xml",
-        "kind": "xml",
-        "role": "sitemap",
-        "rowsReturned": 0,
-        "truthFlag": "HTTP 404",
-        "note": "robots.txt points at /sitemap-index.xml instead."
-      },
-      {
-        "url": "https://thebearcalendar.com/sitemap-index.xml",
-        "kind": "xml",
-        "role": "sitemap",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one child: /sitemap-0.xml, lastmod 2026-09-08T05:13:42.215Z"
-      },
-      {
-        "url": "https://thebearcalendar.com/sitemap-0.xml",
-        "kind": "xml",
-        "role": "sitemap",
-        "rowsReturned": 425,
-        "truthFlag": null,
-        "note": "387 /events/<slug>/ URLs = the 66 upcoming + 321 past event pages (sampled 8 of the 321: all dated 2025 or before 2026-09-08, all render exactly like live events with no past marker); plus 36 /city/<slug>/ listing pages, /, /events/, /feeds/, /submit/."
+        "note": "The one event page the run opens to verify the feed clock (🕒 FEED CLOCK: 16:00+00:00 in the feed, 16:00 with no offset on the page → every row read as local time)."
       },
       {
         "url": "https://thebearcalendar.com/robots.txt",
-        "kind": "text",
+        "kind": "other",
         "role": "other",
-        "rowsReturned": null,
+        "rowsReturned": 0,
         "truthFlag": null,
-        "note": "Disallow /admin/ and /api/; Sitemap: https://thebearcalendar.com/sitemap-index.xml"
-      },
-      {
-        "url": "https://thebearcalendar.com/",
-        "kind": "html",
-        "role": "other",
-        "rowsReturned": null,
-        "truthFlag": null,
-        "note": "home page; not an event surface for this recon."
-      },
-      {
-        "url": "https://thebearcalendar.com/city/london/",
-        "kind": "html",
-        "role": "listing",
-        "rowsReturned": 7,
-        "truthFlag": null,
-        "note": "per-city listing (7 London event links), a filtered duplicate of /events/; reached only via the sitemap."
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/adventure-bears.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 2,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/arno-s-bear-cruises.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/bear-carnival.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/bear-jamboree.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 2,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/bearadise.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 2,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/bearcruise-com.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/bears-in-excess.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 4,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/bears-naturistas.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/beefdip-events.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/beefmince.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 8,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/belgium-bear-pride.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/brisbears-social-club-inc.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/cannonball-bash.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/central-pa-bears.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/chunk.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/club-chub-usa.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/club-try-angles.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/colonia-bears.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/cruising-bears.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 4,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/dj-popperz.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/eagle-london.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/eagle-manchester.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/harbour-city-bears.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/ibc-palm-springs.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/jackhammer-chicago.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/leipzig-baren.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 2,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/mass-bears-and-cubs.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 3,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/midwest-bearfest.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/ottawa-bears.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 2,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/prague-bears.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/sitges-pool-party.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/sticky-rice.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/the-eagle-denver.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/the-urban-bear.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/xl-bears.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/feed/organizer/xposure-events.ics",
-        "kind": "ics",
-        "role": "feed",
-        "rowsReturned": 2,
-        "truthFlag": null,
-        "note": null
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-hangout-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/b-bar-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-pool-party-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/club-chub-weekend-2026-the-ultimate-celebration-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/furry-friday-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-bash-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/saturday-bears-and-cubs-24-hours-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/manbears-social-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-night-at-the-eagle-denver-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/southern-bears-bar-night-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/weekly-bear-social-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/sunday-bears-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/honey-pot-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/urban-bear-nyc-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/monthly-trivia-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/munich-oktobearfest-the-legendary-danube-to-budapest-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/chub-rub-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/chunk-chicago-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-cave-underwear-party-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-cave-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/beefmince-x-rvt-2026-3/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bears-in-excess-2026-4/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-tea-club-cafe-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/sticky-rice-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/xl-bears-bear-bust-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-pub-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/alley-bears-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/beefmince-x-bear-brum-2026-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/belgium-bearpride-bear-folies-2026-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-night-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/belly-up-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/western-xposure-fall-2026-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-frolic-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/leipzig-baren-weekend-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/cadiz-2026-bears-naturistas-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/happy-barsday-10-jahre-leipzig-baren-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/northern-exposure-2026-built-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/western-xposure-xxl-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-bash-cologne-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/beefmince-x-rvt-2026-2/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-tea-dance-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bears-in-excess-2026-3/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/cannonball-bash-2026-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/2026-panama-canal-cruise-on-the-caribbean-princess-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/spookmince-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bears-go-bowling-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bears-in-excess-2026-2/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/beefmince-x-rvt-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bearsgiving-2026-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bearadise-love-boat-bearsgiving-2026-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/amadeus-nova-christmas-markets-river-cruise-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/beefmince-x-brighton-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-fuzz-fest-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/midwest-bearfest-2026-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/turkeymince-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bears-in-excess-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/beefmince-new-year-s-eve-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/beefdip-bear-week-2027-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/cruisingbears-com-hibearnation-2027-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/international-bear-convergence-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-carnival-2027-men-at-work-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-jamboree-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/cruisingbears-com-exotic-expedition-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/cruisingbears-com-after-bears-sitges-week-cruise-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/cruisingbears-com-ibc-balcony-bears-bash-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/eastern-caribbean-adventure-cruise-2027/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "one schema.org Event JSON-LD block (offers.url = original ticket/promoter URL; series pages add eventSchedule with repeatFrequency/byDay); page repeats the date/time line with a \"UTC\" label and a \"More in <country>\" rail of 4 sibling events."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-night-sep-5-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "sitemap-only PAST event page (sample); HTTP 200, full JSON-LD, no past marker."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-carnival-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "sitemap-only PAST event page (sample); HTTP 200, full JSON-LD, no past marker."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/atlanta-bear-pride-2025/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "sitemap-only PAST event page (sample); HTTP 200, full JSON-LD, no past marker."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/84-bear-social-cologne-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "sitemap-only PAST event page (sample); HTTP 200, full JSON-LD, no past marker."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/bear-happy-hour-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "sitemap-only PAST event page (sample); HTTP 200, full JSON-LD, no past marker."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/world-bear-weekend-2025/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "sitemap-only PAST event page (sample); HTTP 200, full JSON-LD, no past marker."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/world-pride-in-amsterdam-rhine-river-pride-capitals-of-europe-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "sitemap-only PAST event page (sample); HTTP 200, full JSON-LD, no past marker."
-      },
-      {
-        "url": "https://thebearcalendar.com/events/xii-international-prague-bear-summer-2026-2026/",
-        "kind": "html",
-        "role": "event",
-        "rowsReturned": 1,
-        "truthFlag": null,
-        "note": "sitemap-only PAST event page (sample); HTTP 200, full JSON-LD, no past marker."
+        "note": "Cached 2026-10-16; points at /sitemap-index.xml."
       }
     ],
-    "notes": "Parser config at recon: automationEnabled false, alwaysBear true, urlDiscoveryDepth 1, maxAdditionalUrls 60, no siteRole, no discoveryAllowed/BlockedPatterns. The parser was NOT in run 20260909-072307 (parserResults has no \"The Bear Calendar\" entry; page cache storage/pages/thebearcalendar.com is empty), so no trap carries seenInRun.\nPlatform confirmed by working endpoints, not markup: /feed.json (count: 66, generated_at 2026-09-08T05:15:16.069Z), /feed.ics (66 VEVENT), /feed.csv (66 rows), /feeds/ (42 .ics), /sitemap-index.xml -> /sitemap-0.xml. The whole site is a static Astro build stamped 8 Sept (sitemap lastmod 2026-09-08T05:13:42Z, header badge \"SEP 8\", \"updated 8 Sept\"), so \"upcoming\" is as of the build, not the request: Bear Night SEP 5 (San Diego, 2026-09-05) had already fallen off the listing.\nTime semantics: feed.json start/end are ISO strings with +00:00 and tz \"UTC\" on 61 rows, but they are local wall-clock (CHUNK Chicago 21:00, BEEFMINCE 22:00 London). feed.ics DTSTART/DTEND are the same values as floating local times. This file records startTime/endTime as those wall-clock values and timezone as the city's IANA zone; the 5 rows with a real tz (Cruising Bears x4, Adventure Bears Panama) use that tz and their ICS local time (Panama cruise 15:00 America/New_York = feed 19:00Z).\nAll-day rows (25 of 66, feed all_day: true): no times; ICS DTEND;VALUE=DATE is exclusive and the page prints the inclusive range (\"17–20 Sept\" for DTSTART 20260917 / DTEND 20260921), endDate here is the inclusive last day. Multi-day timed rows (Club Chub Weekend 11:00 -> 14 Sept 00:00, Cádiz, Northern Exposure, Panama cruise) keep their ICS end.\nSeries (19 rows with rrule): feed.json/ICS start is the series anchor (often before the recon date: B BAR 2026-07-16, HONEY POT 2026-07-15), while the per-event page and its JSON-LD publish the NEXT instance (\"Next / Wed 9 Sept 2026 · Wednesdays\") plus an eventSchedule block (repeatFrequency P1W/P1M, byDay). startDate on series rows here is that page-published next instance; occurrences are expanded from the ICS RRULE + anchor into the window and the page's Next instance is marked origin listed. A crawl of the pages yields one dated instance per series, never the rule (scraper never writes series).\nPer-event pages: exactly one schema.org Event JSON-LD block each — name, startDate/endDate (no offset), location.name + PostalAddress (locality/region/country, no street), organizer.name, image, description, offers.url (== feed ticket_url; absent when ticket_url is null), url = the aggregator page. The \"Website\" link (feed website_url) is a plain anchor in the page body, NOT in JSON-LD. website here = website_url, ticketUrl = ticket_url; neither is ever thebearcalendar.com. 9 rows have no organizer, 7 rows have neither outbound link (aggregator page only).\nOwnership: 12 of 66 rows belong to other live parsers — BEEFMINCE x8 (organizer BEEFMINCE), CHUNK x1, Club Chub x1 (organizer Club Chub USA), BeefDip x1 (organizer BeefDip Events), Eagle LA x1 (B BAR: no organizer on the row but website_url is eaglela.com/events/b-bar/). Jackhammer Chicago, The Eagle Denver, Bears in Excess etc. are not ours. No Megawoof, Twisted Bear, Bearracuda, Furball, Cubhouse, Goldiloxx or Bear it MTL rows were listed on 2026-09-10.\nCity keys: 40 distinct feed city strings; 25 map to scraper-cities keys (Cathedral City -> palm-springs and WILTON MANORS -> fort-lauderdale via the configured patterns), 15 do not (city: null on those rows, listed in openQuestions). 2026-09-11: the crawler now finds feed.json / feed.ics from /events/ on its own (machine-door discovery; the feed was verified as the primary door above). The feed labels wall-clock times \"UTC\" — the JSON-API reader verifies that against an event page and reads them as local time."
+    "notes": "Recheck 2026-10-17 from the cached feed (68 rows vs 66 on 2026-09-10). City keys: 57 rows map to a scraper-cities key, the rest carry city null (Hamburg, Galveston, Papeete, Vienna …). Coordinates: the feed publishes none, so the 45% coords coverage is geocoding of venue + city, not a reader gap."
   },
   "defaults": {},
   "coverage": {
     "confidence": "high",
-    "basis": "feed.json: count 66 / events.length 66 (generated_at 2026-09-08T05:15:16.069Z). feed.ics: 66 VEVENTs, identical slug set (0 delta either way). feed.csv: 66 rows. /events/ (the configured url): \"Showing 66 of 66 upcoming events\", 66 unique /events/<slug>/ hrefs in feed order. Type feeds: 19+19+19+9+1 = 67 rows over the same 66 UIDs (belgium-bearpride-bear-folies-2026-2026 is tagged party AND pride). Organizer feeds: 36 feeds, 57 unique UIDs = 66 minus the 9 organizer-less rows. sitemap-0.xml: 387 event URLs = 66 upcoming + 321 past pages (past is not enumerated; 8 sampled, all past-dated, all still live). Published = 66 = 19 series + 47 singles; every one documented. Past listings: /events/ shows none; the 321 past pages exist only via the sitemap.",
-    "publishedEventCount": 66,
-    "documentedEventCount": 66,
+    "basis": "Feed door: every row of feed.json (68); the ICS twin and the listing agree on the count. Series are ONE entry with rule-derived occurrences in the window.",
+    "publishedEventCount": 68,
+    "documentedEventCount": 68,
     "occurrenceWindow": {
-      "start": "2026-09-10",
-      "end": "2026-12-09"
+      "start": "2026-10-17",
+      "end": "2027-01-15"
     },
     "pastListingsPresent": false,
     "knownGaps": []
   },
   "events": [
     {
+      "id": "tummy-tuesday-pv-bear-happy-hour-at-playroom-2026-10-13",
+      "kind": "single",
+      "title": "Tummy Tuesday PV: Bear Happy Hour at Playroom",
+      "bar": "Playroom",
+      "city": "pv",
+      "timezone": "America/Mexico_City",
+      "startDate": "2026-10-13",
+      "startTime": "16:00",
+      "endDate": "2026-10-13",
+      "endTime": "18:00",
+      "website": null,
+      "ticketUrl": "https://bearadisemx.com/en/tummy-tuesday?utm_source=thebearcalendar&utm_medium=listing&utm_campaign=tummy-tuesday",
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[0]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
       "id": "bear-hangout",
       "kind": "series",
       "title": "Bear Hangout",
       "bar": "Café Bar Flirt",
-      "city": null,
+      "city": "prague",
       "timezone": "Europe/Prague",
-      "startDate": "2026-09-09",
+      "startDate": "2026-08-26",
       "startTime": "18:00",
       "endDate": null,
       "endTime": null,
@@ -1054,37 +112,17 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b9f1f00966b8f5a1.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[0]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[1]"
+      },
       "recurrence": "FREQ=WEEKLY;BYDAY=WE",
       "recurrenceStatedAs": "Wednesdays",
       "occurrences": [
-        {
-          "startDate": "2026-09-16",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-09-23",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-09-30",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-07",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-14",
-          "origin": "rule"
-        },
         {
           "startDate": "2026-10-21",
           "origin": "rule"
@@ -1116,158 +154,126 @@
         {
           "startDate": "2026-12-09",
           "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-23",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-13",
+          "origin": "rule"
         }
-      ],
-      "note": "organizer on the row: Prague Bears. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 18:00 is the local wall-clock value; treat as Europe/Prague. city \"Prague\" has no scraper-cities key. feed.json start 2026-08-26T18:00:00+00:00 / ICS DTSTART 20260826T180000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Wed 9 Sept 2026 · Wednesdays\". page's Next instance 2026-09-09 precedes the occurrence window, so every materialized occurrence is rule-derived."
+      ]
     },
     {
-      "id": "b-bar",
-      "kind": "series",
-      "title": "B BAR",
-      "bar": null,
-      "city": "la",
-      "timezone": "America/Los_Angeles",
-      "startDate": "2026-09-10",
-      "startTime": null,
-      "endDate": "2026-09-10",
-      "endTime": null,
-      "website": "https://eaglela.com/events/b-bar/",
+      "id": "northern-exposure-2026-built-2026-10-14",
+      "kind": "single",
+      "title": "Northern Exposure 2026 - BUILT",
+      "bar": "Brisbane City",
+      "city": "brisbane",
+      "timezone": "Australia/Brisbane",
+      "startDate": "2026-10-14",
+      "startTime": "18:00",
+      "endDate": "2026-10-18",
+      "endTime": "17:00",
+      "website": "https://brisbears.tidyhq.com/public/schedule/events/85125-nex-2026-built",
       "ticketUrl": null,
-      "image": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3b16d2412b9f15a0.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[1]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "belongsToSource": "Eagle LA",
-      "recurrence": "FREQ=WEEKLY;BYDAY=TH",
-      "recurrenceStatedAs": "Thursdays",
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[2]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "western-xposure-xxl-2026-10-15",
+      "kind": "single",
+      "title": "Western Xposure XXL",
+      "bar": "CCBC Resort",
+      "city": "palm-springs",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-15",
+      "startTime": null,
+      "endDate": "2026-10-18",
+      "endTime": null,
+      "website": "https://www.westernxposure.com/westernxposurexxl",
+      "ticketUrl": "https://xxl2026.eventbrite.com/",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[3]"
+      },
+      "note": "all_day: true in the feed (2026-10-15 → 2026-10-18); the feed labels the row tz \"UTC\"."
+    },
+    {
+      "id": "monthly-trivia",
+      "kind": "series",
+      "title": "Monthly Trivia",
+      "bar": "The Alley Bar",
+      "city": "boston",
+      "timezone": "America/New_York",
+      "startDate": "2026-08-20",
+      "startTime": "20:00",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/1eed4052f80210e1.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[4]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=3TH",
+      "recurrenceStatedAs": "3rd Thursdays",
       "occurrences": [
-        {
-          "startDate": "2026-09-10",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/b-bar-2026/",
-            "quote": "Thu 10 Sept 2026 · Thursdays"
-          }
-        },
-        {
-          "startDate": "2026-09-17",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-09-24",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-01",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-08",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-15",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-22",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-29",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-05",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-12",
-          "origin": "rule"
-        },
         {
           "startDate": "2026-11-19",
           "origin": "rule"
         },
         {
-          "startDate": "2026-11-26",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-12-03",
+          "startDate": "2026-12-17",
           "origin": "rule"
         }
-      ],
-      "note": "no organizer on the row. feed.json start 2026-07-16T00:00:00+00:00 / ICS DTSTART 20260716 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Thu 10 Sept 2026 · Thursdays\"."
-    },
-    {
-      "id": "bear-pool-party-2026-09-10",
-      "kind": "single",
-      "title": "BEAR POOL PARTY",
-      "bar": null,
-      "city": "sitges",
-      "timezone": "Europe/Madrid",
-      "startDate": "2026-09-10",
-      "startTime": null,
-      "endDate": "2026-09-10",
-      "endTime": null,
-      "website": "https://www.sitgespoolparty.com",
-      "ticketUrl": "https://sitgespoolparty.com/event/september-10th-sitges-bear-week-pool-party-2026/",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/82e5c1de550e197d.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[2]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Sitges Pool Party. all-day row (feed all_day: true); ICS DTEND 20260911 is exclusive, endDate here is the inclusive last day as the page prints it."
-    },
-    {
-      "id": "club-chub-weekend-2026-the-ultimate-celebration-2026-09-11",
-      "kind": "single",
-      "title": "Club Chub Weekend 2026 - The Ultimate Celebration!",
-      "bar": "CCBC Resort",
-      "city": "palm-springs",
-      "timezone": "America/Los_Angeles",
-      "startDate": "2026-09-11",
-      "startTime": "11:00",
-      "endDate": "2026-09-14",
-      "endTime": "00:00",
-      "website": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209",
-      "ticketUrl": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/9887f9e7ab3d0f7f.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[3]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "belongsToSource": "Club Chub",
-      "note": "organizer on the row: Club Chub USA. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 11:00 is the local wall-clock value; treat as America/Los_Angeles."
+      ]
     },
     {
       "id": "furry-friday",
       "kind": "series",
       "title": "Furry Friday",
       "bar": "Kings Cross Hotel",
-      "city": null,
+      "city": "sydney",
       "timezone": "Australia/Sydney",
-      "startDate": "2026-09-11",
+      "startDate": "2026-08-28",
       "startTime": "19:00",
       "endDate": null,
       "endTime": null,
@@ -1276,45 +282,17 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[4]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[5]"
+      },
       "recurrence": "FREQ=WEEKLY;BYDAY=FR",
       "recurrenceStatedAs": "Fridays",
       "occurrences": [
-        {
-          "startDate": "2026-09-11",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/furry-friday-2026/",
-            "quote": "Fri 11 Sept 2026 · Fridays"
-          }
-        },
-        {
-          "startDate": "2026-09-18",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-09-25",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-02",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-09",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-16",
-          "origin": "rule"
-        },
         {
           "startDate": "2026-10-23",
           "origin": "rule"
@@ -1342,1329 +320,39 @@
         {
           "startDate": "2026-12-04",
           "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: Harbour City Bears. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 19:00 is the local wall-clock value; treat as Australia/Sydney. city \"Sydney\" has no scraper-cities key. feed.json start 2026-08-28T19:00:00+00:00 / ICS DTSTART 20260828T190000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Fri 11 Sept 2026 · Fridays\"."
-    },
-    {
-      "id": "bear-bash-2026-09-11",
-      "kind": "single",
-      "title": "Bear Bash",
-      "bar": "Eagle London",
-      "city": "london",
-      "timezone": "Europe/London",
-      "startDate": "2026-09-11",
-      "startTime": "21:00",
-      "endDate": "2026-09-12",
-      "endTime": "04:00",
-      "website": null,
-      "ticketUrl": "https://www.eaglelondon.com/event-details/bear-bash-16",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/06da256b88c562fd.png",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[5]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Eagle London. website_url is null; the only outbound link is ticket_url (JSON-LD offers.url). feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 21:00 is the local wall-clock value; treat as Europe/London."
-    },
-    {
-      "id": "saturday-bears-and-cubs-24-hours",
-      "kind": "series",
-      "title": "Saturday Bears and Cubs - 24 HOURS!",
-      "bar": "Hawks PDX",
-      "city": "portland",
-      "timezone": "America/Los_Angeles",
-      "startDate": "2026-09-12",
-      "startTime": "10:00",
-      "endDate": "2026-09-13",
-      "endTime": "06:00",
-      "website": "https://hawkspdx.com/calendar-events",
-      "ticketUrl": null,
-      "image": null,
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[6]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=2SA,4SA",
-      "recurrenceStatedAs": "2nd & 4th Saturdays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-12",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/saturday-bears-and-cubs-24-hours-2026/",
-            "quote": "12–13 Sept 2026 · 2nd & 4th Saturdays"
-          }
         },
         {
-          "startDate": "2026-09-26",
+          "startDate": "2026-12-11",
           "origin": "rule"
         },
         {
-          "startDate": "2026-10-10",
+          "startDate": "2026-12-18",
           "origin": "rule"
         },
         {
-          "startDate": "2026-10-24",
+          "startDate": "2026-12-25",
           "origin": "rule"
         },
         {
-          "startDate": "2026-11-14",
+          "startDate": "2027-01-01",
           "origin": "rule"
         },
         {
-          "startDate": "2026-11-28",
+          "startDate": "2027-01-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-15",
           "origin": "rule"
         }
-      ],
-      "note": "no organizer on the row. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 10:00 is the local wall-clock value; treat as America/Los_Angeles. feed.json start 2026-09-12T10:00:00+00:00 / ICS DTSTART 20260912T100000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"12–13 Sept 2026 · 2nd & 4th Saturdays\"."
-    },
-    {
-      "id": "manbears-social",
-      "kind": "series",
-      "title": "Manbears Social",
-      "bar": "The Eagle Bar",
-      "city": "manchester",
-      "timezone": "Europe/London",
-      "startDate": "2026-09-12",
-      "startTime": "16:00",
-      "endDate": null,
-      "endTime": null,
-      "website": "https://www.eaglemanchester.com/event-details/manbears-social-2026-08-08-16-00",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/1d0e9e272de1c458.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[7]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
-      "recurrenceStatedAs": "2nd Saturdays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-12",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/manbears-social-2026/",
-            "quote": "Sat 12 Sept 2026 · 2nd Saturdays"
-          }
-        },
-        {
-          "startDate": "2026-10-10",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-14",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: Eagle Manchester. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 16:00 is the local wall-clock value; treat as Europe/London. feed.json start 2026-08-08T16:00:00+00:00 / ICS DTSTART 20260808T160000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Sat 12 Sept 2026 · 2nd Saturdays\"."
-    },
-    {
-      "id": "bear-night-at-the-eagle-denver",
-      "kind": "series",
-      "title": "Bear Night at the Eagle Denver",
-      "bar": "The Eagle Denver",
-      "city": "denver",
-      "timezone": "America/Denver",
-      "startDate": "2026-09-12",
-      "startTime": "21:00",
-      "endDate": "2026-09-13",
-      "endTime": "02:00",
-      "website": "https://denver-eagle.com/events",
-      "ticketUrl": null,
-      "image": null,
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[8]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=WEEKLY;BYDAY=SA",
-      "recurrenceStatedAs": "Saturdays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-12",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/bear-night-at-the-eagle-denver-2026/",
-            "quote": "12–13 Sept 2026 · Saturdays"
-          }
-        },
-        {
-          "startDate": "2026-09-19",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-09-26",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-03",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-10",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-17",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-24",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-31",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-07",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-14",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-21",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-28",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-12-05",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: The Eagle Denver. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 21:00 is the local wall-clock value; treat as America/Denver. feed.json start 2026-07-18T21:00:00+00:00 / ICS DTSTART 20260718T210000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"12–13 Sept 2026 · Saturdays\"."
-    },
-    {
-      "id": "southern-bears-bar-night",
-      "kind": "series",
-      "title": "Southern Bears Bar Night",
-      "bar": "Atlanta Eagle",
-      "city": "atlanta",
-      "timezone": "America/New_York",
-      "startDate": "2026-09-12",
-      "startTime": "21:00",
-      "endDate": "2026-09-13",
-      "endTime": "03:00",
-      "website": "https://atlantaeagle.com/event/southern-bears-bar-night/",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/fa4d7a06ee4f9ddc.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[9]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
-      "recurrenceStatedAs": "2nd Saturdays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-12",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/southern-bears-bar-night-2026/",
-            "quote": "12–13 Sept 2026 · 2nd Saturdays"
-          }
-        },
-        {
-          "startDate": "2026-10-10",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-14",
-          "origin": "rule"
-        }
-      ],
-      "note": "no organizer on the row. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 21:00 is the local wall-clock value; treat as America/New_York. feed.json start 2026-08-09T21:00:00+00:00 / ICS DTSTART 20260809T210000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"12–13 Sept 2026 · 2nd Saturdays\"."
-    },
-    {
-      "id": "weekly-bear-social",
-      "kind": "series",
-      "title": "Weekly Bear Social",
-      "bar": "T's Pub",
-      "city": null,
-      "timezone": "America/Toronto",
-      "startDate": "2026-09-13",
-      "startTime": "15:30",
-      "endDate": null,
-      "endTime": null,
-      "website": "https://ottawabears.com/bear-socia/",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/30a0e05cf81d3132.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[10]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
-      "recurrenceStatedAs": "Sundays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-13",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/weekly-bear-social-2026/",
-            "quote": "Sun 13 Sept 2026 · Sundays"
-          }
-        },
-        {
-          "startDate": "2026-09-20",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-09-27",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-04",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-11",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-18",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-25",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-01",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-08",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-15",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-22",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-29",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-12-06",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: Ottawa Bears. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 15:30 is the local wall-clock value; treat as America/Toronto. city \"Ottawa\" has no scraper-cities key. feed.json start 2026-08-16T15:30:00+00:00 / ICS DTSTART 20260816T153000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Sun 13 Sept 2026 · Sundays\"."
-    },
-    {
-      "id": "sunday-bears",
-      "kind": "series",
-      "title": "Sunday Bears",
-      "bar": "Town Hall Hotel, 326 King St, Newtown",
-      "city": null,
-      "timezone": "Australia/Sydney",
-      "startDate": "2026-09-13",
-      "startTime": "16:00",
-      "endDate": null,
-      "endTime": null,
-      "website": "https://hcbears.com.au/event-6729471",
-      "ticketUrl": null,
-      "image": null,
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[11]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
-      "recurrenceStatedAs": "Sundays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-13",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/sunday-bears-2026/",
-            "quote": "Sun 13 Sept 2026 · Sundays"
-          }
-        },
-        {
-          "startDate": "2026-09-20",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-09-27",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-04",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-11",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-18",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-10-25",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-01",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-08",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-15",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-22",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-29",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-12-06",
-          "origin": "rule"
-        }
-      ],
-      "note": "no organizer on the row. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 16:00 is the local wall-clock value; treat as Australia/Sydney. city \"Sydney\" has no scraper-cities key. feed.json start 2026-08-16T16:00:00+00:00 / ICS DTSTART 20260816T160000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Sun 13 Sept 2026 · Sundays\"."
-    },
-    {
-      "id": "honey-pot",
-      "kind": "series",
-      "title": "HONEY POT",
-      "bar": "Eagle Wilton Manors",
-      "city": "fort-lauderdale",
-      "timezone": "America/New_York",
-      "startDate": "2026-09-16",
-      "startTime": "18:00",
-      "endDate": "2026-09-16",
-      "endTime": "20:00",
-      "website": "https://eaglebarwm.com/",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cd3d8b75a2f018fc.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[12]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=3WE",
-      "recurrenceStatedAs": "3rd Wednesdays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-16",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/honey-pot-2026/",
-            "quote": "Wed 16 Sept 2026 · 3rd Wednesdays"
-          }
-        },
-        {
-          "startDate": "2026-10-21",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-18",
-          "origin": "rule"
-        }
-      ],
-      "note": "no organizer on the row. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 18:00 is the local wall-clock value; treat as America/New_York. feed.json start 2026-07-15T18:00:00+00:00 / ICS DTSTART 20260715T180000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Wed 16 Sept 2026 · 3rd Wednesdays\"."
-    },
-    {
-      "id": "urban-bear-nyc-2026-09-17",
-      "kind": "single",
-      "title": "Urban Bear NYC",
-      "bar": "Multiple venues",
-      "city": "nyc",
-      "timezone": "America/New_York",
-      "startDate": "2026-09-17",
-      "startTime": null,
-      "endDate": "2026-09-20",
-      "endTime": null,
-      "website": "https://www.theurbanbear.com/",
-      "ticketUrl": "https://Tinyurl.com/UBNYC2026",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2fe805ec192070fd.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[13]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: The Urban Bear. price: $60. all-day row (feed all_day: true); ICS DTEND 20260921 is exclusive, endDate here is the inclusive last day as the page prints it."
-    },
-    {
-      "id": "monthly-trivia",
-      "kind": "series",
-      "title": "Monthly Trivia",
-      "bar": "The Alley Bar",
-      "city": "boston",
-      "timezone": "America/New_York",
-      "startDate": "2026-09-17",
-      "startTime": "20:00",
-      "endDate": null,
-      "endTime": null,
-      "website": "https://www.massbearsandcubs.org/events/mbctrivia-r6a36-jxhwl-4ywba-tg9eg-226p3-bzlx7",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/1eed4052f80210e1.png",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[14]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=3TH",
-      "recurrenceStatedAs": "3rd Thursdays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-17",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/monthly-trivia-2026/",
-            "quote": "Thu 17 Sept 2026 · 3rd Thursdays"
-          }
-        },
-        {
-          "startDate": "2026-10-15",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-19",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: Mass Bears and Cubs. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 20:00 is the local wall-clock value; treat as America/New_York. feed.json start 2026-08-20T20:00:00+00:00 / ICS DTSTART 20260820T200000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Thu 17 Sept 2026 · 3rd Thursdays\"."
-    },
-    {
-      "id": "munich-oktobearfest-the-legendary-danube-to-budapest-2026-09-19",
-      "kind": "single",
-      "title": "Munich OktoBearfest + The Legendary Danube to Budapest",
-      "bar": "MS Belljour",
-      "city": null,
-      "timezone": "Europe/Berlin",
-      "startDate": "2026-09-19",
-      "startTime": null,
-      "endDate": "2026-09-29",
-      "endTime": null,
-      "website": "https://transcend-cruises.com/oktobearfest2026/",
-      "ticketUrl": "https://form.jotform.com/250756097507161",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8b5b6bfb0a721d94.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[15]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: BearCruise.com. city \"Passau\" has no scraper-cities key. all-day row (feed all_day: true); ICS DTEND 20260930 is exclusive, endDate here is the inclusive last day as the page prints it."
-    },
-    {
-      "id": "chub-rub",
-      "kind": "series",
-      "title": "Chub Rub",
-      "bar": "Powerhouse Bar",
-      "city": "sf",
-      "timezone": "America/Los_Angeles",
-      "startDate": "2026-09-19",
-      "startTime": "17:00",
-      "endDate": "2026-09-19",
-      "endTime": "21:00",
-      "website": "https://powerhousebar.com/event/chub-rub/all/",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/626d413e3f9dd5a1.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[16]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
-      "recurrenceStatedAs": "3rd Saturdays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-19",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/chub-rub-2026/",
-            "quote": "Sat 19 Sept 2026 · 3rd Saturdays"
-          }
-        },
-        {
-          "startDate": "2026-10-17",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-21",
-          "origin": "rule"
-        }
-      ],
-      "note": "no organizer on the row. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 17:00 is the local wall-clock value; treat as America/Los_Angeles. feed.json start 2026-09-19T17:00:00+00:00 / ICS DTSTART 20260919T170000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Sat 19 Sept 2026 · 3rd Saturdays\"."
-    },
-    {
-      "id": "chunk-chicago-2026-09-19",
-      "kind": "single",
-      "title": "CHUNK Chicago",
-      "bar": "Cell Block Chicago",
-      "city": "chicago",
-      "timezone": "America/Chicago",
-      "startDate": "2026-09-19",
-      "startTime": "21:00",
-      "endDate": "2026-09-20",
-      "endTime": "03:00",
-      "website": "https://www.chunk-party.com/event-details/chunk-chicago-september-19th",
-      "ticketUrl": "https://www.chunk-party.com/event-details/chunk-chicago-september-19th",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b0340033ea60be68.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[17]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "belongsToSource": "CHUNK",
-      "note": "organizer on the row: CHUNK. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 21:00 is the local wall-clock value; treat as America/Chicago."
-    },
-    {
-      "id": "bear-cave-underwear-party",
-      "kind": "series",
-      "title": "Bear Cave Underwear Party",
-      "bar": "The Green Lantern",
-      "city": "dc",
-      "timezone": "America/New_York",
-      "startDate": "2026-09-19",
-      "startTime": "21:00",
-      "endDate": "2026-09-20",
-      "endTime": "03:00",
-      "website": "https://www.greenlanterndc.com/daily/",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/26c2308195ccc415.png",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[18]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
-      "recurrenceStatedAs": "3rd Saturdays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-19",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/bear-cave-underwear-party-2026/",
-            "quote": "19–20 Sept 2026 · 3rd Saturdays"
-          }
-        },
-        {
-          "startDate": "2026-10-17",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-21",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: DJ Popperz. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 21:00 is the local wall-clock value; treat as America/New_York. price: Free. feed.json start 2026-09-19T21:00:00+00:00 / ICS DTSTART 20260919T210000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"19–20 Sept 2026 · 3rd Saturdays\"."
-    },
-    {
-      "id": "bear-cave-2026-09-19",
-      "kind": "single",
-      "title": "Bear Cave",
-      "bar": "SLM Oslo, Nedre Slottsgate 2E, 0153 Oslo, Norge",
-      "city": null,
-      "timezone": "Europe/Oslo",
-      "startDate": "2026-09-19",
-      "startTime": "22:00",
-      "endDate": "2026-09-20",
-      "endTime": "02:00",
-      "website": "https://www.norwaybears.com/en/2025/08/norwaybears-bear-cave-august-16/",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b7c66fc0cda236a8.png",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[19]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "no organizer on the row. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 22:00 is the local wall-clock value; treat as Europe/Oslo. city \"Oslo\" has no scraper-cities key."
-    },
-    {
-      "id": "beefmince-x-rvt-2026-09-19",
-      "kind": "single",
-      "title": "BEEFMINCE x RVT",
-      "bar": "The Royal Vauxhall Tavern",
-      "city": "london",
-      "timezone": "Europe/London",
-      "startDate": "2026-09-19",
-      "startTime": "22:00",
-      "endDate": "2026-09-20",
-      "endTime": "04:00",
-      "website": "https://beefmince.com/events",
-      "ticketUrl": "https://link.dice.fm/P0194faadd01",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/e534aa0889c5e044.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[20]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "belongsToSource": "BEEFMINCE",
-      "note": "organizer on the row: BEEFMINCE. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 22:00 is the local wall-clock value; treat as Europe/London. price: £10-12."
-    },
-    {
-      "id": "bears-in-excess-2026-09-20",
-      "kind": "single",
-      "title": "Bears in Excess",
-      "bar": "Spa Excess",
-      "city": "toronto",
-      "timezone": "America/Toronto",
-      "startDate": "2026-09-20",
-      "startTime": "13:00",
-      "endDate": "2026-09-20",
-      "endTime": "18:00",
-      "website": "https://spaexcess.com/event-organizer/bears-in-excess/",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[21]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Bears in Excess. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 13:00 is the local wall-clock value; treat as America/Toronto."
-    },
-    {
-      "id": "bear-tea-club-cafe",
-      "kind": "series",
-      "title": "Bear Tea /Club Cafe",
-      "bar": "Club Cafe",
-      "city": "boston",
-      "timezone": "America/New_York",
-      "startDate": "2026-09-20",
-      "startTime": "16:00",
-      "endDate": "2026-09-20",
-      "endTime": "22:00",
-      "website": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/9507e4baad124d04.png",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[22]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
-      "recurrenceStatedAs": "3rd Sundays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-20",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/bear-tea-club-cafe-2026/",
-            "quote": "Sun 20 Sept 2026 · 3rd Sundays"
-          }
-        },
-        {
-          "startDate": "2026-10-18",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-15",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: Mass Bears and Cubs. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 16:00 is the local wall-clock value; treat as America/New_York. feed.json start 2026-07-19T16:00:00+00:00 / ICS DTSTART 20260719T160000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Sun 20 Sept 2026 · 3rd Sundays\"."
-    },
-    {
-      "id": "sticky-rice-2026-09-25",
-      "kind": "single",
-      "title": "Sticky Rice",
-      "bar": "Casa Oliver",
-      "city": "palm-springs",
-      "timezone": "America/Los_Angeles",
-      "startDate": "2026-09-25",
-      "startTime": null,
-      "endDate": "2026-09-27",
-      "endTime": null,
-      "website": "https://www.sticky-rice.org/",
-      "ticketUrl": "https://forms.gle/TCYs6qPPvVoQoPMD7",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[23]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Sticky Rice. price: $25 suggested donation. all-day row (feed all_day: true); ICS DTEND 20260928 is exclusive, endDate here is the inclusive last day as the page prints it."
-    },
-    {
-      "id": "xl-bears-bear-bust",
-      "kind": "series",
-      "title": "XL Bears Bear Bust",
-      "bar": "CC's Seattle",
-      "city": "seattle",
-      "timezone": "America/Los_Angeles",
-      "startDate": "2026-09-25",
-      "startTime": "20:00",
-      "endDate": null,
-      "endTime": null,
-      "website": "https://www.ccsseattle.com/events",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ace07682ccc30a0f.webp",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[24]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=4FR",
-      "recurrenceStatedAs": "4th Fridays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-25",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/xl-bears-bear-bust-2026/",
-            "quote": "Fri 25 Sept 2026 · 4th Fridays"
-          }
-        },
-        {
-          "startDate": "2026-10-23",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-27",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: XL Bears. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 20:00 is the local wall-clock value; treat as America/Los_Angeles. feed.json start 2026-07-24T20:00:00+00:00 / ICS DTSTART 20260724T200000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Fri 25 Sept 2026 · 4th Fridays\"."
-    },
-    {
-      "id": "bear-pub",
-      "kind": "series",
-      "title": "Bear Pub",
-      "bar": "Ophelia Bar Diner Club",
-      "city": null,
-      "timezone": "Europe/Oslo",
-      "startDate": "2026-09-25",
-      "startTime": "20:00",
-      "endDate": "2026-09-26",
-      "endTime": "00:00",
-      "website": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[25]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=-1FR",
-      "recurrenceStatedAs": "Last Fridays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-25",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/bear-pub-2026/",
-            "quote": "25–26 Sept 2026 · Last Fridays"
-          }
-        },
-        {
-          "startDate": "2026-10-30",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-27",
-          "origin": "rule"
-        }
-      ],
-      "note": "no organizer on the row. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 20:00 is the local wall-clock value; treat as Europe/Oslo. city \"Oslo\" has no scraper-cities key. feed.json start 2026-09-25T20:00:00+00:00 / ICS DTSTART 20260925T200000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"25–26 Sept 2026 · Last Fridays\"."
-    },
-    {
-      "id": "alley-bears",
-      "kind": "series",
-      "title": "Alley Bears",
-      "bar": "The Alley Bar",
-      "city": "boston",
-      "timezone": "America/New_York",
-      "startDate": "2026-09-26",
-      "startTime": "21:00",
-      "endDate": "2026-09-27",
-      "endTime": "02:00",
-      "website": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3a1d8a83b3fb4baf.png",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[26]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=4SA",
-      "recurrenceStatedAs": "4th Saturdays",
-      "occurrences": [
-        {
-          "startDate": "2026-09-26",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/alley-bears-2026/",
-            "quote": "26–27 Sept 2026 · 4th Saturdays"
-          }
-        },
-        {
-          "startDate": "2026-10-24",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-11-28",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: Mass Bears and Cubs. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 21:00 is the local wall-clock value; treat as America/New_York. price: No cover. feed.json start 2026-07-25T21:00:00+00:00 / ICS DTSTART 20260725T210000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"26–27 Sept 2026 · 4th Saturdays\"."
-    },
-    {
-      "id": "beefmince-x-bear-brum-2026-2026-09-26",
-      "kind": "single",
-      "title": "BEEFMINCE x Bear Brum 2026",
-      "bar": "Eden",
-      "city": "birmingham",
-      "timezone": "Europe/London",
-      "startDate": "2026-09-26",
-      "startTime": "22:00",
-      "endDate": "2026-09-27",
-      "endTime": "04:00",
-      "website": "https://beefmince.com/events",
-      "ticketUrl": "https://link.dice.fm/k485cb41bf1e",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/dc5e9a2cb332465b.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[27]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "belongsToSource": "BEEFMINCE",
-      "note": "organizer on the row: BEEFMINCE. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 22:00 is the local wall-clock value; treat as Europe/London. price: £12-12.06."
-    },
-    {
-      "id": "belgium-bearpride-bear-folies-2026-2026-09-29",
-      "kind": "single",
-      "title": "Belgium Bearpride Bear Folies 2026",
-      "bar": null,
-      "city": null,
-      "timezone": "Europe/Brussels",
-      "startDate": "2026-09-29",
-      "startTime": null,
-      "endDate": "2026-10-04",
-      "endTime": null,
-      "website": "https://www.belgiumbearpride.be/",
-      "ticketUrl": "https://www.more.com/be-en/tickets/happenings/festival/belgium-bearpride-bearweek2026-bear-folies/",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5300f5099d0a5be5.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[28]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Belgium Bear Pride. city \"Brussels\" has no scraper-cities key. all-day row (feed all_day: true); ICS DTEND 20261005 is exclusive, endDate here is the inclusive last day as the page prints it."
-    },
-    {
-      "id": "bear-night",
-      "kind": "series",
-      "title": "Bear Night",
-      "bar": "Club Try-Angles",
-      "city": null,
-      "timezone": "America/Denver",
-      "startDate": "2026-10-02",
-      "startTime": null,
-      "endDate": "2026-10-02",
-      "endTime": null,
-      "website": "https://clubtryangles.com/",
-      "ticketUrl": null,
-      "image": null,
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[29]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
-      "recurrenceStatedAs": "1st Fridays",
-      "occurrences": [
-        {
-          "startDate": "2026-10-02",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/bear-night-2026/",
-            "quote": "Fri 2 Oct 2026 · 1st Fridays"
-          }
-        },
-        {
-          "startDate": "2026-11-06",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-12-04",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: Club Try-Angles. city \"Salt Lake City\" has no scraper-cities key. feed.json start 2026-09-04T00:00:00+00:00 / ICS DTSTART 20260904 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"Fri 2 Oct 2026 · 1st Fridays\"."
-    },
-    {
-      "id": "belly-up",
-      "kind": "series",
-      "title": "BELLY UP",
-      "bar": "Jackhammer",
-      "city": "chicago",
-      "timezone": "America/Chicago",
-      "startDate": "2026-10-03",
-      "startTime": "21:00",
-      "endDate": "2026-10-04",
-      "endTime": "05:00",
-      "website": "https://jackhammerchicago.com/belly-up",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b1361780fd51b423.png",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[30]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
-      "recurrenceStatedAs": "1st Saturdays",
-      "occurrences": [
-        {
-          "startDate": "2026-10-03",
-          "origin": "listed",
-          "evidence": {
-            "url": "https://thebearcalendar.com/events/belly-up-2026/",
-            "quote": "3–4 Oct 2026 · 1st Saturdays"
-          }
-        },
-        {
-          "startDate": "2026-11-07",
-          "origin": "rule"
-        },
-        {
-          "startDate": "2026-12-05",
-          "origin": "rule"
-        }
-      ],
-      "note": "organizer on the row: Jackhammer Chicago. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 21:00 is the local wall-clock value; treat as America/Chicago. price: Before 10pm: FREE; 10pm-2:30am: $10; 2:30am-Last call: $5. feed.json start 2026-09-05T21:00:00+00:00 / ICS DTSTART 20260905T210000 is the series anchor (first instance), not the next one; the page and JSON-LD publish the next instance \"3–4 Oct 2026 · 1st Saturdays\"."
-    },
-    {
-      "id": "western-xposure-fall-2026-2026-10-08",
-      "kind": "single",
-      "title": "Western Xposure: Fall 2026",
-      "bar": "CCBC Resort",
-      "city": "palm-springs",
-      "timezone": "America/Los_Angeles",
-      "startDate": "2026-10-08",
-      "startTime": null,
-      "endDate": "2026-10-11",
-      "endTime": null,
-      "website": "https://www.westernxposure.com/westernxposurefall",
-      "ticketUrl": "https://westernxposurefall2026.eventbrite.com",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a0b5ba9d91f6f3dc.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[31]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Xposure Events. price: $60–$180 depending on pass type (single day pass to 4-day pass; GOLD PASS all four days $180). all-day row (feed all_day: true); ICS DTEND 20261012 is exclusive, endDate here is the inclusive last day as the page prints it."
-    },
-    {
-      "id": "bear-frolic-2026-10-08",
-      "kind": "single",
-      "title": "Bear Frolic",
-      "bar": "Courtyard Ottawa Downtown",
-      "city": null,
-      "timezone": "America/Toronto",
-      "startDate": "2026-10-08",
-      "startTime": null,
-      "endDate": "2026-10-12",
-      "endTime": null,
-      "website": "https://ottawabears.com/bear-frolic/",
-      "ticketUrl": "https://ottawabears.com/bear-frolic/#tickets",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/49af59253fc77b35.png",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[32]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Ottawa Bears. city \"Ottawa\" has no scraper-cities key. all-day row (feed all_day: true); ICS DTEND 20261013 is exclusive, endDate here is the inclusive last day as the page prints it."
-    },
-    {
-      "id": "leipzig-bear-weekend-2026-10-09",
-      "kind": "single",
-      "title": "Leipzig Bear Weekend",
-      "bar": null,
-      "city": null,
-      "timezone": "Europe/Berlin",
-      "startDate": "2026-10-09",
-      "startTime": null,
-      "endDate": "2026-10-11",
-      "endTime": null,
-      "website": "https://www.leipzig-baeren.de/party",
-      "ticketUrl": "https://www.leipzig-baeren.de/party/#ticketshop",
-      "image": null,
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[33]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Leipzig Bären. city \"Leipzig\" has no scraper-cities key. all-day row (feed all_day: true); ICS DTEND 20261012 is exclusive, endDate here is the inclusive last day as the page prints it."
-    },
-    {
-      "id": "cadiz-2026-bears-naturistas-2026-10-09",
-      "kind": "single",
-      "title": "Cádiz 2026 - Bears Naturistas",
-      "bar": "Hacienda La Yerbabuena",
-      "city": null,
-      "timezone": "Europe/Madrid",
-      "startDate": "2026-10-09",
-      "startTime": "16:00",
-      "endDate": "2026-10-12",
-      "endTime": "11:15",
-      "website": null,
-      "ticketUrl": "https://bears.bearsnaturistas.com/cadiz-2026-nueva/",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/5aa1d67bdf07da05.png",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[34]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Bears Naturistas. website_url is null; the only outbound link is ticket_url (JSON-LD offers.url). feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 16:00 is the local wall-clock value; treat as Europe/Madrid. city \"Barbate\" has no scraper-cities key."
-    },
-    {
-      "id": "happy-barsday-10-jahre-leipzig-baren-2026-10-10",
-      "kind": "single",
-      "title": "Happy Bärsday – 10 Jahre Leipzig Bären",
-      "bar": "WUEST – Pittlerwerke",
-      "city": null,
-      "timezone": "Europe/Berlin",
-      "startDate": "2026-10-10",
-      "startTime": "19:00",
-      "endDate": null,
-      "endTime": null,
-      "website": null,
-      "ticketUrl": "https://www.leipzig-baeren.de/party/#ticketshop",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/271f3db2171f431d.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[35]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Leipzig Bären. website_url is null; the only outbound link is ticket_url (JSON-LD offers.url). feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 19:00 is the local wall-clock value; treat as Europe/Berlin. city \"Leipzig\" has no scraper-cities key. price: 18 €."
-    },
-    {
-      "id": "northern-exposure-2026-built-2026-10-14",
-      "kind": "single",
-      "title": "Northern Exposure 2026 - BUILT",
-      "bar": "Brisbane City",
-      "city": null,
-      "timezone": "Australia/Brisbane",
-      "startDate": "2026-10-14",
-      "startTime": "18:00",
-      "endDate": "2026-10-18",
-      "endTime": "17:00",
-      "website": "https://brisbears.tidyhq.com/public/schedule/events/85125-nex-2026-built",
-      "ticketUrl": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3b16d2412b9f15a0.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[36]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Brisbears Social Club Inc. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 18:00 is the local wall-clock value; treat as Australia/Brisbane. city \"Brisbane City\" has no scraper-cities key."
-    },
-    {
-      "id": "western-xposure-xxl-2026-10-15",
-      "kind": "single",
-      "title": "Western Xposure XXL",
-      "bar": "CCBC Resort",
-      "city": "palm-springs",
-      "timezone": "America/Los_Angeles",
-      "startDate": "2026-10-15",
-      "startTime": null,
-      "endDate": "2026-10-18",
-      "endTime": null,
-      "website": "https://www.westernxposure.com/westernxposurexxl",
-      "ticketUrl": "https://xxl2026.eventbrite.com/",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[37]"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "organizer on the row: Xposure Events. price: GOLD $180 (4 days), SILVER $150 (Fri-Sun), BRONZE $150 (Thu-Sat), SINGLE $60 (1 day), NIGHT $25 (8pm-4am). all-day row (feed all_day: true); ICS DTEND 20261019 is exclusive, endDate here is the inclusive last day as the page prints it."
+      ]
     },
     {
       "id": "bear-bash-cologne-2026-10-16",
       "kind": "single",
       "title": "BEAR BASH COLOGNE",
       "bar": "Pullermanns",
-      "city": null,
+      "city": "cologne",
       "timezone": "Europe/Berlin",
       "startDate": "2026-10-16",
       "startTime": "21:00",
@@ -2675,15 +363,134 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a4290a1042ce7533.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[38]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: COLONIA BEARS. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 21:00 is the local wall-clock value; treat as Europe/Berlin. city \"Cologne\" has no scraper-cities key."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[6]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "megawoof-san-diego-11-year-anniversary-tour-2026-10-16",
+      "kind": "single",
+      "title": "MEGAWOOF SAN DIEGO - 11 YEAR ANNIVERSARY TOUR",
+      "bar": "The Brass Rail",
+      "city": "san-diego",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-16",
+      "startTime": "21:30",
+      "endDate": "2026-10-17",
+      "endTime": "02:00",
+      "website": null,
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-san-diego-11-year-anniversary-tour-tickets-1999136625462",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/dcabe7872ed8f62c.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[7]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "bearrison-street-fair-2026-2026-10-17",
+      "kind": "single",
+      "title": "Bearrison Street Fair 2026",
+      "bar": "Harrison & 11th Streets",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-17",
+      "startTime": "12:00",
+      "endDate": "2026-10-17",
+      "endTime": "18:00",
+      "website": "https://www.bosf.org/events/bearrison-street-fair-2026",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ec6dfb6a818834b9.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[8]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "chub-rub",
+      "kind": "series",
+      "title": "Chub Rub",
+      "bar": "Powerhouse Bar",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-09-19",
+      "startTime": "17:00",
+      "endDate": null,
+      "endTime": "21:00",
+      "website": "https://powerhousebar.com/event/chub-rub/all/",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/626d413e3f9dd5a1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[9]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SA",
+      "recurrenceStatedAs": "3rd Saturdays",
+      "occurrences": [
+        {
+          "startDate": "2026-10-17",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-19",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "megawoof-san-francisco-11-year-anniversary-bearrison-weekend-2026-10-17",
+      "kind": "single",
+      "title": "MEGAWOOF - SAN FRANCISCO - 11 YEAR ANNIVERSARY / BEARRISON WEEKEND",
+      "bar": "Stud",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-10-17",
+      "startTime": "21:00",
+      "endDate": "2026-10-18",
+      "endTime": "02:00",
+      "website": null,
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-san-francisco-11-year-anniversary-bearrison-weekend-tickets-1999136528171",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/15915c8fd5645ca2.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[10]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "beefmince-x-rvt-2026-10-17",
@@ -2701,23 +508,23 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/e534aa0889c5e044.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[39]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[11]"
+      },
       "belongsToSource": "BEEFMINCE",
-      "note": "organizer on the row: BEEFMINCE. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 22:00 is the local wall-clock value; treat as Europe/London. price: £10-12."
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "bear-tea-dance-2026-10-18",
       "kind": "single",
       "title": "Bear Tea-Dance",
       "bar": "Anthem Orlando",
-      "city": null,
+      "city": "orlando",
       "timezone": "America/New_York",
       "startDate": "2026-10-18",
       "startTime": "12:00",
@@ -2728,15 +535,15 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/34895a5d035c0215.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[40]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Bear Jamboree. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 12:00 is the local wall-clock value; treat as America/New_York. city \"Orlando\" has no scraper-cities key."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[12]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "bears-in-excess-2026-10-18",
@@ -2754,15 +561,431 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[41]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Bears in Excess. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 13:00 is the local wall-clock value; treat as America/Toronto."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[13]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "weekly-bear-social",
+      "kind": "series",
+      "title": "Weekly Bear Social",
+      "bar": "T's Pub",
+      "city": "ottawa",
+      "timezone": "America/Toronto",
+      "startDate": "2026-08-16",
+      "startTime": "15:30",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://ottawabears.com/bear-socia/",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/30a0e05cf81d3132.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[14]"
+      },
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "Sundays",
+      "occurrences": [
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-10",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "bear-tea-club-cafe",
+      "kind": "series",
+      "title": "Bear Tea /Club Cafe",
+      "bar": "Club Cafe",
+      "city": "boston",
+      "timezone": "America/New_York",
+      "startDate": "2026-07-19",
+      "startTime": "16:00",
+      "endDate": null,
+      "endTime": "22:00",
+      "website": "https://www.massbearsandcubs.org/events/bear-tea-club-cafe-byc4f-ftdsy-wn5h6-mjnjj-8ttrb",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/9507e4baad124d04.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[15]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=3SU",
+      "recurrenceStatedAs": "3rd Sundays",
+      "occurrences": [
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "sunday-bears",
+      "kind": "series",
+      "title": "Sunday Bears",
+      "bar": "Town Hall Hotel, 326 King St, Newtown",
+      "city": "sydney",
+      "timezone": "Australia/Sydney",
+      "startDate": "2026-08-16",
+      "startTime": "16:00",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://hcbears.com.au/event-6729471",
+      "ticketUrl": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[16]"
+      },
+      "recurrence": "FREQ=WEEKLY;BYDAY=SU",
+      "recurrenceStatedAs": "Sundays",
+      "occurrences": [
+        {
+          "startDate": "2026-10-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-10-25",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-01",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-08",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-15",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-22",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-29",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-13",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-20",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-03",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-10",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "tummy-tuesday-pv-bear-happy-hour-at-cheeky-lounge-2026-10-20",
+      "kind": "single",
+      "title": "Tummy Tuesday PV: Bear Happy Hour at Cheeky Lounge",
+      "bar": "Cheeky Lounge",
+      "city": "pv",
+      "timezone": "America/Mexico_City",
+      "startDate": "2026-10-20",
+      "startTime": "16:00",
+      "endDate": "2026-10-20",
+      "endTime": "18:00",
+      "website": null,
+      "ticketUrl": "https://bearadisemx.com/en/tummy-tuesday?utm_source=thebearcalendar&utm_medium=listing&utm_campaign=tummy-tuesday",
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[17]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "honey-pot",
+      "kind": "series",
+      "title": "HONEY POT",
+      "bar": "Eagle Wilton Manors",
+      "city": null,
+      "timezone": null,
+      "startDate": "2026-07-15",
+      "startTime": "18:00",
+      "endDate": null,
+      "endTime": "20:00",
+      "website": "https://eaglebarwm.com/",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cd3d8b75a2f018fc.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[18]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=3WE",
+      "recurrenceStatedAs": "3rd Wednesdays",
+      "occurrences": [
+        {
+          "startDate": "2026-10-21",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-18",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-16",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "saturday-bears-and-cubs-24-hours",
+      "kind": "series",
+      "title": "Saturday Bears and Cubs - 24 HOURS!",
+      "bar": "Hawks PDX",
+      "city": "portland",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-09-12",
+      "startTime": "10:00",
+      "endDate": null,
+      "endTime": "06:00",
+      "website": "https://hawkspdx.com/calendar-events",
+      "ticketUrl": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[19]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA,4SA",
+      "recurrenceStatedAs": "2nd & 4th Saturdays",
+      "occurrences": [
+        {
+          "startDate": "2026-10-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-26",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-09",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "bearadise-pool-party-halloween-2026-10-24",
+      "kind": "single",
+      "title": "Bearadise Pool Party: Halloween",
+      "bar": "Cheeky Pool Club",
+      "city": "pv",
+      "timezone": "America/Mexico_City",
+      "startDate": "2026-10-24",
+      "startTime": "13:00",
+      "endDate": "2026-10-24",
+      "endTime": "18:00",
+      "website": null,
+      "ticketUrl": "https://bearadisemx.com/en/pool-parties?utm_source=thebearcalendar&utm_medium=listing&utm_campaign=pool-party-halloween-2026",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/00c3aa8af0740fae.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[20]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "alley-bears",
+      "kind": "series",
+      "title": "Alley Bears",
+      "bar": "The Alley Bar",
+      "city": "boston",
+      "timezone": "America/New_York",
+      "startDate": "2026-07-25",
+      "startTime": "21:00",
+      "endDate": null,
+      "endTime": "02:00",
+      "website": "https://www.massbearsandcubs.org/events/alley-bears-mkp8l-gjrwg-5bjxc-s2myr-7lpae-4hc92-axcak",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3a1d8a83b3fb4baf.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[21]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=4SA",
+      "recurrenceStatedAs": "4th Saturdays",
+      "occurrences": [
+        {
+          "startDate": "2026-10-24",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-28",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-26",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "tummy-tuesday-pv-bear-happy-hour-at-diablitos-cantina-2026-10-27",
+      "kind": "single",
+      "title": "Tummy Tuesday PV: Bear Happy Hour at Diablitos Cantina",
+      "bar": "Diablitos Cantina",
+      "city": "pv",
+      "timezone": "America/Mexico_City",
+      "startDate": "2026-10-27",
+      "startTime": "16:00",
+      "endDate": "2026-10-27",
+      "endTime": "18:00",
+      "website": null,
+      "ticketUrl": "https://bearadisemx.com/en/tummy-tuesday?utm_source=thebearcalendar&utm_medium=listing&utm_campaign=tummy-tuesday",
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[22]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "cannonball-bash-2026-2026-10-28",
@@ -2780,15 +1003,15 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/d6a501726d7dc880.png",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[42]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Cannonball Bash. price: Starting at $65 (Day Pass), $279 (Event Pass), $379 (VIP Pass). all-day row (feed all_day: true); ICS DTEND 20261103 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[23]"
+      },
+      "note": "all_day: true in the feed (2026-10-28 → 2026-11-02); the feed labels the row tz \"UTC\"."
     },
     {
       "id": "adventure-bears-panama-canal-cruise-2026-2026-10-30",
@@ -2798,23 +1021,89 @@
       "city": "fort-lauderdale",
       "timezone": "America/New_York",
       "startDate": "2026-10-30",
-      "startTime": "15:00",
+      "startTime": "19:00",
       "endDate": "2026-11-11",
-      "endTime": "07:00",
+      "endTime": "12:00",
       "website": "https://www.adventurebears.com/panama-26",
       "ticketUrl": "https://www.adventurebears.com/2026-panama-cruise-form",
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/d50b4907e35a1faa.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[43]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Adventure Bears."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[24]"
+      }
+    },
+    {
+      "id": "bear-pub",
+      "kind": "series",
+      "title": "Bear Pub",
+      "bar": "Ophelia Bar Diner Club",
+      "city": "oslo",
+      "timezone": "Europe/Oslo",
+      "startDate": "2026-09-25",
+      "startTime": "20:00",
+      "endDate": null,
+      "endTime": "00:00",
+      "website": "https://www.norwaybears.com/en/2026/01/bear-pub-in-oslo-3/",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f8c40731005a33a7.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[25]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=-1FR",
+      "recurrenceStatedAs": "Last Fridays",
+      "occurrences": [
+        {
+          "startDate": "2026-10-30",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-11-27",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-25",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "club-chub-presents-the-monster-ball-2026-10-31",
+      "kind": "single",
+      "title": "Club Chub Presents: The Monster Ball",
+      "bar": "Falcon North",
+      "city": null,
+      "timezone": null,
+      "startDate": "2026-10-31",
+      "startTime": "21:00",
+      "endDate": "2026-11-01",
+      "endTime": "02:00",
+      "website": "https://www.clubchubusa.com/",
+      "ticketUrl": "https://sickening.events/e/club-chub-presents-the-monster-ball-long-beach",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/9a95eed7927d9ab5.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[26]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "spookmince-2026-10-31",
@@ -2832,23 +1121,132 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/f66d176a65fbf888.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[44]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[27]"
+      },
       "belongsToSource": "BEEFMINCE",
-      "note": "organizer on the row: BEEFMINCE. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 22:00 is the local wall-clock value; treat as Europe/London. price: £15."
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "bear-night",
+      "kind": "series",
+      "title": "Bear Night",
+      "bar": "Club Try-Angles",
+      "city": "salt-lake-city",
+      "timezone": "America/Denver",
+      "startDate": "2026-09-04",
+      "startTime": null,
+      "endDate": null,
+      "endTime": null,
+      "website": "https://clubtryangles.com/",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b3dd7cdbe25cc0f2.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[28]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=1FR",
+      "recurrenceStatedAs": "1st Fridays",
+      "occurrences": [
+        {
+          "startDate": "2026-11-06",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-04",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-01",
+          "origin": "rule"
+        }
+      ],
+      "note": "all_day: true in the feed"
+    },
+    {
+      "id": "bear-lounge-2026-11-07",
+      "kind": "single",
+      "title": "Bear Lounge",
+      "bar": "Luckys Bar",
+      "city": null,
+      "timezone": null,
+      "startDate": "2026-11-07",
+      "startTime": "20:00",
+      "endDate": null,
+      "endTime": null,
+      "website": null,
+      "ticketUrl": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[29]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "belly-up",
+      "kind": "series",
+      "title": "BELLY UP",
+      "bar": "Jackhammer",
+      "city": "chicago",
+      "timezone": "America/Chicago",
+      "startDate": "2026-09-05",
+      "startTime": "21:00",
+      "endDate": null,
+      "endTime": "05:00",
+      "website": "https://jackhammerchicago.com/belly-up",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b1361780fd51b423.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[30]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=1SA",
+      "recurrenceStatedAs": "1st Saturdays",
+      "occurrences": [
+        {
+          "startDate": "2026-11-07",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-05",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-02",
+          "origin": "rule"
+        }
+      ]
     },
     {
       "id": "bears-go-bowling-2026-11-11",
       "kind": "single",
       "title": "Bears go Bowling",
       "bar": "Oslo Bar & Bowling, Torggata 16, 0181 Oslo, Norge",
-      "city": null,
+      "city": "oslo",
       "timezone": "Europe/Oslo",
       "startDate": "2026-11-11",
       "startTime": "18:00",
@@ -2859,15 +1257,123 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2cac9255c7658e0d.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[45]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "no organizer on the row. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 18:00 is the local wall-clock value; treat as Europe/Oslo. city \"Oslo\" has no scraper-cities key."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[31]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "manbears-social",
+      "kind": "series",
+      "title": "Manbears Social",
+      "bar": "The Eagle Bar",
+      "city": "manchester",
+      "timezone": "Europe/London",
+      "startDate": "2026-08-08",
+      "startTime": "16:00",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://www.eaglemanchester.com/event-details/manbears-social-2026-08-08-16-00",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/1d0e9e272de1c458.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[32]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
+      "recurrenceStatedAs": "2nd Saturdays",
+      "occurrences": [
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-09",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "southern-bears-bar-night",
+      "kind": "series",
+      "title": "Southern Bears Bar Night",
+      "bar": "Atlanta Eagle",
+      "city": "atlanta",
+      "timezone": "America/New_York",
+      "startDate": "2026-08-09",
+      "startTime": "21:00",
+      "endDate": null,
+      "endTime": "03:00",
+      "website": "https://atlantaeagle.com/event/southern-bears-bar-night/",
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/fa4d7a06ee4f9ddc.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[33]"
+      },
+      "recurrence": "FREQ=MONTHLY;BYDAY=2SA",
+      "recurrenceStatedAs": "2nd Saturdays",
+      "occurrences": [
+        {
+          "startDate": "2026-11-14",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2026-12-12",
+          "origin": "rule"
+        },
+        {
+          "startDate": "2027-01-09",
+          "origin": "rule"
+        }
+      ]
+    },
+    {
+      "id": "twisted-bear-san-francisco-2026-11-14",
+      "kind": "single",
+      "title": "TWISTED BEAR San Francisco",
+      "bar": "San Francisco Eagle Bar",
+      "city": "sf",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-11-14",
+      "startTime": "21:00",
+      "endDate": "2026-11-15",
+      "endTime": "02:00",
+      "website": null,
+      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-san-francisco-tickets-2002390930175",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/05107e3c69a1b7be.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[34]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "bears-in-excess-2026-11-15",
@@ -2885,15 +1391,41 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[46]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Bears in Excess. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 13:00 is the local wall-clock value; treat as America/Toronto."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[35]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "bearpride-cologne-2026-2026-11-17",
+      "kind": "single",
+      "title": "BearPride Cologne 2026",
+      "bar": null,
+      "city": null,
+      "timezone": null,
+      "startDate": "2026-11-17",
+      "startTime": null,
+      "endDate": "2026-11-22",
+      "endTime": null,
+      "website": null,
+      "ticketUrl": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[36]"
+      },
+      "note": "all_day: true in the feed (2026-11-17 → 2026-11-22); the feed labels the row tz \"UTC\"."
     },
     {
       "id": "beefmince-x-rvt-2026-11-21",
@@ -2911,16 +1443,16 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/e534aa0889c5e044.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[47]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[37]"
+      },
       "belongsToSource": "BEEFMINCE",
-      "note": "organizer on the row: BEEFMINCE. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 22:00 is the local wall-clock value; treat as Europe/London. price: £10-12."
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "bearsgiving-2026-2026-11-27",
@@ -2938,15 +1470,15 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ac4b2c38d26f26f2.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[48]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Bearadise. website_url is null; the only outbound link is ticket_url (JSON-LD offers.url). price: $230 USD Thru 9/30 (All Access). all-day row (feed all_day: true); ICS DTEND 20261130 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[38]"
+      },
+      "note": "all_day: true in the feed (2026-11-27 → 2026-11-29); the feed labels the row tz \"UTC\"."
     },
     {
       "id": "bearadise-love-boat-bearsgiving-2026-2026-11-27",
@@ -2964,15 +1496,67 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21738e910aedb010.webp",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[49]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Bearadise. website_url is null; the only outbound link is ticket_url (JSON-LD offers.url). feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 14:30 is the local wall-clock value; treat as America/Mexico_City. price: $215 USD per person."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[39]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "basted-wasted-bearsgiving-pool-party-2026-11-28",
+      "kind": "single",
+      "title": "Basted & Wasted: Bearsgiving Pool Party",
+      "bar": "Cheeky Pool Club",
+      "city": "pv",
+      "timezone": "America/Mexico_City",
+      "startDate": "2026-11-28",
+      "startTime": "13:00",
+      "endDate": "2026-11-28",
+      "endTime": "19:00",
+      "website": null,
+      "ticketUrl": "https://bearadisemx.com/en/festivals/bearsgiving?utm_source=thebearcalendar&utm_medium=listing&utm_campaign=bearsgiving-saturday",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b060d093d8dacad4.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[40]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "bear-beer-bust-bearsgiving-happy-hour-2026-11-29",
+      "kind": "single",
+      "title": "Bear Beer Bust: Bearsgiving Happy Hour",
+      "bar": "Banana Factory",
+      "city": "pv",
+      "timezone": "America/Mexico_City",
+      "startDate": "2026-11-29",
+      "startTime": "17:00",
+      "endDate": "2026-11-29",
+      "endTime": "20:00",
+      "website": null,
+      "ticketUrl": "https://bearadisemx.com/en/festivals/bearsgiving?utm_source=thebearcalendar&utm_medium=listing&utm_campaign=bearsgiving-sunday",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/873dfe8e7fbf67aa.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[41]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "amadeus-nova-christmas-markets-river-cruise-2026-11-30",
@@ -2980,7 +1564,7 @@
       "title": "Amadeus Nova Christmas Markets River Cruise",
       "bar": "Amadeus Nova",
       "city": null,
-      "timezone": "Europe/Vienna",
+      "timezone": null,
       "startDate": "2026-11-30",
       "startTime": null,
       "endDate": "2026-12-06",
@@ -2990,15 +1574,67 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/90eee32bea2347d2.png",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[50]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Arno's Bear Cruises. city \"Vienna\" has no scraper-cities key. all-day row (feed all_day: true); ICS DTEND 20261207 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[42]"
+      },
+      "note": "all_day: true in the feed (2026-11-30 → 2026-12-06); the feed labels the row tz \"UTC\"."
+    },
+    {
+      "id": "madbear-party-2026-madrid-2026-12-03",
+      "kind": "single",
+      "title": "MADBEAR PARTY 2026 - MADRID",
+      "bar": "BEARS BAR",
+      "city": "madrid",
+      "timezone": "Europe/Madrid",
+      "startDate": "2026-12-03",
+      "startTime": "11:45",
+      "endDate": "2026-12-09",
+      "endTime": "06:00",
+      "website": "https://www.tickettailor.com/events/asociacionmadbear/2409025",
+      "ticketUrl": "https://www.tickettailor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a5fbc49d391cbd2c.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[43]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "macho-party-2026-12-04",
+      "kind": "single",
+      "title": "MACHO PARTY",
+      "bar": "Changó",
+      "city": "madrid",
+      "timezone": "Europe/Madrid",
+      "startDate": "2026-12-04",
+      "startTime": "23:59",
+      "endDate": "2026-12-05",
+      "endTime": "06:00",
+      "website": "https://madbear.org/en",
+      "ticketUrl": "https://site.fourvenues.com/es/matrix-events/events/macho-party--04-12-2026-0U83",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/4f5742321ef5f184.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[44]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "beefmince-x-brighton-2026-12-05",
@@ -3016,23 +1652,23 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/6e3eea8599594d90.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[51]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[45]"
+      },
       "belongsToSource": "BEEFMINCE",
-      "note": "organizer on the row: BEEFMINCE. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 23:00 is the local wall-clock value; treat as Europe/London. price: £12."
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "bear-fuzz-fest-2026-12-10",
       "kind": "single",
       "title": "Bear Fuzz Fest",
       "bar": "Eisenhower Hotel and Conference Center",
-      "city": null,
+      "city": "gettysburg",
       "timezone": "America/New_York",
       "startDate": "2026-12-10",
       "startTime": null,
@@ -3043,15 +1679,15 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21d2f68f477cc2a3.png",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[52]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Central PA Bears. city \"Gettysburg\" has no scraper-cities key. all-day row (feed all_day: true); ICS DTEND 20261214 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[46]"
+      },
+      "note": "all_day: true in the feed (2026-12-10 → 2026-12-13); the feed labels the row tz \"UTC\"."
     },
     {
       "id": "midwest-bearfest-2026-2026-12-10",
@@ -3059,7 +1695,7 @@
       "title": "Midwest Bearfest 2026",
       "bar": "Wyndham Westfield",
       "city": null,
-      "timezone": "America/Indiana/Indianapolis",
+      "timezone": null,
       "startDate": "2026-12-10",
       "startTime": null,
       "endDate": "2026-12-14",
@@ -3069,15 +1705,41 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[53]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Midwest Bearfest. city \"Westfield\" has no scraper-cities key. price: $169–$199. all-day row (feed all_day: true); ICS DTEND 20261215 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[47]"
+      },
+      "note": "all_day: true in the feed (2026-12-10 → 2026-12-14); the feed labels the row tz \"UTC\"."
+    },
+    {
+      "id": "vienna-frosty-bear-weekend-2026-2026-12-10",
+      "kind": "single",
+      "title": "VIENNA FROSTY BEAR WEEKEND 2026",
+      "bar": null,
+      "city": null,
+      "timezone": null,
+      "startDate": "2026-12-10",
+      "startTime": null,
+      "endDate": "2026-12-13",
+      "endTime": null,
+      "website": "https://www.austrianbearcommunity.eu",
+      "ticketUrl": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[48]"
+      },
+      "note": "all_day: true in the feed (2026-12-10 → 2026-12-13); the feed labels the row tz \"UTC\"."
     },
     {
       "id": "turkeymince-2026-12-19",
@@ -3095,16 +1757,16 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/309c941ef5b0b78e.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[54]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[49]"
+      },
       "belongsToSource": "BEEFMINCE",
-      "note": "organizer on the row: BEEFMINCE. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 22:00 is the local wall-clock value; treat as Europe/London. price: £10."
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "bears-in-excess-2026-12-20",
@@ -3122,15 +1784,15 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[55]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Bears in Excess. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 13:00 is the local wall-clock value; treat as America/Toronto."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[50]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "beefmince-new-year-s-eve-2026-12-31",
@@ -3148,16 +1810,94 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/4fe93117e2b46e7b.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[56]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[51]"
+      },
       "belongsToSource": "BEEFMINCE",
-      "note": "organizer on the row: BEEFMINCE. feed tz is the literal \"UTC\" and the page suffixes the time with \"UTC\", but 22:00 is the local wall-clock value; treat as Europe/London. price: £17."
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "barenpaadiie-xxl-2027-01-14",
+      "kind": "single",
+      "title": "Bärenpaadiie XXL",
+      "bar": null,
+      "city": null,
+      "timezone": null,
+      "startDate": "2027-01-14",
+      "startTime": "18:00",
+      "endDate": "2027-01-17",
+      "endTime": "15:00",
+      "website": null,
+      "ticketUrl": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[52]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "bears-in-excess-2027-01-17",
+      "kind": "single",
+      "title": "Bears in Excess",
+      "bar": "Spa Excess",
+      "city": "toronto",
+      "timezone": "America/Toronto",
+      "startDate": "2027-01-17",
+      "startTime": "13:00",
+      "endDate": "2027-01-17",
+      "endTime": "18:00",
+      "website": null,
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/ebbdda00bcf1459e.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[53]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "bearadise-ibff-bear-week-2027-2027-01-22",
+      "kind": "single",
+      "title": "Bearadise IBFF Bear Week 2027",
+      "bar": "Majahuitas",
+      "city": "pv",
+      "timezone": "America/Mexico_City",
+      "startDate": "2027-01-22",
+      "startTime": "16:00",
+      "endDate": "2027-01-31",
+      "endTime": "23:30",
+      "website": null,
+      "ticketUrl": "https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/33f77fcbc30504e3.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[54]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "beefdip-bear-week-2027-2027-01-24",
@@ -3175,16 +1915,16 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/905101f19a7ea53c.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[57]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[55]"
+      },
       "belongsToSource": "BeefDip",
-      "note": "organizer on the row: BeefDip Events. all-day row (feed all_day: true); ICS DTEND 20270201 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "note": "all_day: true in the feed (2027-01-24 → 2027-01-31); the feed labels the row tz \"UTC\"."
     },
     {
       "id": "cruisingbears-com-hibearnation-2027-2027-01-25",
@@ -3195,28 +1935,106 @@
       "timezone": "America/New_York",
       "startDate": "2027-01-25",
       "startTime": null,
-      "endDate": "2027-02-04",
+      "endDate": "2027-02-05",
       "endTime": null,
       "website": "https://www.cruisingbears.com/hibearnation-cruise-2027",
       "ticketUrl": "https://events.cruisingbears.com/hibearnation27",
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/61c19ff06a2a8245.webp",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[58]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Cruising Bears. price: $1750. all-day row (feed all_day: true); ICS DTEND 20270205 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[56]"
+      },
+      "note": "all_day: true in the feed (2027-01-25 → 2027-02-05); the feed labels the row tz \"America/New_York\"."
+    },
+    {
+      "id": "bearadise-beach-ibff-bear-week-2027-2027-01-28",
+      "kind": "single",
+      "title": "Bearadise Beach: IBFF Bear Week 2027",
+      "bar": "Majahuitas",
+      "city": "pv",
+      "timezone": "America/Mexico_City",
+      "startDate": "2027-01-28",
+      "startTime": "16:00",
+      "endDate": "2027-01-28",
+      "endTime": "23:30",
+      "website": null,
+      "ticketUrl": "https://bearadisemx.com/en/bearadise-beach?utm_source=thebearcalendar&utm_medium=listing&utm_campaign=bearadise-beach-ibff-2027",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/e3ab576f63af96ef.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[57]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
+    },
+    {
+      "id": "symphony-of-the-seas-2027-01-31",
+      "kind": "single",
+      "title": "Symphony of the Seas",
+      "bar": "Symphony of the Seas",
+      "city": null,
+      "timezone": null,
+      "startDate": "2027-01-31",
+      "startTime": null,
+      "endDate": "2027-02-07",
+      "endTime": null,
+      "website": "https://www.arnoscruises.com/test-page/symphony/",
+      "ticketUrl": "https://bearcruiseusa.com/ArnosCruiseReservationForm.asp?CruiseID=96",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/6d229e5d31aa0b08.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[58]"
+      },
+      "note": "all_day: true in the feed (2027-01-31 → 2027-02-07); the feed labels the row tz \"UTC\"."
+    },
+    {
+      "id": "chubs-at-the-tubs-2027-01-31",
+      "kind": "single",
+      "title": "Chubs at the Tubs",
+      "bar": "Spa Excess",
+      "city": "toronto",
+      "timezone": "America/Toronto",
+      "startDate": "2027-01-31",
+      "startTime": "13:00",
+      "endDate": "2027-01-31",
+      "endTime": "18:00",
+      "website": null,
+      "ticketUrl": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/746b86430162dac9.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[59]"
+      },
+      "note": "The feed labels this wall-clock time \"UTC\"; the event page prints it with no offset (read as local time)."
     },
     {
       "id": "international-bear-convergence-2027-02-18",
       "kind": "single",
       "title": "International Bear Convergence",
-      "bar": null,
+      "bar": "Hotel ZOSO",
       "city": "palm-springs",
       "timezone": "America/Los_Angeles",
       "startDate": "2027-02-18",
@@ -3228,22 +2046,22 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/a8a304c648ab58a5.png",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[59]"
-      },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: IBC Palm Springs. all-day row (feed all_day: true); ICS DTEND 20270223 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[60]"
+      },
+      "note": "all_day: true in the feed (2027-02-18 → 2027-02-22); the feed labels the row tz \"UTC\"."
     },
     {
       "id": "bear-carnival-2027-men-at-work-2027-04-08",
       "kind": "single",
       "title": "Bear Carnival 2027: men at work",
       "bar": "Gran Canaria",
-      "city": null,
+      "city": "gran-canaria",
       "timezone": "Atlantic/Canary",
       "startDate": "2027-04-08",
       "startTime": null,
@@ -3254,23 +2072,22 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3b0a651c84ca2e79.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[60]"
-      },
       "expect": {
-        "extracted": false,
-        "note": "listing position 61 of 66 > maxAdditionalUrls: 60 — limitAdditionalUrls() slices the first 60 links in document order, so a depth-1 crawl of the configured url cannot reach this page"
+        "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Bear Carnival. city \"Maspalomas\" has no scraper-cities key. all-day row (feed all_day: true); ICS DTEND 20270419 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[61]"
+      },
+      "note": "all_day: true in the feed (2027-04-08 → 2027-04-18); the feed labels the row tz \"UTC\"."
     },
     {
       "id": "bear-jamboree-2027-06-03",
       "kind": "single",
       "title": "Bear Jamboree",
       "bar": "Crowne Plaza Lake Buena Vista",
-      "city": null,
+      "city": "orlando",
       "timezone": "America/New_York",
       "startDate": "2027-06-03",
       "startTime": null,
@@ -3281,16 +2098,41 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[61]"
-      },
       "expect": {
-        "extracted": false,
-        "note": "listing position 62 of 66 > maxAdditionalUrls: 60 — limitAdditionalUrls() slices the first 60 links in document order, so a depth-1 crawl of the configured url cannot reach this page"
+        "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Bear Jamboree. city \"Orlando\" has no scraper-cities key. all-day row (feed all_day: true); ICS DTEND 20270608 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[62]"
+      },
+      "note": "all_day: true in the feed (2027-06-03 → 2027-06-07); the feed labels the row tz \"UTC\"."
+    },
+    {
+      "id": "biggervegas-2027-2027-06-16",
+      "kind": "single",
+      "title": "BiggerVegas 2027",
+      "bar": "Tuscany Suites & Casino",
+      "city": "vegas",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2027-06-16",
+      "startTime": null,
+      "endDate": "2027-06-21",
+      "endTime": null,
+      "website": "https://www.biggervegas.com/",
+      "ticketUrl": "https://www.biggervegas.com/",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/382eded4ab0a93d3.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[63]"
+      },
+      "note": "all_day: true in the feed (2027-06-16 → 2027-06-21); the feed labels the row tz \"UTC\"."
     },
     {
       "id": "cruisingbears-com-exotic-expedition-2027-07-11",
@@ -3301,32 +2143,31 @@
       "timezone": "Pacific/Tahiti",
       "startDate": "2027-07-11",
       "startTime": null,
-      "endDate": "2027-07-24",
+      "endDate": "2027-07-25",
       "endTime": null,
       "website": "https://www.cruisingbears.com/exotic-expedition-2027",
       "ticketUrl": "https://events.cruisingbears.com/exoticexpedition27",
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/1c0c4e79f89a357e.webp",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[62]"
-      },
       "expect": {
-        "extracted": false,
-        "note": "listing position 63 of 66 > maxAdditionalUrls: 60 — limitAdditionalUrls() slices the first 60 links in document order, so a depth-1 crawl of the configured url cannot reach this page"
+        "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Cruising Bears. city \"Papeete\" has no scraper-cities key. price: $2620. all-day row (feed all_day: true); ICS DTEND 20270725 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[64]"
+      },
+      "note": "all_day: true in the feed (2027-07-11 → 2027-07-25); the feed labels the row tz \"Pacific/Tahiti\"."
     },
     {
-      "id": "cruisingbears-com-after-bears-sitges-week-cruise-2027-09-12",
+      "id": "cruisingbears-com-after-bears-sitges-week-cruise-2027-09-11",
       "kind": "single",
       "title": "CruisingBears.com AFTER BEARS SITGES WEEK Cruise",
       "bar": "Virgin Voyages",
       "city": null,
       "timezone": "Europe/Madrid",
-      "startDate": "2027-09-12",
+      "startDate": "2027-09-11",
       "startTime": null,
       "endDate": "2027-09-19",
       "endTime": null,
@@ -3335,16 +2176,15 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/551e972535418342.webp",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[63]"
-      },
       "expect": {
-        "extracted": false,
-        "note": "listing position 64 of 66 > maxAdditionalUrls: 60 — limitAdditionalUrls() slices the first 60 links in document order, so a depth-1 crawl of the configured url cannot reach this page"
+        "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Cruising Bears. city \"Barcelona\" has no scraper-cities key. price: $1830. all-day row (feed all_day: true); ICS DTEND 20270920 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[65]"
+      },
+      "note": "all_day: true in the feed (2027-09-11 → 2027-09-19); the feed labels the row tz \"Europe/Madrid\"."
     },
     {
       "id": "cruisingbears-com-ibc-balcony-bears-bash-2027-10-09",
@@ -3355,23 +2195,22 @@
       "timezone": "America/Los_Angeles",
       "startDate": "2027-10-09",
       "startTime": null,
-      "endDate": "2027-10-16",
+      "endDate": "2027-10-17",
       "endTime": null,
       "website": "https://www.cruisingbears.com/cruising-bears-balcony-bear-bash-2027",
       "ticketUrl": "https://events.cruisingbears.com/balconybash",
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3220db63f1047f48.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[64]"
-      },
       "expect": {
-        "extracted": false,
-        "note": "listing position 65 of 66 > maxAdditionalUrls: 60 — limitAdditionalUrls() slices the first 60 links in document order, so a depth-1 crawl of the configured url cannot reach this page"
+        "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Cruising Bears. price: $1166. all-day row (feed all_day: true); ICS DTEND 20271017 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[66]"
+      },
+      "note": "all_day: true in the feed (2027-10-09 → 2027-10-17); the feed labels the row tz \"America/Los_Angeles\"."
     },
     {
       "id": "eastern-caribbean-adventure-cruise-2027-11-21",
@@ -3389,16 +2228,15 @@
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b230ac9121c06008.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "evidence": {
-        "url": "https://thebearcalendar.com/feed.json",
-        "jsonPath": "$.events[65]"
-      },
       "expect": {
-        "extracted": false,
-        "note": "listing position 66 of 66 > maxAdditionalUrls: 60 — limitAdditionalUrls() slices the first 60 links in document order, so a depth-1 crawl of the configured url cannot reach this page"
+        "extracted": true
       },
       "bearVerdict": null,
-      "note": "organizer on the row: Adventure Bears. all-day row (feed all_day: true); ICS DTEND 20271129 is exclusive, endDate here is the inclusive last day as the page prints it."
+      "evidence": {
+        "url": "https://thebearcalendar.com/feed.json",
+        "jsonPath": "$.events[67]"
+      },
+      "note": "all_day: true in the feed (2027-11-21 → 2027-11-28); the feed labels the row tz \"UTC\"."
     }
   ],
   "traps": [
@@ -3551,7 +2389,16 @@
       "q": "Past event pages (321) are still served 200 with full JSON-LD and no past marker, and the static build is a day or more behind (Bear Night SEP 5 dropped from the listing while its page lives on). If a future config adds sitemap discovery or allowPastEvents, every one of those pages will look live.",
       "raisedOn": "2026-09-10",
       "blocking": false
+    },
+    {
+      "q": "Sanity bounds vs real multi-day listings: duration-implausible is capped at 10 days (data/festivals.json) while this feed publishes 12–15-day cruises (HiBEARnation 2027, EXOTIC EXPEDITION) and 11-day Bear Carnival; improbable-overnight-span calls a 95h run from a 6PM start \"an AM/PM typo\". Both are report-only. Raise the cap / bound the overnight rule to spans a 12h slip could produce (≤ 24h)?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    },
+    {
+      "q": "Furry Friday (weekly, no end in the feed) merges onto a saved calendar event whose stored end is 45h later (2026-10-16 19:00 → 10-18 16:00 Sydney); the flag is on the saved record, not this feed. Where did the saved end come from?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
     }
-  ],
-  "recheckAfter": "2026-10-10"
+  ]
 }
