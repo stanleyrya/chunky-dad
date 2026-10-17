@@ -271,6 +271,15 @@ const SOURCE_UNTROUBLED_VERDICTS = ['ok', 'companion'];
 const SPARSE_FIELDS = ['time', 'place', 'url'];
 const SPARSE_SHARE = 50;
 const SPARSE_MIN_KEPT = 5;
+// 'flagged' chip: one sanity flag code on ≥ FLAGGED_SHARE % of kept events in
+// ≥ FLAGGED_RUNS of the last FLAGGED_WINDOW ok runs — a standing habit of the
+// read (eagle-ny.com: cover-self-contradictory on 14 of 21 events, run after
+// run). A chip, not a verdict: the events are kept and usable, and a verdict
+// would push a steady host above the ok rows for a defect the owner cannot
+// clear from the dashboard.
+const FLAGGED_SHARE = 50;
+const FLAGGED_RUNS = 3;
+const FLAGGED_WINDOW = 7;
 
 function parseSourceLedger(text) {
     const records = [];
@@ -443,6 +452,33 @@ function assessSparseFields(lines) {
     return worst;
 }
 
+// The flag code that fires on ≥ half the kept events in ≥ FLAGGED_RUNS of the
+// last FLAGGED_WINDOW ok runs: { code, share (median of the firing runs),
+// runs, window }, or null. Ties: more runs, then the higher share.
+function assessFlaggedCode(lines) {
+    const okLines = qualityLinesOf(lines).slice(-FLAGGED_WINDOW);
+    const sharesByCode = new Map();
+    okLines.forEach((line) => {
+        const n = Number(line.quality.n) || 0;
+        const flags = line.quality.flags && typeof line.quality.flags === 'object' ? line.quality.flags : {};
+        Object.keys(flags).forEach((code) => {
+            const share = Math.min(100, Math.round((100 * (Number(flags[code]) || 0)) / n));
+            if (share < FLAGGED_SHARE) return;
+            if (!sharesByCode.has(code)) sharesByCode.set(code, []);
+            sharesByCode.get(code).push(share);
+        });
+    });
+    let best = null;
+    sharesByCode.forEach((shares, code) => {
+        if (shares.length < FLAGGED_RUNS) return;
+        const share = medianOf(shares);
+        if (!best || shares.length > best.runs || (shares.length === best.runs && share > best.share)) {
+            best = { code, share, runs: shares.length, window: okLines.length };
+        }
+    });
+    return best;
+}
+
 function assessSourceHealth(records, options = {}) {
     const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
     const staleAfterDays = Number.isFinite(options.staleAfterDays) ? options.staleAfterDays : 3;
@@ -500,6 +536,7 @@ function assessSourceHealth(records, options = {}) {
             && recentOk.every((line) => (Number(line.extracted) || 0) < peak * SLOW_DECLINE_RATIO);
         const underHalf = (line) => baseline !== null && baseline >= 4 && (Number(line.extracted) || 0) < baseline / 2;
         const sparse = assessSparseFields([...earlier, latest]);
+        const flagged = assessFlaggedCode(lines);
         let verdict = 'ok';
         let since = null;
         if (latest.status === 'dead') {
@@ -554,6 +591,7 @@ function assessSourceHealth(records, options = {}) {
             since,
             baseline,
             sparse,
+            flagged,
             latest,
             vanished,
             lost,
@@ -775,6 +813,12 @@ function formatSparseLabel(row) {
     const sparse = row && row.sparse ? row.sparse : null;
     if (!sparse) return sourceVerdictLabel('sparse');
     return `${sourceVerdictLabel('sparse')} · ${sparse.field} ${sparse.latest}%`;
+}
+
+// "cover-self-contradictory on 67%": the standing flag of a host, or ''.
+function formatFlaggedLabel(row) {
+    const flagged = row && row.flagged ? row.flagged : null;
+    return flagged ? `${flagged.code} on ${flagged.share}%` : '';
 }
 
 function buildVerdictChipHtml(verdict, options = {}) {
@@ -1143,11 +1187,14 @@ function buildQualityChipsHtml(row, options = {}) {
     const auditChip = row && row.auditOpen
         ? `<span class="quality-chip quality-audit" title="${escapeHtml(formatAuditSummary(row.audit, row))}">audit ${(row.audit.missing || []).length + (row.audit.fake || []).length + (row.audit.wrong || []).length + (Number(row.lostStillListed) || 0)}</span>`
         : '';
-    if (!quality || !quality.available) return auditChip ? `<div class="quality-chips">${auditChip}</div>` : '<span class="cell-subtitle">—</span>';
-    if (!badges.length && !auditChip) return '<span class="quality-chip quality-ok">clean</span>';
+    const flaggedChip = row && row.flagged
+        ? `<span class="quality-chip quality-flagged" title="${escapeHtml(`${row.flagged.code} on ≥${FLAGGED_SHARE}% of kept events in ${row.flagged.runs} of the last ${row.flagged.window} runs`)}">${escapeHtml(formatFlaggedLabel(row))}</span>`
+        : '';
+    if (!quality || !quality.available) return auditChip || flaggedChip ? `<div class="quality-chips">${auditChip}${flaggedChip}</div>` : '<span class="cell-subtitle">—</span>';
+    if (!badges.length && !auditChip && !flaggedChip) return '<span class="quality-chip quality-ok">clean</span>';
     const shown = badges.slice(0, limit).map((badge) => `<span class="quality-chip" title="${escapeHtml(badge.detail || '')}">${escapeHtml(badge.chip || badge.label)}</span>`).join('');
     const more = badges.length > limit ? `<span class="quality-chip quality-more">+${badges.length - limit}</span>` : '';
-    return `<div class="quality-chips">${auditChip}${shown}${more}</div>`;
+    return `<div class="quality-chips">${auditChip}${flaggedChip}${shown}${more}</div>`;
 }
 
 // Quality tiles for the host page: every signal with its value, the ones
@@ -1166,11 +1213,14 @@ function buildHostQualityHtml(row) {
     const summary = quality.offCount
         ? `${quality.offCount} signal${quality.offCount === 1 ? '' : 's'} over a threshold: ${quality.badges.map((badge) => badge.chip || badge.label).join(', ')}`
         : 'Every signal inside its threshold.';
+    const standing = row.flagged
+        ? `<div class="quality-summary"><span class="quality-chip quality-flagged">${escapeHtml(formatFlaggedLabel(row))}</span> <span class="muted">standing flag: on ≥${FLAGGED_SHARE}% of kept events in ${row.flagged.runs} of the last ${row.flagged.window} ok runs</span></div>`
+        : '';
     const thin = row.sparse
         ? `<div class="quality-summary"><span class="verdict-chip verdict-sparse">${escapeHtml(formatSparseLabel(row))}</span> <span class="muted">${escapeHtml(`${row.sparse.field} on ${row.sparse.pct}% of ${row.sparse.kept} kept events over ${row.sparse.runs} ok runs (under ${SPARSE_SHARE}% on the latest too)`)}</span></div>`
         : '';
     return `
-        <div class="muted quality-summary">${escapeHtml(summary)}</div>${thin}
+        <div class="muted quality-summary">${escapeHtml(summary)}</div>${thin}${standing}
         <div class="metrics-grid quality-grid">${tiles}
         </div>`;
 }
@@ -2242,7 +2292,9 @@ const MetricsSections = {
     SOURCE_VERDICT_LABELS,
     SOURCE_LEDGER_EMPTY_MESSAGE,
     assessSparseFields,
+    assessFlaggedCode,
     formatSparseLabel,
+    formatFlaggedLabel,
     SOURCE_SORT_KEYS,
     sourceVerdictLabel,
     sourceVerdictRank,
@@ -2304,7 +2356,9 @@ if (typeof module !== 'undefined' && module.exports) {
         SOURCE_VERDICT_LABELS,
         SOURCE_LEDGER_EMPTY_MESSAGE,
         assessSparseFields,
+        assessFlaggedCode,
         formatSparseLabel,
+        formatFlaggedLabel,
         SOURCE_SORT_KEYS,
         sourceVerdictLabel,
         sourceVerdictRank,

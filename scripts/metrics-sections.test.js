@@ -1092,3 +1092,27 @@ test('sparse verdict: a core field under 50% of kept events over the window and 
   assert.equal(MetricsSections.assessSparseFields([buildLedgerLine({ status: 'dead', quality: qualityBlock({ place: 0 }) })]), null);
   assert.equal(MetricsSections.assessSparseFields([buildLedgerLine({})]), null);
 });
+
+test('flagged chip: one sanity flag code on ≥ 50% of kept events in ≥ 3 of the last 7 ok runs — a chip ahead of the quality badges, never a verdict', () => {
+  const health = buildQualityLedger();
+  const rowOf = host => health.rows.find(row => row.host === host);
+  const habit = rowOf('habit.example');
+  assert.equal(habit.verdict, 'ok', 'a standing flag is not trouble: the events are kept and usable');
+  assert.deepEqual(habit.flagged, { code: 'cover-self-contradictory', share: 67, runs: 7, window: 7 });
+  assert.equal(rowOf('blip.example').flagged, null, 'two runs are a blip');
+  assert.equal(rowOf('clean.example').flagged, null);
+  assert.equal(MetricsSections.formatFlaggedLabel(habit), 'cover-self-contradictory on 67%');
+  const chips = MetricsSections.buildQualityChipsHtml(habit, { limit: 1 });
+  assert.ok(chips.startsWith('<div class="quality-chips"><span class="quality-chip quality-flagged" title="cover-self-contradictory on ≥50% of kept events in 7 of the last 7 runs">cover-self-contradictory on 67%</span>'), chips);
+  assert.ok(chips.includes('>flags 15</span>'), 'the flagged chip does not count against the badge limit: the one badge still shows');
+  assert.ok(MetricsSections.buildSourcesTableHtml(health, {}).includes('cover-self-contradictory on 67%'));
+  assert.ok(MetricsSections.buildHostQualityHtml(habit).includes('standing flag: on ≥50% of kept events in 7 of the last 7 ok runs'));
+  // A one-event host with a junk title every run still shows it (woofsatlanta.com).
+  const one = [0, 1, 2].map(index => buildLedgerLine({ run_id: `2026100${index + 1}-050000`, finished_at: `2026-10-0${index + 1}T09:00:00.000Z`, host: 'one.example', extracted: 1, events: 1, bear: 1, quality: qualityBlock({ n: 1, flags: { 'junk-title': 1, 'weekday-derived-date': 1 } }) }));
+  const flagged = MetricsSections.assessFlaggedCode(one);
+  assert.equal(flagged.runs, 3);
+  assert.equal(flagged.share, 100);
+  assert.ok(['junk-title', 'weekday-derived-date'].includes(flagged.code));
+  assert.equal(MetricsSections.assessFlaggedCode(one.slice(0, 2)), null);
+  assert.equal(MetricsSections.assessFlaggedCode([]), null);
+});

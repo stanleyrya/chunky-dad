@@ -4084,6 +4084,11 @@ ${verdictCss}
       color: ${SOURCE_VERDICT_COLORS.lost};
       font-weight: 700;
     }
+    .quality-chip.quality-flagged {
+      border-color: ${SOURCE_VERDICT_COLORS.sparse};
+      color: ${SOURCE_VERDICT_COLORS.sparse};
+      font-weight: 700;
+    }
     .still-chip {
       font-size: 10px;
       padding: 1px 6px;
