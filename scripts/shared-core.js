@@ -1596,7 +1596,7 @@ class SharedCore {
     rekeyOwnerDecisions(decisions) {
         if (!Array.isArray(decisions)) return [];
         return decisions.map(decision => {
-            if (!decision || typeof decision !== 'object' || decision.kind === 'bar' || decision.kind === 'dropped') return decision;
+            if (!decision || typeof decision !== 'object' || decision.kind === 'bar' || decision.kind === 'dropped' || decision.kind === 'gone') return decision;
             const snapshot = decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : null;
             if (!snapshot || !snapshot.title || !snapshot.startDate) return decision;
             const key = this.getOwnerReviewKey({
@@ -2248,6 +2248,83 @@ class SharedCore {
         };
     }
 
+    // ── Host signals and drift ───────────────────────────────────────────
+    // What a host GAVE this run besides a row count: records read through
+    // a structured door (JSON-LD, a widget API, page data) vs. the AI
+    // route, and pages reached. A host that still loads and still yields
+    // rows but has lost a signal it used to give (its JSON-LD gone, its
+    // widget door closed) is in DRIFT: the read is thinner than it looks,
+    // and nothing it fails to list can be trusted as "gone".
+    static collectHostSignals(run) {
+        const payload = run && typeof run === 'object' ? run : {};
+        const parserResults = Array.isArray(payload.parserResults) ? payload.parserResults : [];
+        const analyzedEvents = Array.isArray(payload.analyzedEvents) ? payload.analyzedEvents : [];
+        const allHomeHosts = new Set();
+        const signals = new Map();
+        const hostOf = (host) => {
+            if (!signals.has(host)) signals.set(host, { structured: 0, ai: 0, pages: 0 });
+            return signals.get(host);
+        };
+        parserResults.forEach((parser) => {
+            if (!parser || typeof parser !== 'object') return;
+            const hosts = SharedCore.sourceLedgerParserHosts(parser);
+            hosts.homeHosts.forEach((host) => { allHomeHosts.add(host); hostOf(host); });
+            const classifications = parser.urlClassifications && typeof parser.urlClassifications === 'object' ? Object.keys(parser.urlClassifications) : [];
+            classifications.forEach((url) => {
+                const host = SharedCore.hostOfUrl(url);
+                if (hosts.homeHosts.includes(host)) hostOf(host).pages += 1;
+            });
+        });
+        analyzedEvents.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            const pageHost = SharedCore.hostOfUrl(event._sourcePageUrl);
+            const eventHost = allHomeHosts.has(pageHost) ? pageHost : SharedCore.hostOfUrl(event.website || event.url);
+            if (!allHomeHosts.has(eventHost)) return;
+            const source = String(event._extractionSource || '').trim().toLowerCase();
+            if (!source || source === 'unknown') return;
+            if (source === 'ai' || source === 'ocr') hostOf(eventHost).ai += 1;
+            else hostOf(eventHost).structured += 1;
+        });
+        return signals;
+    }
+
+    // A signal that collapsed to nothing while the host still yields rows:
+    // the median of the last seven ok runs was ≥ 3 (structured records) or
+    // ≥ 2 (pages), and this run has 0. One-run flukes are not drift: the
+    // median needs at least three runs behind it.
+    static assessHostDrift(previousHostState, signals) {
+        const prev = previousHostState && typeof previousHostState === 'object' ? previousHostState : {};
+        const history = Array.isArray(prev.signals_history) ? prev.signals_history.filter((entry) => entry && typeof entry === 'object') : [];
+        const current = signals && typeof signals === 'object' ? signals : {};
+        if (history.length < 3 || !(Number(current.extracted) > 0)) return [];
+        const median = (values) => {
+            const sorted = values.slice().sort((a, b) => a - b);
+            if (sorted.length === 0) return null;
+            const middle = Math.floor(sorted.length / 2);
+            return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+        };
+        const drift = [];
+        [['structured', 3], ['pages', 2]].forEach(([signal, floor]) => {
+            const before = median(history.map((entry) => Number(entry[signal]) || 0));
+            const now = Number(current[signal]) || 0;
+            if (before !== null && before >= floor && now === 0) drift.push({ signal, before, now });
+        });
+        return drift;
+    }
+
+    // The ICS uid behind a calendar identifier: the text after the first
+    // colon (EventKit's "<calendar>:<uid>"), cut at a recurrence suffix; a
+    // bare uid (the published ICS) is itself.
+    static savedEventUid(identifier) {
+        const text = String(identifier === null || identifier === undefined ? '' : identifier).trim();
+        if (!text) return '';
+        const colonIndex = text.indexOf(':');
+        const afterColon = colonIndex >= 0 ? text.slice(colonIndex + 1) : text;
+        const rid = afterColon.search(/\/RID=/i);
+        const uid = (rid >= 0 ? afterColon.slice(0, rid) : afterColon).trim();
+        return uid;
+    }
+
     static buildSourceLedger(payload, options = {}) {
         const run = payload && typeof payload === 'object' ? payload : {};
         const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
@@ -2275,7 +2352,7 @@ class SharedCore {
                     host, parsers: [], pages: 0, outbound_pages: 0, page_errors: 0, errors: [],
                     extracted: 0, events: 0, bear: 0, upcoming: 0, duration_ms: 0,
                     proposals: { new: 0, merge: 0 }, upcomingKeys: {}, eventKeyIndex: new Set(),
-                    roles: [], url: '',
+                    roles: [], url: '', signals: { structured: 0, ai: 0 },
                     quality: { n: 0, time: 0, place: 0, coords: 0, url: 0, image: 0, desc: 0, keys: new Set(), maxDay: '', flags: {}, aiDropped: 0, manualDropped: 0, dropReasons: new Map(), dedupRemoved: 0, merges: 0, changed: 0, churnFields: {}, errors: {} }
                 });
             }
@@ -2379,6 +2456,11 @@ class SharedCore {
             if (!host) return;
             const row = hostOf(host);
             row.proposals[action] += 1;
+            const extraction = String(event._extractionSource || '').trim().toLowerCase();
+            if (extraction && extraction !== 'unknown') {
+                if (extraction === 'ai' || extraction === 'ocr') row.signals.ai += 1;
+                else row.signals.structured += 1;
+            }
             const q = row.quality;
             (Array.isArray(event._sanityFlags) ? event._sanityFlags : []).forEach((flag) => {
                 const code = typeof flag === 'string' ? flag : (flag && flag.code);
@@ -2446,6 +2528,12 @@ class SharedCore {
             const qualityState = status === 'ok'
                 ? { keys: [...row.quality.keys], runs_since_new: runsSinceNew }
                 : { keys: prev && Array.isArray(prev.keys) ? prev.keys : [], runs_since_new: runsSinceNew };
+            // Signals and drift (SharedCore.assessHostDrift): what the host
+            // gave besides rows, against its last seven ok runs.
+            const signals = { structured: row.signals.structured, ai: row.signals.ai, pages: row.pages, extracted: row.extracted };
+            const drift = status === 'ok' ? SharedCore.assessHostDrift(prev, signals) : [];
+            const previousSignals = prev && Array.isArray(prev.signals_history) ? prev.signals_history : [];
+            qualityState.signals_history = status === 'ok' ? previousSignals.slice(-6).concat([signals]) : previousSignals;
             records.push({
                 v: 1,
                 run_id: runId,
@@ -2471,7 +2559,9 @@ class SharedCore {
                 lost: loss.lost,
                 suspected: loss.suspected,
                 listing_gone: loss.listing_gone,
-                quality
+                quality,
+                signals,
+                drift
             });
             hosts[row.host] = status === 'dead' && prev
                 ? Object.assign({}, prev, loss.state, qualityState)
@@ -2483,9 +2573,15 @@ class SharedCore {
             if (!hosts[host]) hosts[host] = previous[host];
         });
 
+        // The "gone from source" streaks ride in the same file: the run
+        // that checked them carries the new state, any other run carries
+        // the previous one forward.
+        const gone = run.goneFromSource && run.goneFromSource.state && typeof run.goneFromSource.state === 'object'
+            ? run.goneFromSource.state
+            : (options.previousUpcoming && options.previousUpcoming.gone && typeof options.previousUpcoming.gone === 'object' ? options.previousUpcoming.gone : {});
         return {
             records,
-            upcoming: { version: 2, run_id: runId, finished_at: finishedAt, hosts }
+            upcoming: { version: 2, run_id: runId, finished_at: finishedAt, hosts, gone }
         };
     }
 
@@ -15885,6 +15981,308 @@ class SharedCore {
             }
         }
         return null;
+    }
+
+    // ── A saved event its source no longer lists ────────────────────────
+    // Owner ruling 2026-10-17 (SF Eagle's "BLUF SF HARD" next to the
+    // site's "Bad Boy"): the scraper never deletes, but it can SAY. A
+    // saved upcoming event whose own links point into a site one of this
+    // run's first-party sources read in full, that no record of this run
+    // matched, is a miss; two misses in a row make it a card ("gone from
+    // its source") for the owner to delete or keep. Fails closed on every
+    // side: an aggregator covers nothing; a day beyond the furthest night
+    // the source showed is outside its statement; a read that is THIN
+    // (upcoming rows under half the host's recent median) or in DRIFT
+    // (SharedCore.assessHostDrift) freezes the streaks — it neither counts
+    // nor clears; a series occurrence is never a candidate (deleting one
+    // is deleting the series). The card carries what the site lists
+    // instead that night (same place + similar name = a rename, which the
+    // merge ladder did not fold) and the same name on other nights (a date
+    // move), so the owner decides with both sides' facts.
+    //
+    // `savedByCity`: { city: { events: [{ identifier, uid?, title,
+    // startDate, endDate, location, notes, url, isAllDay, series? }] } }
+    // from the adapter (the phone snapshot or the published ICS on the Mac).
+    // Returns { candidates, state, summary }; `state` is the next run's
+    // `previousUpcoming.gone`.
+    buildGoneFromSourceCandidates(results, savedByCity, options = {}) {
+        const run = results && typeof results === 'object' ? results : {};
+        const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
+        const nowIso = now.toISOString();
+        const todayKey = nowIso.slice(0, 10);
+        const confirmAfter = Number.isFinite(options.confirmAfter) ? options.confirmAfter : 2;
+        const previous = options.previousUpcoming && typeof options.previousUpcoming === 'object' ? options.previousUpcoming : {};
+        const previousHosts = previous.hosts && typeof previous.hosts === 'object' ? previous.hosts : {};
+        const previousGone = previous.gone && typeof previous.gone === 'object' ? previous.gone : {};
+        const parserResults = Array.isArray(run.parserResults) ? run.parserResults : [];
+        const analyzedEvents = Array.isArray(run.analyzedEvents) ? run.analyzedEvents : [];
+        const cityConfigs = options.cities && typeof options.cities === 'object' ? options.cities : (this.cities || {});
+        const summary = { cities: 0, saved: 0, attributed: 0, seen: 0, firstMisses: 0, candidates: 0, duplicates: 0, identityMisses: 0, beyondHorizon: 0, series: 0, suppressedThin: 0, suppressedDrift: 0, sites: 0 };
+        const cities = savedByCity && typeof savedByCity === 'object' ? savedByCity : {};
+        const identityMisses = [];
+        const iso = (value) => {
+            const ms = SharedCore.toEpochMillis(value);
+            return ms === null ? null : new Date(ms).toISOString();
+        };
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim();
+        const median = (values) => {
+            const sorted = values.slice().sort((a, b) => a - b);
+            if (sorted.length === 0) return null;
+            const middle = Math.floor(sorted.length / 2);
+            return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+        };
+        const pruneState = (cityState) => {
+            const kept = {};
+            Object.keys(cityState && typeof cityState === 'object' ? cityState : {}).forEach((uid) => {
+                const entry = cityState[uid];
+                if (entry && typeof entry === 'object' && String(entry.day || '') >= todayKey) kept[uid] = entry;
+            });
+            return kept;
+        };
+        const state = {};
+        const candidates = [];
+        const coverage = this.buildFirstPartySiteCoverage(parserResults);
+        const checkedCities = new Set();
+
+        // Per source: its host, the furthest night it showed, its upcoming
+        // count against the host's recent median (thin), its drift.
+        const signalsByHost = SharedCore.collectHostSignals(run);
+        const sourceFacts = new Map();
+        parserResults.forEach((parser) => {
+            if (!parser || typeof parser !== 'object') return;
+            const hosts = SharedCore.sourceLedgerParserHosts(parser);
+            const name = String((parser.config && parser.config.name) || parser.name || '').trim();
+            const dropped = (Array.isArray(parser.bearDroppedEvents) ? parser.bearDroppedEvents : []).map((entry) => entry && entry.event).filter(Boolean);
+            let horizonDay = '';
+            let upcoming = 0;
+            [...hosts.events, ...dropped].forEach((record) => {
+                const day = SharedCore.sourceLedgerLocalDay(record && record.startDate, record && record.timezone);
+                if (!day) return;
+                if (day >= todayKey) upcoming += 1;
+                if (day > horizonDay) horizonDay = day;
+            });
+            const prevHost = previousHosts[hosts.primary] && typeof previousHosts[hosts.primary] === 'object' ? previousHosts[hosts.primary] : null;
+            const history = prevHost && Array.isArray(prevHost.history) ? prevHost.history : [];
+            const pastCounts = history.map((entry) => Object.keys(entry && entry.upcoming && typeof entry.upcoming === 'object' ? entry.upcoming : {}).length);
+            const usual = median(pastCounts);
+            const thin = usual !== null && usual >= 4 && upcoming < usual / 2;
+            const signals = Object.assign({ structured: 0, ai: 0, pages: 0 }, signalsByHost.get(hosts.primary) || {}, { extracted: hosts.events.length });
+            const drift = SharedCore.assessHostDrift(prevHost, signals);
+            sourceFacts.set(name, { source: name, host: hosts.primary, horizonDay, extracted: hosts.events.length, upcoming, usual, thin, drift });
+        });
+
+        // Every saved record this run's analysis matched (merge target,
+        // conflict, slot) — by identifier and by its uid.
+        const matched = new Set();
+        const noteMatched = (identifier) => {
+            const text = String(identifier || '').trim();
+            if (!text) return;
+            matched.add(text);
+            const uid = SharedCore.savedEventUid(text);
+            if (uid) matched.add(uid);
+        };
+        analyzedEvents.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            if (event._existingEvent && typeof event._existingEvent === 'object') noteMatched(event._existingEvent.identifier);
+            if (event._existingKey) matched.add(String(event._existingKey));
+            (Array.isArray(event._conflicts) ? event._conflicts : []).forEach((conflict) => { if (conflict && typeof conflict === 'object') noteMatched(conflict.identifier); });
+        });
+
+        const placeKeyOf = (bar, address) => this.normalizeBarNameKey(bar || '') || fold(address || '');
+        // Similar titles: 60% of the shorter one's tokens in the other, and
+        // the shorter one at least two tokens — "B BAR" is inside "HAPPY
+        // THANKSGIVING – BAR OPENS AT 6PM" and says nothing.
+        const tokenCount = (value) => String(value || '').split(' ').filter((word) => word.length > 2).length;
+        const similarTitles = (a, b) => Boolean(a) && (a === b || (Math.min(tokenCount(a), tokenCount(b)) >= 2 && SharedCore.sourceLedgerTitleOverlap(a, b) >= 0.6));
+        // What the run made of each record, by title and local night: the
+        // saved record it merged into, or a proposal of its own.
+        const analyzedIndex = new Map();
+        analyzedEvents.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
+            const key = `${fold(event.title)}|${day}`;
+            if (!key || !day) return;
+            const existing = event._existingEvent && typeof event._existingEvent === 'object' ? event._existingEvent : null;
+            if (!analyzedIndex.has(key)) analyzedIndex.set(key, []);
+            analyzedIndex.get(key).push({
+                action: String(event._action || ''),
+                existingIdentifier: existing && existing.identifier ? String(existing.identifier) : '',
+                existingTitle: existing && existing.title ? String(existing.title) : ''
+            });
+        });
+        const sitesUsed = new Set();
+        Object.keys(cities).forEach((city) => {
+            const entry = cities[city];
+            const saved = Array.isArray(entry) ? entry : (entry && Array.isArray(entry.events) ? entry.events : []);
+            checkedCities.add(city);
+            if (saved.length === 0) return;
+            summary.cities += 1;
+            const timezone = (cityConfigs[city] && cityConfigs[city].timezone) || (entry && entry.timezone) || '';
+            const previousCity = previousGone[city] && typeof previousGone[city] === 'object' ? previousGone[city] : {};
+            const cityState = {};
+            saved.forEach((record) => {
+                if (!record || typeof record !== 'object') return;
+                const identifier = String(record.identifier || '').trim();
+                const uid = String(record.uid || '').trim() || SharedCore.savedEventUid(identifier);
+                if (!uid) return;
+                const day = SharedCore.sourceLedgerLocalDay(record.startDate, timezone);
+                if (!day || day < todayKey) return;
+                summary.saved += 1;
+                if (record.series === true || record.recurrence || record.recurrenceRule) { summary.series += 1; return; }
+                const notes = typeof record.notes === 'string' ? record.notes : '';
+                const fields = notes ? this.parseNotesIntoFields(notes) : {};
+                const links = [record.url, fields.website, fields.ticketUrl, fields.url]
+                    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+                    .filter((value) => /^https?:\/\//i.test(value));
+                let target = null;
+                let link = '';
+                for (const candidateLink of links) {
+                    const domain = this.getRegistrableDomainFromUrl(candidateLink);
+                    const entries = domain ? coverage.get(domain) : null;
+                    if (!entries || entries.length === 0) continue;
+                    const parts = this.getUrlRuleParts(candidateLink);
+                    const segments = parts ? parts.segments.map((segment) => segment.toLowerCase()) : [];
+                    const found = entries.find((candidate) => candidate.segments.length === 0
+                        || (segments.length >= candidate.segments.length && candidate.segments.every((segment, index) => segment === segments[index])));
+                    if (found) { target = Object.assign({}, found, { site: domain }); link = candidateLink; break; }
+                }
+                if (!target) return;
+                const facts = sourceFacts.get(target.source) || null;
+                if (!facts) return;
+                summary.attributed += 1;
+                sitesUsed.add(target.site);
+                if (facts.horizonDay && day > facts.horizonDay) { summary.beyondHorizon += 1; return; }
+                const prior = previousCity[uid] && typeof previousCity[uid] === 'object' ? previousCity[uid] : null;
+                if (matched.has(uid) || (identifier && matched.has(identifier))) { summary.seen += 1; return; }
+                if (facts.thin || facts.drift.length > 0) {
+                    if (facts.thin) summary.suppressedThin += 1; else summary.suppressedDrift += 1;
+                    if (prior) cityState[uid] = prior;
+                    return;
+                }
+                const misses = (prior && Number.isFinite(Number(prior.misses)) ? Number(prior.misses) : 0) + 1;
+                const savedTitleFold = fold(record.title);
+                const savedPlace = placeKeyOf(fields.bar, fields.address);
+                const sameNight = [];
+                const sameTitle = [];
+                [...(target.events || []), ...(target.dropped || []).map((dropped) => Object.assign({}, dropped, { _gone_dropped: true }))].forEach((siteRecord) => {
+                    if (!siteRecord || typeof siteRecord !== 'object') return;
+                    const siteDay = SharedCore.sourceLedgerLocalDay(siteRecord.startDate, siteRecord.timezone || timezone);
+                    if (!siteDay) return;
+                    const overlap = SharedCore.sourceLedgerTitleOverlap(fold(siteRecord.title), savedTitleFold);
+                    const alike = similarTitles(fold(siteRecord.title), savedTitleFold);
+                    const sitePlace = placeKeyOf(siteRecord.bar, siteRecord.address);
+                    const row = {
+                        title: String(siteRecord.title || ''),
+                        startDate: iso(siteRecord.startDate),
+                        day: siteDay,
+                        bar: String(siteRecord.bar || ''),
+                        url: String(siteRecord.url || siteRecord.website || siteRecord.ticketUrl || ''),
+                        samePlace: Boolean(savedPlace && sitePlace && savedPlace === sitePlace),
+                        titleOverlap: Math.round(overlap * 100) / 100,
+                        similar: alike,
+                        dropped: siteRecord._gone_dropped === true
+                    };
+                    if (siteDay === day) sameNight.push(row);
+                    else if (alike && siteDay >= todayKey) sameTitle.push(row);
+                });
+                sameNight.sort((a, b) => (b.samePlace ? 1 : 0) - (a.samePlace ? 1 : 0) || b.titleOverlap - a.titleOverlap);
+                sameTitle.sort((a, b) => a.day.localeCompare(b.day));
+                // The site DOES list it that night at that place: it is not
+                // gone. Either the run gave the row to ANOTHER saved record
+                // (this one is the extra copy — a duplicate card), or the
+                // run proposes it as new / dropped it (the identity gate
+                // did not fold them — logged, never a delete).
+                const listedHere = sameNight.filter((row) => row.samePlace && row.similar);
+                let reason = 'gone';
+                let duplicateOf = null;
+                if (listedHere.length > 0) {
+                    const twins = listedHere.flatMap((row) => analyzedIndex.get(`${fold(row.title)}|${row.day}`) || []);
+                    const other = twins.find((twin) => twin.existingIdentifier && twin.existingIdentifier !== identifier && SharedCore.savedEventUid(twin.existingIdentifier) !== uid);
+                    if (other) {
+                        reason = 'duplicate';
+                        duplicateOf = { identifier: other.existingIdentifier, uid: SharedCore.savedEventUid(other.existingIdentifier), title: other.existingTitle };
+                    } else {
+                        summary.identityMisses += 1;
+                        identityMisses.push({ city, uid, title: String(record.title || ''), day, bar: String(fields.bar || ''), host: facts.host, source: target.source, listed: listedHere[0].title, proposal: twins.length > 0 ? twins[0].action || 'proposal' : (listedHere[0].dropped ? 'dropped' : 'none') });
+                        if (prior) cityState[uid] = prior;
+                        return;
+                    }
+                } else if (sameNight.some((row) => row.similar)) {
+                    reason = 'moved';
+                } else if (sameTitle.length > 0) {
+                    reason = 'date-moved';
+                }
+                const stateEntry = {
+                    title: String(record.title || ''), day, host: facts.host, source: target.source, misses,
+                    first_miss: (prior && prior.first_miss) || nowIso, last_checked: nowIso
+                };
+                cityState[uid] = stateEntry;
+                if (misses === 1) summary.firstMisses += 1;
+                if (misses < confirmAfter) return;
+                // The audit's "still on the site?" verdict for the same
+                // title, when the loss state has one. Its words still on
+                // the site ('still-listed'), or found in the run under
+                // another title ('set-aside'): a read problem, never a
+                // delete — logged like an identity miss.
+                let deepCheck = null;
+                const prevHost = previousHosts[facts.host];
+                const lost = prevHost && prevHost.lost && typeof prevHost.lost === 'object' ? prevHost.lost : null;
+                if (lost) {
+                    const series = lost[savedTitleFold] || Object.keys(lost).map((key) => lost[key]).find((item) => item && similarTitles(fold(item.title), savedTitleFold));
+                    if (series && series.still && series.still.verdict) deepCheck = { verdict: String(series.still.verdict), at: String(series.still.at || '') };
+                }
+                if (deepCheck && (deepCheck.verdict === 'still-listed' || deepCheck.verdict === 'set-aside')) {
+                    summary.identityMisses += 1;
+                    identityMisses.push({ city, uid, title: String(record.title || ''), day, bar: String(fields.bar || ''), host: facts.host, source: target.source, listed: '', proposal: deepCheck.verdict });
+                    return;
+                }
+                summary.candidates += 1;
+                if (reason === 'duplicate') summary.duplicates += 1;
+                candidates.push({
+                    key: `gone|${city}|${uid}`,
+                    kind: 'gone',
+                    reason,
+                    duplicateOf,
+                    city,
+                    uid,
+                    identifier,
+                    title: String(record.title || ''),
+                    startDate: iso(record.startDate),
+                    endDate: iso(record.endDate),
+                    timezone,
+                    isAllDay: record.isAllDay === true,
+                    bar: String(fields.bar || ''),
+                    address: String(fields.address || ''),
+                    location: String(record.location || ''),
+                    url: String(fields.website || record.url || ''),
+                    ticketUrl: String(fields.ticketUrl || ''),
+                    image: String(fields.image || ''),
+                    cover: String(fields.cover || ''),
+                    description: String(fields.description || '').slice(0, 400),
+                    link,
+                    site: target.site,
+                    host: facts.host,
+                    source: target.source,
+                    siteEvents: facts.extracted,
+                    horizonDay: facts.horizonDay,
+                    misses,
+                    firstMiss: stateEntry.first_miss,
+                    deepCheck,
+                    instead: { sameNight: sameNight.slice(0, 6), sameTitle: sameTitle.slice(0, 6) }
+                });
+            });
+            const pruned = pruneState(cityState);
+            if (Object.keys(pruned).length > 0) state[city] = pruned;
+        });
+        // Cities this run did not check keep their streaks, past days dropped.
+        Object.keys(previousGone).forEach((city) => {
+            if (checkedCities.has(city)) return;
+            const kept = pruneState(previousGone[city]);
+            if (Object.keys(kept).length > 0) state[city] = kept;
+        });
+        summary.sites = sitesUsed.size;
+        candidates.sort((a, b) => b.misses - a.misses || String(a.startDate || '').localeCompare(String(b.startDate || '')));
+        return { candidates, state, summary, identityMisses };
     }
 
     // One key per page: scheme dropped, host lowercased without "www.", the

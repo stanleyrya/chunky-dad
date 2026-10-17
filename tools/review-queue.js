@@ -64,6 +64,11 @@ const REVIEW_REASON_TAGS = [
     'wrong link', 'wrong image', 'wrong title', 'wrong venue',
     'should merge', 'recurring', 'wrong date or time', 'not bear', 'other'
 ];
+// Why a "gone from its source" card is KEPT on the calendar (a left
+// swipe there is "keep", not "reject"): the chips the keep sheet offers.
+const GONE_REASON_TAGS = [
+    'still happening', 'renamed on the site', 'moved venue', 'date moved', 'source is wrong', 'not sure'
+];
 
 function resolveSharedRoot(env = process.env) {
     const raw = env && env.CHUNKY_SHARED_STORAGE_DIR;
@@ -346,7 +351,8 @@ function normalizeReason(reason) {
     // waits for the card to change, 'never' is final. "Not bear" stays a tag —
     // older stores, the phone and the bear verdict all read it there.
     const rawMode = typeof reason.mode === 'string' ? reason.mode.trim().toLowerCase() : '';
-    const mode = rawMode === 'fix' || rawMode === 'never' ? rawMode : '';
+    // 'keep' is the gone card's left swipe: the saved event stays.
+    const mode = rawMode === 'fix' || rawMode === 'never' || rawMode === 'keep' ? rawMode : '';
     if (tags.length === 0 && !text && !mode) return null;
     return mode ? { tags, text, mode } : { tags, text };
 }
@@ -359,7 +365,7 @@ function buildDecision(input, options = {}) {
     if (!key) throw new Error('decision needs a key');
     const verdict = input.verdict === 'approve' || input.verdict === 'reject' ? input.verdict : null;
     if (!verdict) throw new Error('verdict must be approve or reject');
-    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' || input.kind === 'series' ? input.kind : 'new';
+    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' || input.kind === 'series' || input.kind === 'gone' ? input.kind : 'new';
     const snapshot = input.snapshot && typeof input.snapshot === 'object' ? input.snapshot : null;
     const now = options.now instanceof Date ? options.now : new Date();
     return {
@@ -1569,7 +1575,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
     // its fresh action; the run file's executions[] dates it. Executions
@@ -1585,7 +1591,7 @@ function buildDeck(runPayload, store, options = {}) {
         .sort((a, b) => a.executedAt.localeCompare(b.executedAt));
     const lastExecutedAt = executions.length > 0 ? executions[executions.length - 1].executedAt : '';
     const ledger = options.writtenLedger && typeof options.writtenLedger === 'object' ? options.writtenLedger : {};
-    const executedMark = (entry, decision) => {
+    const ledgerMark = (entry, decision) => {
         // The phone's ledger: written since this approval was made, on any
         // run (a newer approval than the write is a re-approval, pending).
         const written = ledger[entry.key];
@@ -1593,6 +1599,11 @@ function buildDeck(runPayload, store, options = {}) {
             && (!decision || String(written.executedAt) >= String(decision.stampedAt || ''))) {
             return { at: written.executedAt, as: written.action || 'created' };
         }
+        return null;
+    };
+    const executedMark = (entry, decision) => {
+        const fromLedger = ledgerMark(entry, decision);
+        if (fromLedger) return fromLedger;
         const event = analyzed[entry.sourceIndex];
         if (!event || !event._ownerReviewApproved) return null;
         // A series the phone only reported (seriesWrites: report) or could
@@ -1602,8 +1613,11 @@ function buildDeck(runPayload, store, options = {}) {
     };
     const file = (entry, decision) => {
         if (decision) {
-            const isEventKind = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override' || entry.kind === 'series';
-            const executed = isEventKind ? executedMark(entry, decision) : null;
+            const isEventKind = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override' || entry.kind === 'series'
+                // A gone card's approval is a removal the phone executes; the
+                // ledger (action 'deleted') is the only mark of it.
+                || entry.kind === 'gone';
+            const executed = entry.kind === 'gone' ? ledgerMark(entry, decision) : isEventKind ? executedMark(entry, decision) : null;
             // Still waiting for "Execute on phone": an approval the phone has
             // not written, and that is newer than the run's last execution
             // (an older one was already handed to the phone — written or
@@ -1707,6 +1721,19 @@ function buildDeck(runPayload, store, options = {}) {
             { id: `b${index}`, kind: 'bar', key: proposal.key, sourceIndex: index, proposal },
             SharedCore.findOwnerDecision(proposal, decisions)
         );
+    });
+
+    // "Gone from its source" (SharedCore.buildGoneFromSourceCandidates):
+    // a saved upcoming event its first-party source has not listed for two
+    // runs. One card per saved event, decided by its exact key only; a
+    // right swipe is a removal the phone executes, a left swipe keeps it.
+    const gone = payload.goneFromSource && Array.isArray(payload.goneFromSource.candidates) ? payload.goneFromSource.candidates : [];
+    gone.forEach((candidate, index) => {
+        if (!candidate || typeof candidate !== 'object' || typeof candidate.key !== 'string' || !candidate.key) return;
+        const startMs = SharedCore.toEpochMillis(candidate.startDate);
+        if (startMs !== null && startMs < now) { counts.pastSkipped++; return; }
+        const decision = decisions.find((entry) => entry && entry.key === candidate.key && (entry.verdict === 'approve' || entry.verdict === 'reject')) || null;
+        file({ id: `g${index}`, kind: 'gone', key: candidate.key, sourceIndex: index, proposal: { ...candidate, kind: 'gone' } }, decision);
     });
 
     // Events the bear check DROPPED (flag, don't drop — they are in the run
@@ -2120,6 +2147,8 @@ function formatRejectionsText(store) {
         }
         const label = snap.kind === 'bar'
             ? `BAR ${snap.name || ''} (${snap.city || ''})`
+            : snap.kind === 'gone'
+            ? `GONE ${snap.title || ''} — ${when} @ ${snap.bar || snap.city || ''} [${snap.source || ''}] kept on the calendar (${snap.host || 'its source'} has not listed it for ${snap.misses || '?'} runs)`
             : `${(snap.kind || decision.kind || 'new').toUpperCase()} ${snap.title || ''} — ${when} @ ${snap.bar || snap.city || ''} [${snap.source || ''}]`;
         const tags = decision.reason && decision.reason.tags && decision.reason.tags.length > 0
             ? ` {${decision.reason.tags.join(', ')}}`
@@ -2128,7 +2157,7 @@ function formatRejectionsText(store) {
         const changes = snap.changes && typeof snap.changes === 'object'
             ? Object.keys(snap.changes).map((field) => `${field}: ${snap.changes[field].from || '∅'} → ${snap.changes[field].to || '∅'}`).join('; ')
             : '';
-        const modeLabel = mode === 'fix' ? 'NEEDS FIX' : mode === 'never' ? 'NOT AN EVENT' : mode === 'not-bear' ? 'NOT BEAR' : 'REJECTED';
+        const modeLabel = snap.kind === 'gone' ? 'KEPT' : mode === 'fix' ? 'NEEDS FIX' : mode === 'never' ? 'NOT AN EVENT' : mode === 'not-bear' ? 'NOT BEAR' : 'REJECTED';
         lines.push({ rank: mode === 'fix' ? 0 : mode === '' ? 1 : 2, line: `- [${modeLabel}] ${label}${tags}${text}${changes ? ` (${changes})` : ''}` });
     }
     // What needs fixing first; final answers last.
@@ -2168,6 +2197,7 @@ module.exports = {
     defaultSharedRoot,
     DECISIONS_FILE_NAME,
     REVIEW_REASON_TAGS,
+    GONE_REASON_TAGS,
     RUN_ID_PATTERN,
     resolveSharedRoot,
     getRunsDir,

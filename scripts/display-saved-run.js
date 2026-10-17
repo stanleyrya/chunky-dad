@@ -208,6 +208,10 @@ class SavedRunDisplay {
             // Report-only calendar hygiene checklist — render it for
             // saved runs too (older runs simply have none).
             calendarHygiene: Array.isArray(saved?.calendarHygiene) ? saved.calendarHygiene : [],
+            // "Gone from its source" cards (SharedCore
+            // .buildGoneFromSourceCandidates): the reviewed execute deletes
+            // the ones the owner approved on the deck.
+            goneFromSource: saved?.goneFromSource && typeof saved.goneFromSource === 'object' ? saved.goneFromSource : null,
             config: config,
             sourceRunId: saved?.summary?.runId || null,
             // Execute-from-saved-run support (adapter feature-detects all
