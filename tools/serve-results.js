@@ -1157,6 +1157,120 @@ function renderReviewPictureRow(entry = {}) {
 }
 
 // The Source audit page: read-only findings of the Mac's automated audit
+// The source ledger on the Mac: GET /metrics renders what the phone's
+// Sources view shows — the verdict table and the yield table — from the
+// same builders (scripts/metrics-sections.js), so the owner at the Mac
+// sees "Sparse · place 10%" without opening the phone. Sorting is a page
+// reload with ?sort=&dir= (Sources) and ?ysort=&ydir= (Yield): the sort
+// buttons the builders emit are turned into links by a few lines of script.
+// Read only; nothing here writes.
+function renderMetricsPage(loaded, options = {}) {
+    const esc = escapeHtmlText;
+    const MetricsSections = require(path.join(repoRoot, 'scripts', 'metrics-sections'));
+    const health = loaded && loaded.health ? loaded.health : null;
+    const records = loaded && Array.isArray(loaded.records) ? loaded.records : [];
+    const sourceSort = options.sourceSort || null;
+    const yieldSort = options.yieldSort || null;
+    const faviconUrl = (row) => `https://chunky.dad/img/favicons/favicon-${String(row.host).replace(/[^a-zA-Z0-9.-]/g, '-')}-64px.ico`;
+    const hostUrl = (row) => (row.url ? String(row.url) : `https://${row.host}/`);
+    const yieldData = MetricsSections.buildSourceYieldRows(records, { runs: 7 });
+    const counters = health ? MetricsSections.buildSourceCountersHtml(health) : '';
+    const sourcesTable = health ? MetricsSections.buildSourcesTableHtml(health, { sortState: sourceSort, hostUrl, faviconUrl }) : `<div class="muted">${esc(MetricsSections.SOURCE_LEDGER_EMPTY_MESSAGE)}</div>`;
+    const yieldTable = MetricsSections.buildSourceYieldTableHtml(yieldData, { sortState: yieldSort, hostUrl, faviconUrl });
+    const verdictCss = (MetricsSections.SOURCE_VERDICT_ORDER || []).map((verdict) => `.verdict-${verdict} { color: var(--v-${verdict}); border-color: var(--v-${verdict}); }`).join('\n');
+    const troubled = health ? `${health.troubled} of ${health.hosts} sites need a look` : 'no source ledger yet';
+    return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Metrics · chunky.dad (on your Mac)</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+<meta name="theme-color" content="#151412">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root { color-scheme:dark; --bg:#0b0d13; --card:#1c2235; --ink:#f6f7ff; --muted:#8e94b6; --line:rgba(255,255,255,0.09); --accent:#ff7b2f; --accent-soft:#ffa24a; --brand:#667eea; --background-light:rgba(255,255,255,.06); --border-color:var(--line); --text-secondary:var(--muted); --color-neutral:#a7b0cc; --color-success:#2ed573;
+  --v-dead:#ff6b6b; --v-stopped:#ff9f43; --v-shrunk:#feca57; --v-sparse:#f0a04b; --v-drift:#c8a2ff; --v-lost:#ff7eb6; --v-empty:#9b8cff; --v-vanished:#e056a0; --v-quiet:#54a0ff; --v-companion:#8395a7; --v-ok:#a7b0cc; }
+* { box-sizing:border-box; }
+html { background:var(--bg); }
+body { background:radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%) fixed; margin:0; color:var(--ink); font:14px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; }
+a { color:var(--accent); }
+.top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding:10px 14px 11px; background:var(--brand); border-bottom:1px solid rgba(255,255,255,.18); }
+.top .brand { display:flex; align-items:center; gap:8px; color:#fff; text-decoration:none; }
+.top .brand-name { font:700 21px/1.1 Poppins, -apple-system, system-ui, sans-serif; }
+.top .tool-page-label { font:600 11px/1 Poppins, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.88); padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.14); }
+.top h1 { margin:0; } .top h1 .logo { width:34px; height:34px; }
+.top .tool-buttons { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+.action-button { display:inline-flex; align-items:center; gap:7px; font:600 13px/1 Poppins, sans-serif; padding:9px 13px; border-radius:12px; text-decoration:none; color:#c4c8e4; background:rgba(15,20,34,.9); border:1px solid rgba(255,162,74,.25); }
+.wrap { max-width:1200px; margin:14px auto 40px; padding:0 14px; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 12px; }
+.card { background:var(--card); border-radius:18px; padding:14px 16px 16px; margin-bottom:14px; }
+.card h2 { margin:0 0 8px; font:700 18px/1.2 Poppins, sans-serif; }
+.card .sub { color:var(--muted); font-size:12px; margin:-4px 0 10px; }
+.muted { color:var(--muted); }
+.source-counters { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.metric-chip { display:inline-flex; gap:6px; align-items:baseline; font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:var(--background-light); }
+.metric-chip-value { font-weight:700; }
+.metric-chip.danger { border-color:var(--v-dead); color:var(--v-dead); }
+.table-wrapper { overflow-x:auto; }
+.metrics-table { width:100%; border-collapse:collapse; font-size:13px; }
+.metrics-table th, .metrics-table td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
+.metrics-table th.num, .metrics-table td.num { text-align:right; }
+.sort-button { background:none; border:none; color:var(--muted); font:600 11px/1 Poppins, sans-serif; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; padding:0; }
+.sort-button.active { color:var(--ink); }
+.cell-title { font-weight:600; } .cell-subtitle { font-size:11px; color:var(--muted); }
+.row-link { color:var(--ink); text-decoration:none; }
+.source-site { display:flex; align-items:center; gap:6px; }
+.source-favicon { width:14px; height:14px; border-radius:3px; } .source-favicon.placeholder { display:inline-block; border:1px dashed var(--line); }
+.verdict-chip { display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:8px; border:1px solid; margin-right:3px; }
+${verdictCss}
+.quality-chips { display:flex; flex-wrap:wrap; gap:3px; max-width:200px; }
+.quality-chip { font-size:10px; padding:1px 6px; border-radius:8px; border:1px solid var(--v-shrunk); color:var(--v-shrunk); white-space:nowrap; }
+.quality-chip.quality-audit { border-color:var(--v-lost); color:var(--v-lost); font-weight:700; }
+.quality-chip.quality-flagged { border-color:var(--v-sparse); color:var(--v-sparse); font-weight:700; }
+.quality-chip.quality-ok { border-color:var(--color-success); color:var(--color-success); }
+.quality-chip.quality-more { border-color:var(--line); color:var(--muted); }
+.sparkline { color:var(--accent-soft); }
+.lost-count { color:var(--v-lost); }
+.field-bars { display:inline-flex; gap:2px; align-items:flex-end; }
+.field-bar { position:relative; width:11px; height:22px; border-radius:2px; background:var(--background-light); overflow:hidden; color:var(--color-neutral); }
+.field-bar.low { color:var(--v-sparse); } .field-bar.none { border:1px dashed var(--line); background:transparent; }
+.field-bar-fill { position:absolute; left:0; right:0; bottom:0; background:currentColor; opacity:.75; }
+.field-bar-key { position:absolute; left:0; right:0; bottom:-1px; font-size:7px; line-height:1; text-align:center; color:var(--muted); }
+.lowest-low { color:var(--v-sparse); }
+</style></head>
+<body>
+<header class="top">
+  <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label">Metrics</span></a></h1>
+  <div class="tool-buttons">
+    <a class="action-button" href="/review"><i class="bi bi-layers" aria-hidden="true"></i><span>Review</span></a>
+    <a class="action-button" href="/review/source-audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit</span></a>
+    <a class="action-button" href="/metrics.json"><i class="bi bi-braces" aria-hidden="true"></i><span>JSON</span></a>
+    <a class="action-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>
+  </div>
+</header>
+<div class="wrap">
+<p class="intro">The source ledger (metrics/sources.ndjson, one line per run per website) as the phone's Sources view reads it: ${esc(troubled)}. Read only.</p>
+<div class="card"><h2>Sources</h2><div class="sub">one row per website host, trouble first · Extr · Bear · Up = the latest run</div>${counters}${sourcesTable}</div>
+<div class="card"><h2>Yield</h2><div class="sub">bear kept / extracted (medians over the last ${esc(String(yieldData.runs.length))} runs) · bars = share of kept events with a time, place, coordinates, link, image, description · lowest yield first</div>${yieldTable}</div>
+</div>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  document.querySelectorAll('[data-sort-view]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var view = button.getAttribute('data-sort-view');
+      var keyName = view === 'yield' ? 'ysort' : 'sort';
+      var dirName = view === 'yield' ? 'ydir' : 'dir';
+      params.set(keyName, button.getAttribute('data-sort-key') || '');
+      params.set(dirName, button.getAttribute('data-sort-dir') || 'asc');
+      location.search = params.toString();
+    });
+  });
+})();
+</script>
+</body></html>`;
+}
+
 // (tools/source-audit.js) — per audited host the date, its badges, what the
 // page lists that we did not extract, what we extracted that is not an
 // event, and how each lost series fared on the site. The deck's look, no
@@ -1175,7 +1289,7 @@ function renderSourceAuditPage(store, options = {}) {
     const card = (entry) => `
 <div class="card${sourceAudit.hostHasOpenFindings(entry) ? ' open' : ''}">
   <h2><img src="https://chunky.dad/img/favicons/favicon-${esc(entry.host.replace(/[^a-zA-Z0-9.-]/g, '-'))}-64px.ico" alt="" onerror="this.remove()">${esc(entry.host)}<span class="when">${esc(entry.date)}${entry.run_id ? ` · run ${esc(entry.run_id)}` : ''}</span></h2>
-  <div class="badges"><span class="badge verdict v-${esc(entry.verdict || 'ok')}">${esc(entry.verdict || 'ok')}</span>${entry.badges.map((chip) => `<span class="badge quality">${esc(chip)}</span>`).join('')}${entry.ai !== 'ok' ? `<span class="badge">ai: ${esc(entry.ai)}</span>` : ''}</div>
+  <div class="badges"><span class="badge verdict v-${esc(entry.verdict || 'ok')}">${esc(entry.verdict || 'ok')}</span>${entry.badges.map((chip) => `<span class="badge quality">${esc(chip)}</span>`).join('')}${entry.ai !== 'ok' ? `<span class="badge">ai: ${esc(entry.ai)}${entry.reason ? ` · ${esc(entry.reason)}` : ''}</span>` : ''}</div>
   ${entry.page && entry.page.url ? `<p class="page-meta"><a href="${esc(entry.page.url)}" target="_blank" rel="noopener">${esc(entry.page.url)}</a>${entry.page.fetchedAt ? ` · fetched ${esc(String(entry.page.fetchedAt).slice(0, 16).replace('T', ' '))}Z` : ''}${entry.page.chars ? ` · ${esc(String(entry.page.chars))} chars` : ''}</p>` : '<p class="page-meta">no listing page could be read</p>'}
   <div class="cols">
     <div><h3>On the page, not extracted (${entry.missing.length})</h3>${entry.missing.length ? `<ul class="findings">${entry.missing.map((item) => `<li><b>${esc(item.title)}</b>${item.date ? ` <span class="muted">${esc(item.date)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none</p>'}</div>
@@ -1224,7 +1338,7 @@ a { color:var(--accent); }
 .badge { font-size:12px; padding:2px 8px; border-radius:6px; background:var(--bg); border:1px solid var(--line); color:var(--ink); }
 .badge.verdict { font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
 .badge.v-dead, .badge.v-stopped { color:var(--no); border-color:var(--no); }
-.badge.v-shrunk, .badge.v-empty { color:var(--accent-soft); border-color:var(--accent-soft); }
+.badge.v-shrunk, .badge.v-empty, .badge.v-sparse { color:var(--accent-soft); border-color:var(--accent-soft); }
 .badge.v-lost { color:var(--lost); border-color:var(--lost); }
 .badge.v-ok { color:var(--ok); border-color:var(--ok); }
 .badge.quality { color:var(--accent-soft); }
@@ -1636,7 +1750,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
   <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" srcset="/favicons/favicon-96x96.png 1x, /favicons/favicon-192x192.png 2x" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label" id="top-title">${options.friendMode === true ? 'Phone a friend' : 'Review'}</span></a></h1>
   <div class="tool-buttons">
     <select id="run-select" class="action-button secondary-button" aria-label="Run" onchange="location.href='/review?run='+encodeURIComponent(this.value)">${runOptions}</select>
-    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>${options.friendMode === true ? '' : `\n    <a id="source-audit-link" class="action-button secondary-button" href="/review/source-audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit${Number(options.sourceAuditOpen) > 0 ? ` (${Number(options.sourceAuditOpen)})` : ''}</span></a>`}
+    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>${options.friendMode === true ? '' : `\n    <a id="source-audit-link" class="action-button secondary-button" href="/review/source-audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit${Number(options.sourceAuditOpen) > 0 ? ` (${Number(options.sourceAuditOpen)})` : ''}</span></a>\n    <a id="metrics-link" class="action-button secondary-button" href="/metrics"><i class="bi bi-activity" aria-hidden="true"></i><span>Metrics</span></a>`}
     <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send back</span></a>
   </div>
 </header>
@@ -3634,6 +3748,31 @@ async function handleRequest(state, req, res) {
         }
     }
 
+    // Metrics: the source ledger's verdicts and yield, read only.
+    if ((pathname === '/metrics' || pathname === '/metrics.json') && req.method === 'GET') {
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        try {
+            const loaded = reviewQueue.loadSourceHealth(sharedRoot) || { health: null, records: [] };
+            const sortOf = (key, dir) => (query[key] ? { key: String(query[key]), direction: String(query[dir] || '') === 'desc' ? 'desc' : 'asc' } : null);
+            if (pathname === '/metrics.json') {
+                const MetricsSections = require(path.join(repoRoot, 'scripts', 'metrics-sections'));
+                const health = loaded.health;
+                return sendJson(res, 200, {
+                    ok: true,
+                    hosts: health ? health.hosts : 0,
+                    troubled: health ? health.troubled : 0,
+                    counts: health ? health.counts : {},
+                    rows: health ? health.rows.map((row) => ({ host: row.host, verdict: row.verdict, flags: row.flags, since: row.since, sparse: row.sparse, flagged: row.flagged, extracted: row.latest.extracted, bear: row.latest.bear, upcoming: row.latest.upcoming, lostDays: row.lostDays, badges: row.quality && row.quality.badges ? row.quality.badges.map((badge) => badge.chip) : [] })) : [],
+                    yield: MetricsSections.buildSourceYieldRows(loaded.records, { runs: 7 })
+                });
+            }
+            return sendHtml(res, 200, renderMetricsPage(loaded, { sourceSort: sortOf('sort', 'dir'), yieldSort: sortOf('ysort', 'ydir') }));
+        } catch (error) {
+            console.error(`Metrics render failed: ${error.stack || error}`);
+            return sendText(res, 500, `Metrics render failed: ${error.message}`);
+        }
+    }
+
     // Source audit: the Mac's automated findings (read only) and the fix queue.
     if (pathname === '/review/source-audit' && req.method === 'GET') {
         const sourceAudit = require(path.join(__dirname, 'source-audit'));
@@ -3679,7 +3818,7 @@ async function handleRequest(state, req, res) {
         return res.end(found.buffer);
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/source-audit /review/source-audit.json /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/source-audit /review/source-audit.json /metrics /metrics.json /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
 }
 
 function parsePortFromArgv(argv) {
@@ -3737,6 +3876,7 @@ module.exports = {
     tailLines,
     renderRunFormPage,
     renderSourceAuditPage,
+    renderMetricsPage,
     countSourceAuditOpen,
     renderConfirmRunPage,
     parsePortFromArgv,
