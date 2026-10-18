@@ -16615,6 +16615,14 @@ class SharedCore {
         return Boolean(event && typeof event === 'object' && event._aggregatorUnbackedWithheld && !event._ownerReviewApproved);
     }
 
+    // The only model-read event of a page the crawl reached, dated by
+    // nothing beside its name (stamp site: AiWebParser.markLoneCrawlEvent):
+    // withheld from every automatic write, offered on the deck, written
+    // once the owner approves it there.
+    static isLoneCrawlWithheld(event) {
+        return Boolean(event && typeof event === 'object' && event._loneCrawlWithheld && !event._ownerReviewApproved);
+    }
+
     async mergeParsedEvents(existingEvent, newEvent, options = {}) {
         // Exactly one side from an aggregator: no arbitration, no priorities —
         // the event's own source wins (see "Aggregators are for DISCOVERY").
@@ -22041,6 +22049,8 @@ class SharedCore {
             // withheld from every automatic write; the deck shows it and
             // its approval lets it through, like a big drift.
             (offeringToOwner || !SharedCore.isAggregatorUnbackedWithheld(event)) &&
+            // A lone model-read event from a crawled page: the deck decides.
+            (offeringToOwner || !SharedCore.isLoneCrawlWithheld(event)) &&
             // Fully-past spans are display-only: nothing left to attend, so
             // the write is withheld at analysis (buildAnalyzedCalendarEvent
             // stamps _pastSpanWithheld + the span-fully-past review flag)
@@ -22229,6 +22239,10 @@ class SharedCore {
         if (SharedCore.isBigDriftWithheld(event)) {
             const reason = String(event._bigDriftWithheld.reason || '').trim();
             return `WITHHELD (big drift — ${reason || 'identity changed'}; decide on the deck)`;
+        }
+        if (SharedCore.isLoneCrawlWithheld(event)) {
+            const reason = String(event._loneCrawlWithheld.reason || '').trim();
+            return `WITHHELD (lone event from a crawled page — ${reason || 'its date is stated nowhere beside its name'}; decide on the deck)`;
         }
         if (SharedCore.isRecurringSeriesEvent(event)) {
             if (event._seriesWrite === true && event._ownerReviewApproved) return 'APPROVED (series — the phone writes the recurring event)';
@@ -24341,7 +24355,7 @@ class SharedCore {
             // parsed record came out as "[Circular]" on the analyzed one
             // (replay 2026-10-11: every aggregator-pointer card lost its
             // facts). Cloned here, each copy is written in full.
-            for (const stampKey of ['_aggregatorUnbackedWithheld', '_imageReusedFrom', '_chimeraWithheld']) {
+            for (const stampKey of ['_aggregatorUnbackedWithheld', '_imageReusedFrom', '_chimeraWithheld', '_loneCrawlWithheld']) {
                 if (event[stampKey] && typeof event[stampKey] === 'object') {
                     analyzedEvent[stampKey] = JSON.parse(JSON.stringify(event[stampKey]));
                 }

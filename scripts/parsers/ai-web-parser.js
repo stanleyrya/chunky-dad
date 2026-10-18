@@ -1925,6 +1925,10 @@ class AiWebParser {
             // A record named after a button or a photo caption, and after
             // nothing else on the page, is page furniture the model adopted.
             const keptEvents = this.dropPageFurnitureTitledEvents(allowedEvents, effectiveHtmlData && effectiveHtmlData.html, sourceUrl);
+            // The only event read off a page the crawl reached, dated by
+            // nothing beside its own name, is offered to the owner, not
+            // proposed (see markLoneCrawlEvent).
+            this.markLoneCrawlEvent(keptEvents, effectiveHtmlData, parserConfig, sourceUrl);
             // A page that places its cards in its own prose (see
             // placeEventsAtPageStatedVenue).
             this.placeEventsAtPageStatedVenue(keptEvents, effectiveHtmlData, parserConfig);
@@ -3346,6 +3350,105 @@ class AiWebParser {
     // description and no link of its own, is that sibling's sub-heading.
     // Fails closed: any token the sibling's title does not carry, any
     // description, any link, or another day keeps the record.
+    // A page the crawl reached (not one the owner configured) that yields
+    // exactly ONE model-read event, whose date is stated nowhere near its
+    // name, is the model obliging an empty page: the contact page
+    // ("Events for September 25, 2026"), a shop product, a day view, a
+    // promoter's home page — bearsevents.com, sitgesbearcave.com,
+    // theurbanbear.com on run 20261018-161635, the date lifted from a
+    // sidebar or footer. A listing (the configured page) with one event
+    // is a quiet night, not this; a page with two or more read events has
+    // rows; and a date printed within a few lines of the name is the page
+    // stating it. Such a record is withheld from every automatic write
+    // and shown on the deck with the lines around its name, for the owner
+    // to approve or reject (present data when unclear).
+    markLoneCrawlEvent(events, htmlData, parserConfig, sourceUrl) {
+        const list = Array.isArray(events) ? events.filter(Boolean) : [];
+        if (list.length !== 1 || !sourceUrl) return;
+        const event = list[0];
+        const configured = (Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [])
+            .some(url => this.getUrlDedupeKey(this.normalizeUrl(url, url)) === this.getUrlDedupeKey(sourceUrl));
+        if (configured) return;
+        if (!(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return;
+        // A date the page's own structured data or a stated rule produced
+        // is not the model's guess.
+        if (event._barFromJsonLd || event._startDateRawText || event._dateOrigin || event._extractionSource === 'jsonld') return;
+        // Block boundaries are line breaks: "beside the name" is measured in
+        // the page's own lines, not in whatever whitespace the markup had.
+        const lined = htmlData && typeof htmlData.html === 'string'
+            ? { ...htmlData, html: htmlData.html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt)>/gi, '$&\n') }
+            : htmlData;
+        const windowInfo = this.undatedRowWindow(lined, event.title);
+        if (!windowInfo) return;
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
+        const title = fold(event.title);
+        const lines = windowInfo.lines.slice(1); // the first entry is the title itself (undatedRowWindow prepends it)
+        let at = -1;
+        for (let i = 0; i < lines.length; i++) { if (title && fold(lines[i]).includes(title)) { at = i; break; } }
+        if (at < 0) {
+            // The name is nowhere in the page's lines (OCR-only, or a
+            // paraphrase): nothing beside it can state the date.
+            at = -1;
+        }
+        const near = at >= 0 ? lines.slice(Math.max(0, at - 6), at + 7) : [];
+        const dayParts = this.localDateParts(event.startDate, event._timezoneUnresolved ? 'UTC' : (event.timezone || null));
+        const stated = dayParts ? AiWebParser.textStatesDate(near.join('\n'), dayParts) : false;
+        if (stated) return;
+        const reason = at < 0
+            ? 'the only event read from a page the crawl reached, and its name is not in the page\'s text'
+            : 'the only event read from a page the crawl reached, and no date is stated within six lines of its name';
+        event._loneCrawlWithheld = {
+            page: sourceUrl,
+            day: dayParts ? `${dayParts.year}-${String(dayParts.month).padStart(2, '0')}-${String(dayParts.day).padStart(2, '0')}` : '',
+            reason,
+            near: near.slice(0, 13).map(line => line.slice(0, 160))
+        };
+        console.log(`🧭 LONE EVENT: "${event.title}" on ${sourceUrl} — ${reason}; withheld for the owner`);
+    }
+
+    localDateParts(date, timezone) {
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', { timeZone: timezone || 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' });
+            const parts = Object.fromEntries(formatter.formatToParts(date).filter(p => p.type !== 'literal').map(p => [p.type, Number(p.value)]));
+            if (!parts.year || !parts.month || !parts.day) return null;
+            return { year: parts.year, month: parts.month, day: parts.day };
+        } catch (_) { return null; }
+    }
+
+    // Does this text state this calendar day — a month name (several
+    // languages, long or short) with the day number beside it, or a
+    // numeric date in either order, or an ISO date? A weekday or a time
+    // alone is not a date.
+    static textStatesDate(text, { year, month, day }) {
+        const source = String(text || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
+        if (!source) return false;
+        const MONTHS = [
+            ['january', 'jan', 'enero', 'ene', 'gener', 'gen', 'janvier', 'janv', 'januar', 'jan', 'gennaio', 'genn', 'janeiro', 'januari'],
+            ['february', 'feb', 'febrero', 'febrer', 'fevrier', 'fev', 'februar', 'febbraio', 'fevereiro', 'februari'],
+            ['march', 'mar', 'marzo', 'marc', 'mars', 'marz', 'maerz', 'marco', 'maart'],
+            ['april', 'apr', 'abril', 'abr', 'avril', 'avr', 'aprile'],
+            ['may', 'mayo', 'maig', 'mai', 'maggio', 'mag', 'maio', 'mei'],
+            ['june', 'jun', 'junio', 'juny', 'juin', 'juni', 'giugno', 'giu', 'junho'],
+            ['july', 'jul', 'julio', 'juliol', 'juillet', 'juil', 'juli', 'luglio', 'lug', 'julho'],
+            ['august', 'aug', 'agosto', 'ago', 'agost', 'aout', 'augustus', 'augusti'],
+            ['september', 'sep', 'sept', 'septiembre', 'setembre', 'set', 'septembre', 'settembre', 'sett', 'setembro'],
+            ['october', 'oct', 'octubre', 'octobre', 'oktober', 'okt', 'ottobre', 'ott', 'outubro', 'out'],
+            ['november', 'nov', 'noviembre', 'novembre', 'novembro'],
+            ['december', 'dec', 'diciembre', 'dic', 'desembre', 'des', 'decembre', 'dezember', 'dez', 'dicembre', 'dezembro']
+        ];
+        const names = MONTHS[month - 1].join('|');
+        const d = String(day), dd = String(day).padStart(2, '0'), m = String(month), mm = String(month).padStart(2, '0');
+        const dayToken = `(?:${d}|${dd})(?:st|nd|rd|th|\\.|º|°|er)?`;
+        const patterns = [
+            new RegExp(`\\b(?:${names})\\.?,?\\s+${dayToken}\\b`),           // September 3, Sept. 03
+            new RegExp(`\\b${dayToken}\\s+(?:de\\s+|d'|of\\s+)?(?:${names})\\b`), // 3 de septiembre, 3rd of September, 3. September
+            new RegExp(`\\b${year}-${mm}-${dd}\\b`),                               // ISO
+            new RegExp(`\\b(?:${m}|${mm})/(?:${d}|${dd})(?:/(?:${year}|${String(year).slice(2)}))?\\b`), // 9/3/2026
+            new RegExp(`\\b(?:${d}|${dd})[./-](?:${m}|${mm})(?:[./-](?:${year}|${String(year).slice(2)}))?\\b`) // 3.9.2026, 03/09
+        ];
+        return patterns.some(pattern => pattern.test(source));
+    }
+
     // Page furniture a model adopts as an event name: the label of a button
     // ("Load More" on eaglemanchester.com's home page, run 20261017-054812,
     // dated by an invented repeat) and the caption under a photo ("Robert
@@ -19299,6 +19402,32 @@ class AiWebParser {
             }
         }
 
+        // A feed under any section ("/events/feed/" — The Events Calendar's
+        // RSS, read by AI as an event named "en-US", run 20261018-161635).
+        if (/\/feed\/?$/.test(lowerPath) || /(?:^|[?&])feed=/i.test(parsedUrl.search || '')) return { valid: false, reason: 'wordpress-infrastructure' };
+        // A calendar plugin's OTHER VIEWS of the same calendar — today, a
+        // day, a month, a week, list/photo/map, a category/tag/venue/
+        // organizer archive, an iCal export — are the listing we already
+        // read, re-arranged. Followed as pages they read as events: ten
+        // "Events for July 27, 2026" (bearsevents.com's day views) and one
+        // "Events for" (sitgesbearcave.com/events/today/), run
+        // 20261018-161635. Route SHAPES of the calendar plugins (The Events
+        // Calendar, MEC, EventON) under any base segment — the configured
+        // listing itself never comes through here.
+        const viewSearch = (parsedUrl.search || '').toLowerCase();
+        if (/^\/[^/]+\/(?:today|list|month|week|day|photo|map|upcoming|past|summary)\/?$/.test(lowerPath)
+            || /^\/[^/]+\/\d{4}-\d{2}(?:-\d{2})?\/?$/.test(lowerPath)
+            || /^\/[^/]+\/(?:month|week|day|list|photo|map)\/\d{4}-\d{2}(?:-\d{2})?\/?$/.test(lowerPath)
+            || /^\/[^/]+\/(?:category|tag|organizer|organiser|venue)\/[^/]+\/?$/.test(lowerPath)
+            || /(?:^|[?&])(?:tribe-bar-date|eventdisplay|tribe_event_display|tribe-events-cat|eventdate|post_type=tribe_events|mec_[a-z_]+|evo_[a-z_]+)(?:=|&|$)/.test(viewSearch)) {
+            return { valid: false, reason: 'calendar-view-route' };
+        }
+        // A shop's product pages sell things; the calendar lists the nights
+        // (shop/cart/checkout/account paths are blocked above). A WooCommerce product ("Sitges Bears Week VIP Pass 2026", same run)
+        // read as a page becomes a dated "event" named after a ticket.
+        if (/^\/(?:product|product-category|product-tag)(?:\/|$)/.test(lowerPath)) {
+            return { valid: false, reason: 'shop-route' };
+        }
         return { valid: true, reason: 'valid' };
     }
 

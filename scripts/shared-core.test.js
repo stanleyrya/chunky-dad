@@ -28923,3 +28923,11 @@ test('splitVenueNameAndStreet: the three shapes a list types into one venue slot
   assert.deepEqual(SharedCore.splitVenueNameAndStreet('The Eagle, 554 W 28th St, New York', street), { venue: 'The Eagle', address: '554 W 28th St, New York' });
   assert.deepEqual(SharedCore.splitVenueNameAndStreet('', street), { venue: '', address: '' });
 });
+
+test('a lone crawled-page event is withheld from every automatic write, offered on the deck, and written once approved', () => {
+  const event = { title: 'Events for September 25, 2026', startDate: new Date('2026-09-03T20:00:00.000Z'), _action: 'new', _loneCrawlWithheld: { page: 'https://www.bearsevents.com/contact-us-2/', day: '2026-09-03', reason: 'the only event read from a page the crawl reached, and no date is stated within six lines of its name', near: [] } };
+  assert.equal(SharedCore.filterEventsForExecution([event]).length, 0, 'never written on its own');
+  assert.equal(SharedCore.filterEventsForExecution([event], { offeringToOwner: true }).length, 1, 'the deck sees it');
+  assert.match(SharedCore.describeExecutionDisposition(event), /^WITHHELD \(lone event from a crawled page — the only event read from a page the crawl reached/);
+  assert.equal(SharedCore.filterEventsForExecution([{ ...event, _ownerReviewApproved: true }]).length, 1, 'approved on the deck, it is written');
+});

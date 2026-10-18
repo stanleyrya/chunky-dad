@@ -786,6 +786,16 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
             url: String(unbacked.nearest.url || '')
         } : null
     } : null;
+    // The only model-read event of a crawled page, dated by nothing beside
+    // its name (ai-web-parser markLoneCrawlEvent): the page and the lines
+    // around the name, so the owner can see what the model saw.
+    const lone = event._loneCrawlWithheld && typeof event._loneCrawlWithheld === 'object' ? event._loneCrawlWithheld : null;
+    const loneCrawl = lone ? {
+        page: String(lone.page || ''),
+        day: String(lone.day || ''),
+        reason: String(lone.reason || ''),
+        near: (Array.isArray(lone.near) ? lone.near : []).map((line) => String(line || '')).filter(Boolean).slice(0, 13)
+    } : null;
     const reused = event._imageReusedFrom && typeof event._imageReusedFrom === 'object' ? event._imageReusedFrom : null;
     const imageReusedFrom = reused ? {
         image: String(reused.image || ''),
@@ -797,6 +807,7 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
     return {
         bigDrift,
         aggregatorUnbacked,
+        loneCrawl,
         imageReusedFrom,
         bearVerdict: storedVerdict ? storedVerdict.verdict : null,
         bearVerdictStampedAt: storedVerdict ? storedVerdict.stampedAt || null : null,
