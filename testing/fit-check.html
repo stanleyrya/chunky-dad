@@ -114,6 +114,7 @@ input[type=file] { padding:6px; }
     <div id="stageWrap"></div>
     <div class="toolbar">
       <span class="zoom">Zoom <input id="zoom" type="range" min="0.5" max="4" step="0.05" value="1" aria-label="Zoom"> <button id="fit" type="button" title="Fit the whole plan in view">Fit</button></span>
+      <button id="undo" type="button" title="Undo the last change (Cmd/Ctrl+Z)" disabled>↶ Undo</button>
       <button id="calBtn" type="button" title="Tap two points on the plan with a known distance between them">📏 Set scale</button>
       <span id="scaleInfo" class="save"></span>
       <span id="saveState" class="save" style="margin-left:auto"></span>
@@ -126,7 +127,7 @@ input[type=file] { padding:6px; }
       <button id="calCancel" type="button">Cancel</button>
     </div>
     <div id="selbar" class="selbar"><span class="who" id="selWho"></span><button id="rotate" type="button">⟳ Rotate</button><button id="dup" type="button">⧉ Duplicate</button><button id="remove" type="button">✕ Delete</button></div>
-    <p class="hint">Drag a piece to move it; double-tap it to rotate. Drag the plan itself to pan. Edges snap together when close; red means two pieces overlap. <span class="keys">Arrow keys nudge 1", Shift+arrow 1', R rotates, Delete removes.</span> The tool knows the scale, not the walls, so check those by eye.</p>
+    <p class="hint">Drag a piece to move it; double-tap it to rotate. Drag the plan itself to pan. Edges snap together when close; red means two pieces overlap. Undo takes back the last change. <span class="keys">Arrow keys nudge 1", Shift+arrow 1', R rotates, Delete removes.</span> The tool knows the scale, not the walls, so check those by eye.</p>
     <div id="status" class="status"></div>
   </div>
 
@@ -219,8 +220,28 @@ function toast(text) { toastEl.textContent = text; toastEl.classList.add('show')
 // ---------- Persistence: this browser ----------
 function ls(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
 const pending = {};
-function persist(a) {
+// Undo: every change ends in persist(), so the state as it was before each
+// change is kept there (furniture + scale), up to 50 steps per apartment.
+const history = {}, lastState = {};
+const stateOf = a => JSON.stringify({ ppi: a.ppi, furniture: a.furniture });
+function rememberState(a) { if (a) lastState[a.id] = stateOf(a); renderUndo(); }
+function renderUndo() { const a = apt(); $('undo').disabled = !(a && history[a.id] && history[a.id].length); }
+function undo() {
+  const a = apt(); const stack = a && history[a.id];
+  if (!stack || !stack.length) return;
+  const prev = JSON.parse(stack.pop());
+  a.ppi = prev.ppi; a.furniture = prev.furniture; selected = null;
+  lastState[a.id] = stateOf(a);
+  persist(a, { silent: true }); renderStage(); renderPanel(); renderUndo(); toast('Undone');
+}
+function persist(a, options) {
   if (!a) return;
+  if (!(options && options.silent)) {
+    const now = stateOf(a), before = lastState[a.id];
+    if (before !== undefined && before !== now) { (history[a.id] = history[a.id] || []).push(before); if (history[a.id].length > 50) history[a.id].shift(); }
+    lastState[a.id] = now;
+    renderUndo();
+  }
   clearTimeout(pending[a.id]);
   pending[a.id] = setTimeout(() => {
     const saved = ls('fitcheck-apts') || {};
@@ -283,7 +304,7 @@ const overlaps = (a, b) => { const A = dims(a), B = dims(b); return a.x < b.x + 
 const problems = it => apt().furniture.some(o => o !== it && overlaps(it, o)) ? ['overlap'] : [];
 
 // ---------- Render ----------
-function renderAll() { renderSelect(); renderStage(); renderPanel(); renderBanner(); }
+function renderAll() { const a = apt(); if (a && lastState[a.id] === undefined) rememberState(a); renderSelect(); renderStage(); renderPanel(); renderBanner(); renderUndo(); }
 function renderBanner() {
   const a = apt(), b = $('shareBanner');
   if (!a || !a.shared) { b.hidden = true; b.innerHTML = ''; return; }
@@ -433,9 +454,10 @@ function snap(it, x, y) {
 $('aptSel').onchange = e => { activeId = e.target.value; selected = null; if (activeId !== 'shared') ls('fitcheck-active', activeId); renderAll(); };
 $('zoom').oninput = e => { zoom = +e.target.value; renderStage(); };
 $('fit').onclick = () => { zoom = 1; $('zoom').value = '1'; renderStage(); };
+$('undo').onclick = undo;
 let resizeTimer = null;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!drag) renderStage(); }, 150); });
-$('rotate').onclick = () => { if (!selected) return; selected.r = (selected.r + 90) % 360; persist(apt()); renderStage(); };
+$('rotate').onclick = () => { if (!selected) return; selected.r = (selected.r + 90) % 360; persist(apt()); renderStage(); renderPanel(); };
 $('remove').onclick = () => { if (!selected) return; const a = apt(); a.furniture = a.furniture.filter(o => o !== selected); selected = null; persist(a); renderStage(); renderPanel(); };
 $('dup').onclick = () => { if (!selected) return; const a = apt(); const c = { ...selected, id: String(uid++), x: selected.x + 6, y: selected.y + 6 }; a.furniture.push(c); selected = c; persist(a); renderStage(); renderPanel(); };
 $('addForm').addEventListener('submit', e => {
@@ -459,7 +481,9 @@ $('reset').onclick = () => {
 $('clear').onclick = () => { const a = apt(); if (!a) return; a.furniture = []; selected = null; persist(a); renderStage(); renderPanel(); };
 $('copyFurn').onclick = () => { const a = apt(); if (!a) return; let y = 12; for (const f of STARTER) { a.furniture.push({ ...f, id: String(uid++), x: 12, y, r: 0 }); y += f.d + 6; } persist(a); renderStage(); renderPanel(); };
 document.addEventListener('keydown', e => {
-  if (!selected || ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+  if ((e.metaKey || e.ctrlKey) && !e.shiftKey && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); return; }
+  if (!selected) return;
   const s = e.shiftKey ? 12 : 1;
   if (e.key === 'ArrowLeft') selected.x -= s; else if (e.key === 'ArrowRight') selected.x += s;
   else if (e.key === 'ArrowUp') selected.y -= s; else if (e.key === 'ArrowDown') selected.y += s;
