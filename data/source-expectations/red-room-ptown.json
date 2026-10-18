@@ -1,0 +1,323 @@
+{
+  "schemaVersion": 1,
+  "source": "Red Room Ptown",
+  "slug": "red-room-ptown",
+  "status": "complete",
+  "recheckAfter": "2026-11-17",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://redroom.club/events"
+    ],
+    "doors": [
+      {
+        "url": "https://redroom.club/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 7,
+        "truthFlag": "\"Upcoming Events\": six server-rendered cards (one holds two dates), no paging, no load-more",
+        "note": "Seat Engine venue site (footer \"Powered by Seat Engine\", ticketing at redroomatvelvet.seatengine.com). Each card: month-day header, title, full copy behind a more/less toggle, \"Buy Tickets\" (an expand toggle, no href) and the dated line(s) \"Thu Oct 29 2026,  9:30 PM\". Card links go to /events/<id>. Header and footer print \"258 Commercial Street / Provincetown MA 02657\"."
+      },
+      {
+        "url": "https://redroom.club/events",
+        "kind": "json-ld",
+        "role": "feed",
+        "rowsReturned": 7,
+        "truthFlag": "one block, a Place node whose \"Events\" array holds every upcoming show (7) — the same block is printed on /calendar",
+        "note": "The Place (\"Red Room \", PostalAddress 258 Commercial Street, Provincetown, MA) nests its shows under a capitalised \"Events\" key, a spelling schema.org never had. Each Event: name, startDate (UTC instant, no endDate), url (/shows/<id>), image (files.seatengine.com talent headshot), description (HTML), location = the Place. collectJsonLdEventNodes reads the key case-insensitively since 2026-10-18 (fixture scripts/fixtures/redroom-club-events-2026-10-18.html); before that the structured-data path walked past all seven."
+      },
+      {
+        "url": "https://redroom.club/calendar",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 43,
+        "truthFlag": "October 2026 grid: 43 title/time cells (36 on days already past, 7 on Oct 24-31) plus month/year selects and prev/next links",
+        "note": "Month grid of titles and clock times only; the month and year appear in <select> options, never in running text, which is why the list page is the configured door. Topped by \"2026 SHOWS, EVENTS, AND TICKETS...... COMING SOON!\". Carries the identical JSON-LD block."
+      },
+      {
+        "url": "https://redroom.club/calendar?month=11&year=2026",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "November 2026 grid: no event cells",
+        "note": "Second door for the empty horizon after Halloween."
+      },
+      {
+        "url": "https://redroom.club/calendar?month=12&year=2026",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "December 2026 grid: no event cells",
+        "note": "The season ends with Possessed 7 on Oct 31; nothing is listed after it."
+      },
+      {
+        "url": "https://redroom.club/events/140817",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "A card link. Answers with a redirect to /events (final URL https://redroom.club/events, identical bytes): the per-event addresses on this host are the listing itself. The shows’ real pages are the JSON-LD /shows/<id> URLs, which were not read."
+      }
+    ],
+    "notes": "Recon 2026-10-18: six reads (robots, /events, /calendar for October, November and December, one /events/<id> link). The site publishes 7 upcoming shows (6 titles; Dark Rooms: Jackie Cox twice), all between 2026-10-24 and 2026-10-31, every one on both the list page and in its JSON-LD. The October grid also shows 36 past cells for 8 past titles (O'Neill Festival of New Works, Poppy Champlin, Lisa Koch, Suzanne Westenhoefer, Girls On Fire, Mina Hartong, Zoe Lewis, Sister Funk) — counted, not enumerated. The discovery audit of 2026-10-17 counted 11 JSON-LD shows; four have since passed."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Listing door and its JSON-LD agree on the same 7 dated shows; the November and December grids are empty, so the 7 are everything the site publishes ahead. All are singles (no repeat is stated anywhere; the two Dark Rooms dates are two Event nodes). Past listings exist only on the /calendar grid (36 October cells), counted in recon.notes.",
+    "publishedEventCount": 7,
+    "documentedEventCount": 7,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "ptown",
+    "timezone": "America/New_York",
+    "bar": "Red Room",
+    "address": "258 Commercial Street, Provincetown, MA 02657",
+    "location": null,
+    "website": "https://redroom.club",
+    "instagram": "https://www.instagram.com/redroomptown"
+  },
+  "events": [
+    {
+      "id": "dark-rooms-jackie-cox-2026-10-24",
+      "kind": "single",
+      "title": "Dark Rooms:Jackie Cox",
+      "description": "This October, things are getting very dark… and very dirty! Back at the Red Room for her third Spooky Bear (and somehow still allowed back), Jackie Cox invites you to DARKROOMS her filthiest adults-only cabaret yet! Loosely inspired (and we cannot emphasize loosely enough) by the hit horror film Backrooms , Jackie slips through the wrong door (which, historically, is how most of her best nights begin) and plunges headfirst into a shadowy labyrinth of sex, camp, strange men, and stains best left unidentified. But don’t worry, scaredy-cats: DARKROOMS is only as scary as your clinic checkup will be the week after Halloween... Expect killer vocals, filthy comedy, ridiculous costumes, spooky silliness, and things that go bump in the night. There’s just one rule: absolutely no safe word. (We tried “Wellfleet” but that only made things worse) It’s part horror movie, part filthy cabaret, and part Dick Dock with a plot! Where the biggest fright of the night might just be when the lights come on. Come for the camp. Stay for what happens in the dark!",
+      "startDate": "2026-10-24",
+      "startTime": "19:00",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://redroom.club/shows/387533",
+      "ticketUrl": null,
+      "image": "https://files.seatengine.com/talent/headshots/photos/95664/full/data",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://redroom.club/events",
+        "quote": "\"url\":\"https://redroom.club/shows/387533\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD startDate 2026-10-24T23:00:00Z (UTC) = 2026-10-24 19:00 Provincetown time. One \"Upcoming Events\" card lists both dates (\"Sat, Oct 24, 2026 7:00 PM\" and \"Sat, Oct 31, 2026 7:00 PM\"); the JSON-LD carries each date as its own Event with its own /shows/ page."
+    },
+    {
+      "id": "furball-howl-underwear-and-gear-party-2026-10-29",
+      "kind": "single",
+      "title": "FURBALL:Howl Underwear and Gear Party",
+      "description": "Get your tickets now! Last year it sold out. Thursday Night! Brooklyn Joe brings his underwear party back to Red Room for Spooky Bear!",
+      "startDate": "2026-10-29",
+      "startTime": "21:30",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://redroom.club/shows/387797",
+      "ticketUrl": null,
+      "image": "https://files.seatengine.com/talent/headshots/photos/95709/full/data",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://redroom.club/events",
+        "quote": "\"url\":\"https://redroom.club/shows/387797\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD startDate 2026-10-30T01:30:00Z (UTC) = 2026-10-29 21:30 Provincetown time. Card text: \"Thu Oct 29 2026,  9:30 PM\". Furball is a curated promoter (data/promoters.json)."
+    },
+    {
+      "id": "tammie-brown-s-halloween-spooktacular-2026-10-30",
+      "kind": "single",
+      "title": "Tammie Brown's Halloween Spooktacular",
+      "description": "Tammie's annual SPOOKTACULAR.",
+      "startDate": "2026-10-30",
+      "startTime": "19:00",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://redroom.club/shows/381263",
+      "ticketUrl": null,
+      "image": "https://files.seatengine.com/talent/headshots/photos/93914/full/data",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://redroom.club/events",
+        "quote": "\"url\":\"https://redroom.club/shows/381263\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD startDate 2026-10-30T23:00:00Z (UTC) = 2026-10-30 19:00 Provincetown time."
+    },
+    {
+      "id": "thirsty-burlington-in-spooky-cher-2026-10-30",
+      "kind": "single",
+      "title": "Thirsty Burlington in Spooky Cher",
+      "description": "Thirsty is back for one night only in Spooky Cher for Spooky Bear!",
+      "startDate": "2026-10-30",
+      "startTime": "20:30",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://redroom.club/shows/385716",
+      "ticketUrl": null,
+      "image": "https://files.seatengine.com/talent/headshots/photos/95187/full/data",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://redroom.club/events",
+        "quote": "\"url\":\"https://redroom.club/shows/385716\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD startDate 2026-10-31T00:30:00Z (UTC) = 2026-10-30 20:30 Provincetown time."
+    },
+    {
+      "id": "belly-spooky-bear-edition-2026-10-30",
+      "kind": "single",
+      "title": "Belly: Spooky Bear Edition",
+      "description": "Belly is back with the Spooky Bear Underwear Party.",
+      "startDate": "2026-10-30",
+      "startTime": "21:30",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://redroom.club/shows/386153",
+      "ticketUrl": null,
+      "image": "https://files.seatengine.com/talent/headshots/photos/95651/full/data",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://redroom.club/events",
+        "quote": "\"url\":\"https://redroom.club/shows/386153\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD startDate 2026-10-31T01:30:00Z (UTC) = 2026-10-30 21:30 Provincetown time."
+    },
+    {
+      "id": "dark-rooms-jackie-cox-2026-10-31",
+      "kind": "single",
+      "title": "Dark Rooms:Jackie Cox",
+      "description": "This October, things are getting very dark… and very dirty! Back at the Red Room for her third Spooky Bear (and somehow still allowed back), Jackie Cox invites you to DARKROOMS her filthiest adults-only cabaret yet! Loosely inspired (and we cannot emphasize loosely enough) by the hit horror film Backrooms , Jackie slips through the wrong door (which, historically, is how most of her best nights begin) and plunges headfirst into a shadowy labyrinth of sex, camp, strange men, and stains best left unidentified. But don’t worry, scaredy-cats: DARKROOMS is only as scary as your clinic checkup will be the week after Halloween... Expect killer vocals, filthy comedy, ridiculous costumes, spooky silliness, and things that go bump in the night. There’s just one rule: absolutely no safe word. (We tried “Wellfleet” but that only made things worse) It’s part horror movie, part filthy cabaret, and part Dick Dock with a plot! Where the biggest fright of the night might just be when the lights come on. Come for the camp. Stay for what happens in the dark!",
+      "startDate": "2026-10-31",
+      "startTime": "19:00",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://redroom.club/shows/386124",
+      "ticketUrl": null,
+      "image": "https://files.seatengine.com/talent/headshots/photos/95664/full/data",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://redroom.club/events",
+        "quote": "\"url\":\"https://redroom.club/shows/386124\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD startDate 2026-10-31T23:00:00Z (UTC) = 2026-10-31 19:00 Provincetown time. One \"Upcoming Events\" card lists both dates (\"Sat, Oct 24, 2026 7:00 PM\" and \"Sat, Oct 31, 2026 7:00 PM\"); the JSON-LD carries each date as its own Event with its own /shows/ page."
+    },
+    {
+      "id": "possessed-7-halloween-blowout-2026-10-31",
+      "kind": "single",
+      "title": "Possessed 7 Halloween BLOWOUT",
+      "description": "We're baaaccck. And better than ever. Our 7th mega HALLOWEEN Party. All 3 clubs in full motion. The Graveyard, the Catacombs, and the Cornfield Drag Barn, and new this year- a SUPER VIP Balcony Lounge. It's the one party you'll die to attend! Plus a $1,000 CASH PRIZE for best costume! Get your tickets now while they're discounted!",
+      "startDate": "2026-10-31",
+      "startTime": "22:00",
+      "endDate": null,
+      "endTime": null,
+      "website": "https://redroom.club/shows/379756",
+      "ticketUrl": null,
+      "image": "https://files.seatengine.com/talent/headshots/photos/94432/full/data",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://redroom.club/events",
+        "quote": "\"url\":\"https://redroom.club/shows/379756\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "JSON-LD startDate 2026-11-01T02:00:00Z (UTC) = 2026-10-31 22:00 Provincetown time."
+    }
+  ],
+  "traps": [
+    {
+      "id": "card-links-redirect-to-listing",
+      "kind": "navigation",
+      "label": "Card links /events/<id> (six on the list page, one per cell on the grid)",
+      "why": "Every one answers with the listing page itself (302 to /events). A crawl that follows them re-reads the same list six times and finds no detail page; the shows’ own pages are the /shows/<id> URLs inside the JSON-LD. urlDiscoveryDepth 0 keeps the crawl on the page.",
+      "evidence": {
+        "url": "https://redroom.club/events",
+        "quote": "href=\"/events/140354\""
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "october-grid-past-cells",
+      "kind": "past-event",
+      "label": "October grid cells on Oct 3-17 (e.g. \"Poppy Champlin 8:30 PM\" on the 9th)",
+      "why": "Past shows on /calendar, a page the parser is not configured for and does not reach at depth 0; the grid names no month in text, so a reader that took these cells would also have to guess the month.",
+      "evidence": {
+        "url": "https://redroom.club/calendar",
+        "quote": "<a href=\"/events/134345\">Poppy Champlin</a>"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "coming-soon-banner",
+      "kind": "announcement",
+      "label": "\"2026 SHOWS, EVENTS, AND TICKETS...... COMING SOON!\" over the grid",
+      "why": "A stale season banner above a calendar that already lists the season; it names a year and nothing else.",
+      "evidence": {
+        "url": "https://redroom.club/calendar",
+        "quote": "2026 SHOWS, EVENTS, AND TICKETS...... COMING SOON!"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "place-node",
+      "kind": "venue-header",
+      "label": "The JSON-LD Place node \"Red Room \" (name, description, address, url http://redroom.club)",
+      "why": "The container of the shows, not a show: no startDate. collectJsonLdEventNodes keeps it out by requiring @type Event and a startDate.",
+      "evidence": {
+        "url": "https://redroom.club/events",
+        "quote": "\"@type\":\"Place\",\"name\":\"Red Room \""
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Ticket links: \"Buy Tickets\" on the list page is an expand toggle with no href, and the JSON-LD has no offers, so ticketUrl stays null unless the /shows/<id> page is read. At depth 0 the cards’ own pages are still fetched as enrichment (observed on Spa Excess); whether /shows/<id> yields a seatengine ticket link is unverified (not fetched during recon to stay inside the request budget).",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}

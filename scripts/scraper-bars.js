@@ -83,6 +83,22 @@ const scraperBars = {
       "coordinates": "13.7284617, 100.5329437"
     }
   ],
+  "berlin": [
+    {
+      "name": "Woof Berlin",
+      "city": "berlin",
+      "address": "Fuggerstraße 37, 10777 Berlin",
+      "coordinates": "52.4990874, 13.3416676",
+      "website": "https://www.woof-berlin.com"
+    },
+    {
+      "name": "SO36",
+      "city": "berlin",
+      "address": "Oranienstraße 190, 10999 Berlin",
+      "coordinates": "52.5003921, 13.4221017",
+      "website": "https://so36.com"
+    }
+  ],
   "birmingham": [
     {
       "name": "Eden",
@@ -367,6 +383,15 @@ const scraperBars = {
       "city": "fort-lauderdale",
       "address": "Northeast 4th Avenue, Fort Lauderdale, Florida",
       "coordinates": "26.1462600, -80.1403612"
+    }
+  ],
+  "gettysburg": [
+    {
+      "name": "Eisenhower Hotel & Conference Center",
+      "city": "gettysburg",
+      "address": "2634 Emmitsburg Rd, Gettysburg, PA 17325",
+      "coordinates": "39.765789, -77.2691996",
+      "website": "https://eisenhower.com"
     }
   ],
   "hong-kong": [
@@ -1012,7 +1037,8 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/boatslipresort",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
       "gayCities": "https://ptown.gaycities.com/hotels/10272-boatslip-resort-beach-club",
-      "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z",
+      "website": "https://theboatslip.com"
     },
     {
       "name": "Crown & Anchor",
@@ -1042,7 +1068,8 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/redroomptown",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
       "gayCities": "https://ptown.gaycities.com/bars/309562-red-room",
-      "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z"
+      "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z",
+      "website": "https://redroom.club"
     },
     {
       "name": "Provincetown Inn",
@@ -1328,7 +1355,8 @@ const scraperBars = {
       "name": "The Bear Cave",
       "city": "sitges",
       "address": "Carrer de Bonaire 12, 08870 Sitges",
-      "coordinates": "41.2360385, 1.8079068"
+      "coordinates": "41.2360385, 1.8079068",
+      "website": "https://sitgesbearcave.com"
     }
   ],
   "sydney": [
@@ -1372,7 +1400,8 @@ const scraperBars = {
       "name": "Spa Excess",
       "city": "toronto",
       "address": "105 Carlton Street, Toronto, Ontario",
-      "coordinates": "43.6620695, -79.3773558"
+      "coordinates": "43.6620695, -79.3773558",
+      "website": "https://spaexcess.com"
     },
     {
       "name": "Black Eagle Toronto",

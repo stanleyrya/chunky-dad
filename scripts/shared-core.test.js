@@ -532,6 +532,40 @@ test('extractJsonLdEventNodes finds Event nodes in plain, @graph, and list conta
   assert.equal(core.extractJsonLdEventNodes(mixedHtml).length, 1);
 });
 
+test('extractJsonLdEventNodes reads the shows a Place lists under its event / events / Events key', () => {
+  const core = createCore();
+
+  // redroom.club/events as served on 2026-10-18 (Seat Engine): ONE JSON-LD
+  // block, a Place whose shows sit in an "Events" array — capital E, a
+  // spelling schema.org never had. The structured-data path used to walk
+  // only `events` and found nothing on the page; the AI then re-read the
+  // list by eye.
+  const fs = require('fs');
+  const path = require('path');
+  const fixturePath = path.join(__dirname, 'fixtures', 'redroom-club-events-2026-10-18.html');
+  const nodes = core.extractJsonLdEventNodes(fs.readFileSync(fixturePath, 'utf8'));
+  assert.equal(nodes.length, 7, 'the seven upcoming shows are read out of the Place');
+  assert.deepEqual(nodes.map((node) => node.name).slice(0, 2), ['Dark Rooms:Jackie Cox', 'FURBALL:Howl Underwear and Gear Party']);
+  assert.equal(nodes[1].startDate, '2026-10-30T01:30:00Z');
+  assert.equal(nodes[1].url, 'https://redroom.club/shows/387797');
+  assert.equal(nodes[1].location && nodes[1].location.name, 'Red Room ');
+
+  // schema.org's own spellings: `event` on a Place, `events` on an Organization.
+  const placeHtml = `
+    <script type="application/ld+json">
+      {"@type":"Place","name":"A Bar","event":[{"@type":"Event","name":"Night One","startDate":"2026-11-05T21:00:00-05:00"}]}
+    </script>
+    <script type="application/ld+json">
+      {"@type":"Organization","name":"A Promoter","events":{"@type":"DanceEvent","name":"Night Two","startDate":"2026-11-06"}}
+    </script>`;
+  assert.deepEqual(core.extractJsonLdEventNodes(placeHtml).map((node) => node.name), ['Night One', 'Night Two']);
+
+  // The container itself is never an event, whatever it is called.
+  const containerOnly = `
+    <script type="application/ld+json">{"@type":"Place","name":"Just A Place","startDate":"2026-11-05","Events":[]}</script>`;
+  assert.equal(core.extractJsonLdEventNodes(containerOnly).length, 0);
+});
+
 test('classifyPage prefers JSON-LD Event count over the month-name heuristic', () => {
   const core = createCore();
 
@@ -28635,6 +28669,134 @@ test('a replaced primary picture takes its stale crop with it: the saved orienta
   assert.equal(finalEvent.image, newFlyer, logs.filter(line => /image/.test(line)).join('\n'));
   assert.ok(!finalEvent.imageVertical, `stale crop dropped: ${finalEvent.imageVertical}`);
   assert.ok(logs.some(line => line.includes('dropped imageVertical — a crop of the replaced primary picture')), logs.join('\n'));
+});
+
+test('bear verdict store: a title held both ways at one place decides nothing and says so; agreeing duplicates keep the first entry (never newest-wins); a bare year is not another party', () => {
+  const core = createCore();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    // The same title, stored twice, pointing both ways: no stored verdict
+    // applies — not the older (which stood first and used to win), not the
+    // newer. The conflict is exposed for the deck.
+    core.bearVerdicts = [
+      eagleNycVerdict('UNDERWEAR NIGHT @ Eagle NYC', { verdict: 'not_bear', stampedAt: '2026-09-21T04:15:45.423Z' }),
+      eagleNycVerdict('Underwear Night', { verdict: 'bear', stampedAt: '2026-10-06T23:03:19.733Z' })
+    ];
+    const event = eagleNycEvent('Underwear Night');
+    assert.equal(core.findStoredBearVerdictMatch(event), null, 'newest-wins is NOT applied on the title path');
+    assert.equal(core.findStoredBearVerdict(event), null);
+    assert.ok(logs.some((line) => line.includes('🐻 BEAR CHECK: "Underwear Night" — the verdict store holds this title both ways (') && line.includes('no stored verdict applied')), logs.join('\n'));
+    const conflict = core.findStoredBearVerdictConflict(event);
+    assert.equal(conflict.matchedBy, 'title');
+    assert.deepEqual(conflict.hits.map((hit) => [hit.verdict, hit.title]), [['not_bear', 'UNDERWEAR NIGHT @ Eagle NYC'], ['bear', 'Underwear Night']]);
+    // Another place is another party: no conflict there, no match either.
+    const elsewhere = { ...event, bar: 'Rockbar', address: '185 Christopher St, New York, NY', location: '' };
+    assert.equal(core.findStoredBearVerdictConflict(elsewhere), null);
+    assert.equal(core.findStoredBearVerdict(elsewhere), null);
+
+    // Agreeing duplicates: the first entry speaks, as it always did.
+    core.bearVerdicts = [
+      eagleNycVerdict('Underwear Night', { verdict: 'bear', stampedAt: '2026-09-21T00:00:00.000Z' }),
+      eagleNycVerdict('UNDERWEAR NIGHT @ Eagle NYC', { verdict: 'bear', stampedAt: '2026-10-06T00:00:00.000Z' })
+    ];
+    const agreeing = core.findStoredBearVerdictMatch(event);
+    assert.equal(agreeing.matchedBy, 'title');
+    assert.equal(agreeing.entry, core.bearVerdicts[0]);
+    assert.equal(core.findStoredBearVerdictConflict(event), null);
+
+    // A year-blind sibling the other way withholds the exact hit (Dallas
+    // Eagle, store 2026-10-18: bear on "… 2026", not bear on the plain title).
+    core.bearVerdicts = [
+      eagleNycVerdict('Underwear Night and Contest with DJ Michael Jon', { verdict: 'not_bear', stampedAt: '2026-09-21T04:15:45.423Z' }),
+      eagleNycVerdict('Underwear Night and Contest 2026', { verdict: 'bear', stampedAt: '2026-10-06T23:03:19.733Z' })
+    ];
+    const plain = eagleNycEvent('Underwear Night and Contest');
+    assert.equal(core.findStoredBearVerdictMatch(plain), null);
+    const yearConflict = core.findStoredBearVerdictConflict(plain);
+    assert.equal(yearConflict.matchedBy, 'title');
+    assert.equal(yearConflict.hits.length, 2);
+    // …but a year-blind sibling alone never becomes a match: fail closed.
+    core.bearVerdicts = [eagleNycVerdict('Underwear Night and Contest 2026', { verdict: 'bear' })];
+    assert.equal(core.findStoredBearVerdict(plain), null);
+    assert.equal(core.findStoredBearVerdictConflict(plain), null);
+    assert.equal(SharedCore.getBearVerdictYearBlindKey('underwear night contest 2026'), 'underwear night contest');
+    assert.equal(SharedCore.getBearVerdictYearBlindKey('route 66'), 'route 66', 'only a year is blind, not every number');
+
+    // The party fold both ways (no exact entry): the same refusal, exposed
+    // as a party conflict.
+    core.bearVerdicts = JOCKSTRAP_DECORATED.map((title) => eagleNycVerdict(title))
+      .concat([eagleNycVerdict('🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ PAPA SMURF | $20 CASH COVER', { verdict: 'bear', stampedAt: '2026-09-28T00:00:00.000Z' })]);
+    const party = eagleNycEvent('Jockstrap Wednesday');
+    assert.equal(core.findStoredBearVerdictMatch(party), null);
+    const partyConflict = core.findStoredBearVerdictConflict(party);
+    assert.equal(partyConflict.matchedBy, 'party');
+    assert.equal(partyConflict.hits.length, 4);
+    assert.ok(logs.some((line) => line.includes('holds this party both ways')));
+  } finally {
+    console.log = originalLog;
+  }
+});
+
+// ── Undated-row drops ride the bear-drop channel (2026-10-18) ────────────────
+test('undated-row drops reported by the parser reach bearDroppedEvents (results drop list) and the per-host ledger as "undated: …"; feed rows without the stamp are untouched', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const httpAdapter = {
+    fetchData: async (url) => ({ html: '<html><body>venue calendar</body></html>', url, statusCode: 200, headers: {} }),
+    postJson: async () => ({ ok: true, status: 200, text: JSON.stringify({ response: JSON.stringify({ verdict: 'bear', reason: 'bear night' }) }) })
+  };
+  const icsRow = { title: 'Bear Night', startDate: futureIsoAt(10, 21), bar: 'The Lumber Yard Bar', city: 'seattle', timezone: 'America/Los_Angeles', source: 'ics', url: 'https://www.thelumberyardbar.com/events/bear-night' };
+  const jsonLdRow = { title: 'Bear Happy Hour', startDate: futureIsoAt(12, 18), bar: 'Akbar', city: 'la', timezone: 'America/Los_Angeles', source: 'jsonld', url: 'https://akbarsilverlake.com/event/bear-happy-hour/' };
+  const undatedDrop = {
+    title: 'Terry Lee Presents',
+    startDate: new Date(futureIsoAt(33, 21)),
+    venue: 'Akbar',
+    reason: 'undated: no date or cadence on the page',
+    detail: 'dated by FREQ=MONTHLY;BYDAY=3TH (model-rrule); its own card states no date and no cadence',
+    host: 'akbarsilverlake.com',
+    sourcePageUrl: 'https://akbarsilverlake.com/about-us/our-team/',
+    event: { title: 'Terry Lee Presents', startDate: new Date(futureIsoAt(33, 21)), bar: 'Akbar', city: 'la', timezone: 'America/Los_Angeles', source: 'ai-web', url: 'https://akbarsilverlake.com/about-us/our-team/', _dateOrigin: { kind: 'rrule-fallback', real: false } }
+  };
+  let served = false;
+  const parsers = {
+    'ai-web': {
+      parseEvents: () => {
+        if (served) return { events: [], additionalLinks: [], undatedRowDrops: [] };
+        served = true;
+        return { events: [{ ...icsRow }, { ...jsonLdRow }], additionalLinks: [], undatedRowDrops: [undatedDrop] };
+      }
+    }
+  };
+  const parserConfig = {
+    name: 'Akbar',
+    urls: ['https://akbarsilverlake.com/about-us/our-team/'],
+    ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model', classifyPages: false, arbitrateMerges: false, bearCheck: { mode: 'enforce' } }
+  };
+  const result = await core.processParser(parserConfig, {}, httpAdapter, display, parsers, new Set());
+  assert.equal(result.events.length, 2, 'the ICS and JSON-LD rows are untouched');
+  assert.ok(result.events.every(event => !event._dateOrigin));
+  const dropped = result.bearDroppedEvents || [];
+  assert.equal(dropped.length, 1, 'one card in the drop list');
+  assert.equal(dropped[0].reason, 'undated: no date or cadence on the page');
+  assert.equal(dropped[0].title, 'Terry Lee Presents');
+  assert.equal(dropped[0].host, 'akbarsilverlake.com');
+  assert.equal(dropped[0].event._sourcePageUrl, 'https://akbarsilverlake.com/about-us/our-team/');
+
+  // The ledger: the host's bear funnel counts it as an extracted row the run
+  // let go, under its own reason.
+  const ledger = SharedCore.buildSourceLedger({
+    summary: { runId: '20261018-120000', timestamp: '2026-10-18T12:00:00.000Z' },
+    parserResults: [{ name: 'Akbar', totalEvents: 3, durationMs: 100, config: { urls: parserConfig.urls }, urlClassifications: {}, events: result.events }],
+    bearDroppedEvents: dropped,
+    analyzedEvents: [],
+    errors: []
+  }, { now: new Date('2026-10-18T12:00:00Z') });
+  const akbar = ledger.records.find(record => record.host === 'akbarsilverlake.com');
+  assert.ok(akbar, 'the host has a ledger line');
+  assert.equal(akbar.quality.bear.ai_dropped, 1);
+  assert.equal(akbar.quality.bear.top_reason, 'undated: no date or cadence on the page');
 });
 
 // ---------------------------------------------------------------------------

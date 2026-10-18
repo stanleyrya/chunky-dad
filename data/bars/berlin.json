@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Woof Berlin",
+    "city": "berlin",
+    "address": "Fuggerstraße 37, 10777 Berlin",
+    "coordinates": "52.4990874, 13.3416676",
+    "website": "https://www.woof-berlin.com"
+  },
+  {
+    "name": "SO36",
+    "city": "berlin",
+    "address": "Oranienstraße 190, 10999 Berlin",
+    "coordinates": "52.5003921, 13.4221017",
+    "website": "https://so36.com"
+  }
+]

@@ -411,6 +411,11 @@
       "q": "Daily audit of 2026-10-17 (\"The only event listed on the page is SMOOCH…\"): the audit read the raw 687 658-character JSON through the HTML text reader and capped it at 6 000 characters — SMOOCH's envelope alone — then judged every other extracted row unverifiable. The run extracted all 14 rows (5 kept, 9 dropped as not bear by the manual store or the AI). Fixed on branch audit/recheck-feeds: tools/source-audit.js renders a JSON or iCalendar door as one line per current record before the cap (scripts/feed-door-shapes.test.js).",
       "raisedOn": "2026-10-17",
       "blocking": false
+    },
+    {
+      "q": "robots.txt on events.ticketsauce.com disallows the events_by_organization feed this parser reads. Owner ruling 2026-10-18: keep reading it — it is a published subscription feed, not a crawl of the site. Recorded so a later robots audit does not stop the door.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
     }
   ]
 }

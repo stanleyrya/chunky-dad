@@ -1186,6 +1186,11 @@
       "q": "2026-10-17: run 20261017-054812 extracted all 45 rows and kept 25 (DOGGY DAYS ×5, SUNDAY FUNDAY ×5, MAKE MONDAYS SUCK LESS ×8 under manual not_bear verdicts; Howl-O-Ween and REWIND dropped by the AI). The ledger's \"lost\" rows BEARAOKE 2026-10-25 and GRRR 2026-10-30 are the feed's own changes: Oct 25 is now SCARYOKE and Oct 30 is \"GRRR: A Nightbear on Clark Street\" (the audit's \"renamed\" twin).",
       "raisedOn": "2026-10-17",
       "blocking": false
+    },
+    {
+      "q": "robots.txt on events.ticketsauce.com disallows the events_by_organization feed this parser reads. Owner ruling 2026-10-18: keep reading it — it is a published subscription feed, not a crawl of the site. Recorded so a later robots audit does not stop the door.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
     }
   ]
 }

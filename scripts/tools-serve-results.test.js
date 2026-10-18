@@ -2082,6 +2082,83 @@ test('review routes: a gone-from-source card renders with its reason and the Gon
   }
 });
 
+test('renderReviewCard (verdict-conflict): both verdicts side by side with their days and spellings, the run\'s own row and what the run did, and no buttons', () => {
+  const ctx = buildReviewCtx();
+  const html = renderReviewCard({ kind: 'verdict-conflict', key: 'verdict-conflict|underwear night contest|dallas eagle', proposal: {
+    kind: 'verdict-conflict', title: 'Underwear Night and Contest', startDate: '2030-10-04T02:00:00.000Z', endDate: '2030-10-04T05:00:00.000Z', timezone: 'America/Chicago',
+    bar: 'Dallas Eagle', address: '525 S Riverfront Blvd, Dallas, TX 75207', city: 'dallas', url: 'https://dallaseagle.com/events', image: 'https://x/underwear.jpg',
+    runSaid: 'dropped — manual store: not_bear (verdict stamped 2026-09-21)', matchedBy: 'title', occurrences: 2, changes: {},
+    hits: [
+      { verdict: 'bear', stampedAt: '2026-10-06T23:03:19.733Z', title: 'Underwear Night and Contest 2026', venue: 'Dallas Eagle', city: 'dallas' },
+      { verdict: 'not_bear', stampedAt: '2026-09-21T04:15:45.423Z', title: 'Underwear Night and Contest', venue: 'Dallas Eagle', city: 'dallas' }
+    ]
+  }, display: {} }, ctx);
+  assert.ok(html.includes('⚖️ You said both') && html.includes('→ bear · ← not bear · 2 rows this run'));
+  assert.ok(html.includes('<h2>Underwear Night and Contest</h2>') && html.includes('Dallas Eagle') && html.includes('525 S Riverfront Blvd'));
+  assert.ok(html.includes('class="verdict is-bear"><b>🐻 bear</b><small>you said on 2026-10-06<br>as “Underwear Night and Contest 2026”</small>'), html);
+  assert.ok(html.includes('class="verdict is-not-bear"><b>🚫 not bear</b><small>you said on 2026-09-21<br>on this title</small>'), html);
+  assert.ok(html.includes('the same title at this place') && html.includes('(dropped — manual store: not_bear (verdict stamped 2026-09-21))'));
+  assert.ok(html.includes('src="https://x/underwear.jpg"'));
+  assert.ok(!html.includes('<button'), 'the swipe is the verdict — no buttons');
+});
+
+test('review routes: a title the store holds both ways is listed by /review/verdict-conflicts.json and counted on the deck; one settle through /review/bear ends it and the undo restores both entries', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-conflict-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  const place = { bar: 'Dallas Eagle', address: '525 S Riverfront Blvd, Dallas, TX 75207', location: '32.7693483, -96.8112576', city: 'dallas' };
+  const event = { title: 'Underwear Night and Contest', ...place, timezone: 'America/Chicago', startDate: '2030-10-04T02:00:00.000Z', endDate: '2030-10-04T05:00:00.000Z', url: 'https://dallaseagle.com/events', source: 'ai-web' };
+  const run = reviewRunFixture('20300101-051500');
+  run.bearDroppedEvents = [{ title: event.title, startDate: event.startDate, venue: event.bar, reason: 'manual store: not_bear (verdict stamped 2026-09-21)', host: 'dallaseagle.com', event }];
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(run));
+  const stored = (title, verdict, stampedAt) => ({ verdict, stampedAt, title, venue: place.bar, address: place.address, location: place.location, city: place.city });
+  const both = [stored('Underwear Night and Contest with DJ Michael Jon', 'not_bear', '2026-09-21T04:15:45.423Z'), stored('Underwear Night and Contest 2026', 'bear', '2026-10-06T23:03:19.733Z')];
+  const verdictsPath = reviewQueue.getBearVerdictsPath(dir);
+  reviewQueue.saveBearVerdicts(verdictsPath, both);
+  const previous = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  try {
+    const state = createServerState();
+    const listed = JSON.parse((await request(state, 'GET', '/review/verdict-conflicts.json')).body);
+    assert.equal(listed.ok, true);
+    assert.equal(listed.count, 1);
+    assert.equal(listed.entries, 2);
+    assert.deepEqual(listed.conflicts[0].hits.map((hit) => hit.verdict), ['bear', 'not_bear']);
+    assert.equal(listed.conflicts[0].venue, 'Dallas Eagle');
+
+    const deck = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(deck.counts['verdict-conflict'], 1);
+    assert.equal(deck.counts.verdictConflictsInStore, 1);
+    const card = deck.cards.find((entry) => entry.kind === 'verdict-conflict');
+    assert.ok(card, 'the card is on the deck');
+    assert.equal(card.proposal.hits.length, 2);
+    assert.ok(!deck.cards.some((entry) => entry.kind === 'dropped'), 'the dropped card yields to the conflict card');
+    const page = (await request(state, 'GET', '/review')).body;
+    assert.ok(page.includes('⚖️ 1 verdict both ways in the store') && page.includes('⚖️ You said both'));
+
+    // Settle: right swipe = bear, through the same route every bear tap uses.
+    const settle = JSON.parse((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'bear', event: card.display.bearIdentity, key: card.key }))).body);
+    assert.equal(settle.ok, true);
+    assert.equal(settle.replacedAll.length, 2, 'both stored entries went');
+    assert.equal(settle.verdicts, 1);
+    const saved = reviewQueue.loadBearVerdicts(verdictsPath);
+    assert.deepEqual(saved.map((entry) => [entry.title, entry.verdict]), [['Underwear Night and Contest', 'bear']]);
+    assert.equal(JSON.parse((await request(state, 'GET', '/review/verdict-conflicts.json')).body).count, 0);
+    const after = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.ok(!after.cards.some((entry) => entry.kind === 'verdict-conflict'), 'settled — no card');
+    assert.equal(after.counts.verdictConflictsInStore, 0);
+    assert.equal(after.decided.find((entry) => entry.kind === 'dropped').decision.bearVerdict, 'bear', 'the dropped row is now decided by the one verdict');
+
+    // Undo: the whole set comes back, the settle goes.
+    const undo = JSON.parse((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'clear', event: card.display.bearIdentity, restore: settle.replacedAll }))).body);
+    assert.equal(undo.restored, true);
+    assert.deepEqual(reviewQueue.loadBearVerdicts(verdictsPath), both);
+    assert.equal(JSON.parse((await request(state, 'GET', '/review/verdict-conflicts.json')).body).count, 1);
+  } finally {
+    if (previous === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR; else process.env.CHUNKY_SHARED_STORAGE_DIR = previous;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('metrics routes: GET /metrics renders the ledger\'s Sources and Yield tables from the shared builders (sort via query), /metrics.json carries the rows and the yield, the deck header links it', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-metrics-route-'));
   fs.mkdirSync(path.join(dir, 'runs'));

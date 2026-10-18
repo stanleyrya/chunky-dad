@@ -2430,6 +2430,16 @@
       "q": "Images (2026-10-17): image 0% on this host is the feed — Google Calendar's public iCalendar export carries no ATTACH and no artwork property; the only picture available would be the promoter's favicon/site identity, which is a site-identity question, not an extraction one.",
       "raisedOn": "2026-10-17",
       "blocking": false
+    },
+    {
+      "q": "robots.txt on calendar.google.com disallows every path (Disallow: /) while serving this calendar's public iCalendar export. Owner ruling 2026-10-18: keep reading it — it is a published subscription feed, not a crawl of the site. Recorded so a later robots audit does not stop the door.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "Why LOCATION rarely names a venue (ledger place 10%): read of the live feed 2026-10-18 — 180 of 232 VEVENTs carry a LOCATION, but it is a neighbourhood for most (Garment District 41, Park Slope 24, Hell's Kitchen 52 across spellings, Midtown Manhattan 14, Tribeca 3) and a loft street address for some (457 W 56th St 2nd fl, 232 W 37th St 2nd fl, 279 E 10th St). These are private sex parties: the address is released on sign-up (\"sign up at manholenyc.com for address\"), the neighbourhood is the published truth and does not change per night. Not one venue, so no venue fill applies; place stays low by design.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
     }
   ]
 }

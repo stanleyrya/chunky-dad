@@ -222,7 +222,8 @@ const scraperPromoters = [
       "Bears Sitges",
       "Bears Sitges Week",
       "Bears Week Sitges",
-      "Bears Sitges Meeting"
+      "Bears Sitges Meeting",
+      "Bears Events"
     ],
     "shortName": "BEARS SITGES",
     "instagram": "https://www.instagram.com/bearssitgesofficial",
@@ -230,7 +231,8 @@ const scraperPromoters = [
     "website": "https://bearssitges.org",
     "bearAffinity": "always",
     "urlPatterns": [
-      "bearssitges"
+      "bearssitges",
+      "bearsevents.com"
     ]
   },
   {
@@ -265,14 +267,36 @@ const scraperPromoters = [
     "bearAffinity": "always"
   },
   {
+    "name": "Bear Fuzz Fest",
+    "aliases": [
+      "Fuzz Fest"
+    ],
+    "shortName": "FUZZ FEST",
+    "website": "https://bearfuzzfest.com",
+    "facebook": "https://www.facebook.com/bearfuzzfest",
+    "urlPatterns": [
+      "bearfuzzfest.com"
+    ],
+    "bearAffinity": "always"
+  },
+  {
     "name": "Urban Bear",
     "aliases": [
       "Urban Bear NYC",
-      "Urban Bear Weekend"
+      "Urban Bear Weekend",
+      "Urban Bear Street Fair",
+      "Fire Island Bear Weekend",
+      "FIBW"
     ],
+    "shortName": "URBAN BEAR",
+    "instagram": "https://www.instagram.com/urbanbearnyc",
     "website": "https://www.theurbanbear.com",
+    "facebook": "https://www.facebook.com/theurbanbear/",
     "urlPatterns": [
-      "theurbanbear.com"
+      "theurbanbear.com",
+      "instagram.com/urbanbearnyc",
+      "eventbrite.com/cc/the-18th-annual-urban-bear-nyc",
+      "eventbrite.com/e/fire-island-bear-weekend"
     ],
     "bearAffinity": "always"
   },
@@ -339,6 +363,52 @@ const scraperPromoters = [
       "eventbrite.co.uk/o/bears-of-london-meet-ups-64998384913",
       "instagram.com/bearsoflondon_network",
       "instagram.com/bearsoflondon_meetups"
+    ],
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Folsom Europe",
+    "aliases": [
+      "Folsom Europe e.V.",
+      "Folsom Berlin"
+    ],
+    "shortName": "FOLSOM EUROPE",
+    "instagram": "https://www.instagram.com/folsomeurope",
+    "website": "https://folsomeurope.berlin",
+    "urlPatterns": [
+      "folsomeurope.berlin",
+      "ems.switchedapp.com/programme/folsomeurope"
+    ]
+  },
+  {
+    "name": "Bears of San Francisco",
+    "aliases": [
+      "BOSF",
+      "Bears of SF"
+    ],
+    "shortName": "BOSF",
+    "instagram": "https://www.instagram.com/bearsofsf",
+    "website": "https://www.bosf.org",
+    "facebook": "https://www.facebook.com/BearsofSF/",
+    "urlPatterns": [
+      "bosf.org",
+      "instagram.com/bearsofsf"
+    ],
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Bear Jamboree",
+    "aliases": [
+      "Bear Jamboree Orlando",
+      "Bear Jamboree Weekend"
+    ],
+    "shortName": "JAM­BO­REE",
+    "instagram": "https://www.instagram.com/bearjamboree",
+    "website": "https://www.bearjamboree.com",
+    "facebook": "http://www.facebook.com/orlandobearpride",
+    "urlPatterns": [
+      "bearjamboree.com",
+      "instagram.com/bearjamboree"
     ],
     "bearAffinity": "always"
   }

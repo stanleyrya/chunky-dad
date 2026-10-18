@@ -172,6 +172,42 @@ const scraperConfig = {
       // reroutes to single-event extraction, whose payload window misses the schedule
     },
     {
+      name: "Sitges Bear Cave",
+      // The Bear Cave, Carrer de Bonaire 12 — Sitges's bear bar, the room the
+      // Bears Sitges Week programme links for the BEEFMINCE and MEGAWOOF
+      // nights. WordPress + The Events Calendar: the listing links its Tribe
+      // REST route and ?ical=1, which the crawler adopts itself (🚪 MACHINE
+      // DOOR). Its calendar holds only the festival week — six nights in
+      // September 2026 on 2026-10-18, nothing upcoming — so an empty feed is
+      // this source's normal state most of the year; the listing then shows
+      // a "Latest Past Events" block, not upcoming rows. The feed dates each
+      // after-midnight party on the morning it runs ("Thursday 10th September
+      // – BEEFMINCE DISCO" starts 2026-09-11 01:00) while the title names the
+      // night before. A bear bar on its own site: alwaysBear, and the curated
+      // record in data/bars/sitges.json ("The Bear Cave", the feed's own
+      // venue name) fills bar, address and coordinates.
+      urls: ["https://sitgesbearcave.com/events/"],
+      alwaysBear: true,
+      siteRole: "venue",
+      metadata: { website: { value: "https://sitgesbearcave.com" } },
+    },
+    {
+      name: "Bears Events (Sitges)",
+      // Bears Sitges Club's own ticket shop (the Bear Cave's footer reads
+      // "Copyright - Bears Events" too): WordPress + WooCommerce + The Events
+      // Calendar, so the Tribe REST route the listing links is the door. It
+      // carries the ticketed festival-week extras the programme page only
+      // names — the Bears Sunset Tea Dance at Hotel Mim, the Drag Brunch Bear
+      // Edition at Le Patio, the VIP Zone — with venue, address, price and
+      // flyer per row, where bearssitges.org gives a line of text. Six rows in
+      // its whole archive on 2026-10-18 and nothing upcoming: empty is normal
+      // between editions. The feed stamps every row timezone "UTC+0" although
+      // the venues are in Sitges — the wall-clock times are local. The
+      // promoter registry maps bearsevents.com to Bears Sitges Club.
+      urls: ["https://www.bearsevents.com/events/"],
+      alwaysBear: true,
+    },
+    {
       name: "Spooky Bear",
       // Northeast Ursamen's Provincetown Halloween weekend. 2026 schedule
       // publishes on THIS url ~Sept/Oct (2025 precedent: full text schedule,
@@ -180,6 +216,45 @@ const scraperConfig = {
       urls: ["https://www.ursamen.org/spookybear"],
       urlDiscoveryDepth: 1, // follow Zeffy/ThunderTix ticket links
       discoveryBlockedPatterns: ["ursamen.org/about", "ursamen.org/contact", "ursamen.org/the-board", "ursamen.org/our-sponsors", "ursamen.org/general-events", "coming-soon", "zeffy.com/donation-form"],
+    },
+    {
+      name: "Folsom Europe",
+      // Berlin's September fetish week. folsomeurope.berlin/program/ is a
+      // WordPress page whose body is ONE iframe of the festival's programme
+      // on Switched's "Event Control" (ems.switchedapp.com) — server-rendered,
+      // one day per page, the other days behind ?day= tabs; the parser's
+      // programme door reads every day (110 cards across five days for the
+      // 2026 edition). The WordPress site's own Tribe calendar holds only
+      // volunteer shifts, so the programme is configured directly: it is a
+      // root, so its day tabs are first-party reads although the host's
+      // robots.txt disallows crawlers (owner ruling 2026-10-18, as for the
+      // Google Calendar and TicketSauce feeds). Cards name their venue in
+      // the title or the blurb only (the Map link is a JS shell), so the
+      // bars data places them; the heading "Folsom Europe 2026" names the
+      // curated festival, which lends the city. The festival is a registry
+      // identity (data/promoters.json), so no metadata or alwaysBear here.
+      // Between editions the programme shows the past one, which the
+      // horizon drops.
+      urls: ["https://ems.switchedapp.com/programme/folsomeurope"],
+      // Every outbound link is the platform's tracking redirect (/url/<guid>)
+      // or a map shell; nothing on the host is worth following.
+      urlDiscoveryDepth: 0,
+    },
+    {
+      name: "Bear Fuzz Fest",
+      // Central PA Bears' winter bear weekend at the Eisenhower Hotel &
+      // Conference Center, Gettysburg (December 10-13, 2026). A plain
+      // WordPress site, no calendar plugin: the home page states the dates
+      // and the hotel in prose, which is the one event it publishes. The
+      // /event-schedule/ page is a tabbed programme (THURSDAY..SUNDAY) whose
+      // rows carry clock times and rooms but no date anywhere on the page —
+      // read alone they can only be dated by guessing, so the crawl stays on
+      // the home page (see data/source-expectations/bear-fuzz-fest.json).
+      // A pure source like Spooky Bear's: the festival is a registry identity
+      // (data/promoters.json carries its website, facebook and bearAffinity
+      // "always"), so no metadata or alwaysBear here.
+      urls: ["https://bearfuzzfest.com/"],
+      urlDiscoveryDepth: 0,
     },
     // ── Onboarding batch 2026-07-27 (recon-verified) — run each one alone
     // via the parser picker and review before including it in bigger runs. ──
@@ -733,6 +808,64 @@ const scraperConfig = {
       urlDiscoveryDepth: 0,
       metadata: { website: { value: "https://woofsatlanta.com" } },
     },
+    // ── Sources added 2026-10-18 (owner-approved from the discovery audit;
+    // one cached read per door, see data/source-expectations) ──
+    {
+      name: "The Boatslip",
+      // Provincetown's tea-dance resort (161 Commercial St), a Shopify site.
+      // /pages/events carries an Elfsight calendar widget — Rockbar's door,
+      // read by collectElfsightCalendarEvents: the boot payload holds the
+      // widget's whole history (232 entries on 2026-10-18: 11 nights left in
+      // 2026, the entire 2027 season already dated, the rest archive). Bear
+      // Week and Spooky Bear teas sit among general ones: the bear check
+      // decides. Everything is in the widget, and the rest of the site is
+      // rooms, dining and a store, so the crawl stays on the configured page.
+      urls: ["https://theboatslip.com/pages/events"],
+      urlDiscoveryDepth: 0,
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://theboatslip.com" } },
+    },
+    {
+      name: "Red Room Ptown",
+      // Provincetown cabaret and nightclub (258 Commercial St) on Seat
+      // Engine. /events is the "Upcoming Events" list: every show with its
+      // weekday date, time and copy, and the page's JSON-LD (a Place whose
+      // `Events` list holds one Event per show, with the show's own
+      // /shows/<id> page and headshot) is read by the structured-data path
+      // without AI. /calendar carries the same block over a month grid that
+      // never states its month in text, so the list page is the door. Each
+      // card's /events/<id> link answers with this same list (a redirect),
+      // so the crawl stays on the page; the shows' own /shows/<id> pages are
+      // still read as ticket-link enrichment (one request a show, each with
+      // the same JSON-LD). Hosts Furball, Belly and Spooky Bear nights among
+      // comedy and cabaret: the bear check decides.
+      urls: ["https://redroom.club/events"],
+      urlDiscoveryDepth: 0,
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://redroom.club" } },
+    },
+    {
+      name: "Spa Excess",
+      // Toronto bathhouse (105 Carlton St). WordPress home page with an
+      // EventON calendar frame — Precinct DTLA's door (📅 EVENTON): the
+      // month's cards come from the plugin's own AJAX call, replayed with
+      // the page's nonce, later months walked to the usual horizon. The
+      // plugin pre-expands its weekly nights into dated cards (Bears in
+      // Excess, Naked Night, CLIMAX! Fridays, Latin Night, Happy Hour). The
+      // cards' times print with a fixed +0:00 that the reader drops in
+      // favour of the venue's own clock. General programming: the bear
+      // check decides. The rest of the site is rooms, rates and policies, so
+      // the crawl stays on the home page and the cards' own pages, like
+      // Woofs Atlanta's — a dozen distinct event pages a run on top of the
+      // four month replays.
+      urls: ["https://spaexcess.com/"],
+      urlDiscoveryDepth: 0,
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://spaexcess.com" } },
+    },
     {
       name: "Gathr",
       // Aggregator for bear-week crowds (Provincetown Bear Week, Fire Island
@@ -820,6 +953,69 @@ const scraperConfig = {
       // — the same door as Megawoof America and Xposure Events. A few events
       // a year; zero upcoming is this source's normal state between them.
       urls: ["https://www.eventbrite.com/o/64998384913"],
+    },
+    // ── Sources added 2026-10-18 (owner-approved from the discovery audit;
+    // each door read once from the live site that day — the
+    // data/source-expectations files hold what was found) ──
+    {
+      name: "Bears of San Francisco",
+      // SF bear club (Squarespace, founded 1994). /events is the club's
+      // events collection — the same door as Mass Bears and Cubs: the page's
+      // ?format=json twin carries every upcoming item with its epoch times,
+      // flyer and page, and each item page serves ?format=ical. The Bear
+      // Calendar carried its Bearrison Street Fair and deadlift competition
+      // as copies; this is the club's own statement. On 2026-10-18 the
+      // collection held nothing upcoming (the 2026 fair had been the day
+      // before) and 142 past items, 30 a page — zero upcoming is this club's
+      // normal state between postings. A bear club, so everything it lists
+      // is a bear event: bearAffinity "always" in data/promoters.json, which
+      // also holds the club's site and socials (a registry identity carries
+      // no metadata or alwaysBear here).
+      urls: ["https://www.bosf.org/events"],
+    },
+    {
+      name: "Urban Bear",
+      // NYC promoter: Urban Bear NYC (four September days ending in the
+      // Street Fair) and Fire Island Bear Weekend (June). Squarespace with
+      // no events collection — the home page's own ?format=json twin is a
+      // plain page with no items — so each weekend's schedule is
+      // hand-written text on its page: the home page carries the NYC
+      // schedule (night, venue, street address, hour and price), /fibw the
+      // Fire Island one, both in the site's own nav; tickets are Eventbrite
+      // links. On 2026-10-18 both pages still showed the 2026 editions,
+      // already past; the next dates arrive on the same pages. Already a
+      // curated promoter (data/promoters.json, bearAffinity "always"); Bear
+      // World Magazine and Gathr carried 16 copies — this is the promoter's
+      // own statement.
+      // The home page also carries sponsor logos linking to venue sites
+      // (rockbarnyc.com among them); followed, the Elfsight reader turned
+      // Rockbar's whole calendar into 107 "Urban Bear" events in a solo
+      // validation run (2026-10-18). Discovery stays on the promoter's own
+      // pages; Rockbar is its own source.
+      urls: ["https://www.theurbanbear.com/"],
+      discoveryAllowedPatterns: ["theurbanbear.com"],
+    },
+    {
+      name: "Bear Jamboree",
+      // Orlando's bear weekend (early June: Crowne Plaza pool parties,
+      // Riptide at Typhoon Lagoon, Bearlicious at Hyatt Place). Wix. The
+      // audit proposed /tickets, but on 2026-10-18 that page served nothing
+      // beyond the nav: Wix Events & Tickets is installed, yet no page of
+      // the site carries an event-list section in its warmup blob, so the
+      // Wix reader has nothing to read until the next edition goes on sale.
+      // The weekend's content hangs off the home page instead: EVENTS →
+      // /events (the party names, each with its page: /tbt, /riptide, /red,
+      // /comedy-show), plus a /schedule page that only the sitemap names.
+      // Configured at the root so the crawl follows the site's own links to
+      // all of it; when the widget fills, its blob rides on every page and
+      // is read from the root as well. Everything dated here is an image:
+      // the 2027 dates are a home-page banner ("June 3-7,2027"), the
+      // October Sunday Tea Dance at Anthem is a gallery of flyers on
+      // /bear-tea-dance, and the party pages print month and day with no
+      // year — the OCR path is what reads this source (first run
+      // 2026-10-18: both found). A bear festival: bearAffinity "always" in
+      // data/promoters.json.
+      urls: ["https://www.bearjamboree.com/"],
     },
     {
       // ── New Site Template ─────────────────────────────────────────────

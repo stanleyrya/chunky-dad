@@ -210,6 +210,28 @@ const DAY_PHRASE_ORDINAL_ALTERNATION = DAY_PHRASE_ORDINAL_WORDS
 // them with margin on both sides.
 const DAY_PHRASE_TITLE_GAP_MAX = 25;
 
+// ── Undated rows: a rule the page states, or no row (2026-10-18) ─────────────
+// A row whose date the rrule fallback in normalizeAiEvent computed was never
+// dated by its page — the page stated no day, a rule did the arithmetic. Such
+// a row is kept only when the row's OWN words state a cadence: "Every
+// Thursday at Massive is our wildly popular and free party BlowPOP!"
+// (massive.club/monthly-events), "Wednesday nights @ 8:30pm" (QUEERAOKE,
+// thelumberyardbar.com/events), "1st Monday each Month" (akbarsilverlake.com
+// /about-us/our-team), the flyer's own "EVERY 2ND FRIDAY" (thelumberyardbar
+// .com/mothly-events). Generic English only — the day-phrase shapes above,
+// the bare period words here, and a weekday standing on its own ("Our Tuesday
+// Comedy Show!", "Theater Thursday", "Taco Tuesday": how a bar names a weekly
+// slot). A weekday that is part of a date ("Mon 05 Oct", "Friday 18th
+// September 2026") names ONE day and vouches for no rule.
+const UNDATED_ROW_PERIOD_WORDS = /\b(?:weekly|nightly|daily|monthly|weekends|every\s+(?:week|night|weekend|month|other\s+[a-z]+)|each\s+(?:week|night|weekend|month))\b/g;
+// What makes a weekday word part of a DATE rather than a slot name, within a
+// few characters on its own line: a month beside a day number ("05 Oct",
+// "October 27"), an ordinal day ("18th"), a numeric date ("10/3"), a year.
+const UNDATED_ROW_MONTH = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t|tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+const UNDATED_ROW_DATE_NEIGHBOUR = new RegExp(
+    `\\b${UNDATED_ROW_MONTH}\\.?,?\\s*\\d{1,2}\\b|\\b\\d{1,2}(?:st|nd|rd|th)?\\s*(?:of\\s+)?${UNDATED_ROW_MONTH}\\b`
+    + '|\\b\\d{1,2}(?:st|nd|rd|th)\\b|\\b\\d{1,2}\\s*\\/\\s*\\d{1,2}\\b|\\b(?:19|20)\\d{2}\\b');
+
 // ── Schedule-label lines (run 20260802-222252, thedallaseagle.com) ───────────
 // Listing widgets that print an event's schedule as its OWN labelled lines
 // ("Start from: August 9, 2026 - 9:00 pm" / "End at: August 10, 2026 - 12:00
@@ -1169,6 +1191,9 @@ class AiWebParser {
         var ocrResults = [];
         try {
             this.aiPromptHistory = [];
+            // Rows this page's assembly dropped as undated (assessUndatedRow),
+            // handed back on the result so SharedCore can show them.
+            this.undatedRowDrops = [];
             // The object the CALLER holds. A page is parsed through COPIES of
             // it (a linearized JSON payload, an html-augmented twin, the
             // per-segment spreads), so a page-level determination resolved on
@@ -1238,6 +1263,15 @@ class AiWebParser {
             if (jsonApiPayload === null) {
                 eventOnHtml = await this.collectEventOnCalendarHtml(effectiveHtmlData, parserConfig, httpAdapter);
                 if (eventOnHtml) effectiveHtmlData = { ...effectiveHtmlData, html: `${effectiveHtmlData.html}\n${eventOnHtml}` };
+            }
+            // A festival programme served by Switched's "Event Control" shows
+            // ONE day per page; the other days are tabs. Every day is read
+            // here and its cards become the programme's own events (see
+            // collectSwitchedProgramme).
+            let programme = null;
+            if (jsonApiPayload === null) {
+                programme = await this.collectSwitchedProgramme(effectiveHtmlData, parserConfig, httpAdapter);
+                if (programme && programme.html) effectiveHtmlData = { ...effectiveHtmlData, html: `${effectiveHtmlData.html}\n${programme.html}` };
             }
             const html = effectiveHtmlData && effectiveHtmlData.html ? effectiveHtmlData.html : '';
             // Calendar month feeds: a MEC month-grid page gets its NEXT
@@ -1343,6 +1377,7 @@ class AiWebParser {
             if (eventOnEvents.length > 0) {
                 console.log(`📅 EVENTON: built ${eventOnEvents.length} event(s) from the calendar's own cards for ${sourceUrl}`);
             }
+            const programmeEvents = programme ? this.buildSwitchedProgrammeEvents(programme, sourceUrl, cityConfig) : [];
             // JSON-API structured events run through the SAME completeness gate
             // and the SAME enrichment/stamping as JSON-LD (structured data
             // enriches, never bypasses). JSON-LD wins when both exist — in
@@ -1426,6 +1461,8 @@ class AiWebParser {
                 ? 'squarespace'
                 : (eventOnEvents.length > 0 && eventOnEvents.length >= completeJsonLdEvents.length
                     ? 'eventon'
+                : (programmeEvents.length > 0 && programmeEvents.length >= completeJsonLdEvents.length
+                    ? 'programme'
                 : (wixEvents.length > 0 && wixEvents.length >= completeJsonLdEvents.length
                     ? 'wix'
                 : (mecEvents.length > 0 && mecEvents.length >= completeJsonLdEvents.length
@@ -1437,13 +1474,15 @@ class AiWebParser {
                             : (pageDataEvents.length > 0
                                 ? 'page-data'
                             : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice'
-                                : (listingProseEvents.length > 0 && completeJsonLdEvents.length === 0 ? 'listing-prose' : null)))))))));
+                                : (listingProseEvents.length > 0 && completeJsonLdEvents.length === 0 ? 'listing-prose' : null))))))))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
                 : (structuredSource === 'listing-prose'
                     ? listingProseEvents
                 : (structuredSource === 'eventon'
                     ? eventOnEvents
+                : (structuredSource === 'programme'
+                    ? programmeEvents
                 : (structuredSource === 'wix'
                     ? wixEvents
                 : (structuredSource === 'mec'
@@ -1454,7 +1493,7 @@ class AiWebParser {
                             ? completeJsonApiEvents
                             : (structuredSource === 'page-data'
                                 ? pageDataEvents
-                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents))))))));
+                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)))))))));
             // A link hub's own JSON-LD / page data is not read (bearracuda.com
             // marks up a partial set on its hub; the detail pages are read
             // instead) — but a calendar DOOR the page itself opened (a widget
@@ -1484,6 +1523,8 @@ class AiWebParser {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the MEC month grid(s) — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'eventon') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the EventON calendar — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'programme') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the festival programme's own cards — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'wix') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Wix events widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
@@ -1908,6 +1949,7 @@ class AiWebParser {
 
             return {
                 events: foldedEvents,
+                undatedRowDrops: this.undatedRowDrops,
                 additionalLinks,
                 discoveredSegments,
                 ocrResults: ocrResults,
@@ -1922,6 +1964,7 @@ class AiWebParser {
             const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
             return {
                 events: [],
+                undatedRowDrops: Array.isArray(this.undatedRowDrops) ? this.undatedRowDrops : [],
                 additionalLinks: this.extractAdditionalUrls(html, sourceUrl, parserConfig),
                 discoveredSegments,
                 ocrResults: ocrResults,
@@ -10267,6 +10310,183 @@ class AiWebParser {
         return event;
     }
 
+    // ── Switched "Event Control" web programme ──────────────────────────
+    // A festival programme hosted by Switched (ems.switchedapp.com) and
+    // framed into the festival's own site (folsomeurope.berlin/program/ is
+    // an <iframe> and nothing else). Server-rendered, ONE day per page; the
+    // other days are tabs (`?day=<guid>`, minted per edition). Each card
+    // prints a date line — "FRI - 11 SEP 2026 - 22:00 - 04:00", or
+    // "... - FROM 22:00" for an open end — a title line, a description,
+    // its artwork, a "Web" link (the platform's redirect to the event's
+    // page) and a "Map" link (a JS map shell: no address in the HTML, so
+    // the venue is whatever the title and description name, filled by the
+    // bars data like any other text). Platform-shaped: the day tabs and the
+    // date-line grammar gate it, never the host. The configured programme
+    // page is a root, so its day tabs are first-party reads (the host's
+    // robots.txt disallows crawlers — the programme is how the festival
+    // serves its own schedule; owner ruling 2026-10-18, as for the
+    // Google Calendar and TicketSauce feeds).
+    static get SWITCHED_DATE_LINE() {
+        return /\b(MON|TUE|WED|THU|FRI|SAT|SUN)\s*-\s*(\d{1,2})\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{4})\s*-\s*(?:FROM\s+(\d{1,2}:\d{2})|(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2}))/i;
+    }
+
+    detectSwitchedProgramme(html, sourceUrl) {
+        const source = String(html || '');
+        if (!/<ul\b[^>]*class="[^"]*\bdays\b[^"]*"/i.test(source)) return null;
+        const dayPattern = /<a\b([^>]*)href="([^"]*[?&]day=[0-9a-f-]{8,}[^"]*)"([^>]*)>\s*([^<]*?)\s*<\/a>/gi;
+        const days = [];
+        let match;
+        while ((match = dayPattern.exec(source)) !== null) {
+            const url = this.normalizeUrl(this.decodeEntitiesFully(match[2]), sourceUrl);
+            if (!url || days.some(day => day.url === url)) continue;
+            const attributes = `${match[1]} ${match[3]}`;
+            days.push({ url, label: this.normalizeWhitespace(match[4]), selected: /\bclass="[^"]*\bselected\b/.test(attributes) });
+        }
+        if (days.length === 0 || !AiWebParser.SWITCHED_DATE_LINE.test(source)) return null;
+        const headingMatch = source.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
+        const heading = headingMatch ? this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(headingMatch[1]))) : '';
+        return { heading, days };
+    }
+
+    // The cards of one programme page, as the page states them: local
+    // wall-clock dates (the venue's zone applies downstream, as for
+    // EventON), an end before its start is the next morning, "FROM" is an
+    // open end (no end: see the one-end contract).
+    readSwitchedProgrammeCards(html) {
+        const source = String(html || '');
+        const cards = [];
+        const MONTHS = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
+        const pad = (value) => String(value).padStart(2, '0');
+        const text = (value) => this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(String(value || ''))));
+        const itemPattern = /<div\b[^>]*class="[^"]*\bitem\b[^"]*"[^>]*>([\s\S]*?)(?=<div\b[^>]*class="[^"]*\bitem\b[^"]*"|<footer\b|$)/gi;
+        let item;
+        while ((item = itemPattern.exec(source)) !== null) {
+            const block = item[1];
+            const paragraphs = [];
+            const paragraphPattern = /<p\b([^>]*)>([\s\S]*?)<\/p>/gi;
+            let paragraph;
+            while ((paragraph = paragraphPattern.exec(block)) !== null) {
+                paragraphs.push({ attributes: paragraph[1], inner: paragraph[2], text: text(paragraph[2]) });
+            }
+            const dateParagraph = paragraphs.find(p => AiWebParser.SWITCHED_DATE_LINE.test(p.text));
+            if (!dateParagraph) continue;
+            const date = dateParagraph.text.match(AiWebParser.SWITCHED_DATE_LINE);
+            const month = MONTHS[date[3].toUpperCase()];
+            const day = `${date[4]}-${pad(month)}-${pad(date[2])}`;
+            const startClock = date[5] || date[6];
+            const startLocal = `${day}T${pad(startClock.split(':')[0])}:${startClock.split(':')[1]}:00`;
+            let endLocal = null;
+            if (date[7]) {
+                const endClock = `${pad(date[7].split(':')[0])}:${date[7].split(':')[1]}`;
+                let endDay = day;
+                if (endClock <= `${pad(startClock.split(':')[0])}:${startClock.split(':')[1]}`) {
+                    const next = new Date(`${day}T00:00:00Z`);
+                    next.setUTCDate(next.getUTCDate() + 1);
+                    endDay = next.toISOString().slice(0, 10);
+                }
+                endLocal = `${endDay}T${endClock}:00`;
+            }
+            const after = paragraphs.slice(paragraphs.indexOf(dateParagraph) + 1);
+            const titleParagraph = after.find(p => p.text && !/<(?:a|img)\b/i.test(p.inner));
+            if (!titleParagraph) continue;
+            const descriptionParagraph = after.find(p => p !== titleParagraph && p.text && !/<(?:a|img)\b/i.test(p.inner));
+            const imageMatch = block.match(/<img\b[^>]*src="(https?:\/\/[^"]+)"/i);
+            const webMatch = block.match(/<a\b[^>]*href="([^"]+)"[^>]*>\s*Web\s*<\/a>/i);
+            const mapMatch = block.match(/<a\b[^>]*href="([^"]*\/location\?[^"]*)"/i);
+            cards.push({
+                title: titleParagraph.text,
+                description: descriptionParagraph
+                    ? this.decodeEntitiesFully(this.stripTags(descriptionParagraph.inner)).replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').trim()
+                    : '',
+                startLocal,
+                endLocal,
+                image: imageMatch ? this.decodeEntitiesFully(imageMatch[1]) : '',
+                webUrl: webMatch ? this.decodeEntitiesFully(webMatch[1]) : '',
+                mapUrl: mapMatch ? this.decodeEntitiesFully(mapMatch[1]) : ''
+            });
+        }
+        return cards;
+    }
+
+    // The cards as JSON-LD Event nodes, so the ordinary structured-data
+    // reader builds the events (dates, artwork slots, cover, title cleanup)
+    // exactly as it does for every other door.
+    buildSwitchedProgrammeJsonLd(cards) {
+        const nodes = (Array.isArray(cards) ? cards : []).map(card => {
+            const node = { '@context': 'https://schema.org', '@type': 'Event', name: card.title, startDate: card.startLocal };
+            if (card.endLocal) node.endDate = card.endLocal;
+            if (card.description) node.description = card.description;
+            if (card.image) node.image = card.image;
+            if (card.webUrl) node.url = card.webUrl;
+            return node;
+        });
+        if (nodes.length === 0) return '';
+        return `<script type="application/ld+json">${JSON.stringify(nodes).replace(/<\//g, '<\\/')}</script>`;
+    }
+
+    async collectSwitchedProgramme(htmlData, parserConfig, httpAdapter) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        if (!html || !sourceUrl) return null;
+        const programme = this.detectSwitchedProgramme(html, sourceUrl);
+        if (!programme) return null;
+        const pageDomain = this.getRegistrableDomainFromUrl(sourceUrl);
+        const ownDay = programme.days.find(day => day.selected) || programme.days.find(day => day.url === sourceUrl) || null;
+        const parts = [{ label: ownDay ? ownDay.label : 'this page', html }];
+        for (const day of programme.days) {
+            if (day === ownDay) continue;
+            if (this.getRegistrableDomainFromUrl(day.url) !== pageDomain) continue;
+            if (!httpAdapter || typeof httpAdapter.fetchData !== 'function') break;
+            try {
+                const response = await httpAdapter.fetchData(day.url, { headers: { Referer: sourceUrl } });
+                const dayHtml = response && typeof response.html === 'string' ? response.html : '';
+                if (!dayHtml) throw new Error('empty answer');
+                parts.push({ label: day.label, html: dayHtml });
+            } catch (error) {
+                console.warn(`🗓️ PROGRAMME: day "${day.label}" (${day.url}) could not be read (${error.message}) — the other days stand`);
+            }
+        }
+        const cards = [];
+        for (const part of parts) {
+            const read = this.readSwitchedProgrammeCards(part.html);
+            console.log(`🗓️ PROGRAMME: ${programme.heading || sourceUrl} — day "${part.label}": ${read.length} card(s)`);
+            cards.push(...read);
+        }
+        return {
+            heading: programme.heading,
+            days: parts.length,
+            cards,
+            html: parts.slice(1).map(part => part.html).join('\n'),
+            jsonLd: this.buildSwitchedProgrammeJsonLd(cards)
+        };
+    }
+
+    // The programme's heading ("Folsom Europe 2026") is the group label of
+    // every card: it names the city, directly or through the curated
+    // festival it names (the same rule a bundle row's region label
+    // follows). A card with no place of its own takes that city and its
+    // zone, so its wall-clock times anchor there.
+    buildSwitchedProgrammeEvents(programme, sourceUrl, cityConfig = null) {
+        if (!programme || !programme.jsonLd) return [];
+        const events = this.extractEventsFromJsonLd(programme.jsonLd, sourceUrl, cityConfig);
+        const heading = String(programme.heading || '');
+        const headingCity = heading && cityConfig
+            ? (this.findCityKeyInText(heading, cityConfig) || this.findCityKeyForFestivalLabel(heading, cityConfig))
+            : '';
+        const timezone = headingCity ? this.getTimezoneForCity(headingCity, cityConfig) : '';
+        let placed = 0;
+        for (const event of events) {
+            if (event.city || !headingCity) continue;
+            event.city = headingCity;
+            if (timezone) event.timezone = timezone;
+            placed += 1;
+        }
+        if (events.length > 0) {
+            console.log(`🗓️ PROGRAMME: built ${events.length} event(s) from ${programme.days} day page(s) of "${heading || sourceUrl}"${headingCity ? ` — ${placed} placed in ${headingCity} by the heading` : ' — the heading names no city'}`);
+        }
+        return events;
+    }
+
     // ── EventON (WordPress calendar plugin) ─────────────────────────────
     // The page ships a frame per calendar (<div id="evcal_calendar_N" class=
     // "ajde_evcal_calendar … ajax_loading_cal"> + data-sc='{shortcode}') and
@@ -10335,7 +10555,7 @@ class AiWebParser {
     // it from an undated flyer, dropped it as a date orphan, and shipped the
     // page's business-hours block as an event titled "Facebook" instead.
     static shouldReadStructuredEvents({ discoveryOnly = false, pageClassification = '', structuredSource = null, structuredCount = 0 } = {}) {
-        const DOOR_READ_SOURCES = new Set(['squarespace', 'eventon', 'wix', 'mec', 'elfsight', 'dice']);
+        const DOOR_READ_SOURCES = new Set(['squarespace', 'eventon', 'programme', 'wix', 'mec', 'elfsight', 'dice']);
         if (discoveryOnly || !structuredSource || !(structuredCount > 0)) return false;
         const isDoor = DOOR_READ_SOURCES.has(structuredSource);
         if (pageClassification === 'link-aggregator' && !isDoor) return false;
@@ -26113,6 +26333,15 @@ TEXT:
         // construction it never does (thelumberyardbar.com publishes nothing
         // but weeklies: all 11 of them were dropped, run 20260913-0336).
         let startDateFromStatedRecurrence = false;
+        // The undated-row verdict for a date computed here (assessUndatedRow):
+        // stamped on the record as _dateOrigin, and a drop is carried out at
+        // the end of assembly so the dropped record reaches the results UI
+        // whole. Where the rule came from decides who is asked: the model
+        // (its rrule survived the schedule-evidence gate, which also accepts
+        // a weekday that merely sits in the corpus), the day-phrase scan, or
+        // the parser's own configuration.
+        let undatedRowVerdict = null;
+        const modelStatedRrule = this.normalizeRruleValue(this.firstNonEmpty(aiEvent.recurrenceRule, aiEvent.recurrence, aiEvent.rrule, ''));
         if (!startDate && title && recurrenceRule) {
             const schema = this.getEventSchema();
             const nextOccurrence = schema && typeof schema.computeNextRruleOccurrence === 'function'
@@ -26151,6 +26380,15 @@ TEXT:
                     recurringDerivedWallClock = !timezone;
                     startDateFromStatedRecurrence = true;
                     console.log(`🔁 RECURRING: derived next occurrence ${nextOccurrence} from rrule for "${title}"`);
+                    undatedRowVerdict = this.assessUndatedRow({
+                        title,
+                        rrule: recurrenceRule,
+                        htmlData,
+                        aiEvent,
+                        timezone,
+                        source: dayPhraseSynthesis ? 'day-phrase' : (modelStatedRrule ? 'model-rrule' : 'parser-metadata'),
+                        nextOccurrence
+                    });
                     if (dayPhraseSynthesis) {
                         console.log(`🔁 RECURRING: "${title}" synthesized from day phrase "${dayPhraseSynthesis.phrase}" → ${recurrenceRule}, next ${nextOccurrence} — will be withheld from calendar write (ICS only)`);
                     }
@@ -26298,6 +26536,27 @@ TEXT:
             source: this.config.source,
             isBearEvent: false
         };
+
+        // Where this record's DATE came from, when the page did not state it:
+        // the rrule fallback above computed it, and assessUndatedRow said
+        // whether the page's words vouch for the rule. Underscore field —
+        // internal, never notes, never a diff field; it dies at the parser
+        // merge like every stamp, which is why the drop below acts on it
+        // here and not later.
+        if (undatedRowVerdict) {
+            event._dateOrigin = {
+                kind: 'rrule-fallback',
+                rrule: undatedRowVerdict.rrule,
+                source: undatedRowVerdict.source,
+                derivedDate: undatedRowVerdict.derivedDate,
+                real: undatedRowVerdict.real,
+                vouchedBy: undatedRowVerdict.vouchedBy,
+                vouchKind: undatedRowVerdict.kind,
+                matchesRule: undatedRowVerdict.matchesRule,
+                window: undatedRowVerdict.window,
+                statedFutureDate: undatedRowVerdict.statedFutureDate
+            };
+        }
 
         // Derived-occurrence recurring event with no stated start time: the
         // ICS export needs a real time, so the results card must offer only
@@ -26492,6 +26751,29 @@ TEXT:
             event._listedOccurrenceDates = pendingListedOccurrenceDates;
         }
         if (titleStated) event._titleStated = true;
+
+        // The undated-row drop (assessUndatedRow said drop): the record is
+        // assembled in full first so the results UI shows the row as it would
+        // have shipped, then carried out through the same channel the bear
+        // check uses — parseEvents hands these to SharedCore, which lists them
+        // with bearDroppedEvents (results drop list, per-host ledger
+        // dropReasons). Never a silent removal.
+        if (undatedRowVerdict && undatedRowVerdict.drop) {
+            const pageUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+            const hostMatch = String(pageUrl || event.url || '').match(/^https?:\/\/([^/?#]+)/i);
+            if (!Array.isArray(this.undatedRowDrops)) this.undatedRowDrops = [];
+            this.undatedRowDrops.push({
+                title: event.title,
+                startDate: event.startDate,
+                venue: event.bar || '',
+                reason: 'undated: no date or cadence on the page',
+                detail: `dated ${undatedRowVerdict.derivedDate} by ${undatedRowVerdict.rrule} (${undatedRowVerdict.source}); its own ${undatedRowVerdict.window} states no date and no cadence`,
+                host: hostMatch ? hostMatch[1].toLowerCase().replace(/^www\./, '') : '',
+                sourcePageUrl: pageUrl,
+                event: { ...event }
+            });
+            return null;
+        }
 
         return event;
     }
@@ -28386,6 +28668,214 @@ TEXT:
     // month and day. Returns the input unchanged whenever anything is
     // ambiguous: no page text, no month/day match, the extracted year already
     // stated, or more than one candidate year adjacent to that date.
+    // THE ROW'S OWN WORDS, for the undated-row rule: a listing card's page
+    // lines plus the OCR of the artwork paired to that card (its own flyer —
+    // on thelumberyardbar.com/mothly-events the page prints nothing but the
+    // flyers, and "EVERY 2ND FRIDAY" exists only on the EXPOSED poster); on a
+    // page that was never split, the whole page. The title rides along: it
+    // passed the evidence gate, so it is the page's words too ("Soundtrack
+    // Sundays"). Returns { lines, window } with every line folded for the
+    // day-phrase vocabulary (lower case, diacritics gone), or null when there
+    // is nothing to read.
+    undatedRowWindow(htmlData, title) {
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const segmentText = htmlData && typeof htmlData.segmentText === 'string' ? htmlData.segmentText.trim() : '';
+        // A segment's prompt is already one card's content (a flyer segment
+        // has no page lines at all — its html IS the poster's OCR); a page
+        // that was never split is read whole.
+        const isSegment = Boolean(htmlData && htmlData.dataFlags && htmlData.dataFlags.segment) || Boolean(segmentText);
+        const window = isSegment ? 'card' : 'page';
+        let text = html;
+        if (segmentText) {
+            const ocrText = this.splitOcrAndPageChunks(html)
+                .filter(chunk => chunk && chunk.corpus === 'ocr')
+                .map(chunk => chunk.text)
+                .join('\n');
+            text = `${segmentText}\n${ocrText}`;
+        }
+        const pageLines = this.stripTags(text).split(/\r?\n/)
+            .map(line => String(line || ''))
+            // OCR marker lines carry an image URL, whose path words must not
+            // read as page text.
+            .filter(line => !/^\s*(?:OCR_IMAGE_URL:|SEGMENT_[A-Z_]+)/.test(line))
+            .map(line => this.foldDayPhraseText(line).trim())
+            .filter(Boolean);
+        // No page text at all (a record assembled with no page behind it):
+        // nothing to judge by, and the title alone is not a page.
+        if (pageLines.length === 0) return null;
+        const titleLine = this.foldDayPhraseText(String(title || '')).trim();
+        return { lines: titleLine ? [titleLine, ...pageLines] : pageLines, window };
+    }
+
+    // Does the row's own text state a cadence, and for which weekday? Scans
+    // the window for the three strengths of statement, strongest first, and
+    // returns { phrase, kind, codes } for the best one or null:
+    //   cadence  — a day-phrase shape: "every thursday", "thursdays",
+    //              "wednesday nights", "sunday afternoons", "2nd & 4th
+    //              thursday", "last sunday of every month";
+    //   period   — a bare period word: weekly, nightly, monthly, weekends,
+    //              "every other month" (SABOR on massive.club);
+    //   weekday  — a weekday standing alone on its line, not beside a month,
+    //              an ordinal day, a numeric date or a year.
+    // `codes` are the BYDAY letters the phrase names ([] for a period word), so
+    // the caller can say whether the phrase produces the rule it is vouching
+    // for. Within a strength the phrase naming the rule's own weekday wins.
+    findUndatedRowCadence(lines, ruleCodes = []) {
+        const ordinal = `(?:${DAY_PHRASE_ORDINAL_ALTERNATION})`;
+        const day = `(${DAY_PHRASE_DAY_ALTERNATION})`;
+        const cadenceShapes = [
+            new RegExp(`\\b${ordinal}(?:\\s*(?:&|and|,)\\s*${ordinal})*\\s+${day}s?\\b`, 'g'),
+            new RegExp(`\\bevery\\s+${day}s?\\b`, 'g'),
+            new RegExp(`\\beach\\s+${day}\\b`, 'g'),
+            new RegExp(`\\b${day}s\\b`, 'g'),
+            new RegExp(`\\b${day}\\s+(?:nights?|afternoons?|mornings?|evenings?)\\b`, 'g'),
+            new RegExp(`\\b${day}\\s+of\\s+(?:the|each|every)\\s+month\\b`, 'g')
+        ];
+        const codeOf = (word) => {
+            const entry = DAY_PHRASE_WEEKDAY_WORDS.find(candidate => candidate.word === word);
+            return entry ? entry.code : '';
+        };
+        const wanted = new Set(Array.isArray(ruleCodes) ? ruleCodes : []);
+        const pick = (found) => {
+            if (found.length === 0) return null;
+            return found.find(entry => entry.codes.some(code => wanted.has(code))) || found[0];
+        };
+        const cadence = [];
+        const weekdays = [];
+        const periods = [];
+        for (const line of lines) {
+            for (const shape of cadenceShapes) {
+                shape.lastIndex = 0;
+                let match;
+                while ((match = shape.exec(line)) !== null) {
+                    cadence.push({ phrase: match[0], kind: 'cadence', codes: [codeOf(match[1])].filter(Boolean) });
+                }
+            }
+            UNDATED_ROW_PERIOD_WORDS.lastIndex = 0;
+            let period;
+            while ((period = UNDATED_ROW_PERIOD_WORDS.exec(line)) !== null) {
+                periods.push({ phrase: period[0], kind: 'period', codes: [] });
+            }
+            const bare = new RegExp(`\\b${day}\\b`, 'g');
+            let word;
+            while ((word = bare.exec(line)) !== null) {
+                const around = line.slice(Math.max(0, word.index - 24), word.index + word[0].length + 24);
+                if (UNDATED_ROW_DATE_NEIGHBOUR.test(around)) continue;
+                weekdays.push({ phrase: word[0], kind: 'weekday', codes: [codeOf(word[1])].filter(Boolean) });
+            }
+        }
+        return pick(cadence) || pick(periods) || pick(weekdays);
+    }
+
+    // The undated-row rule (owner, 2026-10-18: "keep if you think they are
+    // real"). Called for a row whose startDate was just computed from an
+    // rrule because the page stated no date for it. Decides from the page,
+    // never per site, and returns the verdict the caller stamps and acts on:
+    //   { real, drop, kind, vouchedBy, matchesRule, window, source,
+    //     statedFutureDate }
+    // REAL when the row's own window states a cadence (findUndatedRowCadence)
+    // — the fallback date is exactly what such a row needs, so it ships, and
+    // whether the phrase produces the rule's own weekday is logged, not
+    // enforced (a real party on the wrong night is still a party the owner
+    // can fix; a dropped one is gone). A rule the PARSER CONFIG supplied is
+    // the owner's own statement and is real by definition.
+    // NOT REAL when the window states no cadence at all: a season graphic, a
+    // hero tease, a staff bio, last year's recap — the model wrote a rule the
+    // page never did. Two guards keep the drop honest: the window must hold
+    // some text (nothing read → nothing judged → kept, report-only), and when
+    // the evidence gate refused a stated date for this row that the page does
+    // print and that lies AHEAD of the page's own date, the row may be a real
+    // dated event the gate misread — kept, report-only, so the page's own
+    // date is never traded for silence (akbarsilverlake.com/upcoming-events
+    // "Mon 05 Oct Learn the Words, Bitch!": the page's day is past, the
+    // fallback's 11-02 is a date the page never states → dropped).
+    assessUndatedRow({ title, rrule, htmlData, aiEvent, timezone, source, nextOccurrence }) {
+        const verdict = {
+            real: true,
+            drop: false,
+            kind: '',
+            vouchedBy: '',
+            matchesRule: null,
+            window: 'page',
+            source: source || 'model-rrule',
+            rrule: String(rrule || ''),
+            derivedDate: String(nextOccurrence || ''),
+            statedFutureDate: ''
+        };
+        if (verdict.source === 'parser-metadata') {
+            verdict.kind = 'parser-metadata';
+            verdict.vouchedBy = 'the parser configuration states the rule';
+            console.log(`📅 UNDATED ROW: "${title}" keeps ${verdict.derivedDate} — ${verdict.vouchedBy}`);
+            return verdict;
+        }
+        const ruleCodes = String(rrule || '')
+            .split(';')
+            .filter(part => part.startsWith('BYDAY='))
+            .flatMap(part => part.slice(6).split(','))
+            .map(token => (token.trim().match(/(MO|TU|WE|TH|FR|SA|SU)$/) || [])[1])
+            .filter(Boolean);
+        const window = this.undatedRowWindow(htmlData, title);
+        if (!window) {
+            verdict.kind = 'unread';
+            console.log(`📅 UNDATED ROW: "${title}" keeps ${verdict.derivedDate} — no page text to judge it by (report-only)`);
+            return verdict;
+        }
+        verdict.window = window.window;
+        const found = this.findUndatedRowCadence(window.lines, ruleCodes);
+        if (found) {
+            verdict.kind = found.kind;
+            verdict.vouchedBy = found.phrase;
+            verdict.matchesRule = found.codes.length === 0 ? null : found.codes.some(code => ruleCodes.includes(code));
+            const fit = verdict.matchesRule === false
+                ? ` — note: the phrase names ${found.codes.join('/')}, the rule ${rrule} does not (the night may be wrong; the party is real)`
+                : '';
+            console.log(`📅 UNDATED ROW: "${title}" keeps ${verdict.derivedDate} — its own ${verdict.window} states "${found.phrase}"${fit}`);
+            return verdict;
+        }
+        // No cadence anywhere in the row's own words. The one thing that still
+        // speaks for the row is a page-stated date the gate refused AND that
+        // has not passed: shown, not dropped.
+        const droppedStatedStart = this.getDroppedStatedStartDateValue(aiEvent);
+        if (droppedStatedStart) {
+            // The CALENDAR day the value names. A date-only value
+            // ("2026-10-05") parses to UTC midnight, which west of UTC is the
+            // evening before in local getters — so an ISO day is read off the
+            // string itself; anything else goes through the parser and its
+            // local parts, as the rescue census above does.
+            const isoDay = String(droppedStatedStart).match(/^(\d{4})-(\d{2})-(\d{2})/);
+            const parsed = isoDay ? null : this.parseDateValue(droppedStatedStart, timezone);
+            const year = isoDay ? Number(isoDay[1]) : (parsed instanceof Date ? parsed.getFullYear() : NaN);
+            const month = isoDay ? Number(isoDay[2]) : (parsed instanceof Date ? parsed.getMonth() + 1 : NaN);
+            const dayOfMonth = isoDay ? Number(isoDay[3]) : (parsed instanceof Date ? parsed.getDate() : NaN);
+            if ([year, month, dayOfMonth].every(Number.isFinite)) {
+                const pageText = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+                const label = `${year}-${String(month).padStart(2, '0')}-${String(dayOfMonth).padStart(2, '0')}`;
+                const reference = this.resolvePageReferenceDate(htmlData);
+                const referenceMs = reference instanceof Date ? Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth(), reference.getUTCDate()) : NaN;
+                const statedMs = Date.UTC(year, month - 1, dayOfMonth);
+                if (this.pageStatesMonthAndDay(pageText, month, dayOfMonth)) {
+                    if (!Number.isFinite(referenceMs) || statedMs >= referenceMs) {
+                        verdict.real = false;
+                        verdict.kind = 'stated-date-ahead';
+                        verdict.statedFutureDate = label;
+                        console.log(`📅 UNDATED ROW: "${title}" states no cadence in its own ${verdict.window}; the page dates it ${label}, which the evidence gate refused and which lies ahead — kept with its derived ${verdict.derivedDate} (report-only; the page's date is the better one)`);
+                        return verdict;
+                    }
+                    verdict.real = false;
+                    verdict.drop = true;
+                    verdict.kind = 'none';
+                    console.log(`📅 UNDATED ROW: "${title}" is dated ${verdict.derivedDate} by ${rrule}, a rule its own ${verdict.window} never states; the page's only date for it, ${label}, has passed — dropped (shown in results)`);
+                    return verdict;
+                }
+            }
+        }
+        verdict.real = false;
+        verdict.drop = true;
+        verdict.kind = 'none';
+        console.log(`📅 UNDATED ROW: "${title}" is dated ${verdict.derivedDate} by ${rrule}, a rule its own ${verdict.window} never states — no date and no cadence in its words; dropped (shown in results)`);
+        return verdict;
+    }
+
     reportPageDateConflict(startDate, htmlData, timezone, title) {
         if (!(startDate instanceof Date) || Number.isNaN(startDate.getTime())) return false;
         const text = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';

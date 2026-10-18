@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "source": "Folsom Europe",
+  "slug": "folsom-europe",
+  "status": "complete",
+  "recheckAfter": "2027-08-15",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://ems.switchedapp.com/programme/folsomeurope"
+    ],
+    "doors": [
+      {
+        "url": "https://ems.switchedapp.com/programme/folsomeurope",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 17,
+        "truthFlag": "<h1>Folsom Europe 2026</h1>; five day tabs Wed 9 … Sun 13; 17 cards on the landing day, every one dated \"WED - 09 SEP 2026 - …\"",
+        "note": "Configured page: the festival's programme on Switched's \"Event Control\", the page folsomeurope.berlin/program/ frames. Server-rendered (HTTP 200, 55,773 bytes, Safari UA). The landing page is the FIRST day only; the other four days are tabs (?day=<guid>, five guids minted per edition). Each card: artwork (eventcontrol146156798b6b.blob.core.windows.net), a date line \"DDD - DD MON YYYY - HH:MM - HH:MM\" or \"… - FROM HH:MM\", a title line, a blurb, a \"Web\" link (the platform's redirect /url/<guid>) and a \"Map\" link (/location?id=<guid>, a JS map shell with no address in it). Saved as programme.html."
+      },
+      {
+        "url": "https://ems.switchedapp.com/Programme/folsomeurope?day=a36674e3-dac5-4298-bb57-08dd6eac4b22",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 93,
+        "truthFlag": "the four other day tabs: Thu 10 = 23 cards, Fri 11 = 30, Sat 12 = 23, Sun 13 = 17 (110 with the landing day)",
+        "note": "Read four seconds apart (69,798 / 89,123 / 69,429 / 53,691 bytes). Same card grammar on every day. Cross-midnight ends occur (\"SAT - 12 SEP 2026 - 20:00 - 04:00\", \"FRI - 11 SEP 2026 - 19:00 - 05:00\"); 45 of 110 cards have no Web link; every card has artwork and a Map link. Saved as day-<guid>.html."
+      },
+      {
+        "url": "https://ems.switchedapp.com/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "User-agent: * / Disallow: / (and the same for every named search engine)",
+        "note": "The host disallows all crawling. The programme page is a configured root, so it and its same-host day tabs are first-party reads under the politeness gate (the festival embeds this page as its own schedule); the owner ruled 2026-10-18 that a site's own calendar feed is read as a feed, not a crawl (see the Google Calendar and TicketSauce notes). Nothing else on the host is followed (urlDiscoveryDepth 0)."
+      },
+      {
+        "url": "https://folsomeurope.berlin/program/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "<iframe id=\"ems-programme\" src=\"https://ems.switchedapp.com/programme/folsomeurope\">",
+        "note": "The festival's own programme page is the iframe and nothing else (2026-08-22 hand extraction, re-confirmed 2026-10-18). Not configured: the frame's host is another domain, so a discovered frame would be robots-refused, and the frame IS the content."
+      },
+      {
+        "url": "https://folsomeurope.berlin/wp-json/tribe/events/v1/events",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "category \"Volunteering\" on every row (70 shifts, 2026-08-22)",
+        "note": "The WordPress site's Tribe calendar is the volunteer-shift roster (\"Take Down Flags\" and the like), not the public programme. Not configured; the 2026-10-18 solo run of a Tribe stanza on it produced exactly one 2025 shift as an event, which is why that stanza was dropped the same day."
+      }
+    ],
+    "notes": "Added 2026-10-18 at the owner's request (\"Build a reader for the schedule frame\"). The programme door (AiWebParser.collectSwitchedProgramme) reads the landing day and every tab, turns the cards into JSON-LD Event nodes (local wall-clock times; an end before its start is the next morning; FROM = no end) and places cards without a place of their own in the city the heading names — \"Folsom Europe 2026\" names the curated festival (data/festivals.json key folsom-europe, cityKey berlin). Venues are in the title line for bar programmes (\"Woof Berlin\", \"Prinzknecht\", \"Böse Buben\") and in the blurb for parties, so data/bars/berlin.json (Woof Berlin, SO36) is what pins them; the Map link carries no address. The Web link is the platform's redirect to the real page (302 with utm parameters), kept as the ticket link as published. Bear relevance is the verdict's job: the 2026 programme is leather/fetish-wide with a bear core (BEAR DANCE FOLSOM at SO36, every Woof Berlin night). On 2026-10-18 the page still shows the 2026 edition (2026-09-09 … 2026-09-13), all past, so nothing is upcoming until the 2027 programme is published (~July/August 2027); the day guids will be new then."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "All five day pages read on 2026-10-18 and every card counted (17 + 23 + 30 + 23 + 17 = 110). Every card is dated 2026-09-09 … 2026-09-13, before the recon date, so zero upcoming events are published; the past edition is counted, not enumerated (see traps). The parser's reader reproduced the 110 cards from the saved pages, all placed in berlin.",
+    "publishedEventCount": 0,
+    "documentedEventCount": 0,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "berlin",
+    "timezone": "Europe/Berlin",
+    "website": "https://folsomeurope.berlin"
+  },
+  "events": [],
+  "traps": [
+    {
+      "id": "past-edition-programme",
+      "kind": "past-event",
+      "label": "Folsom Europe 2026 — 110 cards, WED 09 SEP 2026 … SUN 13 SEP 2026 (e.g. \"BEAR DANCE FOLSOM\" FRI - 11 SEP 2026 - FROM 22:00; \"Woof Berlin\" FETISH IN THE MIX 2026)",
+      "why": "Between editions the programme keeps showing the last one. Every card states its full date with the year, so the horizon drops them; a reader that re-dated them to the next year would invent the 2027 programme.",
+      "evidence": {
+        "url": "https://ems.switchedapp.com/programme/folsomeurope",
+        "quote": "WED - 09 SEP 2026 - 10:00 - 21:00"
+      },
+      "expect": {
+        "extracted": false
+      }
+    },
+    {
+      "id": "platform-redirect-links",
+      "kind": "foreign-programming",
+      "label": "Web → https://ems.switchedapp.com/url/<guid>?isource=WebProgramme (65 of 110 cards)",
+      "why": "The only outbound links are the platform's tracking redirects (302 to the organiser's page with utm parameters) and map shells; following them is a crawl of a host whose robots.txt disallows it and finds no further events. The redirect itself stands as the card's ticket link.",
+      "evidence": {
+        "url": "https://ems.switchedapp.com/programme/folsomeurope",
+        "quote": "Web"
+      },
+      "expect": {
+        "extracted": false
+      }
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Should the platform's /url/<guid> redirect be resolved once per card to the organiser's real page (one extra request each, ~65 per edition) so the link survives the platform?",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}

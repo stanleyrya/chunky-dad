@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "source": "Sitges Bear Cave",
+  "slug": "sitges-bear-cave",
+  "status": "publishes-nothing",
+  "recheckAfter": "2026-11-17",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://sitgesbearcave.com/events/"
+    ],
+    "doors": [
+      {
+        "url": "https://sitgesbearcave.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "empty-state text: \"There are no upcoming events.\" (twice: the notice and its aria-live twin); <title>Upcoming Events – Sitges Bear Cave</title>",
+        "note": "Configured page. One static read with a Safari UA (HTTP 200, 121,371 bytes): WordPress + WooCommerce + The Events Calendar v2 list view. The page advertises its own doors — <link rel=\"alternate\" ... /events/?ical=1>, the REST base https://sitgesbearcave.com/wp-json/tribe/events/v1/ and /events/feed/ — which is how the crawler adopts the REST route (🚪 MACHINE DOOR). Below the empty state the list renders a \"Latest Past Events\" block with three September 2026 rows (see traps). Saved as bearcave-events.html / .txt."
+      },
+      {
+        "url": "https://sitgesbearcave.com/wp-json/tribe/events/v1/events?per_page=50",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "total: 0; total_pages: 0; events: []; no next_rest_url",
+        "note": "Default window of The Events Calendar REST route (the door the crawler adopts from the listing's <link rel=\"https://api.w.org/\"> and the page's own wp-json/tribe/events/v1/ link): rest_url echoes start_date=2026-10-18 00:00:00 end_date=2028-10-18 23:59:59 status=publish; events [] total 0 total_pages 0, no next_rest_url. HTTP 200, 205 bytes. Saved as bearcave-tribe-p1.json."
+      },
+      {
+        "url": "https://sitgesbearcave.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2018-01-01",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 6,
+        "truthFlag": "total: 6; total_pages: 1 (whole archive, start_date pushed back to 2018-01-01)",
+        "note": "The calendar's entire history is the 2026 festival week: Friday 4th September – MEGAWOOF SHINY DISCO BALLS — 2026-09-05 00:30:00 → 2026-09-05 17:00:00 @ The Bear Cave; Saturday 5th September – MEGAWOOF D>U>R>O — 2026-09-06 00:30:00 → 2026-09-06 06:00:00 @ The Bear Cave; Wednesday 9th September – BEEFMINCE MEET MARKET — 2026-09-10 01:00:00 → 2026-09-10 18:00:00 @ The Bear Cave; Thursday 10th September – BEEFMINCE DISCO — 2026-09-11 01:00:00 → 2026-09-11 18:00:00 @ The Bear Cave; Friday 11th September – BEEFMINCE SPORTS ZONE — 2026-09-12 01:00:00 → 2026-09-12 06:00:00 @ The Bear Cave; Saturday 12th September – BEEFMINCE: THE BIG BALL — 2026-09-13 01:00:00 → 2026-09-13 06:00:00 @ The Bear Cave. Every row: venue { venue: \"The Bear Cave\", address: \"Calle Bonaire 12\", city: \"Sitges\", zip: \"08870\", country: \"Spain\" } (no geo keys), timezone \"Europe/Madrid\", an image, a cost in euros, categories Beefmince or Megawoof, organizer BEEFMINCE or MEGAWOOF, url = the event page on sitgesbearcave.com. Not a door the scraper opens (it never pushes start_date back); read once for the count. Saved as bearcave-tribe-all.json."
+      },
+      {
+        "url": "https://sitgesbearcave.com/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "Disallow: /wp-admin/ and WooCommerce upload/cart paths only; Allow: /wp-admin/admin-ajax.php",
+        "note": "Neither /events/ nor /wp-json/ is disallowed. Sitemap: /sitemap_index.xml (not read)."
+      }
+    ],
+    "notes": "Added 2026-10-18 at the owner’s request as the Sitges bear bar whose event pages the Sitges calendar already links (Thursday BEEFMINCE Disco, Friday BEEFMINCE Sports Zone). The site’s footer reads \"© Copyright - Bears Events - 2026\": the same organisation runs bearsevents.com (its own parser, \"Bears Events (Sitges)\"). The Tribe venue record (id 75) was created 2026-07-16; the whole calendar is the six Bears Sitges Week club nights, so an empty feed from mid-September to the following summer is this source’s normal state, not a fault. The feed dates each after-midnight party on the morning it runs (\"Thursday 10th September – BEEFMINCE DISCO\" has start_date 2026-09-11 01:00:00) while the title names the night before — the same promoter convention bears-sitges-week.json raised. Two rows end at 18:00 (a 17-hour party, \"1:00 am - 6:00 pm\" on the page): a site-side pm/am slip. The curated bar \"The Bear Cave\" (data/bars/sitges.json, Carrer de Bonaire 12) is the feed’s own venue name; the parser name \"Sitges Bear Cave\" is the site’s title, so bar identity comes from the configured siteRole venue, not from the parser being named for the bar."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Two independent doors agree the site publishes zero upcoming events on 2026-10-18: the listing page’s own empty state (\"There are no upcoming events.\", door 1) and the REST route’s default window (total 0, events [], door 2). The archive read (door 3) reconciles the page’s \"Latest Past Events\" block: six rows in the calendar’s whole history, all 2026-09-05 … 2026-09-13, i.e. the Bears Sitges Week nights — past listings are counted (6), not enumerated. No other listing exists on the site: /events/list/, /events/month/ and /events/today/ are views of the same Tribe data.",
+    "publishedEventCount": 0,
+    "documentedEventCount": 0,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "sitges",
+    "timezone": "Europe/Madrid",
+    "bar": "The Bear Cave",
+    "address": "Carrer de Bonaire 12, 08870 Sitges",
+    "location": null,
+    "website": "https://sitgesbearcave.com"
+  },
+  "events": [],
+  "traps": [
+    {
+      "id": "latest-past-events-block",
+      "kind": "past-event",
+      "label": "Latest Past Events → \"Saturday 12th September – BEEFMINCE: THE BIG BALL\" (September 13 @ 1:00 am - 6:00 am), \"Friday 11th September – BEEFMINCE SPORTS ZONE\" (September 12 @ 1:00 am - 6:00 am), \"Thursday 10th September – BEEFMINCE DISCO\" (September 11 @ 1:00 am - 6:00 pm)",
+      "why": "The Events Calendar fills an empty upcoming list with its three most recent past events. They are the festival week that has already happened (2026); the REST door the crawler adopts does not return them, and a page read must not date them forward into the current list. The year sits in a separate \"2026\" line above each row, so a reader that takes \"September 13 @ 1:00 am\" with no year could roll it to 2027.",
+      "evidence": {
+        "url": "https://sitgesbearcave.com/events/",
+        "quote": "Latest Past Events"
+      },
+      "expect": {
+        "extracted": true,
+        "note": "config.allowPastEvents is true for every parser (owner, 2026-07-30), so keeping past rows is correct behaviour, not a bug — the validation run 20261018-111403 extracted all three (3 bear, 0 dropped) with the curated bar, address and coordinates. What the run got WRONG about them is the shape: the AI read of the list rows kept no clock (\"September 13 @ 1:00 am - 6:00 am\" became a date-only 2026-09-12 from the flyer’s \"SATURDAY 12 SEPT\") although the rows carry <time datetime=\"2026-09-13\"> — see openQuestions."
+      },
+      "seenInRun": "20261018-111403"
+    },
+    {
+      "id": "archive-rows-behind-start-date",
+      "kind": "past-event",
+      "label": "wp-json/tribe/events/v1/events?start_date=2018-01-01 → 6 rows (Friday 4th September – MEGAWOOF SHINY DISCO BALLS … Saturday 12th September – BEEFMINCE: THE BIG BALL)",
+      "why": "The whole calendar is past: six club nights of Bears Sitges Week 2026. They are reachable only by pushing the REST window back, which the reader never does, and they are BEEFMINCE / MEGAWOOF promoter nights that those promoters’ own sources carry.",
+      "evidence": {
+        "url": "https://sitgesbearcave.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2018-01-01",
+        "jsonPath": "$.events[*].start_date"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "page-heading-beefmince-parties",
+      "kind": "venue-header",
+      "label": "Beefmince Parties",
+      "why": "The page’s own heading above the event list (the list view’s title), not an event: no date, time or link of its own.",
+      "evidence": {
+        "url": "https://sitgesbearcave.com/events/",
+        "quote": "Beefmince Parties"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "empty-state-notice",
+      "kind": "announcement",
+      "label": "There are no upcoming events.",
+      "why": "The positive signal that the site publishes nothing right now. It is HTTP 200 and the REST door agrees; it must never be read as an event or as a fetch failure.",
+      "evidence": {
+        "url": "https://sitgesbearcave.com/events/",
+        "quote": "There are no upcoming events."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "After-midnight dating: the feed dates \"Thursday 10th September – BEEFMINCE DISCO\" as start_date 2026-09-11 01:00 (the morning it runs) while the title and the Bears Sitges Week programme name the night of the 10th. When the 2027 week is posted, should the calendar show these on the feed’s date (the morning) or the night the title names? bears-sitges-week.json carries the mirror-image question (programme lists 01h parties under the previous day’s header).",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "Two archive rows end 17 hours after they start (01:00 → 18:00; the page shows \"1:00 am - 6:00 pm\") — a pm/am slip on the site. Should a feed row whose end lies more than ~12 h after a small-hours start be treated as \"no end stated\" (one-end contract) instead of trusted?",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "Empty feed learned as a dead end: the validation run (20261018-111403) answered the REST door with total 0 and then logged \"Learned 7 new dead-end URL(s): …/wp-json/tribe/events/v1/events?per_page=50 …\". filterKnownDeadEndUrls removes learned URLs from the machine-door candidates for deadEndRetryDays (30), so a seasonal Tribe calendar that is empty today is not re-asked through its feed for up to 30 days after it fills — the 2027 week (posted in July) could be read first through the page’s AI path instead of the feed. A feed that answered a well-formed envelope with total 0 is empty, not dead; proposed, not built: do not learn such an answer as a dead end (or retry it every run).",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "Tribe v2 list rows have no deterministic reader: the listing’s JSON-LD carries only Organization / WebSite / CollectionPage nodes (Event JSON-LD is emitted for upcoming rows only), so when the REST door is empty the \"Latest Past Events\" rows are read by the AI, which here kept the flyer’s day and no clock while the rows state <time datetime=\"2026-09-13\"> and \"@ 1:00 am - 6:00 am\". A reader for .tribe-events-calendar-list / -latest-past rows (datetime attribute + the \"@ h:mm am - h:mm am\" text, title link, venue line) would be generic to every Tribe site. Proposed, not built.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "The parser points at /events/ (owner’s stanza). The site’s root was not read; a root crawl would have to find /events/ through the nav before the REST door could be adopted, which is the same open root-crawl question as the 2026-10-07 audit.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}
