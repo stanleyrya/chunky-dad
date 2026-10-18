@@ -505,5 +505,11 @@
     }
   ],
   "traps": [],
-  "openQuestions": []
+  "openQuestions": [
+    {
+      "q": "robots.txt on events.ticketsauce.com disallows the events_by_organization feed this parser reads. Owner ruling 2026-10-18: keep reading it — it is a published subscription feed, not a crawl of the site. Recorded so a later robots audit does not stop the door.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
 }

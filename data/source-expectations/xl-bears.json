@@ -175,5 +175,11 @@
     }
   ],
   "traps": [],
-  "openQuestions": []
+  "openQuestions": [
+    {
+      "q": "robots.txt on calendar.google.com disallows every path (Disallow: /) while serving this calendar's public iCalendar export. Owner ruling 2026-10-18: keep reading it — it is a published subscription feed, not a crawl of the site. Recorded so a later robots audit does not stop the door.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
 }
