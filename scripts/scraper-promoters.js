@@ -283,11 +283,20 @@ const scraperPromoters = [
     "name": "Urban Bear",
     "aliases": [
       "Urban Bear NYC",
-      "Urban Bear Weekend"
+      "Urban Bear Weekend",
+      "Urban Bear Street Fair",
+      "Fire Island Bear Weekend",
+      "FIBW"
     ],
+    "shortName": "URBAN BEAR",
+    "instagram": "https://www.instagram.com/urbanbearnyc",
     "website": "https://www.theurbanbear.com",
+    "facebook": "https://www.facebook.com/theurbanbear/",
     "urlPatterns": [
-      "theurbanbear.com"
+      "theurbanbear.com",
+      "instagram.com/urbanbearnyc",
+      "eventbrite.com/cc/the-18th-annual-urban-bear-nyc",
+      "eventbrite.com/e/fire-island-bear-weekend"
     ],
     "bearAffinity": "always"
   },
@@ -369,6 +378,38 @@ const scraperPromoters = [
     "urlPatterns": [
       "folsomeurope.berlin"
     ]
+  },
+  {
+    "name": "Bears of San Francisco",
+    "aliases": [
+      "BOSF",
+      "Bears of SF"
+    ],
+    "shortName": "BOSF",
+    "instagram": "https://www.instagram.com/bearsofsf",
+    "website": "https://www.bosf.org",
+    "facebook": "https://www.facebook.com/BearsofSF/",
+    "urlPatterns": [
+      "bosf.org",
+      "instagram.com/bearsofsf"
+    ],
+    "bearAffinity": "always"
+  },
+  {
+    "name": "Bear Jamboree",
+    "aliases": [
+      "Bear Jamboree Orlando",
+      "Bear Jamboree Weekend"
+    ],
+    "shortName": "JAM­BO­REE",
+    "instagram": "https://www.instagram.com/bearjamboree",
+    "website": "https://www.bearjamboree.com",
+    "facebook": "http://www.facebook.com/orlandobearpride",
+    "urlPatterns": [
+      "bearjamboree.com",
+      "instagram.com/bearjamboree"
+    ],
+    "bearAffinity": "always"
   }
 ];
 

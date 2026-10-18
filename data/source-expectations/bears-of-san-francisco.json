@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "source": "Bears of San Francisco",
+  "slug": "bears-of-san-francisco",
+  "status": "publishes-nothing",
+  "recheckAfter": "2026-11-18",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.bosf.org/events"
+    ],
+    "doors": [
+      {
+        "url": "https://www.bosf.org/events?format=json",
+        "kind": "squarespace-collection-json",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "upcoming[] 0 — the body carries the literal \"upcoming\":[]; past[] 30 = pagination.pageSize with pagination.nextPage true / nextPageUrl \"/events?offset=1724227071243\"; collection.itemCount 142",
+        "note": "Verified door, read once with curl on 2026-10-18 (HTTP 200, 154 KB): collection.typeName \"events-stacked\", collection.title \"Events\", website.timeZone \"America/Los_Angeles\". Past rows carry epoch-ms startDate/endDate, title, fullUrl, assetUrl (the flyer) and body HTML; excerpt, tags and categories are empty on every row. Every row's location block is blank — {addressTitle \"\", addressLine1 \"\", addressLine2 \"\", addressCountry \"\", mapZoom 12} with no markerLat/markerLng — the club names the venue only in the body text (\"at The Lone Star Saloon (Bear Bar USA)\", \"Saturday, Oct 17th at Bearrison Street Fair\"). The newest rows: \"Barbells, Bears, and Butts Deadlift Competition 2026\" (2026-10-17 13:00–16:00), \"Bearrison Street Fair 2026\" (2026-10-17 12:00–18:00), \"BOSF Brunch\" (2026-10-10 13:00–16:00), \"Bay Area Cub Contest\" (2026-09-06 16:00–20:00). Saved as cache-squarespace/www.bosf.org/events-json.body."
+      },
+      {
+        "url": "https://www.bosf.org/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "no <div class=\"eventlist eventlist--upcoming\"> — the <!-- Upcoming Events --> comment is followed by nothing; one <div class=\"eventlist eventlist--past\"> holding 30 article.eventlist-event--past blocks; no eventlist-pagination element",
+        "note": "The configured page, read once with curl on 2026-10-18 (HTTP 200, 965 KB). <title>Events — Bears of San Francisco</title>. Static HTML renders the same 30 past cards as the JSON door's past[] (the first is \"Oct 17 Barbells, Bears, and Butts Deadlift Competition 2026\", the last \"Sep 8 Beer Bust\" of 2024), each with its date, 12-hour start/end, title link (/events/<slug>) and flyer; no venue line on any card. JSON-LD on the page is a WebSite object and a LocalBusiness with an empty address — no Event. Saved as cache-squarespace/www.bosf.org/events.body."
+      },
+      {
+        "url": "https://www.bosf.org/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "no event markup and no dated statement: a Squarespace 7.1 home page of text blocks (\"Formed in 1994\", \"over $700,000 to local and international charities\"), a pull quote and a newsletter form; nav About / Beneficiaries / Leadership / Events / Contact Us / Get Involved",
+        "note": "Read once with curl on 2026-10-18 (HTTP 200, 556 KB) to make sure no event lives outside the collection: none does — the page's only event link is the nav's /events (five times). The HTML links the club's own socials: facebook.com/BearsofSF, instagram.com/bearsofsf, twitter.com/BearsofSF; footer \"San Francisco, CA 94103\". Saved as cache-squarespace/www.bosf.org/home.body."
+      },
+      {
+        "url": "https://www.bosf.org/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "Squarespace stock file: User-agent * disallows /*?format=json and /*?format=ical (and /config, /search, /api/, ?tag=, ?month=, ?view=)",
+        "note": "The collection twin and the per-item ical pages are the doors the scraper opens from the configured page itself; FetchPoliteness treats a configured root and the doors opened while parsing it as first-party, and refuses only DISCOVERED pages that robots disallows."
+      }
+    ],
+    "notes": "Recon from one live read of each door on 2026-10-18, the day after the club's two October events. The club posts each event by hand some weeks ahead; its 2026 postings were Bears Night Out (Jan, Apr), Big Ole Bears Brunch (Mar), Beer Bust @ SF Eagle (Jun), Bears Night Out: Begoni Bistro (Jun), Bearrison Beer Bust (Jul), Bay Area Cub Contest at the Lone Star Saloon (Sep), BOSF Brunch at The Willows (Oct) and the Bearrison Street Fair with its deadlift competition (Oct 17). Between postings the collection is empty, so a run finding zero upcoming here is the club's normal state, not a failure. The Bear Calendar carried the fair and the deadlift competition as copies (its door is aggregator-only); the club's own collection is the statement."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Two independent doors agree the collection holds nothing upcoming on 2026-10-18: the feed's literal \"upcoming\":[] and the listing page rendering only its past section (no eventlist--upcoming block). The home page carries no dated statement of its own. Past listings: 30 on the first page of 142 items (pagination.nextPage true), counted not enumerated.",
+    "publishedEventCount": 0,
+    "documentedEventCount": 0,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "sf",
+    "timezone": "America/Los_Angeles",
+    "location": null,
+    "website": "https://www.bosf.org",
+    "instagram": "https://www.instagram.com/bearsofsf"
+  },
+  "events": [],
+  "traps": [
+    {
+      "id": "past-archive-30-of-142",
+      "kind": "past-event",
+      "label": "past[] / <div class=\"eventlist eventlist--past\"> — the 30 newest of 142 already-happened items, from \"Oct 17 Barbells, Bears, and Butts Deadlift Competition 2026\" back to \"Sep 8 Beer Bust\" (2024), more behind pagination",
+      "why": "The configured page renders the past section when there is nothing upcoming, and the JSON door returns the same 30 as past[] (pageSize 30, nextPage true). Under the global allowPastEvents: true the scraper extracts them — expected behaviour for recent ones — but they must never be counted against publishedEventCount, which covers upcoming only, and a run that reports 30 extracted / 0 upcoming has read this source correctly.",
+      "evidence": {
+        "url": "https://www.bosf.org/events?format=json",
+        "jsonPath": "$.pagination",
+        "quote": "\"nextPage\":true,\"nextPageOffset\":1724227071243,\"nextPageUrl\":\"/events?offset=1724227071243\",\"pageSize\":30"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": "20261018-111539",
+      "note": "Run 20261018-111539 (dry, scratch storage, Squarespace twin from the page cache): 30 extracted, 30 bear (registry bearAffinity), 0 upcoming — exactly this archive. Field completeness over the 30: epoch start/end 30, flyer 26, description 30, event page 30, bar 10, address 7, coordinates 4, city sf 15 / unknown 15. The crawl then opened the 30 item pages one by one (8 live before the run's host budget) — a cost to weigh for a source whose collection is usually empty."
+    },
+    {
+      "id": "newsletter-block",
+      "kind": "announcement",
+      "label": "\"Join our mailing list! Sign up to be the first to know about our events.\" (home page) and the unconfigured Squarespace block notice \"This newsletter signup form needs a storage option.\"",
+      "why": "A sign-up form and an unconfigured-block notice; neither names a date, venue or event.",
+      "evidence": {
+        "url": "https://www.bosf.org/",
+        "quote": "Sign up to be the first to know about our events."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-111539"
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Every collection row's location block is blank, so the Squarespace reader has no bar or address to fill from the feed; the venue sits only in the body text (\"at The Lone Star Saloon (Bear Bar USA)\"). Whether the body-text path recovers the bar for this club's rows can only be judged on a run with upcoming items — none existed on the recon date.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "15 of the 30 rows in run 20261018-111539 carry city \"unknown\": the rows have no address block, the body names a venue without a city (\"The Willows\", \"Bearrison Street Fair\", \"11th & Harrison St.\") and the site's only city statement is the footer \"San Francisco, CA 94103\" and the LocalBusiness JSON-LD. A page-derived site-level city (footer / LocalBusiness) as the last rung for a registry promoter's own site is a generic proposal for the owner; nothing per site was added.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "With nothing upcoming the crawl still follows every past item page from the listing (30 per read, ttl 3 days). Whether past item pages should be opened at all when the collection twin already carried the row is a generic crawl question.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}

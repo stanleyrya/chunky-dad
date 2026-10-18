@@ -1,0 +1,200 @@
+{
+  "schemaVersion": 1,
+  "source": "Urban Bear",
+  "slug": "urban-bear",
+  "status": "publishes-nothing",
+  "recheckAfter": "2026-11-18",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "static",
+      "feed"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.theurbanbear.com/"
+    ],
+    "doors": [
+      {
+        "url": "https://www.theurbanbear.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 8,
+        "truthFlag": "no listing structure: hand-written <h3> text blocks under \"SCHEDULE OF EVENTS\", one per night — 8 nights, September 17–20, 2026, every one before the recon date",
+        "note": "The configured page, read once with curl on 2026-10-18 (HTTP 200, 418 KB). Squarespace 7.1, <title>THE URBAN BEAR</title>, JSON-LD WebSite + LocalBusiness only, no Event. Headline \"THE 18TH ANNUAL / URBAN BEAR NYC / SEPT. 17-20, 2026\" and the paragraph \"Urban Bear NYC returns September 17–20, 2026\". Each schedule block prints weekday and date, name, venue, street address, hour and price: THURSDAY SEPTEMBER 17 — URBAN BEAR NYC OPENING NIGHT PARTY, FLEX HK, 455 WEST 51 ST, 5pm / FREE; FRIDAY SEPTEMBER 18 — BEAR INVASION: THE WHITNEY MUSUEM, 99 GANSEVOORT ST, 5pm / FREE; BEEFY BOYS HAPPY HOUR, TY’S, 114 CHRISTOPHER ST, 5pm / FREE; THE UNDERBEAR PARTY, ROCKBAR, 185 CHRISTOPHER ST, 9pm / $20; SATURDAY SEPTEMBER 19 — BURGERS, BANGLES + BEARS ‘ROPER ROMP’ Drag BRUNCH + CONTEST, JULIUS’, 159 WEST 10 ST, 2pm / FREE; TRUCK STOP: FAT FUC, DJ FUZZY, NOWHERE BAR, 322 EAST 14 ST, 9pm / $20; SUNDAY, SEPTEMBER 20 — THE 18th ANNUAL URBAN BEAR STREET FAIR, DJ NOBL3 B3AR, LITTLE WEST 12 ST (ENTER AT WASHINGTON ST), 1PM-7PM / $20; MEGA BEAR BLAST CLOSING NIGHT PARTY, ROCKBAR, 185 CHRISTOPHER ST, 6PM / FREE. Two \"GET TIX HERE\" buttons → https://www.eventbrite.com/cc/the-18th-annual-urban-bear-nyc-4867683 (an Eventbrite collection). Below: 24 sponsor logos, ACCOMMODATIONS (The Standard High Line, Hyatt Place Chelsea), VENDORS APPLICATION for the street fair (deadline September 9, 2026), VOLUNTEER form, newsletter. Nav: Home, Fire Island Bear Weekend (/fibw), Contact. Saved as cache-squarespace/www.theurbanbear.com/home.body."
+      },
+      {
+        "url": "https://www.theurbanbear.com/?format=json",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "collection.typeName \"page\", collection.title \"Home\", collection.itemCount 0; no upcoming[] or past[] keys — not an events collection",
+        "note": "The Squarespace twin of the configured page, read once with curl on 2026-10-18 (HTTP 200, 20 KB): a plain page, so the Squarespace collection reader has nothing to read on this site and the schedule is read as page text. website.timeZone \"America/New_York\"; website.socialAccounts: instagram.com/urbanbearnyc, facebook.com/theurbanbear, twitter.com/theurbanbear. Saved as cache-squarespace/www.theurbanbear.com/home-json.body."
+      },
+      {
+        "url": "https://www.theurbanbear.com/fibw",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 12,
+        "truthFlag": "no listing structure: \"EVENT SCHEDULE\" text blocks for June 11–15, 2026 — 12 entries — then one descriptive block per event with its price and a Tickets link; every date before the recon date",
+        "note": "The nav's Fire Island Bear Weekend page, read once with curl on 2026-10-18 (HTTP 200, 3.4 MB). <title>FIRE ISLAND BEAR WEEKEND — THE URBAN BEAR</title>; headline \"FIRE ISLAND BEAR WEEKEND JUNE 11-15, 2026\". Schedule: THURSDAY JUNE 11 — BEERS & BEARS OPENING NIGHT PARTY, CHERRY’S 8PM; FRIDAY JUNE 12 — BEAR ASS TEA, THE BELVEDERE 4PM; HIGH TEA, THE PINES PAVILION 8PM; CABEARET WITH ADAM SHAPIRO @ REFLECTIONS 8:30PM; SATURDAY JUNE 13 — VIP EVENT ALEXIS MICHELE OF RPDR, REFLECTIONS 12PM; FIRE ISLAND BEAR CONTEST, CHERRY’S 4PM; TRUCK STOP, MUSIC: BRADY PRINCE, PINES PAVILION 10PM; SUNDAY, JUNE 14 — BEARDED DRAG BRUNCH, THE BLUE WHALE 12PM; URBAN BEAR MEGA POOL PARTY, THE TRYST POOL CLUB 2PM; SHOWTUNES SUNDAY, PINES PAVILION 10PM; MONDAY JUNE 15 — THE PIXIE AVENTURA SHOW, PINES PAVILION 10PM. The day lines print no year; the headline does. Ticket links: eventbrite.com/e/fire-island-bear-weekend-june-11-15-2026-tickets-1984483605886 (the weekend pass), reflectionsfip.com/events/adam-b-shapiro-cabearet/tickets, opentable.com/r/the-blue-whale-fire-island, belvederefireisland.com, grovehotel.com. The only street address printed is \"REFLECTIONS 73 BAY WALK FIRE ISLAND PINES\". Saved as cache-squarespace/www.theurbanbear.com/fibw.body."
+      },
+      {
+        "url": "https://www.theurbanbear.com/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "Squarespace stock file: User-agent * disallows /*?format=json and /*?format=ical (and /config, /search, /api/, ?tag=, ?month=, ?view=)",
+        "note": "Both pages the scraper reads (/ and /fibw) are allowed; the ?format=json twin is opened as a first-party door of the configured page."
+      }
+    ],
+    "notes": "Recon from one live read of each door on 2026-10-18. The promoter runs two weekends a year — Urban Bear NYC in September and Fire Island Bear Weekend in June — and the site is the schedule of each, rewritten in place for the next edition; on the recon date both pages still carried the 2026 editions, four weeks and four months past. Bear World Magazine and Gathr carried 16 copies of these nights as aggregators; this is the promoter's own statement. Nights are co-produced with the venues (Rockbar, Nowhere Bar, Ty's, Julius', FLEX) whose own parsers may also publish them."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Every dated statement on both pages the site's nav offers is in the past on 2026-10-18 — Urban Bear NYC, September 17–20, 2026 (8 nights on the home page) and Fire Island Bear Weekend, June 11–15, 2026 (12 entries on /fibw) — and the configured page's ?format=json twin is a plain page with itemCount 0, so no collection holds anything else. The 2027 dates are not announced. Past listings: 20 schedule entries across the two pages, counted not enumerated.",
+    "publishedEventCount": 0,
+    "documentedEventCount": 0,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "nyc",
+    "timezone": "America/New_York",
+    "location": null,
+    "website": "https://www.theurbanbear.com",
+    "instagram": "https://www.instagram.com/urbanbearnyc"
+  },
+  "events": [],
+  "traps": [
+    {
+      "id": "urban-bear-nyc-2026-schedule",
+      "kind": "past-event",
+      "label": "\"SCHEDULE OF EVENTS\" on the home page — the 8 nights of Urban Bear NYC, September 17–20, 2026 (Opening Night Party at FLEX, Bear Invasion at the Whitney, Beefy Boys Happy Hour at Ty’s, The Underbear Party and Mega Bear Blast at Rockbar, the Roper Romp brunch at Julius’, Truck Stop at Nowhere Bar, the Street Fair on Little West 12th)",
+      "why": "The page prints the year, so these read as dated, finished nights; under allowPastEvents: true extracting them is correct, and they must not be counted as upcoming. Each block carries venue, street address, hour and price; FLEX (the page says \"FLEX HK\", 455 West 51st — the curated bar is at 405 W 51st St), Ty’s, Rockbar, Julius’ and Nowhere Bar are curated nyc bars; the Whitney Museum and the street fair are not bars and carry their street address only.",
+      "evidence": {
+        "url": "https://www.theurbanbear.com/",
+        "quote": "Urban Bear NYC returns September 17–20, 2026, turning New York into one of the biggest bear gatherings on the East Coast."
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": "20261018-114836",
+      "note": "Run 20261018-114836 (dry, scratch storage) extracted 5 of the 8 nights from the home page plus three fragments (\"Little West 12th St.\" from the vendor form, \"The Urban Bear NYC Street Fair\" from the volunteer block, \"URBAN BEAR NYC STREET FEST\" from a flyer) — the Street Fair three times. \"FLEX HK\" resolved to city hong-kong: scraper-cities' hong-kong pattern \"hk\" matches Hell's Kitchen's abbreviation although the address is 455 West 51st Street."
+    },
+    {
+      "id": "fibw-2026-schedule",
+      "kind": "past-event",
+      "label": "\"EVENT SCHEDULE\" on /fibw — the 12 entries of Fire Island Bear Weekend, June 11–15, 2026 (Cherry’s, The Belvedere, The Pines Pavilion, Reflections, The Blue Whale, The Tryst Pool Club)",
+      "why": "The headline prints the year (\"JUNE 11-15, 2026\"), the day lines do not; read with the headline these are finished nights on Fire Island (city key fire-island), extracted under allowPastEvents and never counted as upcoming. None of the venues is a curated bar — there is no data/bars/fire-island.json — and the page prints no street address except Reflections' (73 Bay Walk).",
+      "evidence": {
+        "url": "https://www.theurbanbear.com/fibw",
+        "quote": "JUNE 11-15, 2026"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": "20261018-114836",
+      "note": "Run 20261018-114836 extracted 8 of the 12 entries from /fibw (Beers & Bears, Bear Ass Tea, Cabearet, the VIP party, the Bear Contest, Truck Stop, Bearded Drag Brunch, the weekend itself); 5 resolved to city fire-island, 3 to unknown (Cherry's \"on the Bay\", The Belvedere, Pines Pavilion — no curated venue, no street address). Missing: High Tea, Mega Pool Party, Showtunes Sunday, the Pixie Aventura Show (the schedule block lines without a descriptive block)."
+    },
+    {
+      "id": "get-tix-eventbrite-collection",
+      "kind": "navigation",
+      "label": "\"GET TIX HERE\" → https://www.eventbrite.com/cc/the-18th-annual-urban-bear-nyc-4867683 (home page, twice) and \"Limited Weekend Passes on Sale Here\" → eventbrite.com/e/fire-island-bear-weekend-june-11-15-2026-tickets-1984483605886 (/fibw)",
+      "why": "Ticket buttons for the weekend passes: the first is an Eventbrite collection page (cc/), not an event page, and the second is the weekend pass, not a night. They are the schedule's ticket links, not events of their own.",
+      "evidence": {
+        "url": "https://www.theurbanbear.com/",
+        "quote": "<a\n    href=\"https://www.eventbrite.com/cc/the-18th-annual-urban-bear-nyc-4867683\"\n    class=\"sqs-block-button-element--medium sqs-button-element--primary sqs-block-button-element\"\n    data-sqsp-button\n    target=\"_blank\"\n  >\n    GET TIX HERE\n  </a>"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-114836"
+    },
+    {
+      "id": "vendor-application-deadline",
+      "kind": "announcement",
+      "label": "\"VENDORS APPLICATION — THE 18th ANNUAL Urban Bear NYC Street Fair, SUNDAY, SEPT. 20, 2026, 1pm-7pm … must be received no later than September 9, 2026\"",
+      "why": "The vendor form restates the street fair's date (already in the schedule) and adds a payment deadline; the deadline is not an event and the restatement is a duplicate of the schedule entry.",
+      "evidence": {
+        "url": "https://www.theurbanbear.com/",
+        "quote": "must be received no later than September 9, 2026"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-114836",
+      "note": "Run 20261018-114836 DID extract a record \"2. To apply\" dated 2026-09-09 11:00 from this block (the deadline read as a start) — a miss the trap exists to name."
+    },
+    {
+      "id": "sponsor-logo-gallery",
+      "kind": "gallery",
+      "label": "\"2026 SPONSORS\" — 24 \"View fullsize\" logo images (MISTR, Brass Monkey, SpikedAde, Rockbar, Julius’, FLEX, Ty’s and others link their own sites)",
+      "why": "Sponsor logos, each a link to a sponsor's site; not nights, and several lead to venue sites whose nights belong to those venues' own parsers.",
+      "evidence": {
+        "url": "https://www.theurbanbear.com/",
+        "quote": "2026 SPONSORS"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-114836"
+    },
+    {
+      "id": "accommodations-and-volunteer-blocks",
+      "kind": "announcement",
+      "label": "\"ACCOMMODATIONS\" (The Standard High Line room block, Hyatt Place Chelsea) and \"VOLUNTEER!\" (a sign-up form; volunteers receive a weekend pass)",
+      "why": "Hotel room-block blurbs and a volunteer form; they name the weekend but no night.",
+      "evidence": {
+        "url": "https://www.theurbanbear.com/",
+        "quote": "This years fair will be held on Sunday, Sept. 20, 2026. and volunteers receive an Urban Bear NYC Weekend Pass in appreciation of their service."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-114836"
+    },
+    {
+      "id": "sponsor-links-foreign-calendars",
+      "kind": "foreign-programming",
+      "label": "The sponsor logos and hotel buttons link off-site (rockbarnyc.com, flexbar.nyc, tys.nyc, juliusbarny.com, brassmonkeynyc.com, heymistr.com, spikedade.com, standardhotels.com, hyatt.com, paypal.me; on /fibw belvederefireisland.com, grovehotel.com, reflectionsfip.com, opentable.com) — the adaptive crawl followed them from the root and read what it found there",
+      "why": "A promoter's root may link its ticketing platform, so same-depth outbound links are followed; here they lead to the sponsors' own sites. Rockbar's home page carries an Elfsight calendar and the Elfsight reader opened it inside this parser's crawl: 107 of the run's 128 records are Rockbar's nights (ARCADE, ORAL EXAM TRIVIA, GORDITOS, BEARS NIGHT OUT, PEEP SHOW…), each stamped bear by the promoter's bearAffinity and given https://www.theurbanbear.com as website by the registry identity; The Standard's /specials page yielded \"Sunday Views\" (2027-01-06) and \"Frieze London\" (city london). Rockbar has its own parser; none of this is Urban Bear's programming and none of it belongs under this source.",
+      "evidence": {
+        "url": "https://www.theurbanbear.com/",
+        "quote": "<a href=\"https://rockbarnyc.com\""
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-114836",
+      "note": "Live requests in that run: 36 to 19 hosts (eventbrite.com 2, reflectionsfip.com 2, standardhotels.com 2, hyatt.com parked on 403, paypal.me refused by robots). The generic question — may a platform door (Elfsight, Squarespace twin, Wix blob, DICE, MEC) open on a host outside the source's configured domain, and may a registry identity rewrite the website of records read off another org's site — is raised in openQuestions and left to the owner; no per-site block was added."
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Run 20261018-114836: the crawl followed the home page's sponsor links to rockbarnyc.com and read Rockbar's Elfsight calendar as 107 Urban Bear events (bear by bearAffinity, website rewritten to theurbanbear.com by the registry identity). Proposed generic rule, not built: a platform door opened on a page whose registrable domain is not one of the source's configured domains yields nothing for that source (the host's own parser owns it), and the registry identity never overwrites a website that points at another configured source's domain. Owner decision — it changes crawl semantics for every promoter root that links its venues. — Resolved 2026-10-18: the stanza sets discoveryAllowedPatterns [\"theurbanbear.com\"], so discovery never leaves the promoter's own pages; the crawl-policy question (platform doors on hosts outside a source's domains) stays open as a generic concern.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "Fire Island Bear Weekend's venues (Cherry’s on the Bay, The Belvedere, The Pines Pavilion, Reflections, The Blue Whale, The Tryst Pool Club) have no curated data/bars/fire-island.json; the site prints one street address (Reflections, 73 Bay Walk) and no coordinates, so none could be added with justified coordinates. Owner call before the June 2027 edition.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "The weekend passes are Eventbrite pages (a cc/ collection for NYC, an /e/ event for FIBW) with structured dates; whether to follow them as doors is open — the schedule text is the fuller statement (per-night venue, hour, price).",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "scraper-cities' hong-kong patterns include the bare token \"hk\"; \"FLEX HK\" (Hell's Kitchen) resolved to hong-kong in run 20261018-114836 although the block prints a Manhattan street address. Dropping \"hk\" or requiring a longer match is a one-line data change with cross-city consequences — owner call.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}
