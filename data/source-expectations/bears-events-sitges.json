@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "source": "Bears Events (Sitges)",
+  "slug": "bears-events-sitges",
+  "status": "publishes-nothing",
+  "recheckAfter": "2026-11-17",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.bearsevents.com/events/"
+    ],
+    "doors": [
+      {
+        "url": "https://www.bearsevents.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "empty-state text: \"There are no upcoming events.\"; <title>Events from May 2, 2025 – September 13 – Bears  Events – Sitges 2026</title>",
+        "note": "Configured page. One static read with a Safari UA (HTTP 200, 120,730 bytes): WordPress 7.1.2 + WooCommerce + The Events Calendar v2 list view, same build as sitgesbearcave.com. Advertises /events/?ical=1, the REST base https://www.bearsevents.com/wp-json/tribe/events/v1/ and /events/feed/. Below the empty state: a \"Latest Past Events\" block with three rows (see traps). Saved as bearsevents-events.html / .txt."
+      },
+      {
+        "url": "https://www.bearsevents.com/wp-json/tribe/events/v1/events?per_page=50",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "total: 0; total_pages: 0; events: []; no next_rest_url",
+        "note": "Default window of The Events Calendar REST route (the door the crawler adopts from the listing's <link rel=\"https://api.w.org/\"> and the page's own wp-json/tribe/events/v1/ link): rest_url echoes start_date=2026-10-18 00:00:00 end_date=2028-10-18 23:59:59 status=publish; events [] total 0 total_pages 0, no next_rest_url. HTTP 200, 206 bytes. Saved as bearsevents-tribe-p1.json."
+      },
+      {
+        "url": "https://www.bearsevents.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2018-01-01",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 6,
+        "truthFlag": "total: 6; total_pages: 1 (whole archive, start_date pushed back to 2018-01-01)",
+        "note": "The whole archive: Bears Sunset Tea Dance – May Edition — 2025-05-02 16:00:00 → 2025-05-02 19:30:00 @ Hotel Mim Sitges; VIP ZONE — 2025-09-08 20:00:00 → 2025-09-15 02:00:00 @ Sitges Bear Village VIP Zone; Bears Sunset Tea Dance – September Edition — 2025-09-11 16:00:00 → 2025-09-11 19:30:00 @ Hotel Mim Sitges; Sitges Drag Brunch Bear Edition — 2025-09-14 13:30:00 → 2025-09-14 16:00:00 @ Le Patio Sitges; Bears Sunset Tea Dance – September Edition 2026 — 2026-09-09 16:00:00 → 2026-09-09 19:30:00 @ Hotel Mim Sitges; Sitges Drag Brunch Bear Edition 2026 — 2026-09-13 13:00:00 → 2026-09-13 15:30:00 @ Le Patio Sitges. Rows carry venue { venue, address, city: \"Sitges\", zip } for Hotel Mim Sitges (Av. Sofia, 12), Le Patio Sitges (Calle Bonaire 16) and \"Sitges Bear Village VIP Zone\" (Psg Ribera), an image each, cost in euros where ticketed, organizer \"Bears Events\" on three rows, and timezone \"UTC+0\" on every row although the wall-clock times are Sitges local (16:00 tea dance, 13:00 brunch). Not a door the scraper opens; read once for the count. Saved as bearsevents-tribe-all.json."
+      },
+      {
+        "url": "https://www.bearsevents.com/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "Disallow: /wp-admin/ and WooCommerce upload/cart paths only",
+        "note": "Neither /events/ nor /wp-json/ is disallowed. Sitemap: /sitemap_index.xml (not read)."
+      }
+    ],
+    "notes": "Added 2026-10-18 at the owner’s request: Bears Sitges Club’s own ticket shop (the Bears Sitges Week programme’s ticket links point at bearsevents.com /product/ pages, three of them as typos — see bears-sitges-week.json). The Tribe calendar on this host carries the ticketed festival-week extras (Sunset Tea Dance, Drag Brunch Bear Edition, VIP Zone), not the whole programme, and only around the September week: six rows in its whole history across two editions, one of them cancelled. data/promoters.json maps bearsevents.com (urlPatterns) and the organizer name \"Bears Events\" (alias) to the Bears Sitges Club entry, so nothing here is a second promoter. Timezone on every row is the pseudo-zone \"UTC+0\": the feed reader only adopts IANA names (Area/City), so a row from here takes the city’s zone, Europe/Madrid, which is what the wall-clock times mean."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Two independent doors agree the site publishes zero upcoming events on 2026-10-18: the listing page’s own empty state (\"There are no upcoming events.\", door 1) and the REST route’s default window (total 0, door 2). The archive read (door 3) reconciles the page’s \"Latest Past Events\" block and counts the past listings: six rows, 2025-05-02 … 2026-09-13, all past — counted, not enumerated. The shop’s /product/ pages are WooCommerce products (tickets), not calendar rows, and were not read.",
+    "publishedEventCount": 0,
+    "documentedEventCount": 0,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "sitges",
+    "timezone": "Europe/Madrid",
+    "website": "https://www.bearsevents.com"
+  },
+  "events": [],
+  "traps": [
+    {
+      "id": "latest-past-events-block",
+      "kind": "past-event",
+      "label": "Latest Past Events → \"Sitges Drag Brunch Bear Edition 2026\" (September 13 @ 1:00 pm - 3:30 pm), \"Bears Sunset Tea Dance – September Edition 2026\" (September 9 @ 4:00 pm - 7:30 pm), \"Sitges Drag Brunch Bear Edition\" (September 14, 2025 @ 1:30 pm - 4:00 pm)",
+      "why": "The Events Calendar fills an empty upcoming list with its three most recent past events; two are the 2026 edition just gone and one is 2025. The REST door does not return them. The 2026 rows print no year inline (the year is a separate \"2026\" line), so a reader without the year could roll them forward.",
+      "evidence": {
+        "url": "https://www.bearsevents.com/events/",
+        "quote": "Latest Past Events"
+      },
+      "expect": {
+        "extracted": true,
+        "note": "config.allowPastEvents is true for every parser, so past rows are kept by design. The validation run 20261018-111437 read this block through the AI path and produced ONE record from the three rows: \"BEAR WEEK DRAG BRUNCH\", startDate 2025-09-14, bar \"Le Patio\", address \"Jardin Terrasse\", city unknown — a blend of the 2025 row’s date with the 2024 preview flyer’s OCR text; the 2026 brunch came separately from its own event page (JSON-LD, exact 13:00–15:30, merge with the calendar’s hand-entered copy) and the tea dance page was not read (request budget). Three rows in, one chimera out — see openQuestions."
+      },
+      "seenInRun": "20261018-111437"
+    },
+    {
+      "id": "cancelled-may-tea-dance",
+      "kind": "announcement",
+      "label": "Bears Sunset Tea Dance – May Edition (2025-05-02 16:00) — \"PLEASE NOTE THIS EVENT HAS BEEN CANCELLED.\"",
+      "why": "A cancelled, past row still published in the archive; its description is the cancellation notice. Reachable only behind an explicit start_date.",
+      "evidence": {
+        "url": "https://www.bearsevents.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2018-01-01",
+        "jsonPath": "$.events[0].description"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "vip-zone-ticket-holder-info",
+      "kind": "ticket-tier",
+      "label": "VIP ZONE (2025-09-08 20:00 → 2025-09-15 02:00, \"Sitges Bear Village VIP Zone\") — \"This event information is for VIP Ticket Holders Only\"",
+      "why": "A week-long row that is the VIP pass’s instructions (where to collect the pass, what the zone offers), not a party: a ticket tier wearing a calendar row. Past, and only in the archive window.",
+      "evidence": {
+        "url": "https://www.bearsevents.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2018-01-01",
+        "jsonPath": "$.events[1].description"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "list-title-date-range",
+      "kind": "navigation",
+      "label": "Events from May 2, 2025 – September 13 – Bears  Events – Sitges 2026",
+      "why": "The list view’s <title> states the range of the rows it shows (here the past block), not an event; \"Sitges 2026\" is the site name. A reader taking the page title as a dated event would invent a May 2025 → September 13 span.",
+      "evidence": {
+        "url": "https://www.bearsevents.com/events/",
+        "quote": "Events from May 2, 2025 – September 13 – Bears  Events – Sitges 2026"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "empty-state-notice",
+      "kind": "announcement",
+      "label": "There are no upcoming events.",
+      "why": "The positive empty-state signal, HTTP 200, agreed by the REST door. Never an event, never a fetch failure.",
+      "evidence": {
+        "url": "https://www.bearsevents.com/events/",
+        "quote": "There are no upcoming events."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "When the 2027 rows appear here they will also be lines of the bearssitges.org programme (bears-sitges-week.json documents the tea dance and the drag brunch from the programme text, with flyer-vs-text time deltas). Which copy should win the time — the shop’s feed (structured, ticketed) or the programme line? Both parsers are curated-promoter Bears Sitges Club sources.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "Three list rows, one record: the AI read of the \"Latest Past Events\" block (run 20261018-111437) produced a single \"BEAR WEEK DRAG BRUNCH\" dated 2025-09-14 with the 2024 preview flyer’s venue text and city unknown, instead of three rows with their <time datetime> dates — the same missing Tribe list-row reader as sitges-bear-cave.json raises. Until the feed has upcoming rows, this page yields that chimera on every run; it is a past record, so the calendar never sees it as a write, but it sits in the results as \"new\".",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "The feed’s rows say timezone \"UTC+0\" with Sitges wall-clock times. The reader drops non-IANA zone strings and the city’s zone applies, which is right here; is that worth a log line when it happens, so a site that really means UTC is noticed?",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}

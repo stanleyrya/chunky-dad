@@ -222,7 +222,8 @@ const scraperPromoters = [
       "Bears Sitges",
       "Bears Sitges Week",
       "Bears Week Sitges",
-      "Bears Sitges Meeting"
+      "Bears Sitges Meeting",
+      "Bears Events"
     ],
     "shortName": "BEARS SITGES",
     "instagram": "https://www.instagram.com/bearssitgesofficial",
@@ -230,7 +231,8 @@ const scraperPromoters = [
     "website": "https://bearssitges.org",
     "bearAffinity": "always",
     "urlPatterns": [
-      "bearssitges"
+      "bearssitges",
+      "bearsevents.com"
     ]
   },
   {
@@ -341,6 +343,19 @@ const scraperPromoters = [
       "instagram.com/bearsoflondon_meetups"
     ],
     "bearAffinity": "always"
+  },
+  {
+    "name": "Folsom Europe",
+    "aliases": [
+      "Folsom Europe e.V.",
+      "Folsom Berlin"
+    ],
+    "shortName": "FOLSOM EUROPE",
+    "instagram": "https://www.instagram.com/folsomeurope",
+    "website": "https://folsomeurope.berlin",
+    "urlPatterns": [
+      "folsomeurope.berlin"
+    ]
   }
 ];
 

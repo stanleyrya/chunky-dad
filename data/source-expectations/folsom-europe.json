@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "source": "Folsom Europe",
+  "slug": "folsom-europe",
+  "status": "publishes-nothing",
+  "recheckAfter": "2026-11-17",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://folsomeurope.berlin/program/"
+    ],
+    "doors": [
+      {
+        "url": "https://folsomeurope.berlin/program/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "no event text on the page: the programme is <iframe id=\"ems-programme\" src=\"https://ems.switchedapp.com/programme/folsomeurope\">; <title>FOLSOM EUROPE 2026 SCHEDULE – FOLSOM EUROPE</title>",
+        "note": "Configured page. One static read with a Safari UA (HTTP 200, 129,727 bytes): WordPress + Elementor 3.33.3 + Site Kit, with The Events Calendar active (the <head> links https://folsomeurope.berlin/wp-json/tribe/events/v1/ and /events/?ical=1, which is how the crawler adopts the REST route). The page body is Elementor video widgets plus the EMS iframe; stripped of chrome its text is the nav, the association’s address block, the cookie banner and a membership-form notice — zero dated lines, zero event links. No JSON-LD. Saved as folsom-program.html / .txt."
+      },
+      {
+        "url": "https://folsomeurope.berlin/wp-json/tribe/events/v1/events?per_page=50",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 0,
+        "truthFlag": "total: 0; total_pages: 0; events: []; no next_rest_url",
+        "note": "Default window of The Events Calendar REST route (the door the crawler adopts from the listing's <link rel=\"https://api.w.org/\"> and the page's own wp-json/tribe/events/v1/ link): rest_url echoes start_date=2026-10-18 00:00:00 end_date=2028-10-18 23:59:59 status=publish; events [] total 0 total_pages 0, no next_rest_url. HTTP 200, 206 bytes. Saved as folsom-tribe-p1.json."
+      },
+      {
+        "url": "https://folsomeurope.berlin/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "empty-state text: \"There are no upcoming events.\"",
+        "note": "The Tribe list view on the same host (not the configured page; read as the second door for the empty state). HTTP 200, 166,781 bytes. Below the notice, \"Latest Past Events\" shows three volunteer shifts of 12–14 September 2026 (see traps). Saved as folsom-events-list.html / .txt."
+      },
+      {
+        "url": "https://folsomeurope.berlin/wp-json/tribe/events/v1/events?per_page=50&start_date=2018-01-01",
+        "kind": "tribe-rest",
+        "role": "feed",
+        "rowsReturned": 50,
+        "truthFlag": "total: 85; total_pages: 2; next_rest_url: present",
+        "note": "Whole archive, page 1 of 2 (page 2 carries the other 35; saved as folsom-tribe-all.json / folsom-tribe-all-p2.json). All 85 rows are category \"Volunteering\": shift slots for the 2025 (2025-08-30 … 2025-09-01, 13 rows) and 2026 (2026-09-09 … 2026-09-14, 72 rows) editions — \"Set-up Team\", \"Security Gate – Martin-Luther-Str.\", \"Animal Farm Volunteer / Helfer:in Animal Farm\", \"Take Down Flags / Fahnen abhängen\". Venues are the staffing points: Street fair location; Volunteer Check-in; the Knast; Metropol; Hotel Berlin, Berlin; Meeting @ AXEL HOTEL. No image, no cost, no organizer; timezone Europe/Berlin; url = the shift page on folsomeurope.berlin. The programme the public attends is not in this calendar at all."
+      },
+      {
+        "url": "https://ems.switchedapp.com/programme/folsomeurope",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 17,
+        "truthFlag": "server-rendered rows for WED - 09 SEP 2026 only (17); day tabs Wed 9 … Sun 13; banner \"This website requires JavaScript to run properly.\"",
+        "note": "The iframe’s source, read once to learn what the programme door would be (a third-party host the parser is not configured for and the crawler never reaches: nothing in the pipeline follows an iframe). The 2026 programme is server-rendered one day at a time: 17 rows for Wednesday 9 September with a time range, a venue or organiser name, a blurb and Web / Map / Tickets links — among them \"Woof Berlin — WOOF’S FOLSOM WELCOME. Meet hairy leather guys in the mix with all kinds of fetish.\" The other four days need JavaScript. The whole edition is past. Saved as ems-folsom-programme.html / .txt."
+      },
+      {
+        "url": "https://folsomeurope.berlin/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "Disallow: /wp-admin/ only; Allow: /wp-admin/admin-ajax.php",
+        "note": "Sitemap: /wp-sitemap.xml (not read)."
+      }
+    ],
+    "notes": "Added 2026-10-18 at the owner’s request. Folsom Europe e.V. runs Berlin’s leather week (festivals.json: 2026-09-10 → 2026-09-13, category kink); the August 2026 hand-extraction of its programme already put the bear-relevant nights into the Berlin calendar (Woof Berlin ×4, BearDance at SO36, the street fair). The site is WordPress + Elementor with The Events Calendar installed, but the two are not the same calendar: the public programme lives in an EMS \"Event Control\" programme embedded by iframe on /program/, while the Tribe calendar is the volunteer-shift roster (85 shifts, all category \"Volunteering\", 2025 and 2026). So with /program/ configured the crawler reads an event-less page, adopts the Tribe REST door, finds it empty from mid-September to the next July or August, and while shifts are posted (the 2026 shifts were dated 2026-09-09 … 2026-09-14; creation dates in the feed start 2025-07) reads shifts that the bear check must drop. Leather, not bear, so alwaysBear is false; the promoter entry in data/promoters.json carries the site and the Instagram handle the page itself links (https://www.instagram.com/folsomeurope), with no bearAffinity claim."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Two independent doors agree the host publishes zero upcoming events on 2026-10-18: the REST route’s default window (total 0, door 2) and the Tribe list view’s own empty state (\"There are no upcoming events.\", door 3); the configured /program/ page (door 1) carries no event text of its own at all. The archive read (door 4, two pages, total 85 reconciled with 50 + 35 rows) shows the calendar’s whole history is volunteer shifts — past listings are counted (85), not enumerated, and would be traps even when upcoming. The public programme (door 5) is a past edition on another host that the parser does not read.",
+    "publishedEventCount": 0,
+    "documentedEventCount": 0,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "berlin",
+    "timezone": "Europe/Berlin",
+    "website": "https://folsomeurope.berlin",
+    "instagram": "https://www.instagram.com/folsomeurope"
+  },
+  "events": [],
+  "traps": [
+    {
+      "id": "volunteer-shift-roster",
+      "kind": "foreign-programming",
+      "label": "wp-json/tribe/events/v1/events → \"Set-up Team – Pre-Fair-Day / Aufbau-Team – Aufbautag\", \"Security Gate – Martin-Luther-Str.\", \"Animal Farm Volunteer / Helfer:in Animal Farm\", \"Hang up Flags, Street Decoration and Banners\" … (85 rows, every one category \"Volunteering\")",
+      "why": "The Tribe calendar on this host is the crew roster: dated, timed, placed rows that are work shifts for volunteers, not programming for the public. When the 2027 shifts are posted (summer) they will be upcoming rows in the door the crawler adopts and will look exactly like events — bilingual titles, a street address, a 2–5 hour slot. Nothing bear about any of them; the bear check is what stands between them and the deck.",
+      "evidence": {
+        "url": "https://folsomeurope.berlin/wp-json/tribe/events/v1/events?per_page=50&start_date=2018-01-01",
+        "jsonPath": "$.events[*].categories[0].name"
+      },
+      "expect": {
+        "extracted": true,
+        "note": "config.allowPastEvents is true for every parser, so the past shifts ARE read: the validation run 20261018-112822 followed the list view’s \"past\" link and took all 85 rows from that page’s JSON-LD (title, dates, bar, address, url; no image, no cost), kept every one as \"future\" (86 → 86), and the bear check then dropped 50 of the 51 distinct shifts and FLAGGED one — \"Take Down Flags / Fahnen abhängen\" (2025-09-01 10:00–12:00) — which survived as the run’s single final event. So \"extracted\" is the correct expectation for a shift; the bear check is the only gate, and it let one through as a flag. When the 2027 shifts are upcoming the same 80-odd rows will arrive through the REST door instead."
+      },
+      "seenInRun": "20261018-112822"
+    },
+    {
+      "id": "latest-past-events-block",
+      "kind": "past-event",
+      "label": "Latest Past Events (on /events/) → \"Take Down Flags / Fahnen abhängen – Copy\" (September 14 @ 12:00 - 14:00), \"Boat Tour Assistant – Check-in/Wristband/Ticket/Reception / Reiseleitung Bootstour – Check-in/Bänder/Ticket/Empfang\" (September 13 @ 14:30 - 19:00), \"Storage Manager – Night / Lagerleitung – Nacht\" (September 12 @ 21:00 - September 13 @ 1:00)",
+      "why": "The list view fills its empty upcoming state with the three latest past rows — themselves volunteer shifts of the 2026 edition. Past, and shifts. The year is a separate \"2026\" line above each row.",
+      "evidence": {
+        "url": "https://folsomeurope.berlin/events/",
+        "quote": "Take Down Flags / Fahnen abhängen – Copy"
+      },
+      "expect": {
+        "extracted": true,
+        "note": "Kept by design under the global allowPastEvents; in run 20261018-112822 the crawl went from this block to the full past list (?eventDisplay=past) and read all 85 shifts from its JSON-LD."
+      },
+      "seenInRun": "20261018-112822"
+    },
+    {
+      "id": "ems-programme-iframe",
+      "kind": "out-of-config-scope",
+      "label": "<iframe id=\"ems-programme\" src=\"https://ems.switchedapp.com/programme/folsomeurope\"> — \"FOLSOM EUROPE 2026 SCHEDULE\"",
+      "why": "The real programme, on a third-party host, embedded by iframe. The crawler does not follow iframes and the parser is not configured for ems.switchedapp.com, so no row from it can be read from here; the 17 server-rendered rows it does carry are the past 2026 Wednesday. Documented so nobody reads the page heading \"FOLSOM EUROPE 2026 SCHEDULE\" as a dated event or the empty page as a broken site.",
+      "evidence": {
+        "url": "https://folsomeurope.berlin/program/",
+        "quote": "FOLSOM EUROPE 2026 SCHEDULE"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "gallery-year-links",
+      "kind": "gallery",
+      "label": "GALLERY → 2026 2025 2024 2023 2022 2021 2020 Virtual 2018",
+      "why": "Nav links to photo galleries of past editions: bare year tokens with no month, day, time or venue. A reader that treats a year token as a date would mint dateless festival rows.",
+      "evidence": {
+        "url": "https://folsomeurope.berlin/program/",
+        "quote": "2020 Virtual"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "empty-state-notice",
+      "kind": "announcement",
+      "label": "There are no upcoming events.",
+      "why": "The Tribe list view’s positive empty-state signal, HTTP 200, agreed by the REST door. Never an event, never a fetch failure.",
+      "evidence": {
+        "url": "https://folsomeurope.berlin/events/",
+        "quote": "There are no upcoming events."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The programme door. Three ways to read Folsom Europe’s actual programme, none built: (a) a generic crawler rule that follows an iframe’s src from a configured page as a discovered page (affects every site with embeds — maps, videos, ticket widgets — so it needs its own gate); (b) configure https://ems.switchedapp.com/programme/folsomeurope as a parser url (a third-party host, server-rendered one day per read: the other days need JavaScript); (c) leave the parser on /program/ and keep the programme a once-a-year hand extraction, as in August 2026. Which?",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "One shift reached the final list: the bear check flagged rather than dropped \"Take Down Flags / Fahnen abhängen\" (2025-09-01) in run 20261018-112822 (0 bear, 1 flagged, 50 dropped), so a 2025 volunteer shift stands in the results as a flagged event with no bar, no image and the site root as its website. Flag-don’t-drop is the doctrine, so this is a deck card, not a calendar write — but it shows a staffing row can pass the only gate this source has.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "The Tribe REST door on this host will fill with 2027 volunteer shifts next summer. Should the Tribe reader learn a generic rule for staffing categories (a row whose only category is \"Volunteering\" is not programming), or is the bear check enough? No rule was added: one site is not evidence of a convention.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "Berlin bars: data/bars/berlin.json was created with Woof Berlin and SO36 (the venues the 2026 bear nights used, coordinates from the owner’s Berlin calendar records). Metropol / Mikropol (ADAM, Kake’s Sunday Service, Bearhood Monster Bash) and Lütze Bar were left out — add them?",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}
