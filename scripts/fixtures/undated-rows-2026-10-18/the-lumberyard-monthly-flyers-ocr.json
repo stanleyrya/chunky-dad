@@ -1,0 +1,35 @@
+{
+  "note": "verbatim OCR cache entries (storage/ocr) for the six monthly flyers on https://www.thelumberyardbar.com/mothly-events — the page itself prints no event words",
+  "flyers": [
+    {
+      "url": "https://static.wixstatic.com/media/f45f1a_1831c5468573485b90c473aa2c2b3937~mv2.jpg",
+      "cachedAt": "2026-08-11T18:15:46.962Z",
+      "text": "GAY\nBINGO\nAT THE LUMBER YARD BAR\nEVERY 2ND & 4TH THURSDAY | 7PM\nHOSTED BY BARRY\nFREE TO PLAY | WIN PRIZES"
+    },
+    {
+      "url": "https://static.wixstatic.com/media/f45f1a_525a31bbabd44c03a3e122407ca3547d~mv2.png/v1/fill/w_600,h_337,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/EXP%20Bar%20Ad%20HD.png",
+      "cachedAt": "2026-07-27T18:15:20.002Z",
+      "text": "LUMBERYARD\nBAR\nEXPOSED\nUNDERWEAR OR LESS\nEVERY 2ND FRIDAY\nDJ REDLINE\nDJ CLOVER"
+    },
+    {
+      "url": "https://static.wixstatic.com/media/f45f1a_9ce9f1fa1668434989c67ee4a53acd5b~mv2.jpeg/v1/fill/w_600,h_600,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/f45f1a_9ce9f1fa1668434989c67ee4a53acd5b~mv2.jpeg",
+      "cachedAt": "2026-07-27T18:15:29.480Z",
+      "text": "Lumberyard Presents\nRAT CITY HONKY TONK\nLINE DANCING WITH\nRAIN COUNTRY\nDANCE ASSOCIATION\n\n1st Fridays\n9:00 pm"
+    },
+    {
+      "url": "https://static.wixstatic.com/media/f45f1a_ae4ab4b6d7f4420fadf62edb18bcc50f~mv2.jpeg/v1/fill/w_698,h_391,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/IMG_3424.jpeg",
+      "cachedAt": "2026-07-27T18:15:24.348Z",
+      "text": "Last Tuesday\nDrink & Draw\nat LUMBER YARD\n\nFeaturing local, male presenting, models every month.\nDraw, meet friends, and build community!\n\nLast Tuesday of the month, 7-10pm\nLumber Yard Bar\n9630 16th Avenue SW, Seattle, WA 98106\n\n$15 to participate, buy early at\ncodyshipman.com/events\n\nCURATED BY CODY SHIPMAN"
+    },
+    {
+      "url": "https://static.wixstatic.com/media/f45f1a_cc298ee88cce432e8e8cb60d3df2b2b2~mv2.png/v1/fill/w_600,h_332,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/f45f1a_cc298ee88cce432e8e8cb60d3df2b2b2~mv2.png",
+      "cachedAt": "2026-07-27T18:15:33.287Z",
+      "text": "CHOPPER 'N' FRIENDS\nPUP SOCIAL\nALL CRITTERS WELCOME\nEvery third Saturday\nfrom 4-8pm @\nThe Lumber Yard in Seattle."
+    },
+    {
+      "url": "https://static.wixstatic.com/media/f45f1a_e7854f2aacfb49d78e39bb314896dd37~mv2.jpeg/v1/fill/w_600,h_337,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/f45f1a_e7854f2aacfb49d78e39bb314896dd37~mv2.jpeg",
+      "cachedAt": "2026-07-27T18:15:21.881Z",
+      "text": "SHOWTUNES\nTHEATER THURSDAY\nHosted by Dolly & the DJ\nFirst Thursday of the month\n7pm-10pm\nLive Drag!\nPerformances\nSing Along!\nLUMBER YARD"
+    }
+  ]
+}
