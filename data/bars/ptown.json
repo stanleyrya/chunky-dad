@@ -14,11 +14,11 @@
     "city": "ptown",
     "address": "161 Commercial St, Provincetown, MA 02657",
     "coordinates": "42.0470329, -70.1901852",
+    "website": "https://theboatslip.com",
     "instagram": "https://www.instagram.com/boatslipresort",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
     "gayCities": "https://ptown.gaycities.com/hotels/10272-boatslip-resort-beach-club",
-    "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z",
-    "website": "https://theboatslip.com"
+    "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z"
   },
   {
     "name": "Crown & Anchor",
@@ -45,11 +45,11 @@
     "city": "ptown",
     "address": "258 Commercial St, Provincetown, MA 02657",
     "coordinates": "42.0510476, -70.1876737",
+    "website": "https://redroom.club",
     "instagram": "https://www.instagram.com/redroomptown",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
     "gayCities": "https://ptown.gaycities.com/bars/309562-red-room",
-    "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z",
-    "website": "https://redroom.club"
+    "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z"
   },
   {
     "name": "Provincetown Inn",
