@@ -218,5 +218,11 @@
     "city": "nyc",
     "address": "55 Little West 12th Street, New York, New York",
     "coordinates": "40.7406797, -74.0084922"
+  },
+  {
+    "name": "H0l0",
+    "city": "nyc",
+    "address": "1090 Wyckoff Avenue, Ridgewood, Queens, NY 11385",
+    "coordinates": "40.6942754, -73.9021778"
   }
 ]
