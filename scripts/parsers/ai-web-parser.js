@@ -1924,7 +1924,8 @@ class AiWebParser {
             const allowedEvents = this.filterEventsByDiscoveryAllowlist(events, sourceUrl, parserConfig);
             // A record named after a button or a photo caption, and after
             // nothing else on the page, is page furniture the model adopted.
-            const keptEvents = this.dropPageFurnitureTitledEvents(allowedEvents, effectiveHtmlData && effectiveHtmlData.html, sourceUrl);
+            const keptEvents = this.dropFurnitureShapedTitles(
+                this.dropPageFurnitureTitledEvents(allowedEvents, effectiveHtmlData && effectiveHtmlData.html, sourceUrl), sourceUrl);
             // A page that places its cards in its own prose (see
             // placeEventsAtPageStatedVenue).
             this.placeEventsAtPageStatedVenue(keptEvents, effectiveHtmlData, parserConfig);
@@ -3377,6 +3378,51 @@ class AiWebParser {
             }
             if (!reason) { kept.push(event); continue; }
             console.log(`🪑 FURNITURE: "${event.title}" is ${reason} on ${sourceUrl || 'this page'} and appears nowhere else on the page — not an event`);
+        }
+        return kept;
+    }
+
+    // Page furniture by the SHAPE of the name, when the page's markup does
+    // not give it away (a link styled as a button, a plugin heading, a
+    // numbered line of instructions, a street line on its own, a feed's
+    // language tag). Run 20261018-161635, the crawl's first day on three
+    // new sites: "comprar entradas" (popairparty.com's buy button), "2. To
+    // apply" and "Little West 12th St." (theurbanbear.com's street-fair
+    // instructions), "Events for July 27, 2026" ×10 (The Events Calendar's
+    // day-view heading on bearsevents.com), "en-US" (its RSS feed) — each a
+    // dated "event" on the owner's deck. Shapes only, every one of them a
+    // line no party is named by; a real name with a number ("2 Bears 1
+    // Cave", "12 Step Bears") has no list punctuation after the number and
+    // passes.
+    static furnitureTitleShape(title) {
+        const line = String(title || '').replace(/[​ ]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!line) return '';
+        const words = line.split(' ').length;
+        // A call to action in the site's language: the whole title is one.
+        if (words <= 4 && (/^(?:(?:buy|get|book|grab|purchase|reserve|comprar|compra|acheter|kaufen|koop|réserver|prenota|acquista)\s+(?:your\s+|now\s+|los\s+|las\s+|des\s+|die\s+)?(?:tickets?|entradas?|billets?|karten|biglietti|passes?|spot|table|now|here)|(?:sign|apply|register|rsvp|donate|subscribe|learn|read|find out|more|shop|order)(?:\s+(?:up|now|more|info|here|online))*|(?:more|further)\s+(?:info|information|details)|(?:tickets?|entradas|billets|karten|biglietti))\.?!?$/i.test(line)
+            // Verb-last languages: "Tickets kaufen", "Karten sichern", "Entradas aquí".
+            || /^(?:tickets?|karten|entradas|billets|biglietti|kaarten)\s+(?:kaufen|buchen|sichern|holen|bestellen|reservieren|comprar|acheter|aquí|hier|here)\.?!?$/i.test(line))) return 'a call to action';
+        // A calendar plugin's view heading: "Events for July 27, 2026", "Events for", "Events in October".
+        if (/^events?\s+(?:for|in|on|from|this|next)\b/i.test(line) && !/\b(?:bears?|cubs?|club|bar|party|fest)\b/i.test(line)) return 'a calendar view heading';
+        // A numbered line of instructions ("2. To apply", "3) Bring ID").
+        if (/^\d{1,2}[.)]\s+\S/.test(line) && words <= 6) return 'a numbered line';
+        // A street line on its own ("Little West 12th St.", "W 14th Street").
+        const STREET = '(?:st|street|ave|avenue|rd|road|blvd|boulevard|pl|place|ln|lane|dr|drive|way|straße|strasse|str|calle|rue|platz|weg|gasse)';
+        if (words <= 6 && !/\b(?:bears?|party|night|fest|fair|club)\b/i.test(line)
+            && (/\b\d+(?:st|nd|rd|th)?\b/.test(line) && new RegExp(`\\b${STREET}\\.?$`, 'i').test(line)     // "Little West 12th St.", "W 14th Street"
+                || new RegExp(`^(?:[\\p{L}.'-]+\\s){0,4}[\\p{L}'-]*${STREET}\\.?\\s+\\d{1,5}[a-z]?$`, 'iu').test(line))) return 'a street line'; // "Fuggerstraße 37", "Calle Bonaire 16"
+        // A locale tag or a bare language name from a feed.
+        if (/^[a-z]{2}(?:[-_][A-Z]{2})?$/.test(line)) return 'a locale tag';
+        return '';
+    }
+
+    dropFurnitureShapedTitles(events, sourceUrl = '') {
+        const list = Array.isArray(events) ? events.filter(Boolean) : [];
+        const kept = [];
+        for (const event of list) {
+            const reason = AiWebParser.furnitureTitleShape(event.title);
+            if (!reason) { kept.push(event); continue; }
+            console.log(`🪑 FURNITURE: "${event.title}" is ${reason} on ${sourceUrl || 'this page'} — not an event`);
         }
         return kept;
     }
