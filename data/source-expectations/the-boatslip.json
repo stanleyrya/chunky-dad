@@ -1,0 +1,2527 @@
+{
+  "schemaVersion": 1,
+  "source": "The Boatslip",
+  "slug": "the-boatslip",
+  "status": "complete",
+  "recheckAfter": "2026-11-17",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://theboatslip.com/pages/events"
+    ],
+    "doors": [
+      {
+        "url": "https://theboatslip.com/pages/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Configured page (Shopify, og:site_name \"The Boatslip\", one JSON-LD Organization node). The static HTML holds no events: the calendar is an Elfsight widget (<div class=\"elfsight-app-588829d7-aa7e-42e8-8c6d-df5b85ccca54\">, static.elfsight.com/platform/platform.js) read by collectElfsightCalendarEvents. The footer prints \"161 Commercial Street Provincetown, MA 02657\" and links instagram.com/boatslipresort."
+      },
+      {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 232,
+        "truthFlag": "the boot payload carries the widget’s entire event list: 232 entries, past and future, no paging",
+        "note": "Elfsight event-calendar app. Entries: name, start/end { date, time } with timeZone America/New_York on every dated entry, repeatPeriod (noRepeat 230, custom 2), description (HTML), coverImage, eventType ids (Tea Dance 161, Beach Club 20, Buoy Bar 5, plus ids no longer in the type list), location ids into settings.locations (The Boatslip / The Beach Club / The Buoy Bar, all 161 Commercial Street). No actions (ticket buttons) on any entry. Five 2025 entries store start/end as epoch milliseconds with timeZone null instead of { date, time }; four entries carry visible:false."
+      }
+    ],
+    "notes": "Recon from one read of each door on 2026-10-18 (the validation run read both again, 2 live requests). 232 entries: 4 hidden (visible:false, 2 of them future), 5 legacy epoch-stamped rows (May 2025), 2 \"custom\" daily repeats (pool-party weeks that ended 2026-07-16 and 2026-08-21), 108 visible one-offs on or after 2026-10-18 (11 left in 2026, 97 dated for the 2027 season, 2027-05-07..2027-08-31), 16 one-offs that ended in the 30 days before recon, 97 one-offs that ended earlier (archive)."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: the Elfsight boot payload lists every entry the widget renders (232). Documented: every visible one-off whose last day is on or after 2026-10-18 (108 singles; the 2027 season is already dated and singles are never window-limited). Not documented, counted: 97 one-offs ended before 2026-09-18 (archive), 16 ended between 2026-09-18 and 2026-10-17 (recent past, kept by the scraper under allowPastEvents), 2 repeating pool-party entries whose rules ended in summer, 5 legacy epoch rows from 2025, 4 hidden entries. No series: the widget states no repeat on any upcoming entry (every tea dance is hand-entered per afternoon). The page's own HTML carries none of this.",
+    "publishedEventCount": 108,
+    "documentedEventCount": 108,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "ptown",
+    "timezone": "America/New_York",
+    "bar": "The Boatslip",
+    "address": "161 Commercial Street Provincetown, MA 02657",
+    "location": null,
+    "website": "https://theboatslip.com",
+    "instagram": "https://www.instagram.com/boatslipresort"
+  },
+  "events": [
+    {
+      "id": "solid-gold-tea-ww-2026-10-18",
+      "kind": "single",
+      "title": "SOLID GOLD TEA - WW",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2026-10-18",
+      "startTime": "16:00",
+      "endDate": "2026-10-18",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[7]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2026-10-23",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2026-10-23",
+      "startTime": "16:00",
+      "endDate": "2026-10-23",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[8]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2026-10-24",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in jerseys and jocks. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2026-10-24",
+      "startTime": "16:00",
+      "endDate": "2026-10-24",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/68e9fa4c-6381-43ce-9600-69a0b6e777ae/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[9]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "One of the entry's location ids (c7nhz61x6) names no location in the widget's own list — a deleted sub-venue; the other is The Boatslip."
+    },
+    {
+      "id": "solid-gold-tea-2026-10-25",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2026-10-25",
+      "startTime": "16:00",
+      "endDate": "2026-10-25",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[11]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-spooky-bear-wknd-2026-10-29",
+      "kind": "single",
+      "title": "SOLID GOLD TEA - Spooky Bear Wknd",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2026-10-29",
+      "startTime": "16:00",
+      "endDate": "2026-10-29",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[12]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "One of the entry's location ids (c7nhz61x6) names no location in the widget's own list — a deleted sub-venue; the other is The Boatslip. Validation run 2026-10-18: the promoter registry matched \"Spooky Bear\" in the title and replaced website https://theboatslip.com with https://www.ursamen.org/spookybear (🔗 LINKS, designed behaviour); kept as bear."
+    },
+    {
+      "id": "halloween-uniform-tea-spooky-bear-wknd-2026-10-30",
+      "kind": "single",
+      "title": "HALLOWEEN UNIFORM TEA - Spooky Bear Wknd",
+      "description": "We love a man in uniform! Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. Extended Hours! ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2026-10-30",
+      "startTime": "16:00",
+      "endDate": "2026-10-30",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[13]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "One of the entry's location ids (c7nhz61x6) names no location in the widget's own list — a deleted sub-venue; the other is The Boatslip. Validation run 2026-10-18: the promoter registry matched \"Spooky Bear\" in the title and replaced website https://theboatslip.com with https://www.ursamen.org/spookybear (🔗 LINKS, designed behaviour); kept as bear."
+    },
+    {
+      "id": "spooky-tea-spooky-bear-wknd-2026-10-31",
+      "kind": "single",
+      "title": "SPOOKY TEA - Spooky Bear Wknd",
+      "description": "It's Spooky Bear Weekend's biggest Tea Dance. Special extended hours from 4p - 9p. Time enough for a couple of costume changes! Attire : It's Halloween. You know what to do.",
+      "startDate": "2026-10-31",
+      "startTime": "16:00",
+      "endDate": "2026-10-31",
+      "endTime": "21:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsight.com/storage/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[14]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Validation run 2026-10-18: the promoter registry matched \"Spooky Bear\" in the title and replaced website https://theboatslip.com with https://www.ursamen.org/spookybear (🔗 LINKS, designed behaviour); kept as bear."
+    },
+    {
+      "id": "solid-gold-tea-spooky-bear-wknd-2026-11-01",
+      "kind": "single",
+      "title": "SOLID GOLD TEA - Spooky Bear Wknd",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2026-11-01",
+      "startTime": "16:00",
+      "endDate": "2026-11-01",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[15]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "One of the entry's location ids (c7nhz61x6) names no location in the widget's own list — a deleted sub-venue; the other is The Boatslip. Validation run 2026-10-18: the promoter registry matched \"Spooky Bear\" in the title and replaced website https://theboatslip.com with https://www.ursamen.org/spookybear (🔗 LINKS, designed behaviour); kept as bear."
+    },
+    {
+      "id": "dog-tag-tea-2026-11-06",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2026-11-06",
+      "startTime": "16:00",
+      "endDate": "2026-11-06",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[16]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "One of the entry's location ids (c7nhz61x6) names no location in the widget's own list — a deleted sub-venue; the other is The Boatslip."
+    },
+    {
+      "id": "heated-rival-tea-2026-11-07",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in jerseys and jocks. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2026-11-07",
+      "startTime": "16:00",
+      "endDate": "2026-11-07",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/68e9fa4c-6381-43ce-9600-69a0b6e777ae/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[17]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "One of the entry's location ids (c7nhz61x6) names no location in the widget's own list — a deleted sub-venue; the other is The Boatslip."
+    },
+    {
+      "id": "the-very-last-dance-2026-2026-11-08",
+      "kind": "single",
+      "title": "The Very Last Dance 2026",
+      "description": "The last dance of the 2025 season. See you for First Tea on May 1, 2026! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2026-11-08",
+      "startTime": "16:00",
+      "endDate": "2026-11-08",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[19]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "The entry copy still says \"The last dance of the 2025 season. See you for First Tea on May 1, 2026!\" under a 2026-11-08 date — stale text; the date fields are the statement."
+    },
+    {
+      "id": "first-tea-2027-2027-05-07",
+      "kind": "single",
+      "title": "FIRST TEA 2027",
+      "description": "It’s time. Let’s christen the 2027 season with passion, laughter, and reckless abandon. All you need to bring is yourself – see you there!",
+      "startDate": "2027-05-07",
+      "startTime": "16:00",
+      "endDate": "2027-05-07",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsight.com/storage/a294b4f2-c73a-4124-83f8-b31fc72fe065/37f9788a-280c-42b6-a6d9-9599032fd8b9/First-tea-dance.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[20]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-05-08",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jersey. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-05-08",
+      "startTime": "16:00",
+      "endDate": "2027-05-08",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[21]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-05-09",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-05-09",
+      "startTime": "16:00",
+      "endDate": "2027-05-09",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[22]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-05-14",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-05-14",
+      "startTime": "16:00",
+      "endDate": "2027-05-14",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[23]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "One of the entry's location ids (c7nhz61x6) names no location in the widget's own list — a deleted sub-venue; the other is The Boatslip."
+    },
+    {
+      "id": "heated-rival-tea-2027-05-15",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jersey. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-05-15",
+      "startTime": "16:00",
+      "endDate": "2027-05-15",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[24]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-05-16",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-05-16",
+      "startTime": "16:00",
+      "endDate": "2027-05-16",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[25]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-05-21",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-05-21",
+      "startTime": "16:00",
+      "endDate": "2027-05-21",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[26]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "One of the entry's location ids (c7nhz61x6) names no location in the widget's own list — a deleted sub-venue; the other is The Boatslip."
+    },
+    {
+      "id": "heated-rival-tea-2027-05-22",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jersey. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-05-22",
+      "startTime": "16:00",
+      "endDate": "2027-05-22",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[27]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-05-23",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-05-23",
+      "startTime": "16:00",
+      "endDate": "2027-05-23",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[28]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-mdw-2027-05-28",
+      "kind": "single",
+      "title": "DOG TAG TEA - MDW",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-05-28",
+      "startTime": "16:00",
+      "endDate": "2027-05-28",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[29]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-mdw-2027-05-29",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA MDW",
+      "description": "Come dressed to play in your fav jersey. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-05-29",
+      "startTime": "16:00",
+      "endDate": "2027-05-29",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[30]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-mdw-2027-05-30",
+      "kind": "single",
+      "title": "SOLID GOLD TEA - MDW",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-05-30",
+      "startTime": "16:00",
+      "endDate": "2027-05-30",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[31]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-mdw-2027-05-31",
+      "kind": "single",
+      "title": "I LOVE THE 90s - MDW",
+      "description": "Club anthems and guilty pop pleasures. ATTIRE: come as you are",
+      "startDate": "2027-05-31",
+      "startTime": "16:00",
+      "endDate": "2027-05-31",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6b9fc6d2-4d49-401d-a25f-2d31419152ec/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[32]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-06-04",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-06-04",
+      "startTime": "16:00",
+      "endDate": "2027-06-04",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[33]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "gay-pride-tea-dance-2027-06-05",
+      "kind": "single",
+      "title": "GAY PRIDE TEA DANCE",
+      "description": "Provincetown’s legendary afternoon dance party with Resident DJ Maryalice. ATTIRE: Come As You Are!",
+      "startDate": "2027-06-05",
+      "startTime": "16:00",
+      "endDate": "2027-06-05",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/ab94c347-ee83-4329-918a-a5e49e6a2a97/GayPrideTea2025.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[34]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-06-06",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-06-06",
+      "startTime": "16:00",
+      "endDate": "2027-06-06",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[35]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-06-11",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-06-11",
+      "startTime": "16:00",
+      "endDate": "2027-06-11",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[36]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-06-12",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jerseys. Expect a little competition on the dance floor! Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-06-12",
+      "startTime": "16:00",
+      "endDate": "2027-06-12",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/3415c73d-ee7b-4e90-9990-1ef96afa5b41/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[37]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-06-13",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-06-13",
+      "startTime": "16:00",
+      "endDate": "2027-06-13",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[38]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-06-14",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures. ATTIRE: come as you are",
+      "startDate": "2027-06-14",
+      "startTime": "16:00",
+      "endDate": "2027-06-14",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/39a78215-68f9-4af5-aa7e-e0fa72b07f56/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[39]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-06-15",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: Caftans, curls and cocktails!",
+      "startDate": "2027-06-15",
+      "startTime": "16:00",
+      "endDate": "2027-06-22",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[40]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "The entry's end is 2027-06-22 19:00, days after its start — a tea dance does not run a week; documented as published."
+    },
+    {
+      "id": "pretty-in-pink-2027-06-16",
+      "kind": "single",
+      "title": "PRETTY IN PINK",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields). ATTIRE: Pink!",
+      "startDate": "2027-06-16",
+      "startTime": "16:00",
+      "endDate": "2027-06-16",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/07bc1305-71a4-46cc-b693-48cfdc3526b5/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[41]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-06-17",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-06-17",
+      "startTime": "16:00",
+      "endDate": "2027-06-17",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[42]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-06-18",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-06-18",
+      "startTime": "16:00",
+      "endDate": "2027-06-18",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[43]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-06-19",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jerseys. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-06-19",
+      "startTime": "16:00",
+      "endDate": "2027-06-19",
+      "endTime": "16:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[44]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start in the entry (a zero-length tea); documented as published."
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-06-20",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up. Resident DJ Maryalice runs the show.",
+      "startDate": "2027-06-20",
+      "startTime": "16:00",
+      "endDate": "2027-06-20",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/0fa7407d-633f-4f6d-828f-1b7125cd7d8e/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[45]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-06-21",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures. ATTIRE: come as you are",
+      "startDate": "2027-06-21",
+      "startTime": "16:00",
+      "endDate": "2027-06-21",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/dcd69921-79da-4533-8560-4be6779477b7/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[46]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-06-22",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: Caftans, curls, and cocktails!",
+      "startDate": "2027-06-22",
+      "startTime": "16:00",
+      "endDate": "2027-06-22",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[47]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pretty-in-pink-2027-06-23",
+      "kind": "single",
+      "title": "PRETTY IN PINK",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields). ATTIRE: Pink!",
+      "startDate": "2027-06-23",
+      "startTime": "16:00",
+      "endDate": "2027-06-23",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/720a0a37-7935-4492-ace7-59851fcafebc/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[48]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-06-24",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-06-24",
+      "startTime": "16:00",
+      "endDate": "2027-06-24",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[49]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-06-25",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-06-25",
+      "startTime": "16:00",
+      "endDate": "2027-06-25",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[50]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-06-26",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in jerseys and jocks. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-06-26",
+      "startTime": "16:00",
+      "endDate": "2027-06-26",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[51]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-06-27",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up—resident DJ Maryalice runs the show.",
+      "startDate": "2027-06-27",
+      "startTime": "16:00",
+      "endDate": "2027-06-27",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c0b77e7-bc45-448f-8684-3e2b2fbaea51/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[52]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-06-28",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures from the 90s and 2000s. ATTIRE: come as you are",
+      "startDate": "2027-06-28",
+      "startTime": "16:00",
+      "endDate": "2027-06-28",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/01380169-7ec5-4c8e-94fd-f09709234bbb/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[53]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-06-29",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: Caftans, curls and cocktails!",
+      "startDate": "2027-06-29",
+      "startTime": "16:00",
+      "endDate": "2027-06-29",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[54]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pretty-in-pink-2027-06-30",
+      "kind": "single",
+      "title": "Pretty in Pink",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields). ATTIRE: Pink!",
+      "startDate": "2027-06-30",
+      "startTime": "16:00",
+      "endDate": "2027-06-30",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/75d3f2fd-c52a-4984-be98-ef983294f034/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[55]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-07-01",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-07-01",
+      "startTime": "16:00",
+      "endDate": "2027-07-01",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[56]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-07-02",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-07-02",
+      "startTime": "16:00",
+      "endDate": "2027-07-02",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[57]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-07-03",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jerseys. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-07-03",
+      "startTime": "16:00",
+      "endDate": "2027-07-03",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[58]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "liber-tea-special-extended-hours-2027-07-04",
+      "kind": "single",
+      "title": "LIBER-TEA! Special Extended Hours",
+      "description": "Watch the fireworks from our gigantic deck!",
+      "startDate": "2027-07-04",
+      "startTime": "16:00",
+      "endDate": "2027-07-04",
+      "endTime": "22:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/6c3d336e-cf35-45e2-be4e-ce0f7fb646ec/Libertea-july4.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[59]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-07-05",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures from the 90s and 2000s. ATTIRE: come as you are",
+      "startDate": "2027-07-05",
+      "startTime": "16:00",
+      "endDate": "2027-07-05",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/c6ac41bb-2b71-4093-9c14-6fd0a4a70e12/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[60]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-07-06",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: Caftans, curls, and cocktails!",
+      "startDate": "2027-07-06",
+      "startTime": "16:00",
+      "endDate": "2027-07-06",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[61]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "anthem-tea-independance-week-2027-07-07",
+      "kind": "single",
+      "title": "ANTHEM TEA - IndepenDANCE Week",
+      "description": "Producer, Remixer Ranny",
+      "startDate": "2027-07-07",
+      "startTime": "16:00",
+      "endDate": "2027-07-07",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/84df052b-749a-4bec-9501-a1fe5bae6041/anthem-july2.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[62]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-07-08",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-07-08",
+      "startTime": "16:00",
+      "endDate": "2027-07-08",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[63]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-07-09",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-07-09",
+      "startTime": "16:00",
+      "endDate": "2027-07-09",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[64]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-07-10",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jerseys. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-07-10",
+      "startTime": "16:00",
+      "endDate": "2027-07-10",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[65]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-07-11",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up—resident DJ Maryalice runs the show.",
+      "startDate": "2027-07-11",
+      "startTime": "16:00",
+      "endDate": "2027-07-11",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c0b77e7-bc45-448f-8684-3e2b2fbaea51/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[66]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-07-12",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures from the '90s and 2000s. ATTIRE: Come as you are",
+      "startDate": "2027-07-12",
+      "startTime": "16:00",
+      "endDate": "2027-07-12",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/c4685488-1ba6-4277-84b8-3ce415ae579a/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[67]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-07-13",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: Caftans, curls, and beads!",
+      "startDate": "2027-07-13",
+      "startTime": "16:00",
+      "endDate": "2027-07-13",
+      "endTime": "16:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[68]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start in the entry (a zero-length tea); documented as published."
+    },
+    {
+      "id": "pretty-in-pink-2027-07-14",
+      "kind": "single",
+      "title": "PRETTY IN PINK",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields). ATTIRE: Pink!",
+      "startDate": "2027-07-14",
+      "startTime": "16:00",
+      "endDate": "2027-07-14",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/52cebed2-e923-45d7-8a0f-9a5b4af84185/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[69]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-2027-07-15",
+      "kind": "single",
+      "title": "SOLID GOLD",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-07-15",
+      "startTime": "16:00",
+      "endDate": "2027-07-15",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsight.com/storage/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[70]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-07-16",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-07-16",
+      "startTime": "16:00",
+      "endDate": "2027-07-16",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[71]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-07-17",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jerseys. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-07-17",
+      "startTime": "16:00",
+      "endDate": "2027-07-17",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[72]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-07-18",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up—resident DJ Maryalice runs the show.",
+      "startDate": "2027-07-18",
+      "startTime": "16:00",
+      "endDate": "2027-07-18",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c0b77e7-bc45-448f-8684-3e2b2fbaea51/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[73]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-07-19",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures from the '90s and 2000s. ATTIRE: Come as you are",
+      "startDate": "2027-07-19",
+      "startTime": "16:00",
+      "endDate": "2027-07-19",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/2e918ac1-6cb1-4b64-90b8-6b3e94d0ecfd/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[74]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-07-20",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: Caftans, curls, and beads!",
+      "startDate": "2027-07-20",
+      "startTime": "16:00",
+      "endDate": "2027-07-20",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[75]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pretty-in-pink-2027-07-21",
+      "kind": "single",
+      "title": "PRETTY IN PINK",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields). ATTIRE: Pink!",
+      "startDate": "2027-07-21",
+      "startTime": "16:00",
+      "endDate": "2027-07-21",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/4a81df2b-37e5-4886-9b96-72a43aa1bfc9/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[76]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-07-22",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-07-22",
+      "startTime": "16:00",
+      "endDate": "2027-07-22",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[77]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-07-23",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-07-23",
+      "startTime": "16:00",
+      "endDate": "2027-07-23",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[78]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-07-24",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jerseys. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-07-24",
+      "startTime": "16:00",
+      "endDate": "2027-07-24",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/d07675c3-5320-4977-a204-7a9cb6f44d11/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[79]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-07-25",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up—resident DJ Maryalice runs the show.",
+      "startDate": "2027-07-25",
+      "startTime": "16:00",
+      "endDate": "2027-07-25",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c0b77e7-bc45-448f-8684-3e2b2fbaea51/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[80]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-07-26",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures from the '90s and 2000s. ATTIRE: Come as you are",
+      "startDate": "2027-07-26",
+      "startTime": "16:00",
+      "endDate": "2027-07-26",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/97fd6863-e557-4d66-84e8-46b24b561288/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[81]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-07-27",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: Caftans, curls, and beads!",
+      "startDate": "2027-07-27",
+      "startTime": "16:00",
+      "endDate": "2027-07-27",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[82]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pretty-in-pink-2027-07-28",
+      "kind": "single",
+      "title": "PRETTY IN PINK",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields). ATTIRE: Pink!",
+      "startDate": "2027-07-28",
+      "startTime": "16:00",
+      "endDate": "2027-07-28",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/96831951-96fd-44c3-b8a8-f9929af28d5b/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[83]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-07-29",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-07-29",
+      "startTime": "16:00",
+      "endDate": "2027-07-29",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[84]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-07-30",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-07-30",
+      "startTime": "16:00",
+      "endDate": "2027-07-30",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[85]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "One of the entry's location ids (c7nhz61x6) names no location in the widget's own list — a deleted sub-venue; the other is The Boatslip."
+    },
+    {
+      "id": "heated-rival-tea-2027-07-31",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in your fav jerseys and mesh. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-07-31",
+      "startTime": "16:00",
+      "endDate": "2027-07-31",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/be8fd71e-eef4-47fe-8135-7aedc690fa48/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[86]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-08-01",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up—resident DJ Maryalice runs the show.",
+      "startDate": "2027-08-01",
+      "startTime": "16:00",
+      "endDate": "2027-08-01",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c0b77e7-bc45-448f-8684-3e2b2fbaea51/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[87]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-08-02",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures from the '90s and 2000s. ATTIRE: Come as you are",
+      "startDate": "2027-08-02",
+      "startTime": "16:00",
+      "endDate": "2027-08-02",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/428ec8fb-96b8-4961-98fe-2717decdde24/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[88]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-08-03",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: ATTIRE: Caftans, curls and cocktails!",
+      "startDate": "2027-08-03",
+      "startTime": "16:00",
+      "endDate": "2027-08-03",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[89]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pretty-in-pink-2027-08-04",
+      "kind": "single",
+      "title": "PRETTY IN PINK",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields). ATTIRE: Pink!",
+      "startDate": "2027-08-04",
+      "startTime": "16:00",
+      "endDate": "2027-08-04",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/45c3e329-c63d-4d8d-a243-5b08e9895039/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[90]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-08-05",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-08-05",
+      "startTime": "16:00",
+      "endDate": "2027-08-05",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[91]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-08-06",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-08-06",
+      "startTime": "16:00",
+      "endDate": "2027-08-06",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[92]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-08-07",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in jerseys and jocks. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-08-07",
+      "startTime": "16:00",
+      "endDate": "2027-08-07",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/be8fd71e-eef4-47fe-8135-7aedc690fa48/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[93]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-08-08",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up—resident DJ Maryalice runs the show.",
+      "startDate": "2027-08-08",
+      "startTime": "16:00",
+      "endDate": "2027-08-08",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c0b77e7-bc45-448f-8684-3e2b2fbaea51/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[94]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-08-09",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures from the '90s and 2000s. ATTIRE: Come as you are",
+      "startDate": "2027-08-09",
+      "startTime": "16:00",
+      "endDate": "2027-08-09",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/4ba37675-148f-422a-bcdb-1617956aec28/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[95]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "madonna-madness-2027-08-10",
+      "kind": "single",
+      "title": "MADONNA MADNESS",
+      "description": "19th Annual Madonna Madness Tea. 3 solid hours of Madge MAGIC!",
+      "startDate": "2027-08-10",
+      "startTime": "16:00",
+      "endDate": "2027-08-10",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/efd08fd5-6583-43b5-a4ac-4f364e5334c6/madonna-aug13.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[96]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pretty-in-pink-2027-08-11",
+      "kind": "single",
+      "title": "PRETTY IN PINK",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields).",
+      "startDate": "2027-08-11",
+      "startTime": "16:00",
+      "endDate": "2027-08-11",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/a0e3bf9d-2b0e-4288-9879-8e75c2294f5f/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[97]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-08-12",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-08-12",
+      "startTime": "16:00",
+      "endDate": "2027-08-12",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[98]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-08-13",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-08-13",
+      "startTime": "16:00",
+      "endDate": "2027-08-13",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[99]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-08-14",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in jerseys and jocks. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-08-14",
+      "startTime": "16:00",
+      "endDate": "2027-08-14",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/be8fd71e-eef4-47fe-8135-7aedc690fa48/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[100]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-08-15",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up—resident DJ Maryalice runs the show.",
+      "startDate": "2027-08-15",
+      "startTime": "16:00",
+      "endDate": "2027-08-15",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c0b77e7-bc45-448f-8684-3e2b2fbaea51/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[101]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-carnival-week-2027-08-16",
+      "kind": "single",
+      "title": "I LOVE THE 90s - Carnival Week",
+      "description": "Club anthems and guilty pop pleasures from the '90s and 2000s. ATTIRE: Come as you are",
+      "startDate": "2027-08-16",
+      "startTime": "16:00",
+      "endDate": "2027-08-16",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c5a924d-8fda-4827-9c54-bb63ab683523/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[102]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-carnival-week-2027-08-17",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA - Carnival Week",
+      "description": "ATTIRE: Caftans, curls, and beads!",
+      "startDate": "2027-08-17",
+      "startTime": "16:00",
+      "endDate": "2027-08-17",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/203ad5ea-66ad-48e9-83dc-218f38e54e69/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[103]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pretty-in-pink-carnival-week-2027-08-18",
+      "kind": "single",
+      "title": "PRETTY IN PINK - Carnival Week",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields). ATTIRE: Pink!",
+      "startDate": "2027-08-18",
+      "startTime": "16:00",
+      "endDate": "2027-08-18",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/ca2648f3-1c1f-4ca8-9455-cbcb5a40aa36/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[104]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "cosmic-disco-parade-day-tea-2027-08-19",
+      "kind": "single",
+      "title": "COSMIC DISCO PARADE DAY TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-08-19",
+      "startTime": "16:00",
+      "endDate": "2027-08-19",
+      "endTime": "20:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[105]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-08-20",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-08-20",
+      "startTime": "16:00",
+      "endDate": "2027-08-20",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[106]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "heated-rival-tea-2027-08-21",
+      "kind": "single",
+      "title": "HEATED RIVAL-TEA",
+      "description": "Come dressed to play in jerseys and jocks. Resident DJ Maryalice runs the scoreboard.",
+      "startDate": "2027-08-21",
+      "startTime": "16:00",
+      "endDate": "2027-08-21",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/be8fd71e-eef4-47fe-8135-7aedc690fa48/Heated-Rivalry.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[107]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-08-22",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up—resident DJ Maryalice runs the show.",
+      "startDate": "2027-08-22",
+      "startTime": "16:00",
+      "endDate": "2027-08-22",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c0b77e7-bc45-448f-8684-3e2b2fbaea51/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[108]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-08-23",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures from the '90s and 2000s. ATTIRE: Come as you are",
+      "startDate": "2027-08-23",
+      "startTime": "16:00",
+      "endDate": "2027-08-23",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/6c5a924d-8fda-4827-9c54-bb63ab683523/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[109]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-08-24",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: Caftans, curls and cocktails!",
+      "startDate": "2027-08-24",
+      "startTime": "16:00",
+      "endDate": "2027-08-24",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[110]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "pretty-in-pink-2027-08-25",
+      "kind": "single",
+      "title": "PRETTY IN PINK",
+      "description": "Get pretty. Get pink. And dance like it’s 1985 with New Wave DJ, Chris Ewen (ManRay, Magnetic Fields). ATTIRE: Pink!",
+      "startDate": "2027-08-25",
+      "startTime": "16:00",
+      "endDate": "2027-08-25",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/df6cd5fa-2f13-4b71-a042-efa696011499/PIP-New.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[111]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "solid-gold-tea-2027-08-26",
+      "kind": "single",
+      "title": "SOLID GOLD TEA",
+      "description": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "startDate": "2027-08-26",
+      "startTime": "16:00",
+      "endDate": "2027-08-26",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[112]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "dog-tag-tea-2027-08-27",
+      "kind": "single",
+      "title": "DOG TAG TEA",
+      "description": "Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. ATTIRE: Camo, combat cool, or dog tag chic!",
+      "startDate": "2027-08-27",
+      "startTime": "16:00",
+      "endDate": "2027-08-27",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[113]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "the-real-housewives-of-tea-dance-2027-08-29",
+      "kind": "single",
+      "title": "THE REAL HOUSEWIVES OF TEA DANCE",
+      "description": "Wigs high, standards low, drama at 4. Come dressed to stir it up—resident DJ Maryalice runs the show.",
+      "startDate": "2027-08-29",
+      "startTime": "16:00",
+      "endDate": "2027-08-29",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/da86464a-cd73-409d-9a3c-8b9b7242ac10/RHOTD.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[114]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "i-love-the-90s-2027-08-30",
+      "kind": "single",
+      "title": "I LOVE THE 90s",
+      "description": "Club anthems and guilty pop pleasures from the '90s and 2000s. ATTIRE: Come as you are",
+      "startDate": "2027-08-30",
+      "startTime": "16:00",
+      "endDate": "2027-08-30",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/9cae63ab-17a3-461e-9e2d-253293e4c807/ILoveThe90s-ANTHEM.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[115]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "mrs-roper-goes-to-tea-2027-08-31",
+      "kind": "single",
+      "title": "MRS ROPER GOES TO TEA",
+      "description": "Calling all Helens and Stanleys! It’s a Roper Romp Boatslip-style. Join the mayhem. ATTIRE: Caftans, curls, and beads!",
+      "startDate": "2027-08-31",
+      "startTime": "16:00",
+      "endDate": "2027-08-31",
+      "endTime": "19:00",
+      "ticketUrl": null,
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/eba5e809-58be-4c28-91f8-868793cfad9b/MrsRoper.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[116]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    }
+  ],
+  "traps": [
+    {
+      "id": "hidden-entries",
+      "kind": "duplicate-listing",
+      "label": "Four widget entries flagged visible:false, two of them future (\"Hello BOATSLIP! TEA\" on 2026-10-24 and 2026-11-07 at 16:00)",
+      "why": "The widget does not render a hidden entry, so the site does not publish it; both future ones sit in the slot HEATED RIVAL-TEA already occupies on those Saturdays. readElfsightWidgetEvents skips rows with visible === false.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[10].visible"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-110800",
+      "note": "Indexes 10, 18, 131, 167 of settings.events: Hello BOATSLIP! TEA 2026-10-24; Hello BOATSLIP! TEA 2026-11-07; BAD DECISIONS: OOPS, WE DID IT AGAIN! 2026-09-13; Hello BOATSLIP! TEA 2026-06-20."
+    },
+    {
+      "id": "legacy-epoch-rows",
+      "kind": "past-event",
+      "label": "Five May-2025 entries whose start/end are epoch milliseconds (e.g. \"SAPPHIC NIGHTS - MDW\", start 1748138400000, timeZone null)",
+      "why": "An older entry shape; all five are from the 2025 season. buildEventFromElfsightRow needs start.date and returns nothing for them, and the archive filter cannot read their day either, so they are read and then dropped — correct for 17-month-old nights, but a reader that converted the epoch would resurrect them.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[227].start"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-110800",
+      "note": "Indexes 227, 228, 229, 230, 231: SAPPHIC NIGHTS - MDW @ 2025-05-25; SAPPHIC NIGHTS - MDW @ 2025-05-24; 20 SUMMERS OPEN HOUSE @ 2025-05-15; CINCO DE MAYO @ 2025-05-05; GOLD  @ 2025-05-04."
+    },
+    {
+      "id": "pool-party-repeats-ran-out",
+      "kind": "past-event",
+      "label": "\"SUBMERGED POOL PARTY\" (daily 2026-08-17..21) and \"CANNON BALL POOL PARTY\" (daily 2026-07-11..16), repeatPeriod \"custom\"",
+      "why": "The only repeating entries in the widget; both rules end in summer 2026. The archive filter keeps repeating entries for their rule to decide, and the expander finds no night in the next 90 days — \"a widget entry that has run out, not an event\".",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[148].repeatEndsDate"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-110800"
+    },
+    {
+      "id": "recent-past-teas",
+      "kind": "past-event",
+      "label": "16 tea dances that ended between 2026-09-18 and 2026-10-17 (DOG TAG TEA 2026-09-18 .. HEATED RIVAL-TEA 2026-10-17)",
+      "why": "Less than 30 days old, so the Elfsight archive rule leaves them in and allowPastEvents keeps them: extraction is correct behaviour, not a bug. Documented so a diff does not count 16 extra events as ghosts.",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=588829d7-aa7e-42e8-8c6d-df5b85ccca54",
+        "jsonPath": "$.data.widgets[\"588829d7-aa7e-42e8-8c6d-df5b85ccca54\"].data.settings.events[0].start.date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "seenInRun": "20261018-110800",
+      "note": "Validation run 2026-10-18: 131 rows read after the archive filter = 108 upcoming + 16 recent past + 5 epoch rows + 2 run-out repeats; 126 events built. One of these, \"DOG TAG TEA - Mates Leather Weekend\" (2026-10-02), was kept as bear and then grouped by the cadence pass into FREQ=WEEKLY;BYDAY=FR with the other Friday DOG TAG TEAs and offered as a series card (seriesWrites report mode)."
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The widget already dates the whole 2027 season (97 singles from 2027-05-07). With daysToLookAhead null the run builds all of them and bear-checks all of them (121 of 126 dropped as general tea dances). Should a venue widget's next-season entries wait for a horizon, or is seven months out fine for a seasonal town?",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "The promoter registry matched \"Spooky Bear\" in four tea titles and replaced the venue website with ursamen.org/spookybear (🔗 LINKS: \"the source site’s front door yields to the promoter the event names\"). These are the Boatslip’s own afternoon teas during that weekend, not Northeast Ursamen productions — is the swap wanted on a venue site’s own programme?",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "The cadence pass grouped the hand-entered Friday DOG TAG TEAs into FREQ=WEEKLY;BYDAY=FR and hung the rule on the one that survived the bear check, \"DOG TAG TEA - Mates Leather Weekend\" (a themed edition), offering it as a weekly series card. The widget states no repeat; every afternoon is its own entry.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}

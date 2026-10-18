@@ -8042,8 +8042,18 @@ class SharedCore {
         if (this.isJsonLdEventType(node['@type']) && hasName && hasStartDate) {
             results.push(node);
         }
-        for (const key of ['@graph', 'mainEntity', 'subEvent', 'itemListElement', 'item', 'events']) {
+        for (const key of ['@graph', 'mainEntity', 'subEvent', 'itemListElement', 'item']) {
             if (node[key]) this.collectJsonLdEventNodes(node[key], results, depth + 1);
+        }
+        // A Place or Organization lists what happens there under schema.org's
+        // `event` (singular; `events` is the retired spelling), and a Seat
+        // Engine venue page (redroom.club, 2026-10-18) spells it `Events` —
+        // seven shows the structured-data path walked straight past. The key
+        // is matched without regard to case so the container's spelling
+        // cannot hide the shows under it.
+        for (const key of Object.keys(node)) {
+            const lower = key.toLowerCase();
+            if ((lower === 'event' || lower === 'events') && node[key]) this.collectJsonLdEventNodes(node[key], results, depth + 1);
         }
     }
 

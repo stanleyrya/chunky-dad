@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "source": "Bear Fuzz Fest",
+  "slug": "bear-fuzz-fest",
+  "status": "complete",
+  "recheckAfter": "2026-11-17",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://bearfuzzfest.com/"
+    ],
+    "doors": [
+      {
+        "url": "https://bearfuzzfest.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "one festival, dated once in prose and once in the hero",
+        "note": "WordPress (Yoast JSON-LD: WebPage/WebSite only, no Event). Hero: \"Bear Fuzz Fest  December 10th, 2026!\" over a countdown; body: \"Where Winter Heats Up: December 10th – 13th, 2026\", \"hosted by Central PA Bears\", \"Located at the Eisenhower Hotel & Conference Center in Gettysburg, PA\". Nav: Home, The Venue, Schedule, Buy Passes (/run-passes/), Conduct, Vendors & Sponsors. Links facebook.com/bearfuzzfest and linktr.ee/CentralPABears; no Instagram link anywhere on the site. No og:image; the only artwork is the site logo."
+      },
+      {
+        "url": "https://bearfuzzfest.com/event-schedule/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "38 programme rows under THURSDAY / FRIDAY / SATURDAY / SUNDAY tabs, none dated",
+        "note": "The page the audit proposed as the door. Not EventON (no evo_general_params, no calendar frame): a plain tabbed list, each row \"<strong>Title</strong><br />05:00PM – 10:00PM | Room\". The page never states a date, month or year; the day tabs are weekday names. Its Yoast metadata carries datePublished 2025-06-20 and dateModified 2026-10-06. Read on its own it cannot date a single row."
+      },
+      {
+        "url": "https://bearfuzzfest.com/the-venue/",
+        "kind": "html",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Hotel page: \"Eisenhower Hotel & Conference Center / 2634 Emmitsburg Rd, Gettysburg, PA 17325\" (host hotel) and \"Aspire Hotel & Suites / 2632 Emmitsburg Rd\" (overflow, attached by a walkway), room rates, booking rules. Read to settle the venue address; nothing dated."
+      }
+    ],
+    "notes": "Recon 2026-10-18: robots, the home page, the schedule page and the venue page (one read each). The site publishes one event, the weekend itself: Bear Fuzz Fest, December 10-13 2026, at the Eisenhower Hotel & Conference Center, Gettysburg PA, by Central PA Bears. Its programme (38 rows: registration, pool parties, classes, dance parties, cuddle room, vendor market, drag bingo) lives on /event-schedule/ with clock times and rooms but no dates; the weekday tabs could only be dated by combining them with the home page’s range, which no reader does today. The configured door is therefore the home page with urlDiscoveryDepth 0."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Home page: the only dated statement on the site is the festival range, printed twice (hero and body) with the venue in the same paragraph; the schedule and venue pages add no date. One single, no series, no past listings (a first-year site: datePublished 2025-06).",
+    "publishedEventCount": 1,
+    "documentedEventCount": 1,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "gettysburg",
+    "timezone": "America/New_York",
+    "bar": "Eisenhower Hotel & Conference Center",
+    "address": "2634 Emmitsburg Rd, Gettysburg, PA 17325",
+    "location": null,
+    "website": "https://bearfuzzfest.com",
+    "facebook": "https://www.facebook.com/bearfuzzfest"
+  },
+  "events": [
+    {
+      "id": "bear-fuzz-fest-2026-12-10",
+      "kind": "single",
+      "title": "Bear Fuzz Fest",
+      "shortName": "FUZZ FEST",
+      "description": "Where Winter Heats Up. Your ultimate winter 21+ getaway hosted by Central PA Bears: a cozy weekend retreat celebrating the warm bear spirit of community, with pool parties, an adult playspace, dance parties, classes and kink demos at the Eisenhower Hotel & Conference Center in Gettysburg, PA.",
+      "startDate": "2026-12-10",
+      "startTime": null,
+      "endDate": "2026-12-13",
+      "endTime": null,
+      "ticketUrl": "https://bearfuzzfest.com/run-passes/",
+      "image": "https://bearfuzzfest.com/wp-content/uploads/2025/06/NEW_Bears-Fuzz-Fest-Logo_Orange.webp",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearfuzzfest.com/",
+        "quote": "December 10th – 13th, 2026"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Dates are the site’s inclusive range (the schedule’s Sunday is breakfast only, 07:00-10:00). The description is a condensation of the home-page paragraphs, not a quote. The image is the site logo, the only artwork on the page (no og:image, no flyer). The ticket page is the \"Buy Passes\" nav link; the hero button \"Click Here to Get Your Tickets!\" goes to the same place. Registration opens Thursday 17:00 per the schedule page."
+    }
+  ],
+  "traps": [
+    {
+      "id": "undated-programme-rows",
+      "kind": "out-of-config-scope",
+      "label": "38 schedule rows on /event-schedule/, e.g. \"Registration / 05:00PM – 10:00PM | Lobby\" under THURSDAY",
+      "why": "Programme rows with clock times and rooms but no date on the page; the tabs are bare weekday names. Dated from the page alone they are guesses (the nearest Thursday, or the Yoast dateModified). The parser is configured on the home page at depth 0, so the crawl never reads them; if programme rows are ever wanted, they need the home page’s range applied to the weekday tabs — a generic festival-programme reader, which does not exist.",
+      "evidence": {
+        "url": "https://bearfuzzfest.com/event-schedule/",
+        "quote": "<strong>Registration</strong><br />05:00PM – 10:00PM | Lobby"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-112432",
+      "note": "Experiment 20261018-112432 (parser pointed at /event-schedule/ by override, 4 live requests): the AI boundary pass built 16 segments from the 47 rows and every extraction came back with startDate null (\"AI output missing required title/startDate after normalization\") — 0 events, nothing dated by guessing."
+    },
+    {
+      "id": "yoast-modified-date",
+      "kind": "announcement",
+      "label": "\"dateModified\":\"2026-10-06T01:17:49+00:00\" in the schedule page’s Yoast JSON-LD",
+      "why": "The only machine-readable date on the schedule page is the page’s own edit stamp; a reader that dates undated rows from it would publish 47 events on October 6.",
+      "evidence": {
+        "url": "https://bearfuzzfest.com/event-schedule/",
+        "quote": "\"dateModified\":\"2026-10-06T01:17:49+00:00\""
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-112432",
+      "note": "Experiment 20261018-112432: no extraction used this date; every row stayed undated and was dropped."
+    },
+    {
+      "id": "countdown-hero",
+      "kind": "announcement",
+      "label": "Hero \"Bear Fuzz Fest  December 10th, 2026!\" over a Day(s)/Hour(s)/Minute(s)/Second(s) countdown",
+      "why": "The same festival stated a second time with its first day only; a reader that took the hero as a separate one-day event would publish the weekend twice.",
+      "evidence": {
+        "url": "https://bearfuzzfest.com/",
+        "quote": "December 10th, 2026!"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "hotel-rates",
+      "kind": "ticket-tier",
+      "label": "Room blocks on /the-venue/: \"Cost: $125 ($135 for poolside)\", booking rules, the Aspire overflow hotel",
+      "why": "Hotel inventory for the same weekend, not events; the Aspire Hotel (2632 Emmitsburg Rd) is the overflow block and must not become a second venue.",
+      "evidence": {
+        "url": "https://bearfuzzfest.com/the-venue/",
+        "quote": "Cost: $125 ($135 for poolside)"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "add-ons-price-list",
+      "kind": "ticket-tier",
+      "label": "\"Add-ons During Event: Playspace Dungeon ($20 for whole weekend), Drag Bingo ($10)\"",
+      "why": "Prices for programme items already listed above them on the schedule page; not events of their own.",
+      "evidence": {
+        "url": "https://bearfuzzfest.com/event-schedule/",
+        "quote": "Playspace Dungeon ($20 for whole weekend)"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The audit proposed /event-schedule/ as an EventON door; it is a plain undated list. Configured on the home page the source yields the weekend as one multi-day event. Should the programme rows (pool parties, the two DJ BearBonez dance parties, Drag Bingo, classes) be carried too? That needs a reader that dates weekday tabs from the range the home page states — not built, ask first.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "Bear Fuzz Fest is a bear run; data/festivals.json (the /bear-runs/ calendar) has no entry for it. Adding one with the official dates is an owner call.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "The Eisenhower Hotel coordinates in data/bars/gettysburg.json (39.765789, -77.2691996) come from one Nominatim lookup of the address the site prints, matched to the hotel POI; the address itself is the site’s. Worth a glance on a map before the first write.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}

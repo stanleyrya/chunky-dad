@@ -1,0 +1,3643 @@
+{
+  "schemaVersion": 1,
+  "source": "Spa Excess",
+  "slug": "spa-excess",
+  "status": "complete",
+  "recheckAfter": "2026-11-17",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://spaexcess.com/"
+    ],
+    "doors": [
+      {
+        "url": "https://spaexcess.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "WordPress home page (Slider Revolution hero, \"Toronto’s Biggest Bathhouse for Men\") with one EventON 5.0.2 frame (<div id=\"evcal_calendar_379\" class=\"ajde_evcal_calendar … ajax_loading_cal\">, shortcode in data-sc: fixed_month 10 / fixed_year 2026, event_past_future all) and evo_general_params carrying the nonce (n) and evo_ajax_url \"/?evo-ajax=%%endpoint%%\". No event text in the HTML. Footer: \"105 Carlton Toronto, ON M5B 1M1\"."
+      },
+      {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "kind": "form-post",
+        "role": "feed",
+        "rowsReturned": 147,
+        "truthFlag": "2026-10: 19 cards; 2026-11: 46 cards; 2026-12: 49 cards; 2027-01: 34 cards",
+        "note": "The plugin’s own eventon_init_load call, replayed as a form POST (nonce + cals[evcal_calendar_379][sc][…]) for the page’s month and then for each later month to the three-month horizon (fixed_month / fixed_year / focus range stepped). The answer holds the frame’s rendered cards; every card carries a schema.org Event block (@id event_<post>_<instance>, name, url with a /var/ri-N night suffix on repeat instances, image, HTML description, start/end printed as wall clock with a fixed \"+0:00\", location Place \"Spa Excess\" / \"105 Carlton\", organizer). The reader drops the printed offset and applies Toronto’s clock. The nonce lives about half a day: a stored page needs one fresh read first. October was replayed once during recon; November to January are the validation run’s own answers, read from the scratch page cache."
+      }
+    ],
+    "notes": "Recon 2026-10-18: robots, the home page and one October replay by hand; the validation run of the same day (run 20261018-111647 is the replay of its answers from the scratch page cache) read the page again and walked November, December and January (2026-10: 19 cards; 2026-11: 46 cards; 2026-12: 49 cards; 2027-01: 34 cards). 147 cards in all, every one a dated instance (the plugin pre-expands repeats; no card states a rule). Distinct titles: Happy Hour (24), College Night (15), Date Night (15), CLIMAX! Fridays (15), Naked Night (15), Playground (14), Ski-Mask & Shiesty Night (9), Bears in Excess (4), Latin Night (4), Ryan Russell’s Protégés (4), Slammin’ Sundays RETRO Parties (3), Boned Up (3), Rough House (3), TNE: Totally Naked Excess (3), CODE RED: FF Night (3), Fetish Night (3), Asian Night (3), Sexual Health Coordinator (3), Chubs at the Tubs (2), SOS: EXCESS Spanks! (1), New Year’s Eve 2026: Ball Drop! (1). The run also fetched three card pages (events/bears-in-excess, events/playground, events/happy-hour) and the WordPress REST copy of the home page before it was stopped for the request budget."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "Feed door: every card the calendar answers with for October 2026 through January 2027 (the scraper’s own horizon), 148 cards of which 1 is the same card answered by two months (New Year’s Eve 2026, @id event_145866_2, in both the December and the January answer) and counted once. Each card is its own dated single; weekly nights appear once per week. Cards whose month answer the run fetched after the window end (January 2027) are documented too — singles are never window-limited. No \"CLOSED\" day markers in these four months. Past cards: the October answer begins at the day of the request (fixed_day 18), so nothing before 2026-10-18 was returned.",
+    "publishedEventCount": 147,
+    "documentedEventCount": 147,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "toronto",
+    "timezone": "America/Toronto",
+    "bar": "Spa Excess",
+    "address": "105 Carlton Toronto, ON M5B 1M1",
+    "location": null,
+    "website": "https://spaexcess.com"
+  },
+  "events": [
+    {
+      "id": "bears-in-excess-2026-10-18",
+      "kind": "single",
+      "title": "Bears in Excess",
+      "description": "Big hairy boys and the guys who dig ’em!",
+      "startDate": "2026-10-18",
+      "startTime": "13:00",
+      "endDate": "2026-10-18",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/bears-in-excess/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Bears-GENERIC-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145845_5\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/bears-in-excess/var/ri-5.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Bears in Excess (https://bearsinexcess.com/)."
+    },
+    {
+      "id": "playground-2026-10-20",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-10-20",
+      "startTime": "12:00",
+      "endDate": "2026-10-20",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_39\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-39.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-10-20",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-10-20",
+      "startTime": "16:00",
+      "endDate": "2026-10-20",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_37\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-37.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "ski-mask-shiesty-night-2026-10-20",
+      "kind": "single",
+      "title": "Ski-Mask & Shiesty Night",
+      "description": "Face-down, ass up, door unlocked, ready and waiting! SAVE on Rooms and Lockers every Tuesday from 11PM-1AM for SKI-MASK & SHIESTY NIGHT! DL/ANON LATE NIGHT PLAY. Only at Spa Excess!",
+      "startDate": "2026-10-20",
+      "startTime": "23:00",
+      "endDate": "2026-10-20",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ski-mask-shiesty-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2026/05/SKIIMASKS-SHIESTIES-APR-26-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_146451_24\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ski-mask-shiesty-night/var/ri-24.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-10-21",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-10-21",
+      "startTime": "20:00",
+      "endDate": "2026-10-21",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_39\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-39.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-10-21",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-10-21",
+      "startTime": "20:00",
+      "endDate": "2026-10-21",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_39\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-39.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "latin-night-2026-10-22",
+      "kind": "single",
+      "title": "Latin Night",
+      "description": "The 4th Thursday, every month. Sorteos de cortesias para SPA EXCESSS. Recursos HIV+ y LGBTIIQ+ Condones y lubricates gratis Educacion sexual LATINOS & ADMIRERS 8-11PM Hosted by Latinos Positivos.",
+      "startDate": "2026-10-22",
+      "startTime": "20:00",
+      "endDate": "2026-10-22",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/latin-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Latin-Night-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145867_9\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/latin-night/var/ri-9.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Latinos Positivos (https://www.latinospositivos.ca/)."
+    },
+    {
+      "id": "happy-hour-2026-10-23",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-10-23",
+      "startTime": "16:00",
+      "endDate": "2026-10-23",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_38\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-38.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "climax-fridays-2026-10-23",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-10-23",
+      "startTime": "20:00",
+      "endDate": "2026-10-23",
+      "endTime": "04:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_0\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "The card's end (04:00) is before its start on the same date; the reader rolls it to the next day."
+    },
+    {
+      "id": "naked-night-2026-10-23",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-10-23",
+      "startTime": "20:00",
+      "endDate": "2026-10-23",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_0\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "ryan-russell-s-prote-ge-s-2026-10-25",
+      "kind": "single",
+      "title": "Ryan Russell’s Protégés",
+      "description": "RYAN RUSSELL’S PROTÉGÉS IS IN OVERDRIVE! EXCLUSIVELY AT SPA EXCESS! Join Ryan Russell with special guests, surprises and gear! It’s a great way to spend your Sunday…",
+      "startDate": "2026-10-25",
+      "startTime": "20:00",
+      "endDate": "2026-10-25",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ryan-russells-proteges/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/26-SEPT-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145894_3\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ryan-russells-proteges/var/ri-3.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Ryan Russell (http://rrssll.com)."
+    },
+    {
+      "id": "happy-hour-2026-10-26",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-10-26",
+      "startTime": "16:00",
+      "endDate": "2026-10-26",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_39\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-39.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "playground-2026-10-27",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-10-27",
+      "startTime": "12:00",
+      "endDate": "2026-10-27",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_40\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-40.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "ski-mask-shiesty-night-2026-10-27",
+      "kind": "single",
+      "title": "Ski-Mask & Shiesty Night",
+      "description": "Face-down, ass up, door unlocked, ready and waiting! SAVE on Rooms and Lockers every Tuesday from 11PM-1AM for SKI-MASK & SHIESTY NIGHT! DL/ANON LATE NIGHT PLAY. Only at Spa Excess!",
+      "startDate": "2026-10-27",
+      "startTime": "23:00",
+      "endDate": "2026-10-27",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ski-mask-shiesty-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2026/05/SKIIMASKS-SHIESTIES-APR-26-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_146451_25\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ski-mask-shiesty-night/var/ri-25.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-10-28",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-10-28",
+      "startTime": "20:00",
+      "endDate": "2026-10-28",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_40\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-40.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-10-28",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-10-28",
+      "startTime": "20:00",
+      "endDate": "2026-10-28",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_40\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-40.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-10-29",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-10-29",
+      "startTime": "16:00",
+      "endDate": "2026-10-29",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_40\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-40.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "climax-fridays-2026-10-30",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-10-30",
+      "startTime": "20:00",
+      "endDate": "2026-10-30",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_1\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-1.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2026-10-30",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-10-30",
+      "startTime": "20:00",
+      "endDate": "2026-10-30",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_1\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-1.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-11-01",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-01",
+      "startTime": "16:00",
+      "endDate": "2026-11-01",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_41\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-41.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "slammin-sundays-retro-parties-2026-11-01",
+      "kind": "single",
+      "title": "Slammin’ Sundays RETRO Parties",
+      "description": "The first Sunday of every month, join us for a cruisy night of high-energy retro hits and dance anthems from the 1970’s, 80’s, and 90’s!",
+      "startDate": "2026-11-01",
+      "startTime": "16:00",
+      "endDate": "2026-11-01",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/slammin-sundays-retro-parties/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/retro-night-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145876_10\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/slammin-sundays-retro-parties/var/ri-10.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "playground-2026-11-03",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-11-03",
+      "startTime": "12:00",
+      "endDate": "2026-11-03",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_41\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-41.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "ski-mask-shiesty-night-2026-11-03",
+      "kind": "single",
+      "title": "Ski-Mask & Shiesty Night",
+      "description": "Face-down, ass up, door unlocked, ready and waiting! SAVE on Rooms and Lockers every Tuesday from 11PM-1AM for SKI-MASK & SHIESTY NIGHT! DL/ANON LATE NIGHT PLAY. Only at Spa Excess!",
+      "startDate": "2026-11-03",
+      "startTime": "23:00",
+      "endDate": "2026-11-03",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ski-mask-shiesty-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2026/05/SKIIMASKS-SHIESTIES-APR-26-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_146451_26\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ski-mask-shiesty-night/var/ri-26.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-11-04",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-04",
+      "startTime": "16:00",
+      "endDate": "2026-11-04",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_42\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-42.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-11-04",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-11-04",
+      "startTime": "20:00",
+      "endDate": "2026-11-04",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_41\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-41.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-11-04",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-11-04",
+      "startTime": "20:00",
+      "endDate": "2026-11-04",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_41\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-41.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "boned-up-2026-11-05",
+      "kind": "single",
+      "title": "Boned Up",
+      "description": "Masters, bring your pup! New pups can find a handler, frolic, sniff and play with other pups. Masters: if your pup needs to, take your pup to pee in the showers. Play area in the lounge with large foam mats, toys, and more! PLUS Enjoy our special menu of Starlite Drink Specials. Hosted by Pup Roger.",
+      "startDate": "2026-11-05",
+      "startTime": "20:00",
+      "endDate": "2026-11-05",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/boned-up/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/BONED-UP-26112-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145872_3\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/boned-up/var/ri-3.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Pup Roger."
+    },
+    {
+      "id": "climax-fridays-2026-11-06",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-11-06",
+      "startTime": "20:00",
+      "endDate": "2026-11-06",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_2\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-2.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2026-11-06",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-11-06",
+      "startTime": "20:00",
+      "endDate": "2026-11-06",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_2\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-2.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-11-07",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-07",
+      "startTime": "16:00",
+      "endDate": "2026-11-07",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_43\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-43.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "rough-house-2026-11-08",
+      "kind": "single",
+      "title": "Rough House",
+      "description": "Time for another Rough House Event at Spa Excess. All events are posted on our website RoughHouse.ca Dungeon friskiness this Month to include: SLING STATION FUCK BENCH BONDAGE and FLOGGING at the ST ANDREW’S CROSS WATERSPORTS area SHOWER BONDAGE ROPE BONDAGE and SUSPENSION Outdoor CIGAR PLAY area And other spontaneous Play scenes For more information, please check out our website below or send a note to info@RoughHouse.ca",
+      "startDate": "2026-11-08",
+      "startTime": "13:00",
+      "endDate": "2026-11-08",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/rough-house/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/ROUGH-HOUSE-TILE-011.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145884_9\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/rough-house/var/ri-9.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Rough House (https://www.roughhouse.ca/)."
+    },
+    {
+      "id": "playground-2026-11-10",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-11-10",
+      "startTime": "12:00",
+      "endDate": "2026-11-10",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_42\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-42.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-11-10",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-10",
+      "startTime": "16:00",
+      "endDate": "2026-11-10",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_44\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-44.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "tne-totally-naked-excess-2026-11-10",
+      "kind": "single",
+      "title": "TNE: Totally Naked Excess",
+      "description": "TNT!MEN is proud to present: TNE! Totally Naked Excess. Come get naked with a really awesome and friendly group of guys, enjoy a game of pool, and casual, relaxing man to man fun! $5.00 Flying Horse Beer Special and Q&A for men new to TNT! Get a free Locker or half-price Standard Room ! (ask about our other benefits). www.tntmen.org",
+      "startDate": "2026-11-10",
+      "startTime": "19:00",
+      "endDate": "2026-11-10",
+      "endTime": "22:00",
+      "website": "https://spaexcess.com/events/tne-totally-naked-excess/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/TNETILE750.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145887_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/tne-totally-naked-excess/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: TNT!MEN."
+    },
+    {
+      "id": "ski-mask-shiesty-night-2026-11-10",
+      "kind": "single",
+      "title": "Ski-Mask & Shiesty Night",
+      "description": "Face-down, ass up, door unlocked, ready and waiting! SAVE on Rooms and Lockers every Tuesday from 11PM-1AM for SKI-MASK & SHIESTY NIGHT! DL/ANON LATE NIGHT PLAY. Only at Spa Excess!",
+      "startDate": "2026-11-10",
+      "startTime": "23:00",
+      "endDate": "2026-11-10",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ski-mask-shiesty-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2026/05/SKIIMASKS-SHIESTIES-APR-26-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_146451_27\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ski-mask-shiesty-night/var/ri-27.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-11-11",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-11-11",
+      "startTime": "20:00",
+      "endDate": "2026-11-11",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_42\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-42.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-11-11",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-11-11",
+      "startTime": "20:00",
+      "endDate": "2026-11-11",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_42\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-42.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "code-red-ff-night-2026-11-12",
+      "kind": "single",
+      "title": "CODE RED: FF Night",
+      "description": "Happening monthly every second Thursday starting at 8 pm. Most of the fun will be on the top floor in and around the sling room 905, which will be open for anyone to play in. Spa Excess has a bar and lounge to relax in as well as two cleaning stations. Get a room on the top floor or a locker anywhere, bring your kit and meet some new FFriends! With your host FFernando !",
+      "startDate": "2026-11-12",
+      "startTime": "20:00",
+      "endDate": "2026-11-12",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/code-red-ff-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/CODE-RED-FF-2020-Generic.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145878_10\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/code-red-ff-night/var/ri-10.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: FFernando."
+    },
+    {
+      "id": "fetish-night-2026-11-12",
+      "kind": "single",
+      "title": "Fetish Night",
+      "description": "WS shower areas; FF in Room 905 and the dark room; Leather/Rubber/Gear play welcome and encouraged; Kinks and fetishes welcome! Spa Excess has a bar and lounge to relax in, cleaning stations, a dark room, patio, public and private showers, and more! With your host FFernando !",
+      "startDate": "2026-11-12",
+      "startTime": "20:00",
+      "endDate": "2026-11-12",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/fetish-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DJjVgwqd1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145882_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/fetish-night/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: FFernando."
+    },
+    {
+      "id": "happy-hour-2026-11-13",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-13",
+      "startTime": "16:00",
+      "endDate": "2026-11-13",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_45\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-45.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "climax-fridays-2026-11-13",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-11-13",
+      "startTime": "20:00",
+      "endDate": "2026-11-13",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_3\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-3.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2026-11-13",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-11-13",
+      "startTime": "20:00",
+      "endDate": "2026-11-13",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_3\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-3.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "bears-in-excess-2026-11-15",
+      "kind": "single",
+      "title": "Bears in Excess",
+      "description": "Big hairy boys and the guys who dig ’em!",
+      "startDate": "2026-11-15",
+      "startTime": "13:00",
+      "endDate": "2026-11-15",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/bears-in-excess/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Bears-GENERIC-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145845_6\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/bears-in-excess/var/ri-6.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Bears in Excess (https://bearsinexcess.com/)."
+    },
+    {
+      "id": "happy-hour-2026-11-16",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-16",
+      "startTime": "16:00",
+      "endDate": "2026-11-16",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_46\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-46.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "playground-2026-11-17",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-11-17",
+      "startTime": "12:00",
+      "endDate": "2026-11-17",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_43\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-43.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "ski-mask-shiesty-night-2026-11-17",
+      "kind": "single",
+      "title": "Ski-Mask & Shiesty Night",
+      "description": "Face-down, ass up, door unlocked, ready and waiting! SAVE on Rooms and Lockers every Tuesday from 11PM-1AM for SKI-MASK & SHIESTY NIGHT! DL/ANON LATE NIGHT PLAY. Only at Spa Excess!",
+      "startDate": "2026-11-17",
+      "startTime": "23:00",
+      "endDate": "2026-11-17",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ski-mask-shiesty-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2026/05/SKIIMASKS-SHIESTIES-APR-26-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_146451_28\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ski-mask-shiesty-night/var/ri-28.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-11-18",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-11-18",
+      "startTime": "20:00",
+      "endDate": "2026-11-18",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_43\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-43.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-11-18",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-11-18",
+      "startTime": "20:00",
+      "endDate": "2026-11-18",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_43\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-43.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-11-19",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-19",
+      "startTime": "16:00",
+      "endDate": "2026-11-19",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_47\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-47.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "asian-night-2026-11-19",
+      "kind": "single",
+      "title": "Asian Night",
+      "description": "Asian Night is solely held at Spa Excess for Asian guys and their admirers. Cum to relax, meet new guys, and have some fun in a nonjudgmental adult wonderland. The ACAS volunteer team hosts a welcoming and friendly environment with: • Fun workshops • Cleansing sugar scrub • 50/50 raffle HIV & Syphilis testing provided on site by Hassle Free Clinic.",
+      "startDate": "2026-11-19",
+      "startTime": "19:00",
+      "endDate": "2026-11-19",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/asian-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/ASIAN-NIGHT-2020-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145858_9\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/asian-night/var/ri-9.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: ACAS Toronto (https://acas.org/)."
+    },
+    {
+      "id": "sexual-health-coordinator-2026-11-20",
+      "kind": "single",
+      "title": "Sexual Health Coordinator",
+      "description": "Moji Shirazi, he/him Sexual Health Coordinator E: SexualHealthCoordinator @asaap.ca M: 1 (416) 575-7605 120 Carlton Street, Suite 212 Toronto ON M5A 4K2",
+      "startDate": "2026-11-20",
+      "startTime": "18:00",
+      "endDate": "2026-11-20",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/sexual-health-coordinator/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Coordinator1.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145857_9\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/sexual-health-coordinator/var/ri-9.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "climax-fridays-2026-11-20",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-11-20",
+      "startTime": "20:00",
+      "endDate": "2026-11-20",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_4\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-4.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2026-11-20",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-11-20",
+      "startTime": "20:00",
+      "endDate": "2026-11-20",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_4\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-4.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-11-22",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-22",
+      "startTime": "16:00",
+      "endDate": "2026-11-22",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_48\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-48.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "sos-excess-spanks-2026-11-22",
+      "kind": "single",
+      "title": "SOS: EXCESS Spanks!",
+      "description": "SOS Toronto is onsite at Spa Excess with an event for everyone who likes hot, HOT butts! Get ready!",
+      "startDate": "2026-11-22",
+      "startTime": "18:00",
+      "endDate": "2026-11-22",
+      "endTime": "21:00",
+      "website": "https://spaexcess.com/events/sos-excess-spanks/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/SOS-spanking-e1767634484426.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145891_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/sos-excess-spanks/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "playground-2026-11-24",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-11-24",
+      "startTime": "12:00",
+      "endDate": "2026-11-24",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_44\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-44.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "ski-mask-shiesty-night-2026-11-24",
+      "kind": "single",
+      "title": "Ski-Mask & Shiesty Night",
+      "description": "Face-down, ass up, door unlocked, ready and waiting! SAVE on Rooms and Lockers every Tuesday from 11PM-1AM for SKI-MASK & SHIESTY NIGHT! DL/ANON LATE NIGHT PLAY. Only at Spa Excess!",
+      "startDate": "2026-11-24",
+      "startTime": "23:00",
+      "endDate": "2026-11-24",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ski-mask-shiesty-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2026/05/SKIIMASKS-SHIESTIES-APR-26-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_146451_29\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ski-mask-shiesty-night/var/ri-29.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-11-25",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-25",
+      "startTime": "16:00",
+      "endDate": "2026-11-25",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_49\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-49.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-11-25",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-11-25",
+      "startTime": "20:00",
+      "endDate": "2026-11-25",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_44\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-44.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-11-25",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-11-25",
+      "startTime": "20:00",
+      "endDate": "2026-11-25",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_44\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-44.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "latin-night-2026-11-26",
+      "kind": "single",
+      "title": "Latin Night",
+      "description": "The 4th Thursday, every month. Sorteos de cortesias para SPA EXCESSS. Recursos HIV+ y LGBTIIQ+ Condones y lubricates gratis Educacion sexual LATINOS & ADMIRERS 8-11PM Hosted by Latinos Positivos.",
+      "startDate": "2026-11-26",
+      "startTime": "20:00",
+      "endDate": "2026-11-26",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/latin-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Latin-Night-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145867_10\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/latin-night/var/ri-10.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Latinos Positivos (https://www.latinospositivos.ca/)."
+    },
+    {
+      "id": "climax-fridays-2026-11-27",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-11-27",
+      "startTime": "20:00",
+      "endDate": "2026-11-27",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_5\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-5.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2026-11-27",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-11-27",
+      "startTime": "20:00",
+      "endDate": "2026-11-27",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_5\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-5.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-11-28",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-11-28",
+      "startTime": "16:00",
+      "endDate": "2026-11-28",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_50\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-50.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "ryan-russell-s-prote-ge-s-2026-11-29",
+      "kind": "single",
+      "title": "Ryan Russell’s Protégés",
+      "description": "RYAN RUSSELL’S PROTÉGÉS IS IN OVERDRIVE! EXCLUSIVELY AT SPA EXCESS! Join Ryan Russell with special guests, surprises and gear! It’s a great way to spend your Sunday…",
+      "startDate": "2026-11-29",
+      "startTime": "20:00",
+      "endDate": "2026-11-29",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ryan-russells-proteges/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/26-SEPT-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145894_4\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ryan-russells-proteges/var/ri-4.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Ryan Russell (http://rrssll.com)."
+    },
+    {
+      "id": "playground-2026-12-01",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-12-01",
+      "startTime": "12:00",
+      "endDate": "2026-12-01",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_45\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-45.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-12-01",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-01",
+      "startTime": "16:00",
+      "endDate": "2026-12-01",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_51\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-51.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "ski-mask-shiesty-night-2026-12-01",
+      "kind": "single",
+      "title": "Ski-Mask & Shiesty Night",
+      "description": "Face-down, ass up, door unlocked, ready and waiting! SAVE on Rooms and Lockers every Tuesday from 11PM-1AM for SKI-MASK & SHIESTY NIGHT! DL/ANON LATE NIGHT PLAY. Only at Spa Excess!",
+      "startDate": "2026-12-01",
+      "startTime": "23:00",
+      "endDate": "2026-12-01",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ski-mask-shiesty-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2026/05/SKIIMASKS-SHIESTIES-APR-26-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_146451_30\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ski-mask-shiesty-night/var/ri-30.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-12-02",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-12-02",
+      "startTime": "20:00",
+      "endDate": "2026-12-02",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_45\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-45.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-12-02",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-12-02",
+      "startTime": "20:00",
+      "endDate": "2026-12-02",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_45\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-45.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "boned-up-2026-12-03",
+      "kind": "single",
+      "title": "Boned Up",
+      "description": "Masters, bring your pup! New pups can find a handler, frolic, sniff and play with other pups. Masters: if your pup needs to, take your pup to pee in the showers. Play area in the lounge with large foam mats, toys, and more! PLUS Enjoy our special menu of Starlite Drink Specials. Hosted by Pup Roger.",
+      "startDate": "2026-12-03",
+      "startTime": "20:00",
+      "endDate": "2026-12-03",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/boned-up/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/BONED-UP-26112-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145872_4\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/boned-up/var/ri-4.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Pup Roger."
+    },
+    {
+      "id": "happy-hour-2026-12-04",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-04",
+      "startTime": "16:00",
+      "endDate": "2026-12-04",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_52\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-52.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "climax-fridays-2026-12-04",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-12-04",
+      "startTime": "20:00",
+      "endDate": "2026-12-04",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_6\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-6.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2026-12-04",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-12-04",
+      "startTime": "20:00",
+      "endDate": "2026-12-04",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_6\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-6.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "rough-house-2026-12-06",
+      "kind": "single",
+      "title": "Rough House",
+      "description": "Time for another Rough House Event at Spa Excess. All events are posted on our website RoughHouse.ca Dungeon friskiness this Month to include: SLING STATION FUCK BENCH BONDAGE and FLOGGING at the ST ANDREW’S CROSS WATERSPORTS area SHOWER BONDAGE ROPE BONDAGE and SUSPENSION Outdoor CIGAR PLAY area And other spontaneous Play scenes For more information, please check out our website below or send a note to info@RoughHouse.ca",
+      "startDate": "2026-12-06",
+      "startTime": "13:00",
+      "endDate": "2026-12-06",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/rough-house/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/ROUGH-HOUSE-TILE-011.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145884_10\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/rough-house/var/ri-10.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Rough House (https://www.roughhouse.ca/)."
+    },
+    {
+      "id": "slammin-sundays-retro-parties-2026-12-06",
+      "kind": "single",
+      "title": "Slammin’ Sundays RETRO Parties",
+      "description": "The first Sunday of every month, join us for a cruisy night of high-energy retro hits and dance anthems from the 1970’s, 80’s, and 90’s!",
+      "startDate": "2026-12-06",
+      "startTime": "16:00",
+      "endDate": "2026-12-06",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/slammin-sundays-retro-parties/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/retro-night-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145876_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/slammin-sundays-retro-parties/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-12-07",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-07",
+      "startTime": "16:00",
+      "endDate": "2026-12-07",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_53\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-53.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "playground-2026-12-08",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-12-08",
+      "startTime": "12:00",
+      "endDate": "2026-12-08",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_46\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-46.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "tne-totally-naked-excess-2026-12-08",
+      "kind": "single",
+      "title": "TNE: Totally Naked Excess",
+      "description": "TNT!MEN is proud to present: TNE! Totally Naked Excess. Come get naked with a really awesome and friendly group of guys, enjoy a game of pool, and casual, relaxing man to man fun! $5.00 Flying Horse Beer Special and Q&A for men new to TNT! Get a free Locker or half-price Standard Room ! (ask about our other benefits). www.tntmen.org",
+      "startDate": "2026-12-08",
+      "startTime": "19:00",
+      "endDate": "2026-12-08",
+      "endTime": "22:00",
+      "website": "https://spaexcess.com/events/tne-totally-naked-excess/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/TNETILE750.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145887_12\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/tne-totally-naked-excess/var/ri-12.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: TNT!MEN."
+    },
+    {
+      "id": "ski-mask-shiesty-night-2026-12-08",
+      "kind": "single",
+      "title": "Ski-Mask & Shiesty Night",
+      "description": "Face-down, ass up, door unlocked, ready and waiting! SAVE on Rooms and Lockers every Tuesday from 11PM-1AM for SKI-MASK & SHIESTY NIGHT! DL/ANON LATE NIGHT PLAY. Only at Spa Excess!",
+      "startDate": "2026-12-08",
+      "startTime": "23:00",
+      "endDate": "2026-12-08",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ski-mask-shiesty-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2026/05/SKIIMASKS-SHIESTIES-APR-26-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_146451_31\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ski-mask-shiesty-night/var/ri-31.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-12-09",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-12-09",
+      "startTime": "20:00",
+      "endDate": "2026-12-09",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_46\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-46.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-12-09",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-12-09",
+      "startTime": "20:00",
+      "endDate": "2026-12-09",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_46\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-46.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-12-10",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-10",
+      "startTime": "16:00",
+      "endDate": "2026-12-10",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_54\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-54.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "code-red-ff-night-2026-12-10",
+      "kind": "single",
+      "title": "CODE RED: FF Night",
+      "description": "Happening monthly every second Thursday starting at 8 pm. Most of the fun will be on the top floor in and around the sling room 905, which will be open for anyone to play in. Spa Excess has a bar and lounge to relax in as well as two cleaning stations. Get a room on the top floor or a locker anywhere, bring your kit and meet some new FFriends! With your host FFernando !",
+      "startDate": "2026-12-10",
+      "startTime": "20:00",
+      "endDate": "2026-12-10",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/code-red-ff-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/CODE-RED-FF-2020-Generic.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145878_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/code-red-ff-night/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: FFernando."
+    },
+    {
+      "id": "fetish-night-2026-12-10",
+      "kind": "single",
+      "title": "Fetish Night",
+      "description": "WS shower areas; FF in Room 905 and the dark room; Leather/Rubber/Gear play welcome and encouraged; Kinks and fetishes welcome! Spa Excess has a bar and lounge to relax in, cleaning stations, a dark room, patio, public and private showers, and more! With your host FFernando !",
+      "startDate": "2026-12-10",
+      "startTime": "20:00",
+      "endDate": "2026-12-10",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/fetish-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DJjVgwqd1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145882_12\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/fetish-night/var/ri-12.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: FFernando."
+    },
+    {
+      "id": "climax-fridays-2026-12-11",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-12-11",
+      "startTime": "20:00",
+      "endDate": "2026-12-11",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_7\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-7.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2026-12-11",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-12-11",
+      "startTime": "20:00",
+      "endDate": "2026-12-11",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_7\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-7.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "chubs-at-the-tubs-2026-12-13",
+      "kind": "single",
+      "title": "Chubs at the Tubs",
+      "description": "Hosted by the great guys from Bears in Excess!",
+      "startDate": "2026-12-13",
+      "startTime": "13:00",
+      "endDate": "2026-12-13",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/chubs-at-the-tubs/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Chubs-GENERIC.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145899_3\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/chubs-at-the-tubs/var/ri-3.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Bears in Excess (https://bearsinexcess.com/)."
+    },
+    {
+      "id": "happy-hour-2026-12-13",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-13",
+      "startTime": "16:00",
+      "endDate": "2026-12-13",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_55\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-55.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "playground-2026-12-15",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-12-15",
+      "startTime": "12:00",
+      "endDate": "2026-12-15",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_47\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-47.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "ski-mask-shiesty-night-2026-12-15",
+      "kind": "single",
+      "title": "Ski-Mask & Shiesty Night",
+      "description": "Face-down, ass up, door unlocked, ready and waiting! SAVE on Rooms and Lockers every Tuesday from 11PM-1AM for SKI-MASK & SHIESTY NIGHT! DL/ANON LATE NIGHT PLAY. Only at Spa Excess!",
+      "startDate": "2026-12-15",
+      "startTime": "23:00",
+      "endDate": "2026-12-15",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ski-mask-shiesty-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2026/05/SKIIMASKS-SHIESTIES-APR-26-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_146451_32\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ski-mask-shiesty-night/var/ri-32.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-12-16",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-16",
+      "startTime": "16:00",
+      "endDate": "2026-12-16",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_56\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-56.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-12-16",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-12-16",
+      "startTime": "20:00",
+      "endDate": "2026-12-16",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_47\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-47.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-12-16",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-12-16",
+      "startTime": "20:00",
+      "endDate": "2026-12-16",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_47\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-47.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "asian-night-2026-12-17",
+      "kind": "single",
+      "title": "Asian Night",
+      "description": "Asian Night is solely held at Spa Excess for Asian guys and their admirers. Cum to relax, meet new guys, and have some fun in a nonjudgmental adult wonderland. The ACAS volunteer team hosts a welcoming and friendly environment with: • Fun workshops • Cleansing sugar scrub • 50/50 raffle HIV & Syphilis testing provided on site by Hassle Free Clinic.",
+      "startDate": "2026-12-17",
+      "startTime": "19:00",
+      "endDate": "2026-12-17",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/asian-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/ASIAN-NIGHT-2020-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145858_10\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/asian-night/var/ri-10.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: ACAS Toronto (https://acas.org/)."
+    },
+    {
+      "id": "sexual-health-coordinator-2026-12-18",
+      "kind": "single",
+      "title": "Sexual Health Coordinator",
+      "description": "Moji Shirazi, he/him Sexual Health Coordinator E: SexualHealthCoordinator @asaap.ca M: 1 (416) 575-7605 120 Carlton Street, Suite 212 Toronto ON M5A 4K2",
+      "startDate": "2026-12-18",
+      "startTime": "18:00",
+      "endDate": "2026-12-18",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/sexual-health-coordinator/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Coordinator1.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145857_10\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/sexual-health-coordinator/var/ri-10.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "climax-fridays-2026-12-18",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-12-18",
+      "startTime": "20:00",
+      "endDate": "2026-12-18",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_8\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-8.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2026-12-18",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-12-18",
+      "startTime": "20:00",
+      "endDate": "2026-12-18",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_8\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-8.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-12-19",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-19",
+      "startTime": "16:00",
+      "endDate": "2026-12-19",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_57\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-57.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "playground-2026-12-22",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-12-22",
+      "startTime": "12:00",
+      "endDate": "2026-12-22",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_48\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-48.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "happy-hour-2026-12-22",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-22",
+      "startTime": "16:00",
+      "endDate": "2026-12-22",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_58\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-58.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-12-23",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-12-23",
+      "startTime": "20:00",
+      "endDate": "2026-12-23",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_48\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-48.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-12-23",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-12-23",
+      "startTime": "20:00",
+      "endDate": "2026-12-23",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_48\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-48.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "latin-night-2026-12-24",
+      "kind": "single",
+      "title": "Latin Night",
+      "description": "The 4th Thursday, every month. Sorteos de cortesias para SPA EXCESSS. Recursos HIV+ y LGBTIIQ+ Condones y lubricates gratis Educacion sexual LATINOS & ADMIRERS 8-11PM Hosted by Latinos Positivos.",
+      "startDate": "2026-12-24",
+      "startTime": "20:00",
+      "endDate": "2026-12-24",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/latin-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Latin-Night-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145867_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/latin-night/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Latinos Positivos (https://www.latinospositivos.ca/)."
+    },
+    {
+      "id": "happy-hour-2026-12-25",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-25",
+      "startTime": "16:00",
+      "endDate": "2026-12-25",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_59\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-59.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "climax-fridays-2026-12-25",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2026-12-25",
+      "startTime": "20:00",
+      "endDate": "2026-12-25",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_9\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-9.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2026-12-25",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2026-12-25",
+      "startTime": "20:00",
+      "endDate": "2026-12-25",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_9\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-9.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "bears-in-excess-2026-12-27",
+      "kind": "single",
+      "title": "Bears in Excess",
+      "description": "Big hairy boys and the guys who dig ’em!",
+      "startDate": "2026-12-27",
+      "startTime": "13:00",
+      "endDate": "2026-12-27",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/bears-in-excess/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Bears-GENERIC-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145845_7\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/bears-in-excess/var/ri-7.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Bears in Excess (https://bearsinexcess.com/)."
+    },
+    {
+      "id": "ryan-russell-s-prote-ge-s-2026-12-27",
+      "kind": "single",
+      "title": "Ryan Russell’s Protégés",
+      "description": "RYAN RUSSELL’S PROTÉGÉS IS IN OVERDRIVE! EXCLUSIVELY AT SPA EXCESS! Join Ryan Russell with special guests, surprises and gear! It’s a great way to spend your Sunday…",
+      "startDate": "2026-12-27",
+      "startTime": "20:00",
+      "endDate": "2026-12-27",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ryan-russells-proteges/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/26-SEPT-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145894_5\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ryan-russells-proteges/var/ri-5.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Ryan Russell (http://rrssll.com)."
+    },
+    {
+      "id": "happy-hour-2026-12-28",
+      "kind": "single",
+      "title": "Happy Hour",
+      "description": "Save everyday! From 4-6PM 8-Hour Rooms PLUS: Beer & Liquor Specials!",
+      "startDate": "2026-12-28",
+      "startTime": "16:00",
+      "endDate": "2026-12-28",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/happy-hour/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/HAPPY-HOUR-MAR-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145849_60\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/happy-hour/var/ri-60.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "playground-2026-12-29",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2026-12-29",
+      "startTime": "12:00",
+      "endDate": "2026-12-29",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_49\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-49.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2026-12-30",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2026-12-30",
+      "startTime": "20:00",
+      "endDate": "2026-12-30",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_49\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-49.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2026-12-30",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2026-12-30",
+      "startTime": "20:00",
+      "endDate": "2026-12-30",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_49\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-49.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "new-year-s-eve-2026-ball-drop-2026-12-31",
+      "kind": "single",
+      "title": "New Year’s Eve 2026: Ball Drop!",
+      "description": "Get ready to ring in the New Year with your friends at Spa Excess. Including a complementary midnight champagne toast, hot food spread. Regular prices apply. No Passes, No Specials,",
+      "startDate": "2026-12-31",
+      "startTime": "20:00",
+      "endDate": "2027-01-01",
+      "endTime": "03:00",
+      "website": "https://spaexcess.com/events/new-years-eve-2024-ball-drop/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2025/12/NYE-2026-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145866_2\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/new-years-eve-2024-ball-drop/var/ri-2.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "climax-fridays-2027-01-01",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2027-01-01",
+      "startTime": "20:00",
+      "endDate": "2027-01-01",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_10\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-10.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2027-01-01",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2027-01-01",
+      "startTime": "20:00",
+      "endDate": "2027-01-01",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_10\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-10.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "slammin-sundays-retro-parties-2027-01-03",
+      "kind": "single",
+      "title": "Slammin’ Sundays RETRO Parties",
+      "description": "The first Sunday of every month, join us for a cruisy night of high-energy retro hits and dance anthems from the 1970’s, 80’s, and 90’s!",
+      "startDate": "2027-01-03",
+      "startTime": "16:00",
+      "endDate": "2027-01-03",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/slammin-sundays-retro-parties/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/retro-night-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145876_12\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/slammin-sundays-retro-parties/var/ri-12.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "playground-2027-01-05",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2027-01-05",
+      "startTime": "12:00",
+      "endDate": "2027-01-05",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_50\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-50.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2027-01-06",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2027-01-06",
+      "startTime": "20:00",
+      "endDate": "2027-01-06",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_50\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-50.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2027-01-06",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2027-01-06",
+      "startTime": "20:00",
+      "endDate": "2027-01-06",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_50\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-50.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "boned-up-2027-01-07",
+      "kind": "single",
+      "title": "Boned Up",
+      "description": "Masters, bring your pup! New pups can find a handler, frolic, sniff and play with other pups. Masters: if your pup needs to, take your pup to pee in the showers. Play area in the lounge with large foam mats, toys, and more! PLUS Enjoy our special menu of Starlite Drink Specials. Hosted by Pup Roger.",
+      "startDate": "2027-01-07",
+      "startTime": "20:00",
+      "endDate": "2027-01-07",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/boned-up/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/BONED-UP-26112-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145872_5\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/boned-up/var/ri-5.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Pup Roger."
+    },
+    {
+      "id": "climax-fridays-2027-01-08",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2027-01-08",
+      "startTime": "20:00",
+      "endDate": "2027-01-08",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2027-01-08",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2027-01-08",
+      "startTime": "20:00",
+      "endDate": "2027-01-08",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "rough-house-2027-01-10",
+      "kind": "single",
+      "title": "Rough House",
+      "description": "Time for another Rough House Event at Spa Excess. All events are posted on our website RoughHouse.ca Dungeon friskiness this Month to include: SLING STATION FUCK BENCH BONDAGE and FLOGGING at the ST ANDREW’S CROSS WATERSPORTS area SHOWER BONDAGE ROPE BONDAGE and SUSPENSION Outdoor CIGAR PLAY area And other spontaneous Play scenes For more information, please check out our website below or send a note to info@RoughHouse.ca",
+      "startDate": "2027-01-10",
+      "startTime": "13:00",
+      "endDate": "2027-01-10",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/rough-house/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/ROUGH-HOUSE-TILE-011.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145884_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/rough-house/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Rough House (https://www.roughhouse.ca/)."
+    },
+    {
+      "id": "playground-2027-01-12",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2027-01-12",
+      "startTime": "12:00",
+      "endDate": "2027-01-12",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_51\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-51.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "tne-totally-naked-excess-2027-01-12",
+      "kind": "single",
+      "title": "TNE: Totally Naked Excess",
+      "description": "TNT!MEN is proud to present: TNE! Totally Naked Excess. Come get naked with a really awesome and friendly group of guys, enjoy a game of pool, and casual, relaxing man to man fun! $5.00 Flying Horse Beer Special and Q&A for men new to TNT! Get a free Locker or half-price Standard Room ! (ask about our other benefits). www.tntmen.org",
+      "startDate": "2027-01-12",
+      "startTime": "19:00",
+      "endDate": "2027-01-12",
+      "endTime": "22:00",
+      "website": "https://spaexcess.com/events/tne-totally-naked-excess/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/TNETILE750.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145887_13\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/tne-totally-naked-excess/var/ri-13.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: TNT!MEN."
+    },
+    {
+      "id": "college-night-2027-01-13",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2027-01-13",
+      "startTime": "20:00",
+      "endDate": "2027-01-13",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_51\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-51.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2027-01-13",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2027-01-13",
+      "startTime": "20:00",
+      "endDate": "2027-01-13",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_51\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-51.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "code-red-ff-night-2027-01-14",
+      "kind": "single",
+      "title": "CODE RED: FF Night",
+      "description": "Happening monthly every second Thursday starting at 8 pm. Most of the fun will be on the top floor in and around the sling room 905, which will be open for anyone to play in. Spa Excess has a bar and lounge to relax in as well as two cleaning stations. Get a room on the top floor or a locker anywhere, bring your kit and meet some new FFriends! With your host FFernando !",
+      "startDate": "2027-01-14",
+      "startTime": "20:00",
+      "endDate": "2027-01-14",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/code-red-ff-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/CODE-RED-FF-2020-Generic.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145878_12\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/code-red-ff-night/var/ri-12.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: FFernando."
+    },
+    {
+      "id": "fetish-night-2027-01-14",
+      "kind": "single",
+      "title": "Fetish Night",
+      "description": "WS shower areas; FF in Room 905 and the dark room; Leather/Rubber/Gear play welcome and encouraged; Kinks and fetishes welcome! Spa Excess has a bar and lounge to relax in, cleaning stations, a dark room, patio, public and private showers, and more! With your host FFernando !",
+      "startDate": "2027-01-14",
+      "startTime": "20:00",
+      "endDate": "2027-01-14",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/fetish-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DJjVgwqd1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145882_13\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/fetish-night/var/ri-13.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: FFernando."
+    },
+    {
+      "id": "sexual-health-coordinator-2027-01-15",
+      "kind": "single",
+      "title": "Sexual Health Coordinator",
+      "description": "Moji Shirazi, he/him Sexual Health Coordinator E: SexualHealthCoordinator @asaap.ca M: 1 (416) 575-7605 120 Carlton Street, Suite 212 Toronto ON M5A 4K2",
+      "startDate": "2027-01-15",
+      "startTime": "18:00",
+      "endDate": "2027-01-15",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/sexual-health-coordinator/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Coordinator1.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145857_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/sexual-health-coordinator/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "climax-fridays-2027-01-15",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2027-01-15",
+      "startTime": "20:00",
+      "endDate": "2027-01-15",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_12\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-12.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2027-01-15",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2027-01-15",
+      "startTime": "20:00",
+      "endDate": "2027-01-15",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_12\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-12.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "bears-in-excess-2027-01-17",
+      "kind": "single",
+      "title": "Bears in Excess",
+      "description": "Big hairy boys and the guys who dig ’em!",
+      "startDate": "2027-01-17",
+      "startTime": "13:00",
+      "endDate": "2027-01-17",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/bears-in-excess/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Bears-GENERIC-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145845_8\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/bears-in-excess/var/ri-8.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Bears in Excess (https://bearsinexcess.com/)."
+    },
+    {
+      "id": "playground-2027-01-19",
+      "kind": "single",
+      "title": "Playground",
+      "description": "Playground at Spa Excess is for 18-25 year old guys looking for a free escape! Every Tuesday, guys 18-25 get a FREE 8-hour locker, ANYtime from NOON to MIDNIGHT! Come in, relax, and get off! Free high-speed wi-fi, fully licensed bar and lounge, plus all the clean, refreshing play areas are available! Locker and Key Deposit is required and refunded at the end of your visit.",
+      "startDate": "2027-01-19",
+      "startTime": "12:00",
+      "endDate": "2027-01-19",
+      "endTime": "12:00",
+      "website": "https://spaexcess.com/events/playground/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/PLAYGROUND-G-2048x20481-1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145851_52\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/playground/var/ri-52.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2027-01-20",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2027-01-20",
+      "startTime": "20:00",
+      "endDate": "2027-01-20",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_52\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-52.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2027-01-20",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2027-01-20",
+      "startTime": "20:00",
+      "endDate": "2027-01-20",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_52\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-52.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "asian-night-2027-01-21",
+      "kind": "single",
+      "title": "Asian Night",
+      "description": "Asian Night is solely held at Spa Excess for Asian guys and their admirers. Cum to relax, meet new guys, and have some fun in a nonjudgmental adult wonderland. The ACAS volunteer team hosts a welcoming and friendly environment with: • Fun workshops • Cleansing sugar scrub • 50/50 raffle HIV & Syphilis testing provided on site by Hassle Free Clinic.",
+      "startDate": "2027-01-21",
+      "startTime": "19:00",
+      "endDate": "2027-01-21",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/asian-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/ASIAN-NIGHT-2020-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145858_11\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/asian-night/var/ri-11.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: ACAS Toronto (https://acas.org/)."
+    },
+    {
+      "id": "climax-fridays-2027-01-22",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2027-01-22",
+      "startTime": "20:00",
+      "endDate": "2027-01-22",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_13\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-13.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2027-01-22",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2027-01-22",
+      "startTime": "20:00",
+      "endDate": "2027-01-22",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_13\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-13.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "college-night-2027-01-27",
+      "kind": "single",
+      "title": "College Night",
+      "description": "Every Wednesday, come to Spa Excess for College Night! AGES 18-25 ENJOY A FREE STANDARD ROOM, 8PM-12AM! Why not finish your course-work in our high-speed Wifi equipped playspace? Get your reading done while you get off!",
+      "startDate": "2027-01-27",
+      "startTime": "20:00",
+      "endDate": "2027-01-27",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/college-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/COLLEGE-NIGHT-2021-G-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145853_53\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/college-night/var/ri-53.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "date-night-2027-01-27",
+      "kind": "single",
+      "title": "Date Night",
+      "description": "Bring a friend and get two lockers for the price of one! Wednesdays are DATE NIGHT at Spa Excess from 8pm-12am, weekly!",
+      "startDate": "2027-01-27",
+      "startTime": "20:00",
+      "endDate": "2027-01-27",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/date-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/DATE-NIGT-GENERIC-1-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145855_53\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/date-night/var/ri-53.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "latin-night-2027-01-28",
+      "kind": "single",
+      "title": "Latin Night",
+      "description": "The 4th Thursday, every month. Sorteos de cortesias para SPA EXCESSS. Recursos HIV+ y LGBTIIQ+ Condones y lubricates gratis Educacion sexual LATINOS & ADMIRERS 8-11PM Hosted by Latinos Positivos.",
+      "startDate": "2027-01-28",
+      "startTime": "20:00",
+      "endDate": "2027-01-28",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/latin-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Latin-Night-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145867_12\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/latin-night/var/ri-12.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Latinos Positivos (https://www.latinospositivos.ca/)."
+    },
+    {
+      "id": "climax-fridays-2027-01-29",
+      "kind": "single",
+      "title": "CLIMAX! Fridays",
+      "description": "CLIMAX! Fridays… 8PM-4AM If you’re 18-25, get a *FREE* 8-HOUR Locker! Valid ID is required.",
+      "startDate": "2027-01-29",
+      "startTime": "20:00",
+      "endDate": "2027-01-29",
+      "endTime": "20:00",
+      "website": "https://spaexcess.com/events/climax-fridays/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/FRIDAY-NIGHT-CLIMAX-G-JUN-24-scaled1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145862_14\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "End equals start on the card (no duration stated). Card url https://spaexcess.com/events/climax-fridays/var/ri-14.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "naked-night-2027-01-29",
+      "kind": "single",
+      "title": "Naked Night",
+      "description": "Naked Night Fridays! Nudity is not required but is definitely encouraged. Get down and feel better naked!",
+      "startDate": "2027-01-29",
+      "startTime": "20:00",
+      "endDate": "2027-01-29",
+      "endTime": "23:00",
+      "website": "https://spaexcess.com/events/naked-night/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/NAKED-NIGHT-2024-G1.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145861_14\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/naked-night/var/ri-14.l-L1 is one night of a repeating event; the reader keeps the event page it shares."
+    },
+    {
+      "id": "chubs-at-the-tubs-2027-01-31",
+      "kind": "single",
+      "title": "Chubs at the Tubs",
+      "description": "Hosted by the great guys from Bears in Excess!",
+      "startDate": "2027-01-31",
+      "startTime": "13:00",
+      "endDate": "2027-01-31",
+      "endTime": "18:00",
+      "website": "https://spaexcess.com/events/chubs-at-the-tubs/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/Chubs-GENERIC.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145899_4\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/chubs-at-the-tubs/var/ri-4.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Bears in Excess (https://bearsinexcess.com/)."
+    },
+    {
+      "id": "ryan-russell-s-prote-ge-s-2027-01-31",
+      "kind": "single",
+      "title": "Ryan Russell’s Protégés",
+      "description": "RYAN RUSSELL’S PROTÉGÉS IS IN OVERDRIVE! EXCLUSIVELY AT SPA EXCESS! Join Ryan Russell with special guests, surprises and gear! It’s a great way to spend your Sunday…",
+      "startDate": "2027-01-31",
+      "startTime": "20:00",
+      "endDate": "2027-01-31",
+      "endTime": "23:59",
+      "website": "https://spaexcess.com/events/ryan-russells-proteges/",
+      "ticketUrl": null,
+      "image": "https://spaexcess.com/wp-content/uploads/2024/12/26-SEPT-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"@id\": \"event_145894_6\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Card url https://spaexcess.com/events/ryan-russells-proteges/var/ri-6.l-L1 is one night of a repeating event; the reader keeps the event page it shares. Card organizer: Ryan Russell (http://rrssll.com)."
+    }
+  ],
+  "traps": [
+    {
+      "id": "repeat-night-urls",
+      "kind": "duplicate-listing",
+      "label": "Card urls ending /var/ri-<n>.l-L1 (e.g. https://spaexcess.com/events/bears-in-excess/var/ri-5.l-L1)",
+      "why": "The suffix addresses one night inside the plugin’s page script and is a 404 asked for directly; every night of a repeat shares the event page. normalizeEventOnCalendarHtml strips it, so the card keeps https://spaexcess.com/events/bears-in-excess/ and the nights fold on title + date, not on the url.",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"url\": \"https://spaexcess.com/events/bears-in-excess/var/ri-5.l-L1\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "seenInRun": "20261018-111647",
+      "note": "Extraction is correct — the card is a real night — the trap is reading the suffixed url as a page of its own."
+    },
+    {
+      "id": "fixed-zero-offset",
+      "kind": "announcement",
+      "label": "Times printed as \"2026-10-18T13:00+0:00\" on every card",
+      "why": "EventON prints the editor’s wall clock with the site’s configured UTC offset, here +0:00 for a Toronto venue (cal_def.cal_tz_offset -240 says otherwise). Read as an instant, 13:00+0:00 is 09:00 in Toronto; the wall clock is the statement and the reader drops the offset.",
+      "evidence": {
+        "url": "https://spaexcess.com/?evo-ajax=eventon_init_load",
+        "quote": "\"startDate\": \"2026-10-18T13:00+0:00\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "seenInRun": null,
+      "note": "Not an extra event — a time-reading trap on every real card."
+    },
+    {
+      "id": "wordpress-door-probes",
+      "kind": "soft-404",
+      "label": "/wp-json/tribe/events/v1/events, /wp-json/wp/v2/events and /feed.json",
+      "why": "The crawler’s generic WordPress feed probes; this site answers 404 to all three (no Tribe calendar, no events post type exposed, no JSON feed). Three live requests per run that find nothing — the EventON frame is the only door.",
+      "evidence": {
+        "url": "https://spaexcess.com/wp-json/tribe/events/v1/events?per_page=50",
+        "quote": "HTTP 404"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-111647"
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Card descriptions state cadences in words (\"Playground … Every Tuesday\"), and the Bears in Excess card names its organizer bearsinexcess.com. If a series reader ever quotes EventON descriptions, these weekly nights could become series instead of one single per week.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "At urlDiscoveryDepth 0 the run still fetched the cards’ own pages as listing enrichment (3 of about 12 distinct event pages before it was stopped) plus the WordPress REST copy of the home page and three feed probes: 13 live requests for one home page. On a bathhouse host that answers slowly this is the whole per-run budget of a quiet calendar; worth an owner look at whether enrichment should skip EventON cards that already carry page, image, times and copy.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}

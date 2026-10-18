@@ -369,6 +369,15 @@ const scraperBars = {
       "coordinates": "26.1462600, -80.1403612"
     }
   ],
+  "gettysburg": [
+    {
+      "name": "Eisenhower Hotel & Conference Center",
+      "city": "gettysburg",
+      "address": "2634 Emmitsburg Rd, Gettysburg, PA 17325",
+      "coordinates": "39.765789, -77.2691996",
+      "website": "https://eisenhower.com"
+    }
+  ],
   "hong-kong": [
     {
       "name": "Boo Bar",
@@ -1006,7 +1015,8 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/boatslipresort",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
       "gayCities": "https://ptown.gaycities.com/hotels/10272-boatslip-resort-beach-club",
-      "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z",
+      "website": "https://theboatslip.com"
     },
     {
       "name": "Crown & Anchor",
@@ -1036,7 +1046,8 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/redroomptown",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
       "gayCities": "https://ptown.gaycities.com/bars/309562-red-room",
-      "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z"
+      "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z",
+      "website": "https://redroom.club"
     },
     {
       "name": "Provincetown Inn",
@@ -1366,7 +1377,8 @@ const scraperBars = {
       "name": "Spa Excess",
       "city": "toronto",
       "address": "105 Carlton Street, Toronto, Ontario",
-      "coordinates": "43.6620695, -79.3773558"
+      "coordinates": "43.6620695, -79.3773558",
+      "website": "https://spaexcess.com"
     },
     {
       "name": "Black Eagle Toronto",
