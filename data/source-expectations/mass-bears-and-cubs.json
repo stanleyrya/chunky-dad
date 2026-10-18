@@ -4,7 +4,7 @@
   "slug": "mass-bears-and-cubs",
   "status": "complete",
   "recon": {
-    "date": "2026-09-12",
+    "date": "2026-10-17",
     "method": [
       "feed",
       "static",
@@ -18,9 +18,9 @@
         "url": "https://www.massbearsandcubs.org/events?format=json",
         "kind": "squarespace-collection-json",
         "role": "feed",
-        "rowsReturned": 52,
-        "truthFlag": "upcoming[] 22 (not paginated — the Squarespace events collection returns every upcoming item); past[] 30 = pagination.pageSize with pagination.nextPage true / nextPageUrl \"/events?offset=1769729598148\"; collection.itemCount 83",
-        "note": "Verified door: collection.typeName \"events-stacked\", website.timeZone \"America/New_York\". Rows carry epoch-ms startDate/endDate, title, fullUrl, assetUrl, excerpt + body HTML, tags[], and a per-item location {addressTitle, addressLine1, addressLine2, markerLat, markerLng}. 19 of the 22 upcoming rows carry markerLat/markerLng 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan) — so those coordinates are NOT the venue; only three rows (MA Bear Contest Meet & Greet, Belly Party Spooky Bear, Bear Boutique) carry real Massachusetts coordinates. Saved as discovery/massbearsandcubs.org/events-json.body (2026-09-12 14:59)."
+        "rowsReturned": 44,
+        "truthFlag": "upcoming[] 14 rows (complete: Squarespace does not page the upcoming side), past[] 30 rows with pagination.nextPage true (collection.itemCount 85)",
+        "note": "Verified door: collection.typeName \"events-stacked\", website.timeZone \"America/New_York\". Rows carry epoch-ms startDate/endDate, title, fullUrl, assetUrl, excerpt + body HTML, tags[], and a per-item location {addressTitle, addressLine1, addressLine2, markerLat, markerLng}. 19 of the 22 upcoming rows carry markerLat/markerLng 40.7207559, -74.0007613 — Squarespace's default map marker (lower Manhattan) — so those coordinates are NOT the venue; only three rows (MA Bear Contest Meet & Greet, Belly Party Spooky Bear, Bear Boutique) carry real Massachusetts coordinates. Saved as discovery/massbearsandcubs.org/events-json.body (2026-09-12 14:59). Re-read 2026-10-17 from the scraper's cache (fetched 2026-10-16T09:55Z): 14 upcoming rows 2026-10-18 → 2026-12-26 = the five documented series' nights (Bear Tea Oct 18 \"Meet MA Bear 2027!\", Nov 15, Dec 20; Alley Bears Oct 24, Nov 28, Dec 26; Bears, Brews & Boys Oct 25, Nov 29; Monthly Trivia Nov 19, Dec 17; Monthly Membership Meetings Nov 4, Dec 2) plus The Belly Party - SPOOKY BEAR! (Oct 30) and Bear Boutique (Nov 15). 40 of 44 rows carry markerLat/markerLng 40.7207559, -74.0007613 (the template's New York default) — on 36 beside a Boston mapLat/mapLng, on 7 as the map pin too (the Online/Virtual meetings and \"Bears at the Beach 2026\" at Nantasket Beach / Hull, MA)."
       },
       {
         "url": "https://www.massbearsandcubs.org/events",
@@ -65,7 +65,7 @@
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Single feed door read in full: ?format=json returns upcoming[] with 22 rows and no pagination on the upcoming side (Squarespace paginates only past[]). The static /events page renders the same 22 upcoming article blocks. Collapse: Monthly Trivia ×4, Bear Tea ×4, Alley Bears Gear Night ×4, Monthly Membership Meetings ×3 and Bears Brews & Boys ×2 are five recurring socials published one item per month → 5 series (17 rows); the remaining 5 rows are one-offs → 5 singles (The Belly Party Sep 12, MA Bear Contest Meet & Greet Oct 9, MA Bear Contest 2027 Oct 10, The Belly Party Spooky Bear Oct 30 in Provincetown, Bear Boutique Nov 15). publishedEventCount = 5 + 5 = 10. Every series occurrence is a dated item in the feed (origin listed, one jsonPath each); the window runs to 2026-12-31 because the feed lists December instances for three of the five series. Past listings: past[] page 1 holds 30 rows (2026-09-02 back to 2026-05-06) with pagination.nextPage true; collection.itemCount is 83, so the archive is deeper than the 30 shown — counted, not enumerated, and not paged (no further requests were spent).",
+    "basis": "Re-read 2026-10-17: the JSON door's 14 upcoming rows are all occurrences of the five documented series or the two documented singles still ahead; the three documented singles of Sept/Oct are now in past[] — Earlier basis: Single feed door read in full: ?format=json returns upcoming[] with 22 rows and no pagination on the upcoming side (Squarespace paginates only past[]). The static /events page renders the same 22 upcoming article blocks. Collapse: Monthly Trivia ×4, Bear Tea ×4, Alley Bears Gear Night ×4, Monthly Membership Meetings ×3 and Bears Brews & Boys ×2 are five recurring socials published one item per month → 5 series (17 rows); the remaining 5 rows are one-offs → 5 singles (The Belly Party Sep 12, MA Bear Contest Meet & Greet Oct 9, MA Bear Contest 2027 Oct 10, The Belly Party Spooky Bear Oct 30 in Provincetown, Bear Boutique Nov 15). publishedEventCount = 5 + 5 = 10. Every series occurrence is a dated item in the feed (origin listed, one jsonPath each); the window runs to 2026-12-31 because the feed lists December instances for three of the five series. Past listings: past[] page 1 holds 30 rows (2026-09-02 back to 2026-05-06) with pagination.nextPage true; collection.itemCount is 83, so the archive is deeper than the 30 shown — counted, not enumerated, and not paged (no further requests were spent).",
     "publishedEventCount": 10,
     "documentedEventCount": 10,
     "occurrenceWindow": {
@@ -602,11 +602,26 @@
         "kept": null
       },
       "seenInRun": null
+    },
+    {
+      "seenInRun": "20261017-054812",
+      "id": "home-and-dropdown-date-only-twins",
+      "label": "Home page and /new-dropdown repeat the upcoming list as date-only or UTC-clocked rows",
+      "kind": "duplicate-listing",
+      "why": "The home page lists the same upcoming events as the JSON door without times (run 20261017-054812: \"Monthly Membership Meetings\" 2026-11-04T00:00Z and \"Bear Boutique\" 2026-11-15T00:00Z from https://www.massbearsandcubs.org/) and /new-dropdown repeats them with the time read as UTC and the category \"Events\" read as the bar (\"Monthly Membership Meetings\", bar \"Events\", 2026-11-04T19:00Z). The run set 3 such records aside (\"assembled from two listings — shown in results, never deduplicated, merged or written\"); the daily audit counted them as fakes. They are the JSON rows again, not events of their own.",
+      "evidence": {
+        "url": "https://www.massbearsandcubs.org/events",
+        "quote": "Monthly Membership Meetings"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      }
     }
   ],
   "openQuestions": [
     {
-      "q": "Should the scraper discard Squarespace's default map marker (markerLat 40.7207559 / markerLng -74.0007613, repeated on 19 of 22 rows and in every per-item ICS GEO line) instead of treating it as venue coordinates? The Boston items would otherwise be placed in Manhattan.",
+      "q": "Should the scraper discard Squarespace's default map marker (markerLat 40.7207559 / markerLng -74.0007613, repeated on 19 of 22 rows and in every per-item ICS GEO line) instead of treating it as venue coordinates? The Boston items would otherwise be placed in Manhattan. — ANSWERED 2026-10-17: yes. Run 20261017-054812 shipped \"Bears at the Beach 2026\" (addressTitle \"Nantasket Beach\", addressLine2 \"Hull, MA\", mapLat/mapLng = markerLat/markerLng = 40.7207559, -74.0007613) to the calendar at the New York marker because buildEventFromSquarespaceItem only discarded the template marker on rows with NO address line. Fixed on branch audit/recheck-feeds: a map pin equal to the template marker is never a pin, address or not (scripts/feed-door-shapes.test.js, fixture scripts/fixtures/feed-doors/squarespace-events-format-json.json).",
       "raisedOn": "2026-09-12",
       "blocking": false
     },
@@ -615,5 +630,6 @@
       "raisedOn": "2026-09-12",
       "blocking": false
     }
-  ]
+  ],
+  "recheckAfter": "2026-11-16"
 }

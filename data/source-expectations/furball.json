@@ -4,7 +4,7 @@
   "slug": "furball",
   "status": "complete",
   "recon": {
-    "date": "2026-09-10",
+    "date": "2026-10-17",
     "method": [
       "static",
       "rendered",
@@ -19,9 +19,9 @@
         "url": "https://www.furball.nyc/",
         "kind": "static",
         "role": "listing",
-        "rowsReturned": 9,
+        "rowsReturned": 5,
         "truthFlag": null,
-        "note": "curl of the configured URL (HTTP 200, 630,395 bytes). Wix server-renders the whole page: a site-wide header ticker 'UPCOMING EVENTS:' with 6 rows (M/D + event + venue, no year) and an 'Upcoming Furball Events' body with 3 cards (NOLA, Dallas, UNDERBEAR NYC) that carry full dates with year. 73 wixstatic image references (20 distinct media ids). No Wix Events app: no events-viewer markup, no wix-events data."
+        "note": "Re-read 2026-10-17 from the scraper's cache (fetched 2026-10-15T09:19Z). Ticker (\"UPCOMING EVENTS:\") lists 6 rows: 10/16 UNDERBEAR NYC Boo-ty Call - ROCKBAR, 10/23 FURBALL FUR FANG NOLA - Metro 3, 10/29 FURBALL P'TOWN Howl - REDROOM, 11/6 FURBALL Palm Springs - Toucans Tiki Lounge, 11/21 FURBALL Austin - Austin Eagle, 11/25 UNDERBEAR Stuffed Thanksgiving Eve - ROCKBAR. The body lists 5 dated cards (the first four plus FURBALL MAD.BEAR, DEC 7 2026, Yasta - Madrid); Austin and Thanksgiving Eve have no card. No card states a clock; times come from the ticket pages. Owner ruling 2026-09-13: ticker rows without a card are fragments, not events — the site publishes 5."
       },
       {
         "url": "https://www.furball.nyc/",
@@ -137,173 +137,118 @@
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Primary door = the configured homepage (static curl; rendered DOM identical; page cache of 2026-09-07 identical). Its site-wide ticker lists 6 upcoming rows; its body lists 3 cards, each with a full date incl. year and a flyer image. Ticker ∩ cards = 3 (NOLA 9/5, Dallas 9/18, UNDERBEAR 9/18); ticker-only = 3 (DC 10/3, Boston 10/10, UNDERBEAR 10/16) which have no year, no time and no card. publishedEventCount 6 = the ticker. Second door /upcoming-schedule (out of config scope) lists only 4 rows in its 2026 block, 3 of them already past, and none of the 5 later ticker rows — the delta is explained by the page being a stale hand-edited archive (208 dated PAST EVENTS rows from JUNE 22, 2018 to August 18, 2026 sit below it). /furball-events and /copy-of-furball-events are also stale (2023 and a year-less 'Tuesday, January 30'). Ticket pages (ticketleap, eventbrite) confirm the years and 21:00 start times for NOLA and Dallas. All three flyers agree with their cards (day-of-week, date, venue, time). pastListingsPresent is true because of the /upcoming-schedule archive and the homepage season poster (11 past dates); the crawled homepage text itself has no past rows.",
-    "publishedEventCount": 6,
-    "documentedEventCount": 6,
+    "basis": "Re-read 2026-10-17: the home page's 5 dated cards (ticker 6 rows, two of them card-less fragments per the owner ruling); the September/early-October events of the 2026-09-10 read have rolled off the page — Earlier basis: Primary door = the configured homepage (static curl; rendered DOM identical; page cache of 2026-09-07 identical). Its site-wide ticker lists 6 upcoming rows; its body lists 3 cards, each with a full date incl. year and a flyer image. Ticker ∩ cards = 3 (NOLA 9/5, Dallas 9/18, UNDERBEAR 9/18); ticker-only = 3 (DC 10/3, Boston 10/10, UNDERBEAR 10/16) which have no year, no time and no card. publishedEventCount 6 = the ticker. Second door /upcoming-schedule (out of config scope) lists only 4 rows in its 2026 block, 3 of them already past, and none of the 5 later ticker rows — the delta is explained by the page being a stale hand-edited archive (208 dated PAST EVENTS rows from JUNE 22, 2018 to August 18, 2026 sit below it). /furball-events and /copy-of-furball-events are also stale (2023 and a year-less 'Tuesday, January 30'). Ticket pages (ticketleap, eventbrite) confirm the years and 21:00 start times for NOLA and Dallas. All three flyers agree with their cards (day-of-week, date, venue, time). pastListingsPresent is true because of the /upcoming-schedule archive and the homepage season poster (11 past dates); the crawled homepage text itself has no past rows.",
+    "publishedEventCount": 5,
+    "documentedEventCount": 5,
     "occurrenceWindow": {
-      "start": "2026-09-10",
-      "end": "2026-12-09"
+      "start": "2026-10-17",
+      "end": "2027-01-16"
     },
     "pastListingsPresent": true,
     "knownGaps": []
   },
   "events": [
     {
-      "id": "furball-nola-southern-decadence-2026-09-05",
+      "id": "underbear-nyc-boo-ty-call-2026-10-16",
       "kind": "single",
-      "title": "FURBALL NOLA Southern Decadence",
-      "shortName": "FURBALL NOLA",
-      "description": "Joe Fiore presents FURBALL Southern Decadence, Labor Day Weekend. Music: GSP. Two floors, balcony, dark room. Jocks / underwear / gear, clothes check available. Doors 9PM, party 10PM.",
-      "bar": "Santos Bar",
-      "address": "1135 Decatur St, New Orleans, LA",
-      "location": null,
-      "city": "nola",
-      "timezone": "America/Chicago",
-      "startDate": "2026-09-05",
-      "startTime": "21:00",
-      "endDate": "2026-09-06",
-      "endTime": "03:00",
-      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-new-orleans-southern-decadence-2026",
-      "image": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.furball.nyc/",
-        "quote": "September 5, 2026",
-        "imageUrl": "https://static.wixstatic.com/media/238fae_fd76b69c05fa4e788b9acb5ef77178ee~mv2.jpg"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "Ticker row '9/5 FURBALL NOLA - Santos Bar'; card 'SATURDAY NIGHT!!! / FURBALL / NOLA / Southern Decadence / September 5, 2026 / Santos Bar - New Orleans, LA / GET YOUR TICKETS HERE' (linked to ticketleap). Year is on the card. Time 21:00 and the 1135 Decatur St address come from the flyer ('DOORS: 9PM . PARTY: 10PM', 'SANTOS 1135 DECATUR ST, NEW ORLEANS'); endDate/endTime from ticketleap JSON-LD endDate 2026-09-06T03:00:00-0500. Already past on the recon date (2026-09-10) but still published on the page as an upcoming event."
-    },
-    {
-      "id": "furball-dallas-pride-kickoff-2026-09-18",
-      "kind": "single",
-      "title": "FURBALL Dallas Pride Kickoff Party",
-      "shortName": "FURBALL Dallas",
-      "description": "Joe Fiore presents FURBALL Dallas Pride Kickoff, underwear + gear party, clothes check. Music: DJ GSP and DJ Sanders. Doors 9PM.",
-      "bar": "Dallas Eagle",
-      "address": "525 S Riverfront, Dallas, TX",
-      "location": null,
-      "city": "dallas",
-      "timezone": "America/Chicago",
-      "startDate": "2026-09-18",
-      "startTime": "21:00",
-      "endDate": "2026-09-19",
-      "endTime": "02:00",
-      "ticketUrl": "https://www.eventbrite.com/e/furball-dallas-underwear-gear-party-featuring-dj-gsp-tickets-1998828293232",
-      "image": "https://static.wixstatic.com/media/238fae_0de327229a2341b6a7fda572185436ea~mv2.jpg",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.furball.nyc/",
-        "quote": "Dallas Eagle - Dallas, TX",
-        "imageUrl": "https://static.wixstatic.com/media/238fae_0de327229a2341b6a7fda572185436ea~mv2.jpg"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "Ticker row '9/18 FURBALL Dallas - Dallas Eagle'; card 'FURBALL / D A L L A S (one letter per line in the markup) / Pride Kickoff Party / September 18, 2026 / Dallas Eagle - Dallas, TX' with 'GET YOUR TICKETS HERE' linked to eventbrite. Year is on the card. 21:00 and the address from the flyer ('9PM FRIDAY SEPT. 18', '525 S RIVERFRONT'); endDate/endTime from eventbrite JSON-LD endDate 2026-09-19T02:00:00-05:00. Also a Dallas Eagle venue event — belongs to both sources."
-    },
-    {
-      "id": "underbear-nyc-urban-bear-weekend-2026-09-18",
-      "kind": "single",
-      "title": "UNDERBEAR NYC Urban Bear Weekend Underwear Party",
-      "shortName": "UNDERBEAR NYC",
-      "description": "Furball presents UNDERBEAR, the Urban Bear Weekend underwear party (18th annual Urban Bear NYC). DJ Token Blackfriend. Boxers, briefs, jockstraps encouraged, not required; clothes check available; dark room at midnight. $20.",
+      "title": "UNDERBEAR NYC BOO-TY CALL",
       "bar": "Rockbar",
-      "address": "185 Christopher St, New York, NY",
-      "location": null,
-      "city": "nyc",
-      "timezone": "America/New_York",
-      "startDate": "2026-09-18",
-      "startTime": "21:00",
-      "image": "https://static.wixstatic.com/media/238fae_1d845b6109484f1daabd3e34e51ed3d3~mv2.jpg",
-      "sourceRung": "static",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://www.furball.nyc/",
-        "quote": "URBAN BEAR WEEKEND",
-        "imageUrl": "https://static.wixstatic.com/media/238fae_1d845b6109484f1daabd3e34e51ed3d3~mv2.jpg"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "Ticker row '9/18 UNDERBEAR NYC - ROCKBAR'; card 'UNDERBEAR / NYC / URBAN BEAR WEEKEND / Underwear Party!! / September 18, 2026 / ROCKBAR - NYC / Tickets $20'. Year is on the card. No ticket link on the homepage (the flyer points at THEURBANBEAR.COM). 21:00 and the 185 Christopher St address from the flyer ('FRIDAY SEPT 18', '9PM // $20', 'ROCKBAR NYC 185 CHRISTOPHER ST NYC'). Also published by Rockbar's own widget (run 20260909-072307 has Rockbar 'UNDERBEAR: URBAN BEAR WEEKEND' on 2026-09-18) and by Thotyssey — belongs to Furball too."
-    },
-    {
-      "id": "furball-dc-icon-2026-10-03",
-      "kind": "single",
-      "title": "FURBALL DC",
-      "shortName": "FURBALL DC",
-      "bar": "ICON",
-      "location": null,
-      "city": "dc",
-      "timezone": "America/New_York",
-      "startDate": "2026-10-03",
-      "startTime": null,
-      "sourceRung": "static",
-      "confidence": "ambiguous",
-      "evidence": {
-        "url": "https://www.furball.nyc/",
-        "quote": "10/3 FURBALL DC - ICON"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "Ticker-only row: '10/3 FURBALL DC - ICON'. No year anywhere on the site for this row — 2026 is inferred from the ticker being an ascending list of upcoming dates whose first three rows are dated 2026 by their cards (recon 2026-09-10). 2026-10-03 is a Saturday, consistent with Furball's Saturday pattern. No time, address, ticket link, card or flyer on the crawled page; the ticker is the only door. Not listed on /upcoming-schedule either."
-    },
-    {
-      "id": "furball-boston-legacy-2026-10-10",
-      "kind": "single",
-      "title": "FURBALL Boston",
-      "shortName": "FURBALL Boston",
-      "bar": "Legacy",
-      "location": null,
-      "city": "boston",
-      "timezone": "America/New_York",
-      "startDate": "2026-10-10",
-      "startTime": null,
-      "sourceRung": "static",
-      "confidence": "ambiguous",
-      "evidence": {
-        "url": "https://www.furball.nyc/",
-        "quote": "10/10 FURBALL Boston - Legacy"
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null,
-      "note": "Ticker-only row: '10/10 FURBALL Boston - Legacy'. No year on the site for this row — 2026 inferred from the ticker ordering (see the DC entry). 2026-10-10 is a Saturday. No time, address, ticket link, card or flyer on the crawled page. Not on /upcoming-schedule."
-    },
-    {
-      "id": "underbear-nyc-rockbar-2026-10-16",
-      "kind": "single",
-      "title": "UNDERBEAR NYC",
-      "shortName": "UNDERBEAR NYC",
-      "bar": "Rockbar",
-      "address": "185 Christopher St, New York, NY",
-      "location": null,
       "city": "nyc",
       "timezone": "America/New_York",
       "startDate": "2026-10-16",
       "startTime": null,
       "sourceRung": "static",
-      "confidence": "ambiguous",
+      "confidence": "high",
       "evidence": {
         "url": "https://www.furball.nyc/",
-        "quote": "10/16 UNDERBEAR NYC - ROCKBAR"
+        "quote": "FRIDAY NIGHT!!!\nUNDERBEAR NYC\nBOO-TY CALL\nROCKBAR\nOCT 16, 2026\nNYC\nTickets $10 at the door"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "furball-x-lynx-noir-nola-fur-v-fang-2026-10-23",
+      "kind": "single",
+      "title": "FURBALL x Lynx Noir NOLA — FUR V FANG Haunted Manor",
+      "bar": "Metro 3",
+      "city": "nola",
+      "timezone": "America/Chicago",
+      "startDate": "2026-10-23",
+      "startTime": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.furball.nyc/",
+        "quote": "FURBALL x Lynx Noir NOLA\nFUR V FANG Haunted Manor\nOCT 23, 2026\nMetro 3 - New Orleans, LA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "furball-provincetown-howl-2026-10-29",
+      "kind": "single",
+      "title": "FURBALL Provincetown — HOWL @ Spooky Bear Weekend",
+      "bar": "Red Room",
+      "city": null,
+      "timezone": "America/New_York",
+      "startDate": "2026-10-29",
+      "startTime": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.furball.nyc/",
+        "quote": "FURBALL Provincetown\nHOWL @ Spooky Bear Weekend\nOCT 29, 2026\nREDROOM - Provincetown, MA"
       },
       "expect": {
         "extracted": true
       },
       "bearVerdict": null,
-      "note": "Ticker-only row: '10/16 UNDERBEAR NYC - ROCKBAR'. No year on the site for this row — 2026 inferred from the ticker ordering (see the DC entry). 2026-10-16 is a Friday, consistent with UNDERBEAR's Friday pattern. Address carried over from the Rockbar flyer of the 9/18 UNDERBEAR (same venue), not stated on this row. No time, ticket link, card or flyer. Not on /upcoming-schedule, and NOT present in Rockbar's rows in run 20260909-072307 (only the 9/18 UNDERBEAR is), so as of that run this is Furball-only."
+      "note": "Run 20261017-054812: the page states no clock and the redroom.club ticket page supplied 21:30; the page-side record carried endDate == startDate (sanity flag end-not-after-start ×2 on this host), which the merge cleared."
+    },
+    {
+      "id": "furball-palm-springs-pride-2026-11-06",
+      "kind": "single",
+      "title": "FURBALL Palm Springs PRIDE",
+      "bar": "Toucans Tiki Lounge",
+      "city": "palm-springs",
+      "timezone": "America/Los_Angeles",
+      "startDate": "2026-11-06",
+      "startTime": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.furball.nyc/",
+        "quote": "FURBALL Palm Springs PRIDE\nNOV 6, 2026\nToucans Tiki Lounge -\nPalm Springs, CA"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
+    },
+    {
+      "id": "furball-mad-bear-madrid-2026-12-07",
+      "kind": "single",
+      "title": "FURBALL MAD.BEAR",
+      "bar": "Yasta",
+      "city": "madrid",
+      "timezone": "Europe/Madrid",
+      "startDate": "2026-12-07",
+      "startTime": null,
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.furball.nyc/",
+        "quote": "FURBALL MAD.BEAR\nDEC 7, 2026\nYasta - Madrid, Spain"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Run 20261017-054812 saved it as \"SALA yasta\", address \"C. Valverde, 10\", no pin: the geocoder refused the address as too vague (\"refused generic pin (administrative)\"); coords 25% missing on this host is this one row."
     }
   ],
   "traps": [
@@ -434,6 +379,36 @@
         "note": "Must never become the UNDERBEAR ticket link; the card publishes no ticket link of its own (its flyer says VISIT THEURBANBEAR.COM)."
       },
       "seenInRun": "20260910-131740"
+    },
+    {
+      "seenInRun": "20261017-054812",
+      "id": "ticker-only-austin-2026-11-21",
+      "label": "Ticker row \"11/21 FURBALL Austin - Austin Eagle\" with no card",
+      "kind": "announcement",
+      "why": "Owner ruling 2026-09-13: ticker/hero rows with no time, link or card are fragments, not events. The row has a date and a venue but no card, link or time on the page.",
+      "evidence": {
+        "url": "https://www.furball.nyc/",
+        "quote": "11/21 FURBALL Austin - Austin Eagle"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
+    },
+    {
+      "seenInRun": "20261017-054812",
+      "id": "ticker-only-underbear-thanksgiving-eve-2026-11-25",
+      "label": "Ticker row \"11/25 UNDERBEAR Stuffed Thanksgiving Eve - ROCKBAR\" with no card",
+      "kind": "announcement",
+      "why": "Same ruling as the Austin row: no card, link or time on the page.",
+      "evidence": {
+        "url": "https://www.furball.nyc/",
+        "quote": "11/25 UNDERBEAR Stuffed Thanksgiving Eve - ROCKBAR"
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      }
     }
   ],
   "openQuestions": [
@@ -457,5 +432,6 @@
       "raisedOn": "2026-09-10",
       "blocking": false
     }
-  ]
+  ],
+  "recheckAfter": "2026-11-16"
 }

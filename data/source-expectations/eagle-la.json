@@ -4,11 +4,13 @@
   "slug": "eagle-la",
   "status": "complete",
   "recon": {
-    "date": "2026-09-10",
+    "date": "2026-10-17",
     "method": [
       "feed",
       "static",
-      "flyer"
+      "flyer",
+      "page-cache",
+      "classification-cache"
     ],
     "parserUrlsAtRecon": [
       "https://eaglela.com/"
@@ -109,6 +111,46 @@
         "rowsReturned": 339,
         "truthFlag": null,
         "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /calendar/ month grid (and /home/, which carries the same MEC frame) from the home page and read it through the MEC month grids and the plugin's own month feed replayed to the horizon (📆 MEC GRID, 132 occurrences from 4 grids): 339 events, 75 bear in 5 s — the https://eaglela.com/events/ + https://eaglela.com/calendar/ config read 339/75 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-10."
+      },
+      {
+        "rowsReturned": 46,
+        "truthFlag": "data-mec-year=\"2026\" data-mec-month=\"09\" on the navigator; 46 mec-monthly-tooltip anchors dated 2026-10-01..2026-10-31",
+        "note": "Re-read 2026-10-17 (one live curl, Safari UA). 46 ?occurrence= anchors over 24 slugs for October 2026. NO tooltip carries a mec-tooltip-event-time block and every inline JSON-LD Event is date-only (\"startDate\": \"2026-10-16\"); the only prose per night is the poster thumbnail's alt (\"Titan After Dark: Jock O Rama Oct 16 9pm $8\", \"ONYX Monsters Kink Oct 23 9pm $8\", \"Sudden Death Tournament Oct 25 12pm\"). Six titles not in the 2026-09-10 enumeration: ONYX: SENSORY OVERLOAD (10/11), TITAN AFTER DARK: JOCK-O-RAMA (10/16), ONYX: MONSTERS KINK (onyx-24, 10/23 — the post the file called \"ONYX\"), SUDDEN DEATH TOURNAMENT (10/25), COURTNEY OLIVER: A CELEBRATION OF LIFE (10/25), BOOTS AND BOARDS (10/26).",
+        "url": "https://eaglela.com/calendar/",
+        "kind": "html",
+        "role": "listing"
+      },
+      {
+        "rowsReturned": 103,
+        "truthFlag": "run log: \"📆 MEC GRID: built 103 dated occurrence(s) from 4 month grid(s)\"",
+        "note": "Scraper page cache 2026-10-16 09:21Z, the page run 20261017-054812 read as its grid root (the crawl reaches /home/ before /calendar/). A carousel skin (mec-skin-carousel) with one inline JSON-LD Event per card, date-only, whose \"description\" is an <img alt=\"…\"> — B BAR's reads alt=\"B BAR Every Thursday 10 Draft Special Bare Chest Contest\". The page's ajax_url opened the month feeds below.",
+        "url": "https://eaglela.com/home/",
+        "kind": "html",
+        "role": "listing"
+      },
+      {
+        "rowsReturned": 43,
+        "truthFlag": "JSON {month, events_side, navigator, previous_month, current_month, next_month}; 43 <article class=\"mec-event-article\"> rows under 24 data-mec-cell sections",
+        "note": "Page cache 2026-10-16 (run 20261017-054812; the Dec and Jan feeds cached beside it: 41 and 48 cells; the 2027-01 feed that returned HTTP 500 on 2026-09-10 now answers). Side-list skin: no mec-monthly-tooltip anchors, no time blocks; each occurrence is a JSON-LD Event (date-only) plus an <article> whose thumbnail alt is the caption (\"Sunday Beer Bust 2pm $5 domestic drafts\", \"Meat Rack 2nd and 4th Saturday of each month 8pm $8\", \"B BAR Every Thursday 10 Draft Special Bare Chest Contest\", BLUF: alt=\"\"). Saved as scripts/fixtures/recheck-venues-2026-10-17/eagle-la-mec-month-feed-sections.html (two sections).",
+        "url": "https://eaglela.com/wp-admin/admin-ajax.php?mec_month_feed=2026-11",
+        "kind": "feed",
+        "role": "feed"
+      },
+      {
+        "rowsReturned": 41,
+        "truthFlag": "JSON-LD per page: \"startDate\": \"2026-10-01\", \"endDate\": \"2026-10-01\" (date-only)",
+        "note": "41 occurrence pages in the page cache 2026-10-16 (one fetch per distinct slug by enrichMecOccurrencesFromEventPages). Every page: <h1 class=\"mec-single-title\">, NO mec-single-event-time block, mec-single-event-description = one poster <img> and no text, JSON-LD date-only. The clock is never on the page.",
+        "url": "https://eaglela.com/events/<slug>/?occurrence=YYYY-MM-DD",
+        "kind": "html",
+        "role": "event"
+      },
+      {
+        "rowsReturned": 7,
+        "truthFlag": null,
+        "note": "OCR cache (local MLX) read 2026-10-17 for the all-day set: B-Bar generic poster — \"NO COVER! B BAR EVERY THURSDAY … 10 HANDLE DRAFT SPECIAL … BARE CHEST CONTEST $100 CASH PRIZE\" (no clock); IG_NEW-BLUF-poster-2024 — \"2ND FRIDAY EVERY MONTH … NO COVER\" (no clock); M_Rack-poster-10_10_26 — \"10.10.26 EAGLE LA • 8P-2A $8\" (clock written without the M); CHECK-BACK-art — the stand-in check-back art; IMG_1968 (Cruise LA contest) — \"Mx. Cruise & LEATHER & BOOTBLACK 2027\" (no clock); TITAN JOCK-O-RAMA poster — no clock; IG_GENERIC-M_Rack-poster-2026 — \"8PM-2AM\".",
+        "url": "https://eaglela.com/wp-content/uploads/<poster>",
+        "kind": "image",
+        "role": "flyer"
       }
     ],
     "notes": "WordPress + Modern Events Calendar (MEC), confirmed by the working admin-ajax mec_monthly_view_load_month and mec_list_load_more endpoints. Recurring events are one post with many ?occurrence= dates; the site never states a rule in text — cadence words live only in poster img alt text or on the poster itself."
@@ -124,9 +166,9 @@
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Primary door: the MEC month grid, read four ways that agree — the static /calendar/ page (Sep: 44 occurrences / 22 slugs) and the replayed admin-ajax month feed for Sep/Oct/Nov/Dec 2026 (44/22, 39/19, 43/21, 40/19; 166 occurrence rows, 47 distinct slugs). Second door: the /events/ list archive, which shows 12 rows statically (Sep 9–17) but pages without limit over admin-ajax mec_list_load_more; through Dec 31 it yields 155 occurrence rows over 44 slugs, exactly the grid's set from Sep 9 onward (0 in-grid-not-list, 0 in-list-not-grid). The yesterday delta of \"11 archive slugs vs 22 grid slugs\" is simply the static archive being a 12-row rolling window (10 distinct slugs today), not a smaller catalogue. Collapse: 13 slugs recur (each one post, weekly or monthly occurrence links) → 13 series; 34 slugs appear once → 3 of them are past at recon (traps) and 31 are upcoming singles Sep 11–Dec 31 2026. The list door adds 9 posts beyond the pulled grids (8 Jan 2027 one-offs + CRUISE NIGHT, first date Feb 6 2027) — singles are never window-limited, so they are documented; publishedEventCount = 13 + 31 + 9 = 53. Series occurrences are materialized only inside the window from the grids' dated links (origin listed); Jan–Aug 2027 series rows in the list door are not materialized. Times/cadence text: event pages publish none; they come from poster img alt text (site text, quoted) or from the posters themselves (flyer rung, said so in note). Past listings: the Sep grid carries 12 occurrences before the recon date (3 one-offs + 9 series instances), and the archive shows Sep 9 as its first row; earlier months are reachable through the navigator but were not pulled. The 2027 month-feed HTTP 500 (Jan, Feb, Mar all tried) is a live site defect and is logged in openQuestions.",
-    "publishedEventCount": 53,
-    "documentedEventCount": 53,
+    "basis": "Primary door: the MEC month grid, read four ways that agree — the static /calendar/ page (Sep: 44 occurrences / 22 slugs) and the replayed admin-ajax month feed for Sep/Oct/Nov/Dec 2026 (44/22, 39/19, 43/21, 40/19; 166 occurrence rows, 47 distinct slugs). Second door: the /events/ list archive, which shows 12 rows statically (Sep 9–17) but pages without limit over admin-ajax mec_list_load_more; through Dec 31 it yields 155 occurrence rows over 44 slugs, exactly the grid's set from Sep 9 onward (0 in-grid-not-list, 0 in-list-not-grid). The yesterday delta of \"11 archive slugs vs 22 grid slugs\" is simply the static archive being a 12-row rolling window (10 distinct slugs today), not a smaller catalogue. Collapse: 13 slugs recur (each one post, weekly or monthly occurrence links) → 13 series; 34 slugs appear once → 3 of them are past at recon (traps) and 31 are upcoming singles Sep 11–Dec 31 2026. The list door adds 9 posts beyond the pulled grids (8 Jan 2027 one-offs + CRUISE NIGHT, first date Feb 6 2027) — singles are never window-limited, so they are documented; publishedEventCount = 13 + 31 + 9 = 53. Series occurrences are materialized only inside the window from the grids' dated links (origin listed); Jan–Aug 2027 series rows in the list door are not materialized. Times/cadence text: event pages publish none; they come from poster img alt text (site text, quoted) or from the posters themselves (flyer rung, said so in note). Past listings: the Sep grid carries 12 occurrences before the recon date (3 one-offs + 9 series instances), and the archive shows Sep 9 as its first row; earlier months are reachable through the navigator but were not pulled. The 2027 month-feed HTTP 500 (Jan, Feb, Mar all tried) is a live site defect and is logged in openQuestions. Re-read 2026-10-17: the live /calendar/ grid (46 October anchors over 24 slugs) adds three upcoming singles and two past ones (traps) to the 2026-09-10 set and retitles onyx-24; series set unchanged. Field truth for the run's gaps: no page states a clock (JSON-LD date-only, no time block) — clocks live in the poster thumbnail's alt caption and in the posters; no page states a text description — the caption is the only prose. 26 of the run's 62 kept records sat at midnight: B BAR (16 — caption and poster state no clock), BLUF LA (3 of 5 — generic poster, alt empty), MEAT RACK 10/10 (poster \"8P-2A\"), CRUISE LA ×2, TITAN AFTER DARK (caption 9pm), EAGLE LA HALLOWEEN PARTY (stand-in check-back art).",
+    "publishedEventCount": 56,
+    "documentedEventCount": 56,
     "occurrenceWindow": {
       "start": "2026-09-10",
       "end": "2026-12-31"
@@ -1765,9 +1807,9 @@
     {
       "id": "onyx-2026-10-23",
       "kind": "single",
-      "title": "ONYX",
+      "title": "ONYX: MONSTERS KINK",
       "startDate": "2026-10-23",
-      "startTime": null,
+      "startTime": "21:00",
       "endTime": null,
       "description": "Men of ONYX SoCal / Southwest present ONYX — kinky go-go studs & BDSM demos! (generic flyer text)",
       "website": "https://eaglela.com/events/onyx-24/",
@@ -1775,15 +1817,15 @@
       "sourceRung": "feed",
       "confidence": "high",
       "evidence": {
-        "url": "https://eaglela.com/events/onyx-24/",
-        "quote": "alt=\"Onyx Kinky go go studs\""
+        "url": "https://eaglela.com/calendar/",
+        "quote": "alt=\"ONYX Monsters Kink Oct 23 9pm $8\""
       },
       "expect": {
         "extracted": true,
         "kept": null
       },
       "bearVerdict": null,
-      "note": "A Friday one-off outside the 2nd-Sunday ONYX series; generic poster, no time published. Grid row: href=\"https://eaglela.com/events/onyx-24/?occurrence=2026-10-23\" (https://eaglela.com/wp-admin/admin-ajax.php)."
+      "note": "A Friday one-off outside the 2nd-Sunday ONYX series; generic poster, no time published. Grid row: href=\"https://eaglela.com/events/onyx-24/?occurrence=2026-10-23\" (https://eaglela.com/wp-admin/admin-ajax.php). Retitled on the site by 2026-10-17 (\"ONYX: MONSTERS KINK\", same slug onyx-24); the poster caption now states 9pm."
     },
     {
       "id": "avatar-butt-painting-2026-10-30",
@@ -2423,6 +2465,75 @@
       "bearVerdict": null,
       "note": "Actually a NEW series that begins after the occurrence window: the list door shows 23 dated occurrences Feb 6 2027 – Aug 27 2027 (1st and 3rd Saturdays plus a late-month Friday, e.g. Feb 6, Feb 20, Feb 26, Mar 6, Mar 20, Mar 26 …). It has no occurrence inside coverage.occurrenceWindow and the site states no cadence in words, so it is recorded as a single on its first date; its rule is left for the next recon. Event page: alt=\"Cruise Night No Cover 9pm\" (https://eaglela.com/events/cruise-night-9/); MEC Date meta \"Feb 06 2027\".",
       "cover": "No Cover"
+    },
+    {
+      "id": "sudden-death-tournament-2026-10-25",
+      "kind": "single",
+      "title": "SUDDEN DEATH TOURNAMENT",
+      "startDate": "2026-10-25",
+      "startTime": "12:00",
+      "endTime": null,
+      "description": "Sudden Death Tournament Oct 25 12pm",
+      "website": "https://eaglela.com/events/sudden-death-tournament/",
+      "image": "https://eaglela.com/wp-content/uploads/IMG_5665-Medium-square.jpeg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/calendar/",
+        "quote": "alt=\"Sudden Death Tournament Oct 25 12pm\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "New since the 2026-09-10 enumeration (live grid 2026-10-17); the clock is stated only in the poster caption (alt). Run 20261017-054812 extracted it (bear-dropped)."
+    },
+    {
+      "id": "courtney-oliver-celebration-of-life-2026-10-25",
+      "kind": "single",
+      "title": "COURTNEY OLIVER: A CELEBRATION OF LIFE",
+      "startDate": "2026-10-25",
+      "startTime": "14:00",
+      "endTime": null,
+      "description": "Courtney Oliver A celebration of life Oct 25 2pm",
+      "website": "https://eaglela.com/events/courtney-oliver-a-celebration-of-life/",
+      "image": "https://eaglela.com/wp-content/uploads/Courtney-Celebration-Medium-square.jpeg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/calendar/",
+        "quote": "alt=\"Courtney Oliver A celebration of life Oct 25 2pm\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "New since 2026-09-10 (live grid 2026-10-17); clock only in the caption. Run 20261017-054812 extracted it (bear-dropped)."
+    },
+    {
+      "id": "boots-and-boards-2026-10-26",
+      "kind": "single",
+      "title": "BOOTS AND BOARDS",
+      "startDate": "2026-10-26",
+      "startTime": "18:00",
+      "endTime": null,
+      "description": "Boots and Boards A Collage Workshop 10/26 6pm",
+      "website": "https://eaglela.com/events/boots-and-boards/",
+      "image": "https://eaglela.com/wp-content/uploads/Boots-Boards-Flyer-102626-Medium-square.jpeg",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://eaglela.com/calendar/",
+        "quote": "alt=\"Boots and Boards A Collage Workshop 10/26 6pm\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "New since 2026-09-10 (live grid 2026-10-17); a workshop, clock only in the caption. Run 20261017-054812 extracted it (bear-dropped)."
     }
   ],
   "traps": [
@@ -2563,6 +2674,36 @@
         "kept": null
       },
       "seenInRun": null
+    },
+    {
+      "id": "past-onyx-sensory-overload-oct-11",
+      "kind": "past-event",
+      "label": "ONYX: SENSORY OVERLOAD — Oct 11 2026",
+      "why": "A dated one-off (2nd-Sunday ONYX themed) already past at this recon; still in the October grid. allowPastEvents keeps it — extraction is correct, not counted in publishedEventCount. Run 20261017-054812 kept it (16:00–20:00, bear).",
+      "evidence": {
+        "url": "https://eaglela.com/calendar/",
+        "quote": "alt=\"ONYX Sun Oct 11 4pm\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": "20261017-054812"
+    },
+    {
+      "id": "past-titan-after-dark-jock-o-rama-oct-16",
+      "kind": "past-event",
+      "label": "TITAN AFTER DARK: JOCK-O-RAMA — Oct 16 2026",
+      "why": "A dated one-off (Mr. Rough Trade Gear fundraiser) past at this recon. Run 20261017-054812 kept it at MIDNIGHT: the grid JSON-LD is date-only, the poster states no clock, and the one place the clock is written — the thumbnail caption alt=\"Titan After Dark: Jock O Rama Oct 16 9pm $8\" — was stripped with its <img> tag (fixed on branch audit/recheck-venues: readMecGridSideList keeps the caption and adoptTitleStatedClockForPlaceholderTimes reads it). The run then merged it into the saved BLUF LA monthly slot (🪑 SLOT / 🧭 BIG DRIFT lines) because both sat on 2026-10-16 at midnight.",
+      "evidence": {
+        "url": "https://eaglela.com/calendar/",
+        "quote": "alt=\"Titan After Dark: Jock O Rama Oct 16 9pm $8\""
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": "20261017-054812"
     }
   ],
   "openQuestions": [
@@ -2589,6 +2730,16 @@
     {
       "q": "The scraper's /events/ door reads 12 rows and stops (page/2 is an empty shell); the real archive paging is mec_list_load_more. Is replaying it wanted, or is the month-feed lookahead (default 2 months) the intended reach?",
       "raisedOn": "2026-09-10",
+      "blocking": false
+    },
+    {
+      "q": "Weekly nights whose caption and poster state no clock (B BAR: \"EVERY THURSDAY … 10 HANDLE DRAFT SPECIAL\", BLUF LA generic poster) stay all-day in the calendar. Is all-day the wanted shape for a bar night with no stated clock, or should the venue's door hours stand in (a product call; nothing on the site states 10pm for B BAR)?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    },
+    {
+      "q": "The 2027-01 month feed answered in run 20261017-054812 (cached 154 KB, 48 cells) — the HTTP 500 raised 2026-09-10 looks resolved site-side; left open until a run reads 2027-02/03 as the active-month lookahead.",
+      "raisedOn": "2026-10-17",
       "blocking": false
     }
   ]
