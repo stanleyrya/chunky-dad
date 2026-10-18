@@ -1789,13 +1789,75 @@ class SharedCore {
 
     // { entry, matchedBy: 'title' | 'party' } or null. A verdict on the exact
     // title always speaks first (so a tap on the plain name can overrule the
-    // decorated one). Party matches that DISAGREE (one spelling judged bear,
-    // another not) decide nothing — the owner told them apart himself.
+    // decorated one). Matches that DISAGREE decide nothing: party hits
+    // (one spelling judged bear, another not — the owner told them apart
+    // himself), and exact-title hits too — the store can hold the same
+    // title at the same place both ways (a tap on each side on different
+    // days; two phones), and until 2026-10-18 the older entry won by
+    // standing first in the file. Both-ways is the deck's to settle
+    // (tools/review-queue.js buildDeck, kind verdict-conflict); here it is
+    // logged and the cascade judges the event as if nothing were stored.
     findStoredBearVerdictMatch(event) {
+        const hits = this.collectStoredBearVerdictHits(event);
+        if (!hits) return null;
+        const describe = (list) => list.map(entry => `${entry.verdict} "${entry.title}"${entry.stampedAt ? ` (${String(entry.stampedAt).slice(0, 10)})` : ''}`).join(', ');
+        if (hits.title.length > 0 && SharedCore.bearVerdictsDisagree(hits.title)) {
+            console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — the verdict store holds this title both ways (${describe(hits.title)}); no stored verdict applied`);
+            return null;
+        }
+        // The agreeing case as it always was: the first exact entry speaks.
+        if (hits.exact.length > 0) return { entry: hits.exact[0], matchedBy: 'title' };
+        if (hits.party.length === 0) return null;
+        if (SharedCore.bearVerdictsDisagree(hits.party)) {
+            console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — the verdict store holds this party both ways (${describe(hits.party)}); no stored verdict applied`);
+            return null;
+        }
+        const newest = hits.party.reduce((latest, entry) => (String(entry.stampedAt || '') > String(latest.stampedAt || '') ? entry : latest), hits.party[0]);
+        return { entry: newest, matchedBy: 'party' };
+    }
+
+    // The stored verdicts that speak to this event and point both ways —
+    // { hits, matchedBy: 'title' | 'party' } — or null when the store is of
+    // one mind about it (or silent). Exactly the cases findStoredBearVerdict
+    // refuses to decide, so the deck can put each one in front of the owner
+    // with every entry on it; nothing here picks a side.
+    findStoredBearVerdictConflict(event) {
+        const hits = this.collectStoredBearVerdictHits(event);
+        if (!hits) return null;
+        if (hits.title.length > 0 && SharedCore.bearVerdictsDisagree(hits.title)) return { hits: hits.title, matchedBy: 'title' };
+        if (hits.exact.length === 0 && hits.party.length > 0 && SharedCore.bearVerdictsDisagree(hits.party)) return { hits: hits.party, matchedBy: 'party' };
+        return null;
+    }
+
+    static bearVerdictsDisagree(entries) {
+        return new Set((Array.isArray(entries) ? entries : []).map(entry => entry && entry.verdict)).size > 1;
+    }
+
+    // A title key with its bare year tokens taken out: "underwear night
+    // contest 2026" and "underwear night contest" name one party — the year
+    // is the edition, not the name. Used ONLY to notice disagreement (store
+    // 2026-10-18: Dallas Eagle's Underwear Night was bear on the 2026
+    // spelling and not bear on the plain one, and the plain one dropped the
+    // party every run because only it was an exact hit); a year-blind
+    // sibling never becomes a match on its own.
+    static getBearVerdictYearBlindKey(titleKey) {
+        return String(titleKey || '').split(' ').filter(token => token && !/^(?:19|20)\d{2}$/.test(token)).join(' ');
+    }
+
+    // Every usable stored verdict that speaks to this event, in the tiers
+    // findStoredBearVerdictMatch reads them:
+    //   exact — the same title tokens at this place, in store order;
+    //   title — exact, plus the year-blind siblings (getBearVerdictYearBlindKey)
+    //           at this place: the set whose disagreement withholds a verdict;
+    //   party — the party-key fold (getBearVerdictPartyKey), read only when
+    //           there is no exact hit, as before.
+    // null when nothing could apply (no store, no title identity).
+    collectStoredBearVerdictHits(event) {
         const store = Array.isArray(this.bearVerdicts) ? this.bearVerdicts : [];
         if (store.length === 0 || !event || typeof event !== 'object') return null;
         const eventKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar]);
         if (!eventKey) return null;
+        const eventBlindKey = SharedCore.getBearVerdictYearBlindKey(eventKey);
         const index = this.getBearVerdictStoreIndex();
         const keysOf = (entry) => {
             let keys = index.keys.get(entry);
@@ -1807,33 +1869,35 @@ class SharedCore {
         };
         const usable = store.filter(entry => entry && typeof entry === 'object'
             && (entry.verdict === 'bear' || entry.verdict === 'not_bear'));
+        const exact = [];
+        const siblings = [];
         for (const entry of usable) {
             const entryKey = keysOf(entry).title;
-            if (!entryKey || entryKey !== eventKey) continue;
-            if (!this.bearVerdictPlaceMatches(event, entry)) continue;
-            return { entry, matchedBy: 'title' };
-        }
-        const partyKey = this.getBearVerdictPartyKey(event.title || event.name, [event.bar],
-            this.getBearVerdictLearnedMarkers(event, index));
-        if (!partyKey) return null;
-        const hits = [];
-        for (const entry of usable) {
-            const keys = keysOf(entry);
-            if (keys.party === null) {
-                keys.party = this.getBearVerdictPartyKey(entry.title, [entry.venue],
-                    this.getBearVerdictLearnedMarkers({ title: entry.title, bar: entry.venue, address: entry.address, location: entry.location, city: entry.city }, index));
+            if (!entryKey) continue;
+            if (entryKey === eventKey) {
+                if (this.bearVerdictPlaceMatches(event, entry)) exact.push(entry);
+            } else if (eventBlindKey && SharedCore.getBearVerdictYearBlindKey(entryKey) === eventBlindKey) {
+                if (this.bearVerdictPlaceMatches(event, entry)) siblings.push(entry);
             }
-            if (!keys.party || keys.party !== partyKey) continue;
-            if (!this.bearVerdictPlaceMatches(event, entry)) continue;
-            hits.push(entry);
         }
-        if (hits.length === 0) return null;
-        if (new Set(hits.map(entry => entry.verdict)).size > 1) {
-            console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — the verdict store holds this party both ways (${hits.map(entry => `${entry.verdict} "${entry.title}"`).join(', ')}); no stored verdict applied`);
-            return null;
+        const party = [];
+        if (exact.length === 0) {
+            const partyKey = this.getBearVerdictPartyKey(event.title || event.name, [event.bar],
+                this.getBearVerdictLearnedMarkers(event, index));
+            if (partyKey) {
+                for (const entry of usable) {
+                    const keys = keysOf(entry);
+                    if (keys.party === null) {
+                        keys.party = this.getBearVerdictPartyKey(entry.title, [entry.venue],
+                            this.getBearVerdictLearnedMarkers({ title: entry.title, bar: entry.venue, address: entry.address, location: entry.location, city: entry.city }, index));
+                    }
+                    if (!keys.party || keys.party !== partyKey) continue;
+                    if (!this.bearVerdictPlaceMatches(event, entry)) continue;
+                    party.push(entry);
+                }
+            }
         }
-        const newest = hits.reduce((latest, entry) => (String(entry.stampedAt || '') > String(latest.stampedAt || '') ? entry : latest), hits[0]);
-        return { entry: newest, matchedBy: 'party' };
+        return { exact, title: exact.concat(siblings), party };
     }
 
     // Place half of the verdict-store identity. Venue identity when either

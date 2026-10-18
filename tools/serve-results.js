@@ -1047,9 +1047,57 @@ function renderReviewGoneCard(entry, ctx = {}) {
 </div>`;
 }
 
+// A "you said both" card: the verdict store holds this party both ways
+// (tools/review-queue.js buildDeck, kind verdict-conflict), so no stored
+// verdict applies and the run judged the row itself. The run's own row —
+// flyer, date, place, links — so he recognises the party, then every stored
+// entry side by side: the verdict, the day he gave it, the spelling it was
+// given on. Right swipe = bear, left = not bear; one settle replaces every
+// entry. No "later": a conflict the store keeps is a verdict it withholds.
+function renderReviewVerdictConflictCard(entry, ctx = {}) {
+    const p = entry && entry.proposal ? entry.proposal : {};
+    const display = entry && entry.display ? entry.display : {};
+    const adapter = ctx.adapter;
+    const tz = p.timezone || null;
+    const dateLine = formatReviewDateLine(p.startDate, p.endDate, tz, {});
+    const cityConfig = adapter && adapter.cities && p.city ? adapter.cities[p.city] : null;
+    const calendarName = cityConfig && typeof cityConfig.calendar === 'string' ? cityConfig.calendar : '';
+    const sourceBits = [
+        display.parserName || p.source || 'unknown source',
+        display.pageHost ? `from ${display.pageHost}` : '',
+        calendarName ? `📱 ${calendarName}` : ''
+    ].filter(Boolean);
+    const tiles = (Array.isArray(p.hits) ? p.hits : []).map((hit) => {
+        const bear = hit.verdict === 'bear';
+        const when = hit.stampedAt ? String(hit.stampedAt).slice(0, 10) : '';
+        const spelling = hit.title && hit.title !== p.title ? `as “${escapeHtmlText(hit.title)}”` : 'on this title';
+        return `<div class="verdict ${bear ? 'is-bear' : 'is-not-bear'}"><b>${bear ? '🐻 bear' : '🚫 not bear'}</b><small>you said${when ? ` on ${escapeHtmlText(when)}` : ''}<br>${spelling}${hit.venue && hit.venue !== p.bar ? `<br>at ${escapeHtmlText(hit.venue)}` : ''}</small></div>`;
+    }).join('');
+    const how = p.matchedBy === 'party' ? 'the same party under different spellings' : 'the same title at this place';
+    const chips = [
+        reviewChip(ctx, 'website', '🔗', p.url),
+        reviewChip(ctx, 'tickets', '🎟', p.ticketUrl),
+        p.cover ? `<span class="chip">💵 ${escapeHtmlText(p.cover)}</span>` : ''
+    ].filter(Boolean).join('');
+    const description = String(p.description || '');
+    return `<div class="card-body">
+  ${renderReviewThumb(display, p.image)}
+  <div class="kind-row"><span class="kind kind-conflict">⚖️ You said both</span><span class="muted reason">→ bear · ← not bear${p.occurrences > 1 ? ` · ${p.occurrences} rows this run` : ''}</span></div>
+  <h2>${escapeHtmlText(p.title)}</h2>
+  ${dateLine ? `<div class="line">📅 ${escapeHtmlText(dateLine)}</div>` : ''}
+  ${renderReviewRouteLine(ctx, { bar: p.bar, address: p.address, city: p.city, coordinates: p.location, barSource: display.barSource })}
+  <div class="line muted">${escapeHtmlText(sourceBits.join(' · '))}</div>
+  ${chips ? `<div class="chips">${chips}</div>` : ''}
+  <div class="verdicts">${tiles}</div>
+  <div class="line muted">Two verdicts on ${escapeHtmlText(how)}, so neither applies: the run judged this row itself${p.runSaid ? ` (${escapeHtmlText(p.runSaid)})` : ''}. Your swipe replaces both, and the next run honours it.</div>
+  ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
+</div>`;
+}
+
 function renderReviewCard(entry, ctx = {}) {
     if (entry && entry.kind === 'bar') return renderReviewBarCard(entry, ctx);
     if (entry && entry.kind === 'gone') return renderReviewGoneCard(entry, ctx);
+    if (entry && entry.kind === 'verdict-conflict') return renderReviewVerdictConflictCard(entry, ctx);
     const proposal = entry && entry.proposal ? entry.proposal : {};
     const display = entry && entry.display ? entry.display : {};
     const adapter = ctx.adapter;
@@ -1493,6 +1541,18 @@ body { overscroll-behavior-y:none; }
 .kind-bar { background:rgba(80,120,255,.14); color:#4a6cf7; }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
 .kind-gone { background:rgba(122,92,199,.16); color:#7a5cc7; }
+.kind-conflict { background:rgba(255,123,47,.16); color:var(--accent); }
+/* The stored verdicts side by side: one tile each, the bear side in the
+   approve green, the not-bear side in the reject red, so the tiles read
+   like the swipe that settles them. */
+.verdicts { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; margin:8px 0; }
+.verdicts .verdict { padding:8px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
+.verdicts .verdict b { display:block; font-size:15px; margin-bottom:2px; }
+.verdicts .verdict small { color:var(--muted); font-size:12px; line-height:1.35; }
+.verdicts .is-bear { border-color:var(--ok); }
+.verdicts .is-bear b { color:var(--ok); }
+.verdicts .is-not-bear { border-color:var(--no); }
+.verdicts .is-not-bear b { color:var(--no); }
 .sheet.gone .sheet-modes .mode-notbear, .sheet.gone .sheet-modes .mode-never, .sheet.gone .sheet-fix-note { display:none; }
 .curated { color:var(--ok); font-weight:700; }
 .bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
@@ -1640,7 +1700,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
     <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send back</span></a>
   </div>
 </header>
-<div class="subbar"><span class="muted top-age" style="font-size:12px;">${savedLabel}${deck.environment ? ` · ${escapeHtmlText(deck.environment)}` : ''}</span><div class="pills" id="filters"></div></div>
+<div class="subbar"><span class="muted top-age" style="font-size:12px;">${savedLabel}${deck.environment ? ` · ${escapeHtmlText(deck.environment)}` : ''}${Number(deck.counts && deck.counts.verdictConflictsInStore) > 0 ? ` · <a href="/review/verdict-conflicts.json">⚖️ ${Number(deck.counts.verdictConflictsInStore)} verdict${Number(deck.counts.verdictConflictsInStore) === 1 ? '' : 's'} both ways in the store</a>` : ''}</span><div class="pills" id="filters"></div></div>
 ${missingCalendarNotice}
 <div class="tools">
   <input id="word" type="search" placeholder="filter by words (-word excludes)" autocapitalize="none" autocorrect="off">
@@ -1933,14 +1993,20 @@ window.__startDeck = function () {
     if (join && series) join.onclick = function () { delete solo[series.key]; toast('Folded back — one swipe decides them all'); render(); };
   }
   function counts() {
-    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, gone: 0, dropped: 0 };
+    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, gone: 0, dropped: 0, 'verdict-conflict': 0 };
     queue.forEach(function (c) { out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
     return out;
   }
+  // A verdict-conflict card is a bear verdict either way (see saveOne):
+  // right = bear, left = not bear, no sheet, no "later".
+  function isConflict(c) { return Boolean(c) && c.kind === 'verdict-conflict'; }
   function renderFilters() {
     var c = counts();
     var html = '';
-    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['gone', 'Gone'], ['dropped', 'Not bear']].forEach(function (pair) {
+    // The conflicts tab shows only while there is one — most runs have none.
+    var tabs = [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['gone', 'Gone'], ['dropped', 'Not bear']];
+    if (c['verdict-conflict'] > 0 || filter === 'verdict-conflict') tabs.push(['verdict-conflict', 'Both ways']);
+    tabs.forEach(function (pair) {
       html += '<span class="pill' + (filter === pair[0] ? ' on' : '') + '" data-f="' + pair[0] + '">' + pair[1] + ' <b>' + (c[pair[0]] || 0) + '</b></span>';
     });
     document.getElementById('filters').innerHTML = html;
@@ -1962,7 +2028,9 @@ window.__startDeck = function () {
       if (!el) {
         el = document.createElement('div');
         el.setAttribute('data-key', item.key);
-        el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + '<div class="stamp ok">APPROVE</div><div class="stamp no">NOT YET</div><div class="stamp ask">🙋 ASK A FRIEND</div>';
+        el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + (isConflict(item.cards[0])
+          ? '<div class="stamp ok">🐻 BEAR</div><div class="stamp no">NOT BEAR</div>'
+          : '<div class="stamp ok">APPROVE</div><div class="stamp no">NOT YET</div><div class="stamp ask">🙋 ASK A FRIEND</div>');
         el.className = 'card behind2';
         stage.appendChild(el);
         bindSplit(el, item);
@@ -2008,7 +2076,7 @@ window.__startDeck = function () {
     document.getElementById('btn-undo').disabled = history.length === 0;
   }
   function renderExecute() {
-    var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped' && d.pendingExecute; }).length;
+    var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped' && !isConflict(d) && d.pendingExecute; }).length;
     var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
     var removals = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'gone' && d.pendingExecute; }).length;
     var el = document.getElementById('execute');
@@ -2320,6 +2388,7 @@ window.__startDeck = function () {
       var c = item.cards[0];
       if (verdict === 'reject' && reason && (reason.tags || []).indexOf('not bear') !== -1) { notBearItem(item, true); return; }
       if (c.kind === 'dropped' && verdict === 'reject' && !reason) { decide(item, 'reject', null, 'gone-left'); return; }
+      if (isConflict(c) && verdict === 'reject') { decide(item, 'reject', null, 'gone-left'); return; }
       decide(item, verdict, reason, verdict === 'approve' ? 'gone-right' : 'gone-left');
     });
     var n = list.reduce(function (sum, item) { return sum + item.cards.length; }, 0);
@@ -2327,7 +2396,7 @@ window.__startDeck = function () {
   }
   function notBearItem(item, quiet) {
     var c = item.cards[0];
-    if (c.kind === 'dropped') { decide(item, 'reject', null, 'gone-left'); return; }
+    if (c.kind === 'dropped' || isConflict(c)) { decide(item, 'reject', null, 'gone-left'); return; }
     if (c.kind === 'bar' || c.kind === 'gone') { if (!quiet) { pending = item; openSheet(item); } return; }
     decide(item, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     if (!quiet) toast('Not bear — final');
@@ -2417,17 +2486,19 @@ window.__startDeck = function () {
     // keeps the decision, and the note, it came back with.
     var replaced = { decision: null, bear: null };
     function keepDecision(result) { replaced.decision = result && result.replaced ? result.replaced : null; return result; }
-    function keepBear(result) { replaced.bear = result && result.replaced ? result.replaced : null; return result; }
+    // A settle on a "you said both" card replaces every stored entry; the
+    // undo needs them all back, so the whole set is kept when there is one.
+    function keepBear(result) { replaced.bear = result && result.replacedAll && result.replacedAll.length > 1 ? result.replacedAll : (result && result.replaced ? result.replaced : null); return result; }
     var request = droppedNote
       ? postBear(card, droppedNote === 'fix' ? 'bear' : 'not_bear').then(keepBear).then(function () {
           return post({ key: card.fixTarget.key, kind: 'new', verdict: 'reject', runId: deck.runId, snapshot: card.fixTarget, reason: reason }).then(keepDecision);
         })
-      : card.kind === 'dropped'
+      : card.kind === 'dropped' || isConflict(card)
       ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear').then(keepBear)
       : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null }).then(keepDecision)
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(keepBear).then(function () { return result; }) : result; });
     return request.then(function () {
-      var record = { replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve', html: card.html, series: card.series || null };
+      var record = { replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve' && !isConflict(card), html: card.html, series: card.series || null };
       decided.push(record);
       return record;
     });
@@ -2455,7 +2526,7 @@ window.__startDeck = function () {
       var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
       if (friendMode) { toast(verdict === 'approve' ? 'Looks right — got it' : 'Noted'); return; }
-      toast((card.kind === 'gone' ? (verdict === 'approve' ? 'Removal approved — the phone takes it off the calendar on the next execute' : 'Kept on the calendar') : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      toast((isConflict(card) ? (verdict === 'approve' ? 'Settled: bear — one verdict now, the next run keeps it' : 'Settled: not bear — one verdict now, the next run drops it') : card.kind === 'gone' ? (verdict === 'approve' ? 'Removal approved — the phone takes it off the calendar on the next execute' : 'Kept on the calendar') : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
       renderDecided(); renderExecute(); renderWaiting();
     }).catch(function (error) {
       toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' ' + unitOf(item.series, left.length) + ' back on the stack)' : ''));
@@ -2467,6 +2538,8 @@ window.__startDeck = function () {
   function approveTop() { var c = topItem(); if (c) decide(c, 'approve', null, 'gone-right'); }
   function rejectTop(fixFirst) {
     var c = topItem(); if (!c) return;
+    // A "you said both" card has no "not yet": left is not bear, settled.
+    if (isConflict(c.cards[0])) { decide(c, 'reject', null, 'gone-left'); return; }
     // Reached by a down-left swipe: the sheet opens on "needs a fix".
     sheet.classList.toggle('fix-first', fixFirst === true);
     // A not-bear card gets the same three answers: some of them ARE bear
@@ -2491,7 +2564,7 @@ window.__startDeck = function () {
     // the card comes back to be decided alone (that decision then wins).
     if (record.via) { requeue(record); if (record.series) solo[record.series.key] = true; toast('Back on the stack — decide this night alone'); render(); return; }
     var was = record.replaced || {};
-    var request = record.kind === 'dropped'
+    var request = record.kind === 'dropped' || isConflict(record)
       ? postBear(record, 'clear', was.bear).then(function (result) { return record.noteKey ? post({ key: record.noteKey, verdict: 'clear', restore: was.decision || undefined }) : result; })
       : post({ key: record.key, verdict: 'clear', restore: was.decision || undefined })
           .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear', was.bear).then(function () { return result; }) : result; });
@@ -2577,6 +2650,9 @@ window.__startDeck = function () {
   // question for them. The card goes on that friend's list.
   function askItem(item) {
     if (!item) return;
+    // Both verdicts on a conflict card are the owner's own words; a friend
+    // has nothing to add that settles it.
+    if (isConflict(item.cards[0])) { toast('Both verdicts are yours — settle it with a swipe'); return; }
     pending = item;
     openSheet(item);
     sheet.classList.add('ask');
@@ -2703,7 +2779,7 @@ window.__startDeck = function () {
     // A bulk answer: every item of the set gets this reason.
     if (card.bulk) {
       card.bulk.forEach(function (item) {
-        if (item.cards[0].kind === 'dropped') { decide(item, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
+        if (item.cards[0].kind === 'dropped' || isConflict(item.cards[0])) { decide(item, 'reject', mode === 'not-bear' || isConflict(item.cards[0]) ? null : reason, 'gone-left'); return; }
         decide(item, 'reject', reason, 'gone-left');
       });
       toast('Decided ' + card.bulk.length + ' — ' + (mode === 'fix' ? 'waiting on a fix' : mode === 'never' ? 'not an event' : 'not bear'));
@@ -2711,6 +2787,8 @@ window.__startDeck = function () {
     }
     // On a not-bear card, "not bear" is the plain confirmation it always was.
     if (card.cards[0].kind === 'dropped') { decide(card, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
+    // A conflict card's every left answer is the same one: not bear.
+    if (isConflict(card.cards[0])) { decide(card, 'reject', null, 'gone-left'); return; }
     decide(card, 'reject', reason, 'gone-left');
     toast(mode === 'keep' ? 'Kept on the calendar' : mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
   }
@@ -2719,7 +2797,7 @@ window.__startDeck = function () {
   document.getElementById('sheet-never').onclick = function () { answerSheet('never'); };
   function notBearTop() {
     var c = topItem(); if (!c) return;
-    if (c.cards[0].kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }
+    if (c.cards[0].kind === 'dropped' || isConflict(c.cards[0])) { decide(c, 'reject', null, 'gone-left'); return; }
     if (c.cards[0].kind === 'bar' || c.cards[0].kind === 'gone') { pending = c; openSheet(c); return; }
     decide(c, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     toast('Not bear — final');
@@ -2739,6 +2817,7 @@ window.__startDeck = function () {
     // — there a downward pull has nothing to scroll, so it is free; a card
     // scrolled down scrolls back up as before, and up always scrolls.
     var lockedD = false, atTop = false;
+    var conflict = isConflict(card.cards[0]);
     var okStamp = el.querySelector('.stamp.ok'), noStamp = el.querySelector('.stamp.no'), askStamp = el.querySelector('.stamp.ask');
     var frame = null;
     // A left swipe has three directions: UP-left = not bear (done, no
@@ -2767,7 +2846,8 @@ window.__startDeck = function () {
       if (noStamp) {
         noStamp.style.opacity = Math.max(0, Math.min(1, -dx / 90));
         var zone = leftZone();
-        var label = zone === 'notbear' ? 'NOT BEAR' : zone === 'fix' ? 'NEEDS FIX' : 'NOT YET';
+        // A conflict card has one left answer, whatever the angle.
+        var label = conflict ? 'NOT BEAR' : zone === 'notbear' ? 'NOT BEAR' : zone === 'fix' ? 'NEEDS FIX' : 'NOT YET';
         if (noStamp.textContent !== label) noStamp.textContent = label;
       }
     }
@@ -2835,6 +2915,7 @@ window.__startDeck = function () {
         return;
       }
       if (!cancelled && lockedH && dx > 110) { approveTop(); return; }
+      if (!cancelled && lockedH && dx < -110 && conflict) { notBearTop(); return; }
       if (!cancelled && lockedH && dx < -110) {
         var zone = leftZone();
         if (zone === 'notbear') { notBearTop(); return; }
@@ -3604,10 +3685,15 @@ async function handleRequest(state, req, res) {
             const core = new SharedCore(cities, { eventSchema: EventSchema });
             const current = reviewQueue.loadBearVerdicts(verdictsPath);
             if (verdict === 'clear') {
-                const restored = body.restore ? reviewQueue.restoreBearVerdict(current, core, body.restore) : { restored: false };
+                // `restore` is the entry the swipe overwrote, or the whole
+                // set a settle on a "you said both" card replaced; the
+                // event names the spelling the settle was written under.
+                const restored = body.restore ? reviewQueue.restoreBearVerdict(current, core, body.restore, body.event || null) : { restored: false };
                 if (restored.restored) {
                     reviewQueue.saveBearVerdicts(verdictsPath, restored.verdicts);
-                    console.log(`Review: undone — the ${body.restore.verdict} verdict of ${String(body.restore.stampedAt || '').slice(0, 10) || 'earlier'} on "${body.restore.title}" is back`);
+                    const back = (Array.isArray(body.restore) ? body.restore : [body.restore])
+                        .map((entry) => `the ${entry.verdict} verdict of ${String(entry.stampedAt || '').slice(0, 10) || 'earlier'} on "${entry.title}"`).join(' and ');
+                    console.log(`Review: undone — ${back} ${Array.isArray(body.restore) && body.restore.length > 1 ? 'are' : 'is'} back`);
                     return sendJson(res, 200, { ok: true, removed: true, restored: true, verdicts: restored.verdicts.length });
                 }
                 const cleared = reviewQueue.clearBearVerdict(current, core, body.event || {});
@@ -3618,7 +3704,10 @@ async function handleRequest(state, req, res) {
             }
             const result = reviewQueue.upsertBearVerdict(current, core, body.event || {}, verdict);
             reviewQueue.saveBearVerdicts(verdictsPath, result.verdicts);
-            console.log(`Review: ${verdict} — "${result.entry.title}" @ "${result.entry.venue || result.entry.city}"`);
+            const settled = Array.isArray(result.replacedAll) && result.replacedAll.length > 1
+                ? ` — settles ${result.replacedAll.length} stored entries (${result.replacedAll.map((entry) => `${entry.verdict} "${entry.title}"`).join(', ')})`
+                : '';
+            console.log(`Review: ${verdict} — "${result.entry.title}" @ "${result.entry.venue || result.entry.city}"${settled}`);
             if (verdict === 'bear') {
                 const decisionsPath = reviewQueue.getDecisionsPath(sharedRoot);
                 const cleared = reviewQueue.clearNotBearRejections(reviewQueue.loadDecisions(decisionsPath), core, body.event || {});
@@ -3627,10 +3716,28 @@ async function handleRequest(state, req, res) {
                     console.log(`Review: bear verdict also cleared ${cleared.removed.length} "not bear" rejection(s): ${cleared.removed.join(', ')}`);
                 }
             }
-            return sendJson(res, 200, { ok: true, entry: result.entry, replaced: result.replaced || null, verdicts: result.verdicts.length });
+            return sendJson(res, 200, { ok: true, entry: result.entry, replaced: result.replaced || null, replacedAll: Array.isArray(result.replacedAll) ? result.replacedAll : [], verdicts: result.verdicts.length });
         } catch (error) {
             const status = /must be|no title identity/.test(error.message) ? 400 : 500;
             return sendJson(res, status, { ok: false, error: error.message });
+        }
+    }
+
+    // Every title the verdict store holds both ways, run or no run (read
+    // only; the deck's cards are the subset this run's events touch).
+    if (pathname === '/review/verdict-conflicts.json' && req.method === 'GET') {
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        try {
+            const { SharedCore } = require(path.join(repoRoot, 'scripts', 'shared-core'));
+            const { EventSchema } = require(path.join(repoRoot, 'scripts', 'event-schema'));
+            const latest = resolveReviewRun({}).run;
+            const cities = (latest && latest.payload && latest.payload.config && latest.payload.config.cities) || {};
+            const core = new SharedCore(cities, { eventSchema: EventSchema });
+            const verdicts = reviewQueue.loadBearVerdicts(reviewQueue.getBearVerdictsPath(sharedRoot));
+            const conflicts = reviewQueue.findBearVerdictStoreConflicts(verdicts, core);
+            return sendJson(res, 200, { ok: true, entries: verdicts.length, count: conflicts.length, conflicts });
+        } catch (error) {
+            return sendJson(res, 500, { ok: false, error: error.message });
         }
     }
 
@@ -3679,7 +3786,7 @@ async function handleRequest(state, req, res) {
         return res.end(found.buffer);
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/source-audit /review/source-audit.json /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/verdict-conflicts.json /review/decisions.json /review/rejections /review/source-audit /review/source-audit.json /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
 }
 
 function parsePortFromArgv(argv) {
@@ -3752,6 +3859,7 @@ module.exports = {
     renderReviewBearRow,
     reviewUrlLabel,
     renderReviewCard,
+    renderReviewVerdictConflictCard,
     renderReviewPage,
     renderFriendPage,
     resolveReplyBase,

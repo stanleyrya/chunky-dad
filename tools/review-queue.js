@@ -481,9 +481,44 @@ function buildBearIdentity(event) {
     };
 }
 
+// SharedCore reads the verdict store it was handed at construction; the
+// deck's store helpers judge a list that is not yet (or no longer) that one.
+function withBearStore(core, list, read) {
+    const before = core.bearVerdicts;
+    core.bearVerdicts = list;
+    try {
+        return read();
+    } finally {
+        core.bearVerdicts = before;
+    }
+}
+
+// The stored entries a verdict on this identity replaces: EVERY entry with
+// the same title at the same place (not the first — a store that held the
+// title twice kept the second behind the owner's back, and the scraper then
+// read the title both ways and applied nothing), and, when the store holds
+// the party both ways in the scraper's own reading (SharedCore
+// .findStoredBearVerdictConflict: a year-blind sibling, or the party fold
+// with no exact entry), those entries too — the owner's new word settles
+// the party, and leaving the other side in place would keep the conflict
+// alive. Agreeing entries under another spelling are left alone, as before.
+function coveredBearVerdicts(list, core, id) {
+    const key = core.getBearVerdictTitleKey(id.title, [id.bar]);
+    const place = { title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city };
+    const exact = key ? list.filter((existing) => core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key
+        && core.bearVerdictPlaceMatches(place, existing)) : [];
+    const conflict = key ? withBearStore(core, list, () => core.findStoredBearVerdictConflict(place)) : null;
+    const covered = exact.slice();
+    for (const entry of conflict ? conflict.hits : []) if (!covered.includes(entry)) covered.push(entry);
+    // Store order, so the new entry takes the first covered slot.
+    return list.filter((existing) => covered.includes(existing));
+}
+
 // Same entry shape and upsert rule as persistBearVerdictTap: one entry per
-// party-at-venue, last tap wins. Returns { verdicts, entry } or throws on a
-// record with no title identity.
+// party-at-venue, last tap wins — over every entry it covers
+// (coveredBearVerdicts). Returns { verdicts, entry, replaced, replacedAll }
+// (`replaced` = the first entry overwritten, `replacedAll` = all of them,
+// for the undo) or throws on a record with no title identity.
 function upsertBearVerdict(verdicts, core, identity, verdict, options = {}) {
     if (verdict !== 'bear' && verdict !== 'not_bear') throw new Error('verdict must be bear or not_bear');
     const id = buildBearIdentity(identity);
@@ -492,24 +527,73 @@ function upsertBearVerdict(verdicts, core, identity, verdict, options = {}) {
     const now = options.now instanceof Date ? options.now : new Date();
     const entry = { verdict, stampedAt: now.toISOString(), title: id.title, venue: id.bar, address: id.address, location: id.location, city: id.city };
     const list = normalizeBearVerdicts(verdicts).slice();
-    const index = list.findIndex((existing) =>
-        core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key
-        && core.bearVerdictPlaceMatches({ title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city }, existing));
-    // The verdict this one overwrites, handed back so an undo can restore it.
-    const replaced = index >= 0 ? list[index] : null;
-    if (index >= 0) list[index] = entry;
-    else list.push(entry);
-    return { verdicts: list, entry, replaced };
+    const covered = coveredBearVerdicts(list, core, id);
+    const index = covered.length > 0 ? list.indexOf(covered[0]) : -1;
+    const kept = list.filter((existing) => !covered.includes(existing));
+    if (index >= 0) kept.splice(Math.min(index, kept.length), 0, entry);
+    else kept.push(entry);
+    return { verdicts: kept, entry, replaced: covered.length > 0 ? covered[0] : null, replacedAll: covered };
 }
 
-// The undo of a verdict that overwrote an earlier one: the earlier entry
-// goes back as it was stored (its own stamp, its own spelling). See
-// restoreDecision. Refuses anything that is not a stored-verdict shape.
-function restoreBearVerdict(verdicts, core, previous) {
-    const valid = normalizeBearVerdicts([previous])[0];
-    if (!valid || !core.getBearVerdictTitleKey(valid.title, [valid.venue])) return { verdicts: normalizeBearVerdicts(verdicts), restored: false };
-    const result = upsertBearVerdict(verdicts, core, { title: valid.title, bar: valid.venue, address: valid.address, location: valid.location, city: valid.city }, valid.verdict);
-    return { verdicts: result.verdicts.map((entry) => (entry === result.entry ? valid : entry)), restored: true };
+// The undo of a verdict that overwrote earlier ones: the earlier entries go
+// back as they were stored (their own stamps, their own spellings) and the
+// verdict that replaced them goes — found under `identity` (the spelling it
+// was written under) and under each earlier entry's own identity. See
+// restoreDecision. `previous` is one stored entry or the list the upsert
+// handed back as `replacedAll`; anything that is not a stored-verdict shape
+// is refused.
+function restoreBearVerdict(verdicts, core, previous, identity = null) {
+    const list = normalizeBearVerdicts(verdicts).slice();
+    const valid = normalizeBearVerdicts(Array.isArray(previous) ? previous : [previous])
+        .filter((entry) => core.getBearVerdictTitleKey(entry.title, [entry.venue]));
+    if (valid.length === 0) return { verdicts: list, restored: false };
+    const identities = valid.map((entry) => ({ title: entry.title, bar: entry.venue, address: entry.address, location: entry.location, city: entry.city }));
+    if (identity && core.getBearVerdictTitleKey(buildBearIdentity(identity).title, [buildBearIdentity(identity).bar])) identities.push(buildBearIdentity(identity));
+    const exactHit = (existing, id) => core.getBearVerdictTitleKey(existing.title, [existing.venue]) === core.getBearVerdictTitleKey(id.title, [id.bar])
+        && core.bearVerdictPlaceMatches({ title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city }, existing);
+    const gone = list.filter((existing) => identities.some((id) => exactHit(existing, id)));
+    const index = gone.length > 0 ? list.indexOf(gone[0]) : -1;
+    const kept = list.filter((existing) => !gone.includes(existing));
+    kept.splice(index >= 0 ? Math.min(index, kept.length) : kept.length, 0, ...valid);
+    return { verdicts: kept, restored: true };
+}
+
+// Every place the store holds a title both ways: entries at one place whose
+// title keys agree up to a bare year (SharedCore.getBearVerdictYearBlindKey)
+// and whose verdicts do not. The whole file, not this run — what GET
+// /review/verdict-conflicts.json lists and the deck header counts; the deck
+// CARDS are only the conflicts this run's events touch (buildDeck).
+function findBearVerdictStoreConflicts(verdicts, core) {
+    const SharedCore = loadSharedCore();
+    const list = normalizeBearVerdicts(verdicts);
+    const seen = new Set();
+    const conflicts = [];
+    list.forEach((entry, index) => {
+        if (seen.has(index)) return;
+        const key = SharedCore.getBearVerdictYearBlindKey(core.getBearVerdictTitleKey(entry.title, [entry.venue]));
+        if (!key) return;
+        const place = { title: entry.title, bar: entry.venue, address: entry.address, location: entry.location, city: entry.city };
+        const group = [entry];
+        seen.add(index);
+        list.forEach((other, otherIndex) => {
+            if (seen.has(otherIndex)) return;
+            if (SharedCore.getBearVerdictYearBlindKey(core.getBearVerdictTitleKey(other.title, [other.venue])) !== key) return;
+            if (!core.bearVerdictPlaceMatches(place, other)) return;
+            group.push(other);
+            seen.add(otherIndex);
+        });
+        if (!SharedCore.bearVerdictsDisagree(group)) return;
+        const newest = group.reduce((latest, candidate) => (String(candidate.stampedAt || '') > String(latest.stampedAt || '') ? candidate : latest), group[0]);
+        conflicts.push({
+            key,
+            title: String(newest.title || ''),
+            venue: String(newest.venue || ''),
+            city: String(newest.city || ''),
+            hits: group.slice().sort((a, b) => String(b.stampedAt || '').localeCompare(String(a.stampedAt || '')))
+                .map((hit) => ({ verdict: hit.verdict, stampedAt: hit.stampedAt || null, title: String(hit.title || ''), venue: String(hit.venue || ''), city: String(hit.city || '') }))
+        });
+    });
+    return conflicts;
 }
 
 // An undo clears the verdict on this title. When there is none and the card
@@ -527,16 +611,12 @@ function clearBearVerdict(verdicts, core, identity) {
         && core.bearVerdictPlaceMatches(place, existing);
     let gone = list.filter(exact);
     if (gone.length === 0 && key) {
-        const before = core.bearVerdicts;
-        core.bearVerdicts = list;
-        try {
+        gone = withBearStore(core, list, () => {
             const partyKey = core.getBearVerdictPartyKey(id.title, [id.bar], core.getBearVerdictLearnedMarkers(place));
-            gone = partyKey ? list.filter((existing) => core.bearVerdictPlaceMatches(place, existing)
+            return partyKey ? list.filter((existing) => core.bearVerdictPlaceMatches(place, existing)
                 && core.getBearVerdictPartyKey(existing.title, [existing.venue], core.getBearVerdictLearnedMarkers(
                     { title: existing.title, bar: existing.venue, address: existing.address, location: existing.location, city: existing.city })) === partyKey) : [];
-        } finally {
-            core.bearVerdicts = before;
-        }
+        });
     }
     const kept = list.filter((existing) => !gone.includes(existing));
     return { verdicts: kept, removed: gone.length > 0, removedTitles: gone.map((existing) => String(existing.title || '')) };
@@ -1575,7 +1655,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0, 'verdict-conflict': 0, verdictConflictsInStore: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
     // its fresh action; the run file's executions[] dates it. Executions
@@ -1799,6 +1879,10 @@ function buildDeck(runPayload, store, options = {}) {
         droppedByKey.set(key, card);
     });
     for (const card of droppedByKey.values()) {
+        // A party the store holds both ways asks its question on the
+        // verdict-conflict card below, not twice.
+        const p = card.proposal;
+        if (core.bearVerdicts.length > 0 && core.findStoredBearVerdictConflict({ title: p.title, bar: p.bar, address: p.address, location: p.location, city: p.city })) continue;
         if (card.display.bearVerdict) {
             // The note left with the verdict (under the event's own key)
             // rides along, so the decided row shows it and an undo clears both.
@@ -1809,6 +1893,82 @@ function buildDeck(runPayload, store, options = {}) {
         } else {
             cards.push(card);
             counts.dropped++;
+        }
+    }
+
+    // The verdict store holds a party this run lists BOTH WAYS (SharedCore
+    // .findStoredBearVerdictConflict — owner ruling 2026-10-18, "show the
+    // conflict on the deck"): one card per title-at-place, carrying every
+    // stored entry (verdict, stamp, the spelling it was given on) beside the
+    // run's own row so he recognises the party. Nothing here picks a side,
+    // and there is no decided state to keep: a settle rewrites the store
+    // (upsertBearVerdict replaces every covered entry), and the card is
+    // simply not built once the store is of one mind. The run's rows are
+    // the kept events, the parsers' own lists and the bear-dropped ones —
+    // a conflicting party is withheld from the store either way, so it
+    // may sit in any of them. Cards stay about this run; the whole store's
+    // conflicts are counted (verdictConflictsInStore) and listed by
+    // GET /review/verdict-conflicts.json.
+    counts.verdictConflictsInStore = core.bearVerdicts.length > 0 ? findBearVerdictStoreConflicts(core.bearVerdicts, core).length : 0;
+    if (core.bearVerdicts.length > 0) {
+        const conflictByKey = new Map();
+        // Dropped rows first: they carry the run's reason, and the card
+        // shows the first row's.
+        const runRows = dropped.map((entry) => ({ event: entry && entry.event, index: -1, dropReason: String((entry && entry.reason) || '') }))
+            .concat(analyzed.map((event, index) => ({ event, index, dropReason: '' })))
+            .concat((Array.isArray(payload.parserResults) ? payload.parserResults : [])
+                .flatMap((result) => (result && Array.isArray(result.events) ? result.events : []).map((event) => ({ event, index: -1, dropReason: '' }))));
+        runRows.forEach(({ event, index, dropReason }) => {
+            if (!event || typeof event !== 'object') return;
+            const endMs = SharedCore.toEpochMillis(event.endDate);
+            const startMs = SharedCore.toEpochMillis(event.startDate);
+            const lastMs = endMs !== null ? endMs : startMs;
+            if (lastMs !== null && lastMs < now) return;
+            const titleKey = core.getBearVerdictTitleKey(event.title || event.name, [event.bar || event.venue]);
+            if (!titleKey) return;
+            const key = `verdict-conflict|${SharedCore.getBearVerdictYearBlindKey(titleKey)}|${core.getOwnerReviewPlaceKey(event)}`;
+            if (conflictByKey.has(key)) { conflictByKey.get(key).proposal.occurrences += 1; return; }
+            const conflict = core.findStoredBearVerdictConflict({ ...event, bar: event.bar || event.venue });
+            if (!conflict) return;
+            const iso = (value) => {
+                const ms = SharedCore.toEpochMillis(value);
+                return ms === null ? null : new Date(ms).toISOString();
+            };
+            const description = String(event.description || '').trim();
+            const proposal = {
+                kind: 'verdict-conflict',
+                key,
+                title: String(event.title || event.name || ''),
+                startDate: iso(event.startDate),
+                endDate: iso(event.endDate),
+                timezone: event.timezone || core.getCityTimezone(event.city) || null,
+                bar: String(event.bar || event.venue || ''),
+                address: String(event.address || ''),
+                city: String(event.city || ''),
+                location: typeof event.location === 'string' ? event.location : '',
+                source: String(event.source || ''),
+                url: String(event.url || event.website || ''),
+                ticketUrl: String(event.ticketUrl || ''),
+                image: String(event.image || event._sharedPicture || ''),
+                cover: String(event.cover || ''),
+                description: description.length > 600 ? `${description.slice(0, 600)}…` : description,
+                // What the run did with this row, so the card can say that
+                // nothing stored applied: dropped (and why) or kept.
+                runSaid: dropReason ? `dropped — ${dropReason}` : (typeof event.bearSource === 'string' && event.bearSource ? `kept — ${event.bearSource}` : 'kept'),
+                matchedBy: conflict.matchedBy,
+                hits: conflict.hits.slice().sort((a, b) => String(b.stampedAt || '').localeCompare(String(a.stampedAt || '')))
+                    .map((hit) => ({ verdict: hit.verdict, stampedAt: hit.stampedAt || null, title: String(hit.title || ''), venue: String(hit.venue || ''), city: String(hit.city || '') })),
+                occurrences: 1,
+                changes: {}
+            };
+            const display = buildReviewDisplayContext(event, payload, core, extras);
+            display.notes = '';
+            conflictByKey.set(key, { id: `v${conflictByKey.size}`, kind: 'verdict-conflict', key, sourceIndex: index, proposal, display });
+        });
+        for (const card of conflictByKey.values()) {
+            cards.push(card);
+            counts.pending++;
+            counts['verdict-conflict']++;
         }
     }
 
@@ -2234,6 +2394,7 @@ module.exports = {
     upsertBearVerdict,
     restoreBearVerdict,
     clearBearVerdict,
+    findBearVerdictStoreConflicts,
     createDeckCore,
     buildBarProposal,
     buildReviewDisplayContext,
