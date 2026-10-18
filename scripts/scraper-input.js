@@ -821,6 +821,63 @@ const scraperConfig = {
       // a year; zero upcoming is this source's normal state between them.
       urls: ["https://www.eventbrite.com/o/64998384913"],
     },
+    // ── Sources added 2026-10-18 (owner-approved from the discovery audit;
+    // each door read once from the live site that day — the
+    // data/source-expectations files hold what was found) ──
+    {
+      name: "Bears of San Francisco",
+      // SF bear club (Squarespace, founded 1994). /events is the club's
+      // events collection — the same door as Mass Bears and Cubs: the page's
+      // ?format=json twin carries every upcoming item with its epoch times,
+      // flyer and page, and each item page serves ?format=ical. The Bear
+      // Calendar carried its Bearrison Street Fair and deadlift competition
+      // as copies; this is the club's own statement. On 2026-10-18 the
+      // collection held nothing upcoming (the 2026 fair had been the day
+      // before) and 142 past items, 30 a page — zero upcoming is this club's
+      // normal state between postings. A bear club, so everything it lists
+      // is a bear event: bearAffinity "always" in data/promoters.json, which
+      // also holds the club's site and socials (a registry identity carries
+      // no metadata or alwaysBear here).
+      urls: ["https://www.bosf.org/events"],
+    },
+    {
+      name: "Urban Bear",
+      // NYC promoter: Urban Bear NYC (four September days ending in the
+      // Street Fair) and Fire Island Bear Weekend (June). Squarespace with
+      // no events collection — the home page's own ?format=json twin is a
+      // plain page with no items — so each weekend's schedule is
+      // hand-written text on its page: the home page carries the NYC
+      // schedule (night, venue, street address, hour and price), /fibw the
+      // Fire Island one, both in the site's own nav; tickets are Eventbrite
+      // links. On 2026-10-18 both pages still showed the 2026 editions,
+      // already past; the next dates arrive on the same pages. Already a
+      // curated promoter (data/promoters.json, bearAffinity "always"); Bear
+      // World Magazine and Gathr carried 16 copies — this is the promoter's
+      // own statement.
+      urls: ["https://www.theurbanbear.com/"],
+    },
+    {
+      name: "Bear Jamboree",
+      // Orlando's bear weekend (early June: Crowne Plaza pool parties,
+      // Riptide at Typhoon Lagoon, Bearlicious at Hyatt Place). Wix. The
+      // audit proposed /tickets, but on 2026-10-18 that page served nothing
+      // beyond the nav: Wix Events & Tickets is installed, yet no page of
+      // the site carries an event-list section in its warmup blob, so the
+      // Wix reader has nothing to read until the next edition goes on sale.
+      // The weekend's content hangs off the home page instead: EVENTS →
+      // /events (the party names, each with its page: /tbt, /riptide, /red,
+      // /comedy-show), plus a /schedule page that only the sitemap names.
+      // Configured at the root so the crawl follows the site's own links to
+      // all of it; when the widget fills, its blob rides on every page and
+      // is read from the root as well. Everything dated here is an image:
+      // the 2027 dates are a home-page banner ("June 3-7,2027"), the
+      // October Sunday Tea Dance at Anthem is a gallery of flyers on
+      // /bear-tea-dance, and the party pages print month and day with no
+      // year — the OCR path is what reads this source (first run
+      // 2026-10-18: both found). A bear festival: bearAffinity "always" in
+      // data/promoters.json.
+      urls: ["https://www.bearjamboree.com/"],
+    },
     {
       // ── New Site Template ─────────────────────────────────────────────
       // Copy this entry, fill in the live fields, and you're done — depth,

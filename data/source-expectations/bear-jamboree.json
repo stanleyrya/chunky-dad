@@ -1,0 +1,306 @@
+{
+  "schemaVersion": 1,
+  "source": "Bear Jamboree",
+  "slug": "bear-jamboree",
+  "status": "complete",
+  "recheckAfter": "2026-11-18",
+  "recon": {
+    "date": "2026-10-18",
+    "method": [
+      "static",
+      "flyer",
+      "page-cache"
+    ],
+    "parserUrlsAtRecon": [
+      "https://www.bearjamboree.com/"
+    ],
+    "doors": [
+      {
+        "url": "https://www.bearjamboree.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "no listing structure and no date in the page text (\"join the biggest bear party in FL\", \"PARTY BEARS WELCOME\", \"EVENTS 11 LGBTQ+ Events\"); the Wix warmup blob carries no event-list section (the parser's own findWixEventListSections returns 0); ONE date on the page, inside a banner image: static.wixstatic.com/media/ee7b13_88ca371b3fec4552b00c494165566711~mv2.png (1584×672) reads \"June 3-7,2027\"",
+        "note": "The configured page, read once with curl on 2026-10-18 (HTTP 200, 1.9 MB). Wix (Thunderbolt), <title>Bear Jamboree | Orlando Gay Bear Weekend</title>, JSON-LD WebSite only; the installed apps include \"Wix Events & Tickets\" and \"Event Calendar\"; site timeZone America/New_York. Buttons: EVENTS → /events, Tickets → /tickets, book hotel → /booking. Nav: Home, About, Sunday tea dance (/bear-tea-dance), Hotel, Booking, Travel, Gallery, Contact, Photography Policy, Tickets. The HTML links instagram.com/bearjamboree and facebook.com/orlandobearpride. Saved as cache-squarespace/www.bearjamboree.com/home.body. The 2027 dates are published only as that banner image — the OCR path of the 2026-10-18 validation run (run 20261018-115356) read it; no text node, JSON-LD or widget row carries them."
+      },
+      {
+        "url": "https://www.bearjamboree.com/tickets",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "the page the audit proposed: its server HTML is the nav, a newsletter form and the footer — 23 text lines, no iframe, no JSON-LD, no event-list section in the warmup blob",
+        "note": "Read once with curl on 2026-10-18 (HTTP 200, 1.1 MB). Whatever the Tickets page shows is drawn in the browser by the Wix Events widget, and on the recon date that widget published nothing: the warmup blob of this page — and of the five other pages read — carries no event-list section, so the Wix reader has nothing to read. Saved as cache-squarespace/www.bearjamboree.com/tickets.body."
+      },
+      {
+        "url": "https://www.bearjamboree.com/schedule",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 12,
+        "truthFlag": "a hand-written day-by-day schedule with no year: \"Thursday, june 4\", \"FRIDAY, june 5\", \"SATURDAY, june 6\", \"Sunday, june 6\" (sic); 12 entries, each name / venue / hours; no page of the site links it (the sitemap names it)",
+        "note": "Read once with curl on 2026-10-18 (HTTP 200, 1.2 MB). June 4 is a Thursday in 2026 and a Friday in 2027, so this is the 2026 edition (June 4–7, 2026), four months before the recon date. Entries: Thursday — Meet & Greet, Crowne Plaza Lobby Bar, 5:30 PM–7:30 PM; Friday — Bearchella Pool Party (DJ Chris Adams, DJ Tim Staney), Crowne Plaza Pool, 11:00 AM–7:00 PM; PrideCup Opening, Hyatt Place, 5:00 PM–7:00 PM; RIPTIDE (DJ J Warren, DJ Joel Corry), Disney's Typhoon Lagoon Waterpark, 8:00 PM–2:00 AM; Saturday — Bearchella Pool Party (four DJ sets), Crowne Plaza Pool, 11:00 AM–2:00 AM; Bingo with a Twist ft. Bearoncé, Hyatt Place, 1:30 PM–3:30 PM; Bearoke hosted by Tora Himan, Crowne Plaza Bar, 4:30 PM–6:30 PM; Jessica Kirson Stand-Up, Hyatt Place, 9:00 PM–10:00 PM (doors 8 pm); Bearlicious Dance Party (DJ Alex Ramos), Hyatt Place, 11:00 PM–3:00 AM; Sunday — Bearchella Pool Party (four DJ sets), Crowne Plaza Pool, 11:00 AM–2:00 AM; Bingo with a Twist ft. Bearded Man, Hyatt Place, 1:30 PM–3:30 PM; Bearoke, Crowne Plaza Bar, 4:30 PM–6:30 PM. No street address, price or link on the page. Saved as cache-squarespace/www.bearjamboree.com/schedule.body."
+      },
+      {
+        "url": "https://www.bearjamboree.com/events",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "party names without dates — \"BEARCHELLA pool parties\", \"Friday Pool Party Wet & Woofy\", \"Saturday Pool Party Thick Thighs\", \"Drag Brunch\", \"Bingo with a twist\", \"Bearaoke\", \"Bearlicious dance party at hyatt plACE\", \"Sunday Pool Party Soaked and Stroked\", \"Bear-O (music bingo)\", \"Bear-B-Q.\"; \"WEEKEND EVENTS\" Learn More buttons → /tbt, /riptide, /red, /comedy-show, /mediakit",
+        "note": "Read once with curl on 2026-10-18 (HTTP 200, 1.5 MB). The home page's EVENTS button lands here; it is the weekend's menu of parties and the way to the party pages, with no date on it. Saved as cache-squarespace/www.bearjamboree.com/events.body."
+      },
+      {
+        "url": "https://www.bearjamboree.com/riptide",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "one party page: a blurb for Riptide at Disney's Typhoon Lagoon and the line \"JUNE 5 / FROM 8pm-2AM\" — no year",
+        "note": "Read once with curl on 2026-10-18 (HTTP 200, 1.4 MB) as the sample party page reached from /events. The copy names DJ Kitty Glitter; the /schedule names J Warren and Joel Corry for the same night — the two pages disagree, both for the 2026 edition. /tbt, /red and /comedy-show were read live by the validation run (run 20261018-115356) into the scratch page cache and are documented below from it. Saved as cache-squarespace/www.bearjamboree.com/riptide.body."
+      },
+      {
+        "url": "https://www.bearjamboree.com/tbt",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "one party page: \"FREE #TBT Welcome Party at the Sheraton Lake Buena Vista\" and the line \"JUNE 4 / FROM 8PM-1 AM\" — no year",
+        "note": "Read from the scratch page cache (fetched 2026-10-18 15:52 UTC by run 20261018-115356, HTTP 200, 1.4 MB). The 2026 edition's opening night; /schedule calls the same night \"Meet & Greet, Crowne Plaza Lobby Bar\" — the party page and the schedule name different venues for June 4."
+      },
+      {
+        "url": "https://www.bearjamboree.com/red",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "one party page: \"RED Ringmaster\" at \"the House of Blues at Disney Springs\", \"JUNE 6 / FROM 8pm-2AM\" — no year",
+        "note": "Read from the scratch page cache (fetched 2026-10-18 15:53 UTC by run 20261018-115356, HTTP 200, 1.2 MB). The 2026 edition's Saturday main party; /schedule does not list it (its Saturday night is Bearlicious at Hyatt Place) — the two pages describe the weekend differently."
+      },
+      {
+        "url": "https://www.bearjamboree.com/comedy-show",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "one party page: \"JESSICA KIRSON\", \"JUNE 6 / FROM 8-10 pm\" — no year",
+        "note": "Read from the scratch page cache (fetched 2026-10-18 15:51 UTC by run 20261018-115356, HTTP 200, 1.2 MB). Matches /schedule's \"Jessica Kirson Stand-Up, Hyatt place, 9:00 PM - 10:00 PM (Doors open at 8 pm)\" for Saturday of the 2026 edition."
+      },
+      {
+        "url": "https://www.bearjamboree.com/bear-tea-dance",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 1,
+        "truthFlag": "\"Bear Tea Dance\" heading over a four-image gallery (\"1/4\"); no text beyond that — the event is on the flyers: three variants of one flyer (ee7b13_e0741dadec934c228ad38a068c9d8ba5~mv2.jpg, ee7b13_69fb3ce9f4be49b0b7bc4e5cb2831723~mv2.jpg, ee7b13_6c5d4e7ea9674256a0906e3eca7d8556~mv2.jpg, 1275×1650, one headliner each) all reading \"SUNDAY TEA DANCE / 18 OCT SUNDAY DAY 12PM - 6PM / LOCATION: 43 W Washington St, Orlando, FL 32801 (Behind Anthem Orlando)\", plus a \"SUNDAY TEA DANCE\" logo",
+        "note": "Read once with curl on 2026-10-18 (HTTP 200, 1.2 MB) because \"Sunday tea dance\" in the nav could have been a standing Orlando night: it is one dated event — the Sunday Tea Dance of Come Out With Pride Orlando, October 18, 2026, presented by Bear Jamboree in partnership with Anthem, entertainment Kristine W, DJ Nani Soul, DJ Joe Pacheco, 18+ — published only as flyers in a Wix gallery. The page text has no date; the OCR path read all three flyers in run 20261018-115356. Saved as cache-squarespace/www.bearjamboree.com/bear-tea-dance.body."
+      },
+      {
+        "url": "https://www.bearjamboree.com/pages-sitemap.xml",
+        "kind": "sitemap",
+        "role": "sitemap",
+        "rowsReturned": 24,
+        "truthFlag": "24 <url> entries, every <lastmod> 2026-09-12",
+        "note": "Reached through /sitemap.xml (a sitemapindex of pages-sitemap.xml and member-profiles_p_first-chunk-sitemap.xml), both read once on 2026-10-18. Pages: /, /about, /bear-tea-dance, /bearlicious, /booking, /comedy-show, /contact, /copy-of-photography-policy, /copy-of-tickets, /djs, /events, /gallery, /hotel, /inquiry-services-page, /magazine, /mediakit, /photography-policy, /red, /riptide, /schedule, /tbt, /thankyou, /tickets, /travel. The whole site was last edited on one day in September; nothing has been posted for 2027. Saved as cache-squarespace/www.bearjamboree.com/pages-sitemap.body."
+      },
+      {
+        "url": "https://www.bearjamboree.com/robots.txt",
+        "kind": "other",
+        "role": "other",
+        "rowsReturned": 0,
+        "truthFlag": "User-agent: * / Allow: / / Disallow: *?lightbox= ; Sitemap: https://www.bearjamboree.com/sitemap.xml",
+        "note": "Nothing the scraper reads is refused."
+      }
+    ],
+    "notes": "Recon from one live read of each door on 2026-10-18 (nine requests to the host, the sitemaps included; the validation run spent the other three on /tbt, /red and /comedy-show). Bear Jamboree is Orlando's bear weekend in early June — June 4–7 in 2026, June 3–7 in 2027 per the home-page banner — held across the Crowne Plaza (pool parties, Bearoke, the lobby-bar meet & greet), Hyatt Place (Bingo, the comedy show, Bearlicious), the Sheraton Lake Buena Vista (TBT), House of Blues at Disney Springs (RED) and Disney's Typhoon Lagoon (Riptide); it also presents a Sunday Tea Dance at Anthem for Come Out With Pride Orlando in October. Everything dated on this site is an image: the 2027 dates are a banner, the tea dance is a gallery of flyers, and the 2026 party pages print month and day without a year. The audit proposed /tickets as the Wix Events door; on the recon date that page is an empty shell, so the stanza is the root — the home page carries the banner and the nav reaches the tea dance and, via EVENTS → /events, the party pages."
+  },
+  "coverage": {
+    "confidence": "medium",
+    "basis": "Text doors publish nothing upcoming: the Wix Events widget carries no event-list section on any of the nine pages read (the parser's own findWixEventListSections returns 0 for each), and every dated text line (/schedule, /tbt, /red, /comedy-show, /riptide) is the past June 2026 edition, fixed to 2026 by its weekdays. The two upcoming things the site publishes are images: the home-page banner \"June 3-7,2027\" and the three Sunday Tea Dance flyers on /bear-tea-dance (\"18 OCT SUNDAY DAY 12PM - 6PM\"), both read by the OCR path in run 20261018-115356 and documented from that read — hence medium: the site's remaining gallery images (sponsor logos on every page, the 1,000-image /gallery not read) are assumed to carry no further dated flyer. Past listings: 12 schedule entries and 4 party pages, counted not enumerated.",
+    "publishedEventCount": 2,
+    "documentedEventCount": 2,
+    "occurrenceWindow": {
+      "start": "2026-10-18",
+      "end": "2027-01-16"
+    },
+    "pastListingsPresent": true,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "orlando",
+    "timezone": "America/New_York",
+    "location": null,
+    "website": "https://www.bearjamboree.com",
+    "instagram": "https://www.instagram.com/bearjamboree"
+  },
+  "events": [
+    {
+      "id": "sunday-tea-dance-2026-10-18",
+      "kind": "single",
+      "title": "Sunday Tea Dance",
+      "shortName": "Tea Dance",
+      "description": "Presented by Bear Jamboree in partnership with Anthem for Come Out With Pride Orlando. Entertainment by Kristine W, DJ Nani Soul and DJ Joe Pacheco. Admission 18+.",
+      "bar": "Anthem Orlando",
+      "address": "43 W Washington St, Orlando, FL 32801",
+      "location": null,
+      "startDate": "2026-10-18",
+      "startTime": "12:00",
+      "endDate": "2026-10-18",
+      "endTime": "18:00",
+      "website": "https://www.bearjamboree.com/bear-tea-dance",
+      "image": "https://static.wixstatic.com/media/ee7b13_e0741dadec934c228ad38a068c9d8ba5~mv2.jpg",
+      "cover": null,
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.bearjamboree.com/bear-tea-dance",
+        "imageUrl": "https://static.wixstatic.com/media/ee7b13_e0741dadec934c228ad38a068c9d8ba5~mv2.jpg",
+        "quote": "18 OCT SUNDAY DAY 12PM - 6PM"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Flyer-only: the page text has no date, so the record exists only if the OCR path reads the gallery; run 20261018-115356 did (title \"Bear Jamboree: Sunday tea dance\", Anthem, 43 W Washington St, 2026-10-18 12:00–18:00, Anthem's curated coordinates) — an OCR-path question, not a crawl one.",
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The quote is the flyer's text as the vision model read it (three variants agree on the date, hour and address); the year is not printed, and October 18 is a Sunday in 2026 — the recon date itself — and a Monday in 2027. The flyer prints \"LOCATION: 43 W Washington St, Orlando, FL 32801 (Behind Anthem Orlando)\"; the curated Anthem Orlando is at 100 North Orange Avenue, the same downtown block, so bar is the curated name and the address is the flyer's. No price on the flyer (\"TICKETS & INFO AT: BEARJAMBOREE.COM\")."
+    },
+    {
+      "id": "bear-jamboree-2027",
+      "kind": "single",
+      "title": "Bear Jamboree 2027",
+      "shortName": "Bear Jamboree",
+      "description": null,
+      "bar": null,
+      "address": null,
+      "location": null,
+      "startDate": "2027-06-03",
+      "startTime": null,
+      "endDate": "2027-06-07",
+      "endTime": null,
+      "website": "https://www.bearjamboree.com/",
+      "image": "https://static.wixstatic.com/media/ee7b13_88ca371b3fec4552b00c494165566711~mv2.png",
+      "cover": null,
+      "sourceRung": "flyer",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://www.bearjamboree.com/",
+        "imageUrl": "https://static.wixstatic.com/media/ee7b13_88ca371b3fec4552b00c494165566711~mv2.png",
+        "quote": "June 3-7,2027"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Flyer-only: the 2027 dates exist only in a banner image on the home page; run 20261018-115356 read it (record \"Bear Jamboree: Orlando Gay Bear Weekend\", 2027-06-03 → 2027-06-07). An OCR-path question, not a crawl one.",
+        "kept": null
+      },
+      "bearVerdict": null,
+      "note": "The banner is a date range and nothing else — no venue, no hour, no price — and June 3 is a Thursday in 2027, the weekend's usual Thursday-to-Monday shape. The run's record carried bar \"Disney's Typhoon Lagoon\" (barSource geo-poi, address \"Mountain Trail\") and coordinates for it: the banner names no venue, the weekend spans five venues, and Typhoon Lagoon hosts one night of it, so that bar is the pipeline's, not the site's — see openQuestions."
+    }
+  ],
+  "traps": [
+    {
+      "id": "schedule-2026-no-year",
+      "kind": "past-event",
+      "label": "/schedule — \"Thursday, june 4\" … \"Sunday, june 6\": the 12 entries of the June 4–7, 2026 edition, no year printed, on a page no other page links",
+      "why": "The weekdays fix the year — June 4 is a Thursday in 2026 and a Friday in 2027 — so the only truthful readings are 2026 nights (finished) or nothing; a 2027-dated record would be an invention. The page is reachable only through the sitemap, which the crawler does not read, so a run from the root never sees it.",
+      "evidence": {
+        "url": "https://www.bearjamboree.com/schedule",
+        "quote": "Thursday, june 4"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-115356",
+      "note": "If the page is ever read (a configured URL, or a link appearing), the year-repair rule — a no-year date is kept only inside [now − 45 d, now + 210 d] — would, on the recon date, drop June 4, 2026 (136 days back) and refuse June 4, 2027 (229 days ahead); any 2027-dated record from here is a bug."
+    },
+    {
+      "id": "riptide-june-5-no-year",
+      "kind": "past-event",
+      "label": "/riptide — \"JUNE 5 / FROM 8pm-2AM\": the 2026 Riptide night at Disney's Typhoon Lagoon, no year printed, reached from /events",
+      "why": "A party page of the finished 2026 edition that a crawl from the root does reach (home → /events → Learn More). It prints no year: June 5, 2026 is 135 days before the recon date, outside the 45-day past allowance of the year-repair rule, and June 5, 2027 is 230 days ahead, outside its 210-day future allowance — so the expected outcome is no record. A record dated 2027-06-05 from this page is a bug (the 2027 dates are not announced).",
+      "evidence": {
+        "url": "https://www.bearjamboree.com/riptide",
+        "quote": "JUNE 5"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "The page is dated only by month and day; whether the AI path produces a 2026 record (acceptable under allowPastEvents) or none (the year-repair window) depends on the clock — only a 2027 record is wrong."
+      },
+      "seenInRun": "20261018-115356",
+      "note": "Run 20261018-115356 extracted it as 2026-06-05 22:00 at Disney's Typhoon Lagoon (the past-edition reading, acceptable under allowPastEvents); /tbt and /comedy-show were read the same way (2026-06-05 and 2026-06-07). No 2027 record came from any party page."
+    },
+    {
+      "id": "events-page-party-menu",
+      "kind": "announcement",
+      "label": "/events — \"BEARCHELLA pool parties / Friday Pool Party Wet & Woofy / Saturday Pool Party Thick Thighs / Drag Brunch / Bingo with a twist / Bearaoke / Bearlicious dance party at hyatt plACE / Sunday Pool Party Soaked and Stroked / Bear-O (music bingo) / Bear-B-Q.\"",
+      "why": "The weekend's menu of parties, with weekday labels but no date, time, address or price; the dated statement lives on /schedule and the party pages. Not events on this page.",
+      "evidence": {
+        "url": "https://www.bearjamboree.com/events",
+        "quote": "Bearlicious dance party at hyatt plACE"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-115356"
+    },
+    {
+      "id": "home-event-count",
+      "kind": "announcement",
+      "label": "\"EVENTS / 11 LGBTQ+ Events / world class productions\" on the home page and /events",
+      "why": "A count of the weekend's parties, not a listing; it names no night.",
+      "evidence": {
+        "url": "https://www.bearjamboree.com/",
+        "quote": "11 LGBTQ+ Events"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-115356"
+    },
+    {
+      "id": "tickets-empty-shell",
+      "kind": "navigation",
+      "label": "/tickets — the nav's Tickets button lands on a page whose server HTML is the nav, a newsletter form and the footer",
+      "why": "The Wix Events widget draws this page in the browser; with nothing on sale it publishes nothing, server-side or otherwise. It is a door to re-read when the next edition opens, not an event and not a fetch failure (HTTP 200).",
+      "evidence": {
+        "url": "https://www.bearjamboree.com/tickets",
+        "quote": "Tickets | Bear Jamboree"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261018-115356"
+    },
+    {
+      "id": "party-pages-2026-no-year",
+      "kind": "past-event",
+      "label": "/tbt (\"JUNE 4 FROM 8PM-1 AM\", Sheraton Lake Buena Vista), /red (\"JUNE 6 FROM 8pm-2AM\", House of Blues at Disney Springs), /comedy-show (\"JUNE 6 FROM 8-10 pm\", Jessica Kirson) — the 2026 edition's party pages, no year printed, reached from /events",
+      "why": "Like /riptide: finished nights whose year the page does not print. Read as 2026 they are past events (allowPastEvents); read as 2027 they would be inventions — the 2027 edition is June 3–7 and its parties are not announced.",
+      "evidence": {
+        "url": "https://www.bearjamboree.com/tbt",
+        "quote": "JUNE 4"
+      },
+      "expect": {
+        "extracted": "unknown",
+        "note": "Month-and-day pages: the year-repair window decides between a 2026 record and none; run 20261018-115356 produced 2026-dated records for /tbt and /comedy-show (/red was read after the host budget and produced none).",
+        "kept": null
+      },
+      "seenInRun": "20261018-115356",
+      "note": "The run's /tbt record carried bar \"Pharmacy Hotel\" and address \"Avita HOTEL\" — sponsor-logo OCR (Avita Pharmacy) read as the venue; the page says Sheraton Lake Buena Vista."
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The 2027 weekend is published as a date-only banner; the run's record attached Disney's Typhoon Lagoon (geo-poi) and its coordinates to the whole weekend because the home copy mentions \"our legendary Bear Lagoon at Disney's Typhoon Lagoon\". A multi-venue weekend announced without a venue should carry none; whether the POI rung may name a bar the page never states for the event is a generic question for the owner.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "When the 2027 edition goes on sale the Wix Events widget should carry its events in the warmup blob of every page (the Wix reader reads it from the root). Whether the Tickets page uses the list widget or a single-event ticket picker, whose data the reader does not look for, cannot be known until then — recheck the first run after the announcement.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "/schedule is the one text schedule and nothing links it (sitemap only); the crawler does not read sitemaps. If the 2027 schedule is again posted there unlinked, only a configured URL reaches it — owner call whether to add https://www.bearjamboree.com/schedule to urls once dates exist.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    },
+    {
+      "q": "The party pages and /schedule disagree on venues for the same 2026 nights (TBT: Sheraton Lake Buena Vista vs Crowne Plaza Lobby Bar; Saturday: RED at House of Blues vs Bearlicious at Hyatt Place). For 2027 the fresher page should win; which that is cannot be known until both are rewritten.",
+      "raisedOn": "2026-10-18",
+      "blocking": false
+    }
+  ]
+}
