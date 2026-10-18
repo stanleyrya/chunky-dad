@@ -883,6 +883,12 @@ const scraperBars = {
       "coordinates": "33.8239380, -116.5432028"
     },
     {
+      "name": "Toucans Tiki Lounge",
+      "city": "palm-springs",
+      "address": "2100 PALM CANYON DRIVE",
+      "coordinates": "33.8486910, -116.5480960"
+    },
+    {
       "name": "Dick's on Arenas",
       "city": "palm-springs",
       "address": "301 E Arenas Rd, Palm Springs, CA 92262",
