@@ -22511,3 +22511,323 @@ test('a parsed page reports the address it declares as its own to the core, whic
   parser.core = null;
   parser.noteSelfDeclaredAliases('<link rel="canonical" href="https://x.example/a/b">', 'https://x.example/a/c');
 });
+
+// ── Undated rows: a rule the page states, or no row (2026-10-18) ─────────────
+// Verbatim pages from the page cache of runs 20261016–20261018 (see
+// scripts/fixtures/undated-rows-2026-10-18/). Each row below is one the rrule
+// fallback dated in run 20261018-052739 because its page stated no date; the
+// owner's ruling: keep the real ones, drop the rest, decide from the page.
+{
+  const fs = require('fs');
+  const path = require('path');
+  const UNDATED_DIR = path.join(__dirname, '..', 'fixtures', 'undated-rows-2026-10-18');
+  const readUndated = (name) => fs.readFileSync(path.join(UNDATED_DIR, name), 'utf8');
+  const UNDATED_NOW = () => new Date(Date.UTC(2026, 9, 17, 12, 0, 0)); // Sat 2026-10-17, the fetch day
+  const UNDATED_FIELDS = ['title', 'startDate', 'startTime', 'endTime', 'rrule', 'bar', 'description'];
+  const UNDATED_REASON = 'undated: no date or cadence on the page';
+
+  function undatedParser() {
+    global.EventSchema = EventSchema;
+    const parser = createParser();
+    parser.now = UNDATED_NOW;
+    parser.undatedRowDrops = [];
+    return parser;
+  }
+  // Assemble one row the way a segment of a split page reaches
+  // normalizeAiEvent: the card's page lines as segmentText, the prompt content
+  // (card + its own OCR) as html, flagged as a segment.
+  function assembleCard(parser, aiEvent, { url, segmentText, html, parserConfig = {}, segment = true }) {
+    const logs = [];
+    const original = console.log;
+    console.log = (...args) => { logs.push(args.join(' ')); };
+    try {
+      const event = parser.normalizeAiEvent({ ...aiEvent }, parserConfig, {
+        url,
+        fetchedAt: '2026-10-17T09:35:20.505Z',
+        html: html || segmentText,
+        segmentText,
+        dataFlags: { segment, ocr: true }
+      }, null, UNDATED_FIELDS);
+      return { event, logs };
+    } finally {
+      console.log = original;
+    }
+  }
+
+  test('undated row kept: massive.club/monthly-events BLOWPOP — the card says "Thursdays / Every Thursday", the Thursday rule is the page\'s own', () => {
+    const parser = undatedParser();
+    const { event, logs } = assembleCard(parser, { title: 'BLOWPOP', recurrence: 'FREQ=WEEKLY;BYDAY=TH' }, {
+      url: 'https://www.massive.club/monthly-events',
+      segmentText: 'BLOWPOP\nThursdays\nEvery Thursday at Massive is our wildly popular and free party BlowPOP! This is an homage to old school rPlace but with our modern twist, featuring your favorite pop divas, bangers and remixes, curated by Waxwitch and Repoman!'
+    });
+    assert.ok(event, 'the row ships');
+    assert.equal(event.startDate.toISOString().slice(0, 10), '2026-10-22', 'the fallback date is what the row needs');
+    assert.equal(event._dateOrigin.kind, 'rrule-fallback');
+    assert.equal(event._dateOrigin.real, true);
+    assert.match(event._dateOrigin.vouchedBy, /thursday/);
+    assert.equal(event._dateOrigin.matchesRule, true);
+    assert.equal(event._dateOrigin.window, 'card');
+    assert.equal(parser.undatedRowDrops.length, 0);
+    assert.ok(logs.some(line => line.startsWith('📅 UNDATED ROW: "BLOWPOP" keeps 2026-10-22')), 'the log names the cadence words that vouched');
+  });
+
+  test('undated row kept: massive.club Discipline "3rd Fridays" vouches a monthly rule; Bottom Forty\'s "the Sundays of …" vouches the day-phrase synthesis', () => {
+    const parser = undatedParser();
+    const discipline = assembleCard(parser, { title: 'Discipline (Kink/Fetish)', recurrence: 'FREQ=MONTHLY;BYDAY=3FR' }, {
+      url: 'https://www.massive.club/monthly-events',
+      segmentText: 'Discipline (Kink/Fetish)\n3rd Fridays\nDiscipline, hosted by Terry Miller, is Massive’s monthly event celebrating everything kink, fetish, gear and whatever you are into.'
+    }).event;
+    assert.ok(discipline);
+    assert.equal(discipline._dateOrigin.vouchedBy, '3rd fridays');
+    assert.equal(discipline._dateOrigin.matchesRule, true);
+    // No model rrule at all: the day-phrase scan writes the rule, and the
+    // same words vouch for it (source day-phrase).
+    const bottomForty = assembleCard(parser, { title: 'Bottom Forty' }, {
+      url: 'https://www.massive.club/monthly-events',
+      segmentText: 'Bottom Forty\n3-day Weekend Sundays\nJoin us the Sundays of Martin Luther Kind Day, Presidents Day, Memorial Day and Labor Day for the infamous Bottom Forty holiday weekend romps'
+    }).event;
+    assert.ok(bottomForty, 'a day-phrase row still ships');
+    assert.equal(bottomForty._dateOrigin.source, 'day-phrase');
+    assert.equal(bottomForty._dateOrigin.real, true);
+    assert.equal(parser.undatedRowDrops.length, 0);
+  });
+
+  test('undated row dropped: cadence words in ANOTHER card do not vouch — massive.club "Other Parties" sits on the page that says "Every Saturday", its own card says nothing', () => {
+    const parser = undatedParser();
+    const page = readUndated('massive-club-monthly-events.html');
+    assert.match(page, /Every Saturday join us at Massive/, 'the page states a Saturday cadence — for Massive Saturdays');
+    const { event, logs } = assembleCard(parser, { title: 'Other Parties', recurrence: 'FREQ=WEEKLY;BYDAY=SA' }, {
+      url: 'https://www.massive.club/monthly-events',
+      html: page,
+      segmentText: 'Other Parties at Massive (check calendar for upcoming dates)\nBRUT, BEARRACUDA, TUFF, BABE NIGHT, BLOOD RAVE, FLAMMABLE'
+    });
+    assert.equal(event, null, 'the row is dropped');
+    assert.equal(parser.undatedRowDrops.length, 1);
+    const drop = parser.undatedRowDrops[0];
+    assert.equal(drop.reason, UNDATED_REASON);
+    assert.equal(drop.title, 'Other Parties');
+    assert.equal(drop.host, 'massive.club');
+    assert.equal(drop.sourcePageUrl, 'https://www.massive.club/monthly-events');
+    assert.equal(drop.event.title, 'Other Parties', 'the dropped record is whole — the results UI shows it as it would have shipped');
+    assert.equal(drop.event._dateOrigin.real, false);
+    assert.ok(logs.some(line => /UNDATED ROW: "Other Parties" is dated \d{4}-\d{2}-\d{2} by FREQ=WEEKLY;BYDAY=SA, a rule its own card never states/.test(line)));
+  });
+
+  test('undated rows kept: thelumberyardbar.com/events QUEERAOKE ("Wednesday nights @ 8:30pm") and Dolly and the DJ ("Most Saturday Nights", day-phrase)', () => {
+    const parser = undatedParser();
+    const excerpt = readUndated('the-lumberyard-events-excerpt.html');
+    const queeraoke = assembleCard(parser, { title: 'QUEERAOKE', recurrence: 'FREQ=WEEKLY;BYDAY=WE' }, {
+      url: 'https://www.thelumberyardbar.com/events',
+      html: excerpt,
+      segmentText: 'QUEERAOKE\nWednesday nights @ 8:30pm\nCome Join Bumper and Sing your heart out.'
+    }).event;
+    assert.ok(queeraoke);
+    assert.equal(queeraoke._dateOrigin.vouchedBy, 'wednesday nights');
+    assert.equal(queeraoke.startDate.toISOString().slice(0, 10), '2026-10-21');
+    const dolly = assembleCard(parser, { title: 'Dolly and the DJ' }, {
+      url: 'https://www.thelumberyardbar.com/events',
+      html: excerpt,
+      segmentText: 'Dolly and the DJ\nMost Saturday Nights'
+    }).event;
+    assert.ok(dolly);
+    assert.equal(dolly._dateOrigin.source, 'day-phrase');
+    assert.equal(dolly._dateOrigin.vouchedBy, 'saturday nights');
+    assert.equal(parser.undatedRowDrops.length, 0);
+  });
+
+  test('undated rows: thelumberyardbar.com/mothly-events prints nothing but flyers — the card\'s OWN flyer text vouches ("EVERY 2ND FRIDAY", "1st Fridays", "Every third Saturday"), a flyerless card is dropped', () => {
+    const parser = undatedParser();
+    const { flyers } = JSON.parse(readUndated('the-lumberyard-monthly-flyers-ocr.json'));
+    const expected = {
+      'EXPOSED': { rrule: 'FREQ=MONTHLY;BYDAY=2FR', phrase: '2nd friday' },
+      'RAT CITY HONKY TONK': { rrule: 'FREQ=MONTHLY;BYDAY=1FR', phrase: '1st fridays' },
+      'CHOPPER \'N\' FRIENDS PUP SOCIAL': { rrule: 'FREQ=MONTHLY;BYDAY=3SA', phrase: 'third saturday' },
+      'SHOWTUNES THEATER THURSDAY': { rrule: 'FREQ=MONTHLY;BYDAY=1TH', phrase: 'first thursday' },
+      'GAY BINGO': { rrule: 'FREQ=MONTHLY;BYDAY=2TH', phrase: '2nd & 4th thursday' },
+      'Drink & Draw': { rrule: 'FREQ=MONTHLY;BYDAY=-1TU', phrase: 'last tuesday' }
+    };
+    let checked = 0;
+    for (const [title, want] of Object.entries(expected)) {
+      const flyer = flyers.find(entry => entry.text.replace(/\n/g, ' ').toUpperCase().includes(title.replace(/\s+/g, ' ').toUpperCase().slice(0, 12)));
+      assert.ok(flyer, `fixture carries the ${title} flyer`);
+      const html = `${parser.buildOcrSnippet(flyer.url, flyer.text)}\n\n<div>Gallery</div>`;
+      const { event } = assembleCard(parser, { title, recurrence: want.rrule }, {
+        url: 'https://www.thelumberyardbar.com/mothly-events',
+        html,
+        segmentText: 'Gallery'
+      });
+      assert.ok(event, `${title} ships on its flyer's own words`);
+      assert.equal(event._dateOrigin.vouchedBy, want.phrase, title);
+      assert.equal(event._dateOrigin.matchesRule, true, title);
+      assert.equal(event._dateOrigin.window, 'card', title);
+      checked++;
+    }
+    assert.equal(checked, 6);
+    assert.equal(parser.undatedRowDrops.length, 0);
+    // The same card with no flyer paired to it has nothing to say.
+    const { event } = assembleCard(parser, { title: 'EXPOSED UNDERWEAR OR LESS', recurrence: 'FREQ=MONTHLY;BYDAY=2FR' }, {
+      url: 'https://www.thelumberyardbar.com/mothly-events',
+      html: '<div>Gallery</div>',
+      segmentText: 'Gallery'
+    });
+    assert.equal(event, null);
+    assert.equal(parser.undatedRowDrops.length, 1);
+    assert.equal(parser.undatedRowDrops[0].reason, UNDATED_REASON);
+  });
+
+  test('undated rows: akbarsilverlake.com/about-us/our-team bios — "1st Monday each Month" and a weekday-named slot ("Our Tuesday Comedy Show!") vouch; a bio with no cadence and no flyer is dropped', () => {
+    const parser = undatedParser();
+    const page = readUndated('akbar-about-us-our-team.html');
+    assert.match(page, /1st Monday each Month/);
+    const learn = assembleCard(parser, { title: 'Learn the Words, Bitch!', recurrence: 'FREQ=MONTHLY;BYDAY=1MO' }, {
+      url: 'https://akbarsilverlake.com/about-us/our-team/',
+      html: page,
+      segmentText: 'Learn the Words, Bitch!\nwithy Tony Soto\nA lip sync competition that anyone can take part in, because why should drag queens have all the fun? Hosted by Silver Lake’s Iconic queen, Tony Soto, 1st Monday each Month.'
+    }).event;
+    assert.ok(learn);
+    assert.equal(learn._dateOrigin.vouchedBy, '1st monday');
+    assert.equal(learn.startDate.toISOString().slice(0, 10), '2026-11-02');
+    const drunk = assembleCard(parser, { title: 'Drunk On Stage', recurrence: 'FREQ=WEEKLY;BYDAY=TU' }, {
+      url: 'https://akbarsilverlake.com/about-us/our-team/',
+      html: page,
+      segmentText: 'Drunk on Stage\nStand Up, Writer, Actor\nOur Tuesday Comedy Show!'
+    }).event;
+    assert.ok(drunk, 'a bar names its weekly slot by the weekday alone');
+    assert.equal(drunk._dateOrigin.vouchKind, 'weekday');
+    assert.equal(drunk._dateOrigin.vouchedBy, 'tuesday');
+    assert.equal(parser.undatedRowDrops.length, 0);
+    // The live card carries its poster (OCR "EVERY 3RD THURSDAY"), which
+    // vouched in the 2026-10-18 measurement run; this is the same bio with
+    // no artwork paired — the page's prose alone names no night.
+    const terry = assembleCard(parser, { title: 'Terry Lee Presents', recurrence: 'FREQ=MONTHLY;BYDAY=3TH' }, {
+      url: 'https://akbarsilverlake.com/about-us/our-team/',
+      html: page,
+      segmentText: 'Rock Steady Lounge\nTerry Lee Presents\nI’m very proud to be doing ROCKSTEADY LOUNGE at Akbar for almost 17 years that has become an institution in the SKA, ROCKSTEADY and REGGAE scene.'
+    });
+    assert.equal(terry.event, null, 'the prose says this bio is about a DJ, not when he plays — without the poster the Thursday is the model\'s');
+    assert.equal(parser.undatedRowDrops.length, 1);
+    assert.equal(parser.undatedRowDrops[0].host, 'akbarsilverlake.com');
+  });
+
+  test('undated rows: a weekday that is part of a DATE vouches nothing — akbarsilverlake.com/upcoming-events "Mon 05 Oct Learn the Words" is dropped once its day has passed, kept report-only while the page\'s day lies ahead', () => {
+    const parser = undatedParser();
+    const page = readUndated('akbar-upcoming-events.html');
+    // The evidence gate refused the page's own "2026-10-05" for this row (run
+    // 20261018-052739) and the fallback wrote 11-02 instead.
+    const past = assembleCard(parser, {
+      title: 'Learn the Words, Bitch!',
+      recurrence: 'FREQ=MONTHLY;BYDAY=1MO',
+      __droppedFieldValues: { startDate: '2026-10-05' }
+    }, {
+      url: 'https://akbarsilverlake.com/upcoming-events/',
+      html: page,
+      segmentText: '05\nOct\nMon\nLearn the Words, Bitch!\nThe Legendary Lip Sync Contest'
+    });
+    assert.equal(past.event, null);
+    assert.equal(parser.undatedRowDrops.length, 1);
+    assert.ok(past.logs.some(line => /the page's only date for it, 2026-10-05, has passed — dropped/.test(line)));
+    // Same shape with the page's own day still ahead: the gate may be wrong
+    // about a real dated night, so the row is shown, never silenced.
+    const ahead = assembleCard(parser, {
+      title: 'Learn the Words, Bitch!',
+      recurrence: 'FREQ=MONTHLY;BYDAY=1MO',
+      __droppedFieldValues: { startDate: '2026-11-02' }
+    }, {
+      url: 'https://akbarsilverlake.com/upcoming-events/',
+      html: page.replace('Pink Pony Club', 'Nov 2 Pink Pony Club'),
+      segmentText: '02\nNov\nMon\nLearn the Words, Bitch!'
+    });
+    assert.ok(ahead.event, 'kept');
+    assert.equal(ahead.event._dateOrigin.real, false);
+    assert.equal(ahead.event._dateOrigin.vouchKind, 'stated-date-ahead');
+    assert.equal(ahead.event._dateOrigin.statedFutureDate, '2026-11-02');
+    assert.equal(parser.undatedRowDrops.length, 1, 'no second drop');
+  });
+
+  test('undated rows: campoutpoconos.com/local-attractions — the page heading as a row is kept only while its window holds the farmers market\'s "Every Saturday"; the intro alone is dropped', () => {
+    const parser = undatedParser();
+    const page = readUndated('camp-out-poconos-local-attractions.html');
+    assert.match(page, /Every Saturday/);
+    // The whole page as the window (a page the splitter did not split): the
+    // rule keeps the row — the cadence is real, the TITLE is the page's h1
+    // fused with a card, which is another rule's problem (reported).
+    const whole = assembleCard(parser, { title: 'Things to Do Near Camp Out Poconos', recurrence: 'FREQ=WEEKLY;BYDAY=SA' }, {
+      url: 'https://campoutpoconos.com/local-attractions/',
+      html: page,
+      segmentText: '',
+      segment: false
+    });
+    assert.ok(whole.event);
+    assert.equal(whole.event._dateOrigin.window, 'page');
+    assert.equal(whole.event._dateOrigin.vouchedBy, 'every saturday');
+    const intro = assembleCard(parser, { title: 'Things to Do Near Camp Out Poconos', recurrence: 'FREQ=WEEKLY;BYDAY=SA' }, {
+      url: 'https://campoutpoconos.com/local-attractions/',
+      html: page,
+      segmentText: 'Things to Do Near Camp Out Poconos\nPlanning a visit to Camp Out Poconos?\nExplore some of our favorite local spots, from scenic hikes and charming towns to breweries, vintage shopping, and LGBTQ+-friendly destinations. Whether you’re here for the weekend or the season, there’s plenty to discover just beyond camp.'
+    });
+    assert.equal(intro.event, null, '"here for the weekend" is a visit, not a cadence');
+    assert.equal(parser.undatedRowDrops.length, 1);
+  });
+
+  test('undated rows: bearworldmag.com roundup "Friday 18th September 2026: Furry Fridays / The Second Pour" — the date-bound Friday vouches nothing, the plural "Fridays" does (kept, documented)', () => {
+    const parser = undatedParser();
+    const post = readUndated('bear-world-magazine-hcb-september-post-excerpt.html');
+    const cadence = parser.findUndatedRowCadence(['friday 18th september 2026: the second pour'], ['FR']);
+    assert.equal(cadence, null, 'a weekday beside an ordinal day and a month is a date');
+    const { event } = assembleCard(parser, { title: 'The Second Pour', recurrence: 'FREQ=WEEKLY;BYDAY=FR', __droppedFieldValues: { startDate: '2026-09-18' } }, {
+      url: 'https://bearworldmag.com/wp-json/wp/v2/posts',
+      html: post,
+      segmentText: 'Wk3 of September: Friday 18th September 2026: Furry Fridays\nEvent Name: The Second Pour – Furry Friday – KCH (Pub Session)\nLocation: Kings Cross Hotel, aka KCH (248 William Street, Pott Point, NSW, 2011)\nTime: 7:00 pm until late (11:59pm)'
+    });
+    assert.ok(event, 'kept: the row names a Friday series by name');
+    assert.equal(event._dateOrigin.vouchedBy, 'fridays');
+  });
+
+  test('undated rows: a rule the parser configuration supplies is the owner\'s own statement — kept without asking the page', () => {
+    const parser = undatedParser();
+    const { event, logs } = assembleCard(parser, { title: 'Bear Night' }, {
+      url: 'https://venue.example/about',
+      segmentText: 'Bear Night\nOur friendliest crowd. Cheap beer.',
+      parserConfig: { metadata: { recurrence: { value: 'FREQ=WEEKLY;BYDAY=TH' } } }
+    });
+    assert.ok(event);
+    assert.equal(event._dateOrigin.source, 'parser-metadata');
+    assert.equal(event._dateOrigin.real, true);
+    assert.ok(logs.some(line => /the parser configuration states the rule/.test(line)));
+    assert.equal(parser.undatedRowDrops.length, 0);
+  });
+
+  test('undated rows: rows the page DATES are out of scope — a furball-style year-less "10/3" row, a dated row that also carries a rule, and a beefdip hero with "Jan 23 – 31" carry no stamp and are never dropped', () => {
+    const parser = undatedParser();
+    const furball = assembleCard(parser, { title: 'FURBALL DC', startDate: '2026-10-03', startTime: '22:00' }, {
+      url: 'https://furball.nyc/',
+      segmentText: '10/3 FURBALL DC - ICON'
+    }).event;
+    assert.ok(furball);
+    assert.equal(furball._dateOrigin, undefined);
+    const dated = assembleCard(parser, { title: 'Massive Saturdays', startDate: '2026-10-24', startTime: '22:00', recurrence: 'FREQ=WEEKLY;BYDAY=SA' }, {
+      url: 'https://www.massive.club/calendar',
+      segmentText: 'Massive Saturdays\nSat, Oct 24, 2026 10:00 PM'
+    }).event;
+    assert.ok(dated);
+    assert.equal(dated._dateOrigin, undefined, 'a stated date never enters the fallback');
+    const hero = readUndated('beefdip-planned-events-hero-excerpt.html');
+    assert.match(hero, /Jan 23 – 31/);
+    const beefdip = assembleCard(parser, { title: 'BeefDip Bear Week', startDate: '2027-01-23' }, {
+      url: 'https://beefdip.com/planned-events/',
+      html: hero,
+      segmentText: 'BeefDip Bear Week 2026\nJan 23 – 31 • Puerto Vallarta\n9 DAYS • 20+ PARTIES • UNLIMITED MEMORIES'
+    }).event;
+    assert.ok(beefdip);
+    assert.equal(beefdip._dateOrigin, undefined);
+    assert.equal(parser.undatedRowDrops.length, 0);
+  });
+
+  test('undated rows: parseEvents hands the page\'s drops to the caller and starts each page clean', async () => {
+    const parser = undatedParser();
+    parser.undatedRowDrops = [{ title: 'stale from a previous page' }];
+    const result = await parser.parseEvents({ url: 'https://venue.example/', html: '<html><body><p>Nothing here.</p></body></html>' }, { name: 'Venue', urls: ['https://venue.example/'] }, null, null, null);
+    assert.ok(Array.isArray(result.undatedRowDrops));
+    assert.equal(result.undatedRowDrops.length, 0, 'the previous page\'s drops never leak into this page\'s result');
+  });
+}

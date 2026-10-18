@@ -8521,6 +8521,11 @@ class SharedCore {
         // Linked ICS feeds discovered during the crawl (report-only evidence,
         // never a source this wave) — see collectIcsFeedFindings.
         const icsFeedCollector = { seen: new Set(), findings: [] };
+        // Rows the AI parser assembled and then dropped because their date was
+        // computed from a rule the page never states (AiWebParser
+        // .assessUndatedRow). Listed with the bear-check drops below so the
+        // results drop list and the per-host ledger see them.
+        const undatedDropCollector = [];
 
         await this.crawlUrlsForEvents({
             urls: effectiveParserConfig.urls || [],
@@ -8544,7 +8549,8 @@ class SharedCore {
             crawlErrorCollector,
             crawlGoneCollector,
             foreignOrgDropCollector,
-            icsFeedCollector
+            icsFeedCollector,
+            undatedDropCollector
         });
 
         // ONE RECORD, ONE DESTINATION. A record the parser stamped
@@ -8771,8 +8777,12 @@ class SharedCore {
             );
         }
 
-        if (bearDropCollector.length > 0) {
-            result.bearDroppedEvents = bearDropCollector;
+        // Undated-row drops ride with the bear-check drops: one drop list in
+        // the results UI, one dropReasons tally per host in the ledger. Their
+        // reason ('undated: …') tells them apart.
+        const droppedRows = [...bearDropCollector, ...undatedDropCollector];
+        if (droppedRows.length > 0) {
+            result.bearDroppedEvents = droppedRows;
         }
 
         if (discoveryOnly && discoveryTreeCollector) {
@@ -11021,6 +11031,9 @@ class SharedCore {
         // Linked-ICS-feed discovery (report-only): { seen: Set, findings: [] }
         // scoped to one parser run — see collectIcsFeedFindings.
         icsFeedCollector = null,
+        // Undated-row drops the AI parser reports per page
+        // (parseResult.undatedRowDrops) — see processParser.
+        undatedDropCollector = null,
         // URL dedupe keys of the links in `urls` that are PAGES OF EVENTS the
         // parent page already published (a row's own detail page, an event's
         // own ticket link). They are enrichment, not discovery, and spend
@@ -11323,6 +11336,18 @@ class SharedCore {
                             }
                         }
                     }
+                }
+
+                // Rows this page dropped as undated (see AiWebParser
+                // .assessUndatedRow): collected with the page they came from.
+                if (undatedDropCollector && parseResult && Array.isArray(parseResult.undatedRowDrops) && parseResult.undatedRowDrops.length > 0) {
+                    for (const drop of parseResult.undatedRowDrops) {
+                        if (!drop || typeof drop !== 'object') continue;
+                        if (!drop.sourcePageUrl) drop.sourcePageUrl = url;
+                        if (drop.event && typeof drop.event === 'object' && !drop.event._sourcePageUrl) drop.event._sourcePageUrl = drop.sourcePageUrl;
+                        undatedDropCollector.push(drop);
+                    }
+                    await displayAdapter.logInfo(`SYSTEM: ${url} → ${parseResult.undatedRowDrops.length} undated row(s) dropped (no date or cadence on the page): ${parseResult.undatedRowDrops.map(drop => `"${drop && drop.title || 'Unknown'}"`).join(', ')}`);
                 }
 
                 if (discoveryTreeCollector && segmentCount > 0) {
@@ -11689,7 +11714,8 @@ class SharedCore {
                             crawlErrorCollector,
                             crawlGoneCollector,
                             foreignOrgDropCollector,
-                            icsFeedCollector
+                            icsFeedCollector,
+                            undatedDropCollector
                         });
                     }
                 }
@@ -11781,7 +11807,8 @@ class SharedCore {
                             crawlErrorCollector,
                             crawlGoneCollector,
                             foreignOrgDropCollector,
-                            icsFeedCollector
+                            icsFeedCollector,
+                            undatedDropCollector
                         });
                     }
                 } else {
@@ -13245,7 +13272,13 @@ class SharedCore {
             event._pageSiteRole = role;
             stamped++;
         }
-        const dropped = parseResult && Array.isArray(parseResult.bearDroppedEvents) ? parseResult.bearDroppedEvents : [];
+        // Dropped records too — the bear check's and the undated-row rule's
+        // (parseResult.undatedRowDrops): a manual rescue must see the same
+        // fact.
+        const dropped = [
+            ...(parseResult && Array.isArray(parseResult.bearDroppedEvents) ? parseResult.bearDroppedEvents : []),
+            ...(parseResult && Array.isArray(parseResult.undatedRowDrops) ? parseResult.undatedRowDrops : [])
+        ];
         for (const entry of dropped) {
             const event = entry && entry.event;
             if (!event || typeof event !== 'object' || !Object.isExtensible(event) || event._pageSiteRole) continue;

@@ -28636,3 +28636,63 @@ test('a replaced primary picture takes its stale crop with it: the saved orienta
   assert.ok(!finalEvent.imageVertical, `stale crop dropped: ${finalEvent.imageVertical}`);
   assert.ok(logs.some(line => line.includes('dropped imageVertical — a crop of the replaced primary picture')), logs.join('\n'));
 });
+
+// ── Undated-row drops ride the bear-drop channel (2026-10-18) ────────────────
+test('undated-row drops reported by the parser reach bearDroppedEvents (results drop list) and the per-host ledger as "undated: …"; feed rows without the stamp are untouched', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const httpAdapter = {
+    fetchData: async (url) => ({ html: '<html><body>venue calendar</body></html>', url, statusCode: 200, headers: {} }),
+    postJson: async () => ({ ok: true, status: 200, text: JSON.stringify({ response: JSON.stringify({ verdict: 'bear', reason: 'bear night' }) }) })
+  };
+  const icsRow = { title: 'Bear Night', startDate: futureIsoAt(10, 21), bar: 'The Lumber Yard Bar', city: 'seattle', timezone: 'America/Los_Angeles', source: 'ics', url: 'https://www.thelumberyardbar.com/events/bear-night' };
+  const jsonLdRow = { title: 'Bear Happy Hour', startDate: futureIsoAt(12, 18), bar: 'Akbar', city: 'la', timezone: 'America/Los_Angeles', source: 'jsonld', url: 'https://akbarsilverlake.com/event/bear-happy-hour/' };
+  const undatedDrop = {
+    title: 'Terry Lee Presents',
+    startDate: new Date(futureIsoAt(33, 21)),
+    venue: 'Akbar',
+    reason: 'undated: no date or cadence on the page',
+    detail: 'dated by FREQ=MONTHLY;BYDAY=3TH (model-rrule); its own card states no date and no cadence',
+    host: 'akbarsilverlake.com',
+    sourcePageUrl: 'https://akbarsilverlake.com/about-us/our-team/',
+    event: { title: 'Terry Lee Presents', startDate: new Date(futureIsoAt(33, 21)), bar: 'Akbar', city: 'la', timezone: 'America/Los_Angeles', source: 'ai-web', url: 'https://akbarsilverlake.com/about-us/our-team/', _dateOrigin: { kind: 'rrule-fallback', real: false } }
+  };
+  let served = false;
+  const parsers = {
+    'ai-web': {
+      parseEvents: () => {
+        if (served) return { events: [], additionalLinks: [], undatedRowDrops: [] };
+        served = true;
+        return { events: [{ ...icsRow }, { ...jsonLdRow }], additionalLinks: [], undatedRowDrops: [undatedDrop] };
+      }
+    }
+  };
+  const parserConfig = {
+    name: 'Akbar',
+    urls: ['https://akbarsilverlake.com/about-us/our-team/'],
+    ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model', classifyPages: false, arbitrateMerges: false, bearCheck: { mode: 'enforce' } }
+  };
+  const result = await core.processParser(parserConfig, {}, httpAdapter, display, parsers, new Set());
+  assert.equal(result.events.length, 2, 'the ICS and JSON-LD rows are untouched');
+  assert.ok(result.events.every(event => !event._dateOrigin));
+  const dropped = result.bearDroppedEvents || [];
+  assert.equal(dropped.length, 1, 'one card in the drop list');
+  assert.equal(dropped[0].reason, 'undated: no date or cadence on the page');
+  assert.equal(dropped[0].title, 'Terry Lee Presents');
+  assert.equal(dropped[0].host, 'akbarsilverlake.com');
+  assert.equal(dropped[0].event._sourcePageUrl, 'https://akbarsilverlake.com/about-us/our-team/');
+
+  // The ledger: the host's bear funnel counts it as an extracted row the run
+  // let go, under its own reason.
+  const ledger = SharedCore.buildSourceLedger({
+    summary: { runId: '20261018-120000', timestamp: '2026-10-18T12:00:00.000Z' },
+    parserResults: [{ name: 'Akbar', totalEvents: 3, durationMs: 100, config: { urls: parserConfig.urls }, urlClassifications: {}, events: result.events }],
+    bearDroppedEvents: dropped,
+    analyzedEvents: [],
+    errors: []
+  }, { now: new Date('2026-10-18T12:00:00Z') });
+  const akbar = ledger.records.find(record => record.host === 'akbarsilverlake.com');
+  assert.ok(akbar, 'the host has a ledger line');
+  assert.equal(akbar.quality.bear.ai_dropped, 1);
+  assert.equal(akbar.quality.bear.top_reason, 'undated: no date or cadence on the page');
+});
