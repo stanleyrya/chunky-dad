@@ -1488,17 +1488,12 @@ class AiWebParser {
             // home page is a link hub with the Elfsight embed in a shared
             // block (crawl from the root, 2026-10-08): the widget published
             // 92 nights and the hub route returned none of them.
-            const doorReadSources = new Set(['squarespace', 'eventon', 'wix', 'mec', 'elfsight', 'dice']);
-            const useStructuredEvents = parserConfig.discoveryOnly !== true
-                && (pageClassification !== 'link-aggregator' || doorReadSources.has(structuredSource))
-                && structuredEvents.length > 0
-                // A multi-event page with a single structured node likely marks up only its
-                // featured event — fall through to segment extraction for full coverage.
-                // The page's OWN flight data is its whole listing however short
-                // (whereto.party's one-event city hubs: Paris, Toulouse — the
-                // fall-through read the hub's header as an event and the one
-                // card a second time, run 20261012-214806).
-                && (pageClassification !== 'multi-event-page' || structuredEvents.length >= 2 || structuredSource === 'page-data');
+            const useStructuredEvents = AiWebParser.shouldReadStructuredEvents({
+                discoveryOnly: parserConfig.discoveryOnly === true,
+                pageClassification,
+                structuredSource,
+                structuredCount: structuredEvents.length
+            });
             if (useStructuredEvents) {
                 // "skipping OCR" was true when this route read no images at
                 // all; the events' own artwork is OCR'd below, so the line
@@ -1910,7 +1905,10 @@ class AiWebParser {
                 this.applyJsonApiStructuredEnrichment(events, jsonApiEvents, sourceUrl);
             }
 
-            const keptEvents = this.filterEventsByDiscoveryAllowlist(events, sourceUrl, parserConfig);
+            const allowedEvents = this.filterEventsByDiscoveryAllowlist(events, sourceUrl, parserConfig);
+            // A record named after a button or a photo caption, and after
+            // nothing else on the page, is page furniture the model adopted.
+            const keptEvents = this.dropPageFurnitureTitledEvents(allowedEvents, effectiveHtmlData && effectiveHtmlData.html, sourceUrl);
             // A page that places its cards in its own prose (see
             // placeEventsAtPageStatedVenue).
             this.placeEventsAtPageStatedVenue(keptEvents, effectiveHtmlData, parserConfig);
@@ -3332,6 +3330,88 @@ class AiWebParser {
     // description and no link of its own, is that sibling's sub-heading.
     // Fails closed: any token the sibling's title does not carry, any
     // description, any link, or another day keeps the record.
+    // Page furniture a model adopts as an event name: the label of a button
+    // ("Load More" on eaglemanchester.com's home page, run 20261017-054812,
+    // dated by an invented repeat) and the caption under a photo ("Robert
+    // Valin, photo by Catalin Stelian", "PLPN Flag – Photo Credit: …",
+    // "Bears enjoying a cold pint in Halifax" — bearworldmag.com's recap
+    // articles, same run; each became a dated "event" the owner had to judge).
+    // The test is where the words live, not what they say: a title whose
+    // every occurrence on the page is inside a <button>/<input type=submit>
+    // (or its aria-label) or inside a <figcaption> is that control's label or
+    // that picture's caption. A caption that names a party the article's own
+    // prose also names passes untouched — the prose carries it. Fails open
+    // on any page without such elements.
+    dropPageFurnitureTitledEvents(events, html, sourceUrl = '') {
+        const list = Array.isArray(events) ? events.filter(Boolean) : [];
+        const furniture = this.collectPageFurnitureTexts(html);
+        if (list.length === 0 || (furniture.buttons.size === 0 && furniture.captions.length === 0)) return list;
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+        const prose = ` ${fold(furniture.prose)} `;
+        const kept = [];
+        for (const event of list) {
+            const title = fold(event.title);
+            if (!title || prose.includes(` ${title} `)) { kept.push(event); continue; }
+            let reason = '';
+            if (furniture.buttons.has(title)) reason = 'the label of a button';
+            else if (furniture.captions.some(caption => caption === title
+                || (caption.startsWith(`${title} `) && /^(photo|picture|image|credit|by|courtesy|pictured)\b/.test(caption.slice(title.length + 1))))) {
+                reason = 'the caption under a photo';
+            }
+            if (!reason) { kept.push(event); continue; }
+            console.log(`🪑 FURNITURE: "${event.title}" is ${reason} on ${sourceUrl || 'this page'} and appears nowhere else on the page — not an event`);
+        }
+        return kept;
+    }
+
+    // The page's control labels and photo captions, each folded, plus the
+    // page's text with those elements removed (so "appears nowhere else" can
+    // be asked). Button labels: <button> text, aria-label on buttons and
+    // role=button elements, submit/button inputs' value. Captions:
+    // <figcaption> text. Scripts and styles are never text.
+    collectPageFurnitureTexts(html) {
+        const source = String(html || '');
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+        const textOf = (markup) => fold(this.decodeBasicEntities(this.stripTags(String(markup || ''))));
+        const attr = (tag, name) => {
+            const match = new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i').exec(tag);
+            return match ? (match[1] !== undefined ? match[1] : match[2]) : '';
+        };
+        const buttons = new Set();
+        const captions = [];
+        if (!source || !/<(?:button|figcaption|input)\b|role\s*=\s*["']button["']/i.test(source)) {
+            return { buttons, captions, prose: '' };
+        }
+        let prose = source.replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ');
+        prose = prose.replace(/<button\b([^>]*)>([\s\S]*?)<\/button>/gi, (whole, tag, inner) => {
+            const label = textOf(inner) || fold(this.decodeBasicEntities(attr(tag, 'aria-label')));
+            if (label) buttons.add(label);
+            const aria = fold(this.decodeBasicEntities(attr(tag, 'aria-label')));
+            if (aria) buttons.add(aria);
+            return ' ';
+        });
+        prose = prose.replace(/<input\b[^>]*>/gi, (tag) => {
+            if (/\stype\s*=\s*["'](?:submit|button|reset)["']/i.test(tag)) {
+                const label = fold(this.decodeBasicEntities(attr(tag, 'value'))) || fold(this.decodeBasicEntities(attr(tag, 'aria-label')));
+                if (label) buttons.add(label);
+            }
+            return ' ';
+        });
+        prose = prose.replace(/<([a-z][a-z0-9]*)\b([^>]*\brole\s*=\s*["']button["'][^>]*)>([\s\S]*?)<\/\1>/gi, (whole, name, tag, inner) => {
+            const label = textOf(inner) || fold(this.decodeBasicEntities(attr(tag, 'aria-label')));
+            if (label) buttons.add(label);
+            return ' ';
+        });
+        prose = prose.replace(/<figcaption\b[^>]*>([\s\S]*?)<\/figcaption>/gi, (whole, inner) => {
+            const caption = textOf(inner);
+            if (caption) captions.push(caption);
+            return ' ';
+        });
+        return { buttons, captions, prose: this.decodeBasicEntities(this.stripTags(prose)) };
+    }
+
     foldSubheadingEvents(events, sourceUrl = '') {
         const list = Array.isArray(events) ? events.filter(Boolean) : [];
         if (list.length < 2 || !this.core || typeof this.core.getCrossSourceTitleTokens !== 'function') return list;
@@ -9009,6 +9089,29 @@ class AiWebParser {
         return rows;
     }
 
+    // The alt text of the images in an HTML fragment whose visible text is
+    // EMPTY: a WordPress post whose whole body is one pasted poster carries
+    // the venue's copy in the attachment's alt ("Sunday Beer Bust 2pm $5
+    // domestic drafts", eaglela.com — the only prose the site publishes for
+    // the night, and the only place its clock is written). stripTags threw
+    // it away with the tag; 86% of the kept Eagle LA events shipped with no
+    // description (run 20261017-054812). '' when the fragment has text of
+    // its own (then that text is the description) or no captioned image.
+    imageCaptionFromMarkup(html) {
+        const markup = String(html || '');
+        if (!markup || !/<img\b/i.test(markup)) return '';
+        const visible = this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(markup)));
+        if (visible) return '';
+        const captions = [];
+        const altPattern = /<img\b[^>]*\balt\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+        let match;
+        while ((match = altPattern.exec(markup)) !== null) {
+            const caption = this.normalizeWhitespace(this.decodeEntitiesFully(match[1] !== undefined ? match[1] : match[2]));
+            if (caption && !captions.includes(caption)) captions.push(caption);
+        }
+        return captions.join(' ');
+    }
+
     readMecGridSideList(grid, sourceUrl, cityConfig) {
         const rows = [];
         const sectionPattern = /<div\b[^>]*class="[^"]*mec-calendar-events-sec[^"]*"[^>]*data-mec-cell="(\d{8})"[^>]*>([\s\S]*?)(?=<div\b[^>]*class="[^"]*mec-calendar-events-sec\b|$)/gi;
@@ -9016,6 +9119,21 @@ class AiWebParser {
         while ((section = sectionPattern.exec(grid)) !== null) {
             const day = section[1];
             const body = section[2];
+            // The section's <article> rows repeat each occurrence as a
+            // thumbnail whose alt is the same attachment caption — read when
+            // the JSON-LD description carries none (the poster pasted with an
+            // empty alt). Keyed by the row's own link.
+            const articleCaptionByUrl = new Map();
+            const articlePattern = /<article\b[\s\S]*?<\/article>/gi;
+            let article;
+            while ((article = articlePattern.exec(body)) !== null) {
+                const hrefMatch = article[0].match(/\bhref="([^"]+)"/i);
+                const altMatch = article[0].match(/<img\b[^>]*\balt="([^"]+)"/i);
+                if (!hrefMatch || !altMatch) continue;
+                const key = this.normalizeHttpUrlValue(this.decodeBasicEntities(hrefMatch[1]).trim()) || '';
+                const caption = this.normalizeWhitespace(this.decodeEntitiesFully(altMatch[1]));
+                if (key && caption && !articleCaptionByUrl.has(key)) articleCaptionByUrl.set(key, caption);
+            }
             const blockPattern = /<script\b[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
             let block;
             while ((block = blockPattern.exec(body)) !== null) {
@@ -9034,12 +9152,20 @@ class AiWebParser {
                 const timeMatch = startText.match(/T(\d{2}:\d{2})/);
                 // The description arrives HTML-escaped inside the JSON
                 // ("&lt;p&gt;Beer &amp;amp; bears&lt;/p&gt;"): decode, strip, decode again.
+                const descriptionMarkup = this.decodeEntitiesFully(String(node.description || ''));
+                let description = cleanText(descriptionMarkup);
+                let descriptionIsCaption = false;
+                if (!description) {
+                    description = this.imageCaptionFromMarkup(descriptionMarkup) || articleCaptionByUrl.get(href) || '';
+                    descriptionIsCaption = Boolean(description);
+                }
                 const event = this.buildMecOccurrenceEvent({
                     title, href, day,
                     timeText: timeMatch ? timeMatch[1] : '',
-                    description: cleanText(this.decodeEntitiesFully(String(node.description || ''))),
+                    description,
                     image: this.normalizeHttpUrlValue(String(typeof node.image === 'string' ? node.image : (node.image && node.image.url) || '').trim()) || ''
                 }, sourceUrl);
+                if (event && descriptionIsCaption) event._descriptionFromImageCaption = true;
                 if (event) rows.push(event);
             }
         }
@@ -9913,21 +10039,25 @@ class AiWebParser {
         // 20260913-152123) carried only 40.7207559, -74.0007613 — Squarespace's
         // own New York default — and geocoded to 443–459 Broadway while its
         // flyer says 60 Rowes Wharf, Boston.
-        // …and so is a location with a name and no street line whose map pin
-        // IS the template's marker (findSquarespaceTemplateMarker): the
-        // monthly meetings at "Online/Virtual" carried that pin, were
+        // …and so is ANY location whose map pin IS the template's marker
+        // (findSquarespaceTemplateMarker), whatever its address lines say:
+        // the monthly meetings at "Online/Virtual" carried that pin, were
         // reverse-geocoded to "459, Broadway, Little Italy, Lower
-        // Manhattan" and shipped with that address (run 20260929-091555).
-        // A street line beneath the name is the editor stating a place, and
-        // keeps its pin whatever it equals.
+        // Manhattan" and shipped with that address (run 20260929-091555);
+        // "Bears at the Beach 2026" at "Nantasket Beach" / "Hull, MA" carried
+        // the same New York pin beside a real locality line and shipped to
+        // the calendar at 40.7207559, -74.0007613 (run 20261017-054812)
+        // because the guard used to stand down for a row with an address.
+        // The address is the editor stating a place; the pin is the
+        // platform stating nothing — the address geocodes on its own.
         const pickCoordinate = (...values) => values.map(Number).find(value => Number.isFinite(value) && value !== 0);
         const statesPlace = Boolean(clean(location.addressTitle) || addressParts.length > 0);
         let lat = statesPlace ? pickCoordinate(location.mapLat, location.markerLat) : undefined;
         let lng = statesPlace ? pickCoordinate(location.mapLng, location.markerLng) : undefined;
         const templateMarker = options && typeof options.templateMarker === 'string' ? options.templateMarker : '';
-        if (templateMarker && addressParts.length === 0 && Number.isFinite(lat) && Number.isFinite(lng)
+        if (templateMarker && Number.isFinite(lat) && Number.isFinite(lng)
             && `${lat.toFixed(5)},${lng.toFixed(5)}` === templateMarker) {
-            console.log(`🟦 SQUARESPACE: "${title}" carries the template's own marker (${lat}, ${lng}) and no street line — an untouched map, not a place; no pin taken`);
+            console.log(`🟦 SQUARESPACE: "${title}" carries the template's own marker (${lat}, ${lng})${addressParts.length ? ` beside the address "${addressParts.join(', ')}"` : ' and no street line'} — an untouched map, not a place; no pin taken${addressParts.length ? ', the address geocodes on its own' : ''}`);
             lat = undefined;
             lng = undefined;
         }
@@ -10213,6 +10343,32 @@ class AiWebParser {
         const nextEnd = Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 1) / 1000 + clockOffset - 1;
         return { ...sc, fixed_month: String(target.getUTCMonth() + 1), fixed_year: String(target.getUTCFullYear()),
             focus_start_date_range: String(nextStart), focus_end_date_range: String(nextEnd) };
+    }
+
+    // Which route reads a page: its structured events, or the segment/AI
+    // pass. A link hub's own JSON-LD / page data is not read (bearracuda.com
+    // marks up a partial set on its hub; the detail pages are read instead)
+    // — but a calendar DOOR the page itself opened (a widget boot, a
+    // collection twin, a month grid) is the site's complete calendar
+    // whatever the HTML shell around it reads as (Rockbar's home page, crawl
+    // from the root 2026-10-08: the widget published 92 nights and the hub
+    // route returned none of them). A multi-event page with a single JSON-LD
+    // node likely marks up only its featured event — fall through to segment
+    // extraction for full coverage — but the page's OWN flight data
+    // (whereto.party's one-event city hubs, run 20261012-214806) and a
+    // door's single row are the whole listing however short: a quiet EventON
+    // calendar answered its month replay with ONE card (woofsatlanta.com,
+    // run 20261017-054812), the fall-through re-read that card by AI, dated
+    // it from an undated flyer, dropped it as a date orphan, and shipped the
+    // page's business-hours block as an event titled "Facebook" instead.
+    static shouldReadStructuredEvents({ discoveryOnly = false, pageClassification = '', structuredSource = null, structuredCount = 0 } = {}) {
+        const DOOR_READ_SOURCES = new Set(['squarespace', 'eventon', 'wix', 'mec', 'elfsight', 'dice']);
+        if (discoveryOnly || !structuredSource || !(structuredCount > 0)) return false;
+        const isDoor = DOOR_READ_SOURCES.has(structuredSource);
+        if (pageClassification === 'link-aggregator' && !isDoor) return false;
+        if (pageClassification === 'multi-event-page' && structuredCount < 2
+            && structuredSource !== 'page-data' && !isDoor) return false;
+        return true;
     }
 
     // The answer's event cards, made readable by the ordinary structured-data
@@ -13171,6 +13327,13 @@ class AiWebParser {
             return true;
         }
         const streetLine = String(address || '').split(',')[0];
+        // The twin rule below catches a venue NAME that is the address's own
+        // street line ("10-90 Wyckoff" / "10-90 Wyckoff, Queens"). A first
+        // address part with no house number is the publisher repeating the
+        // venue's name inside its address ("The Hub @ Eden, 138 Gooch
+        // Street" — Outsavvy, run 20261017-054812: the bar was dropped and
+        // "Dandy : BEAR BRUM 2026" shipped with no place), not a street line.
+        if (!/^\s*\d{1,6}(?:-\d{1,6})?\s+/.test(streetLine)) return false;
         const expandAbbreviation = {
             st: 'street', ave: 'avenue', blvd: 'boulevard', rd: 'road',
             dr: 'drive', ln: 'lane', pl: 'place', ct: 'court',
@@ -15549,11 +15712,47 @@ class AiWebParser {
     // collected so a row can pick one its own master actually has.
     readImageUrlTemplateFromPage(body, ids) {
         const source = String(body || '');
+        const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // The page renders whatever cards are on its board that day, so the
+        // exact ids the feed just handed us are usually NOT among its URLs
+        // (tockify.com/thotyssey: 12 cards of one day against a feed of 394
+        // rows — images arrived on 4 runs of 10 and vanished on the others as
+        // the board turned over). The template does not depend on which
+        // asset is shown: every URL of the same OWNER carries the same shape,
+        // so a URL of the feed's ownerId followed by an id-shaped segment
+        // (same length and alphabet as the feed's own ids) teaches it too.
+        // The exact-id match is still tried first.
+        const attempts = [];
         for (const [id, record] of ids) {
-            const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const match = source.match(new RegExp(`https?://[^"'\\s\\\\<>]*${escaped}[^"'\\s\\\\<>]*`, 'i'));
-            if (!match) continue;
-            let template = match[0];
+            const match = source.match(new RegExp(`https?://[^"'\\s\\\\<>]*${escape(id)}[^"'\\s\\\\<>]*`, 'i'));
+            if (match) attempts.push({ url: match[0], id, record });
+        }
+        if (attempts.length === 0) {
+            const owners = new Map();
+            for (const [id, record] of ids) {
+                if (record && record.ownerId && !owners.has(record.ownerId)) owners.set(record.ownerId, id);
+            }
+            for (const [ownerId, sampleId] of owners) {
+                const alphabet = /^[0-9a-f]+$/i.test(sampleId) ? '[0-9a-f]' : '[A-Za-z0-9_-]';
+                const shape = `${alphabet}{${sampleId.length}}`;
+                // The page may render the same owner's assets from more than
+                // one CDN host (a header image on one, the cards on another):
+                // the shape most of its URLs share is the calendar's.
+                const tally = new Map();
+                for (const found of source.matchAll(new RegExp(`https?://[^"'\\s\\\\<>]*${escape(ownerId)}/(${shape})(?![A-Za-z0-9])[^"'\\s\\\\<>]*`, 'gi'))) {
+                    const key = found[0].split(found[1]).join('{id}').replace(/(\d{2,4})(?=\D*$)/, '{size}');
+                    const entry = tally.get(key) || { count: 0, url: found[0], id: found[1] };
+                    entry.count += 1;
+                    tally.set(key, entry);
+                }
+                const best = [...tally.values()].sort((a, b) => b.count - a.count)[0];
+                if (!best) continue;
+                attempts.push({ url: best.url, id: best.id, record: { ownerId }, learnedFromOwner: true });
+                break;
+            }
+        }
+        for (const { url, id, record } of attempts) {
+            let template = url;
             if (record.ownerId && template.includes(record.ownerId)) {
                 template = template.split(record.ownerId).join('{ownerId}');
             }
@@ -15565,7 +15764,6 @@ class AiWebParser {
             // Every size this page renders for the same shape: the template is
             // rebuilt as a pattern by escaping its literal parts and letting
             // the ids and the size stand in as groups.
-            const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const familySource = withPlaceholders
                 .split(/(\{ownerId\}|\{id\}|\{size\})/)
                 .map(part => {
@@ -27868,30 +28066,45 @@ TEXT:
         for (const event of events) {
             if (!event || !this.isMidnightWallClock(event.startDate, event)) continue;
             const title = this.decodeBasicEntities(String((event && event.title) || ''));
-            if (!title.trim()) continue;
-            const pattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
-            const clocks = [];
-            let match;
-            while ((match = pattern.exec(title)) !== null) {
-                let hour = parseInt(match[1], 10);
-                const minute = match[2] ? parseInt(match[2], 10) : 0;
-                if (hour > 12 || minute > 59) continue;
-                const meridiem = match[3].toLowerCase();
-                if (meridiem === 'pm' && hour < 12) hour += 12;
-                if (meridiem === 'am' && hour === 12) hour = 0;
-                clocks.push({ hour, minute, raw: match[0] });
+            // The caption of the event's own poster (readMecGridSideList: the
+            // site's prose for the night lives in the image's alt) is the
+            // site's own words too — second to the title, same rules: one
+            // meridiem clock, or nothing.
+            const sources = [{ kind: 'title', text: title, label: 'its own title' }];
+            if (event._descriptionFromImageCaption === true && typeof event.description === 'string' && event.description.trim()) {
+                sources.push({ kind: 'caption', text: this.decodeBasicEntities(event.description), label: 'its poster caption' });
             }
-            const distinct = new Set(clocks.map(clock => `${clock.hour}:${clock.minute}`));
-            if (clocks.length === 0 || distinct.size !== 1) continue;
+            let chosen = null;
+            for (const source of sources) {
+                if (!source.text.trim()) continue;
+                const pattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
+                const clocks = [];
+                let match;
+                while ((match = pattern.exec(source.text)) !== null) {
+                    let hour = parseInt(match[1], 10);
+                    const minute = match[2] ? parseInt(match[2], 10) : 0;
+                    if (hour > 12 || minute > 59) continue;
+                    const meridiem = match[3].toLowerCase();
+                    if (meridiem === 'pm' && hour < 12) hour += 12;
+                    if (meridiem === 'am' && hour === 12) hour = 0;
+                    clocks.push({ hour, minute, raw: match[0] });
+                }
+                const distinct = new Set(clocks.map(clock => `${clock.hour}:${clock.minute}`));
+                if (clocks.length === 0 || distinct.size !== 1) continue;
+                chosen = { source, clock: clocks[0] };
+                break;
+            }
+            if (!chosen) continue;
             const day = event.startDate;
             event.startDate = new Date(Date.UTC(
-                day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), clocks[0].hour, clocks[0].minute));
+                day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), chosen.clock.hour, chosen.clock.minute));
             if (event.endDate instanceof Date && event.endDate.getTime() <= event.startDate.getTime()) {
                 event.endDate = new Date(event.startDate);
             }
-            event._startTimeFromTitle = true;
+            if (chosen.source.kind === 'title') event._startTimeFromTitle = true;
+            else event._startTimeFromCaption = true;
             adopted++;
-            console.log(`🕒 TITLE CLOCK: "${event.title}" listed with no time — its own title states ${clocks[0].raw}; start set to ${String(clocks[0].hour).padStart(2, '0')}:${String(clocks[0].minute).padStart(2, '0')} wall clock`);
+            console.log(`🕒 ${chosen.source.kind === 'title' ? 'TITLE' : 'CAPTION'} CLOCK: "${event.title}" listed with no time — ${chosen.source.label} states ${chosen.clock.raw}; start set to ${String(chosen.clock.hour).padStart(2, '0')}:${String(chosen.clock.minute).padStart(2, '0')} wall clock`);
         }
         return adopted;
     }
@@ -27991,7 +28204,14 @@ TEXT:
     // "9pm-2am", "doors 8pm"): the first clock of the first range; null
     // when the text states two different starts or none.
     readSingleStartClockFromFlyerText(text) {
-        const source = String(text || '');
+        // Poster shorthand drops the M: "8P-2A", "9P – 2A", "10P TO 4A"
+        // (Eagle LA's MEAT RACK 10.10.26 poster, run 20261017-054812 — the
+        // only place that night's clock is stated). Only ever read as a PAIR
+        // so a lone "8P" (a size, a code) never becomes a clock.
+        const source = String(text || '').replace(
+            /\b(\d{1,2})(?::(\d{2}))?\s*([ap])\s*(-|–|—|to|til|till|until)\s*(\d{1,2})(?::(\d{2}))?\s*([ap])\b/gi,
+            (whole, h1, m1, a1, sep, h2, m2, a2) => `${h1}${m1 ? ':' + m1 : ''}${a1.toLowerCase()}m ${sep} ${h2}${m2 ? ':' + m2 : ''}${a2.toLowerCase()}m`
+        );
         const clockPattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
         const parse = (match) => {
             let hour = Number(match[1]);

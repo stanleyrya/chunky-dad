@@ -47,6 +47,7 @@ const {
   tailLines,
   renderRunFormPage,
   renderSourceAuditPage,
+  renderMetricsPage,
   parsePortFromArgv,
   lookupIcsEvent,
   BRIDGE_SHIM_MARKER,
@@ -2156,4 +2157,56 @@ test('review routes: a title the store holds both ways is listed by /review/verd
     if (previous === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR; else process.env.CHUNKY_SHARED_STORAGE_DIR = previous;
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('metrics routes: GET /metrics renders the ledger\'s Sources and Yield tables from the shared builders (sort via query), /metrics.json carries the rows and the yield, the deck header links it', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-metrics-route-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.mkdirSync(path.join(dir, 'metrics'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  const quality = (overrides) => Object.assign({ n: 20, time: 100, place: 100, coords: 90, url: 100, image: 50, desc: 60, flags: {}, bear: { extracted: 40, kept: 20, ai_dropped: 0, manual_dropped: 0, top_reason: '' }, dedup: { removed: 0, pct: 0 }, stability: 90, horizon_days: 30, runs_since_new: 1, errors: {}, churn: { merges: 0, changed: 0, fields: {} } }, overrides);
+  const lines = [];
+  for (let index = 1; index <= 8; index += 1) {
+    const base = { v: 1, run_id: `2030010${index}-051500`, finished_at: `2030-01-0${index}T05:15:00.000Z`, environment: 'node', trigger: 'scheduled', pages: 1, outbound_pages: 0, page_errors: 0, errors: [], upcoming: 5, proposals: { new: 0, merge: 1 }, duration_ms: 100, status: 'ok', vanished: [], aggregator: false, lost: [], suspected: 0, listing_gone: false };
+    lines.push(Object.assign({}, base, { host: 'lodge.example', parsers: ['Lodge'], url: 'https://lodge.example/basic.ics', extracted: 300, events: 87, bear: 74, quality: quality({ n: 87, place: 10 }) }));
+    lines.push(Object.assign({}, base, { host: 'steady.example', parsers: ['Steady'], url: 'https://steady.example/events/', extracted: 40, events: 20, bear: 20, quality: quality({}) }));
+  }
+  fs.writeFileSync(path.join(dir, 'metrics', 'sources.ndjson'), lines.map(line => JSON.stringify(line)).join('\n') + '\n');
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const page = await request(state, 'GET', '/metrics');
+    assert.equal(page.status, 200, page.body);
+    assert.ok(page.body.includes('1 of 2 sites need a look'), 'the health headline');
+    assert.ok(page.body.includes('verdict-chip verdict-sparse">Sparse · place 10%</span>'), 'the sparse verdict with its field');
+    assert.ok(page.body.includes('data-list="sources"') && page.body.includes('data-list="yield"'), 'both tables');
+    assert.ok(page.body.includes('74 / 300') && page.body.includes('class="field-bar low" title="place 10%"'), 'the yield row with its field bars');
+    assert.ok(page.body.indexOf('data-source-host="lodge.example"') < page.body.indexOf('data-source-host="steady.example"'), 'trouble first');
+    assert.ok(!page.body.includes('<button class="decide') && !/stanley/i.test(page.body), 'read only, no name');
+    const byHost = await request(state, 'GET', '/metrics?sort=host&dir=desc&ysort=yield&ydir=desc');
+    assert.ok(byHost.body.indexOf('data-source-host="steady.example"') < byHost.body.indexOf('data-source-host="lodge.example"'), 'the Sources sort follows the query');
+    assert.ok(byHost.body.indexOf('data-yield-host="steady.example"') < byHost.body.indexOf('data-yield-host="lodge.example"'), 'the Yield sort follows its own query');
+    const json = JSON.parse((await request(state, 'GET', '/metrics.json')).body);
+    assert.equal(json.ok, true);
+    assert.equal(json.hosts, 2);
+    assert.equal(json.troubled, 1);
+    assert.equal(json.rows[0].host, 'lodge.example');
+    assert.equal(json.rows[0].verdict, 'sparse');
+    assert.deepEqual(json.rows[0].sparse, { field: 'place', pct: 10, latest: 10, kept: 87 * 8, runs: 8 });
+    assert.equal(json.yield.runs.length, 7);
+    assert.equal(json.yield.rows.find(row => row.host === 'lodge.example').yield, 25);
+    const deck = await request(state, 'GET', '/review');
+    assert.ok(deck.body.includes('href="/metrics"'), 'the deck header links the metrics page');
+    assert.ok((await request(state, 'GET', '/nowhere')).body.includes('/metrics'), 'the 404 lists it');
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('metrics page without a ledger says so', () => {
+  const html = renderMetricsPage({ health: null, records: [] });
+  assert.ok(html.includes('no source ledger yet') && html.includes('No source ledger yet'));
 });

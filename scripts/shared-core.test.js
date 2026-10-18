@@ -23159,8 +23159,8 @@ test('SPA door: a shell with no endpoint that ships its events in its own bundle
   assert.equal(opened.dataDoor.inline, true);
   const rows = JSON.parse(opened.html).events;
   assert.equal(rows.length, 5);
-  assert.equal(rows.find(r => r.title === 'Dirty Alley').region_label, 'Folsom Street Fair', 'the group code is read back to its printed label');
-  assert.equal(rows.find(r => r.title === 'Bears Are Animals').region_label, 'NYC', 'rows with no code belong to the one menu entry no code names');
+  assert.equal(rows.find(r => r.title === 'Dirty Alley').group_label, 'Folsom Street Fair', 'the group code is read back to its printed label');
+  assert.equal(rows.find(r => r.title === 'Bears Are Animals').group_label, 'NYC', 'rows with no code belong to the one menu entry no code names');
   const tea = rows.find(r => r.title === 'Tea Dance');
   assert.equal(tea.ticket_url, undefined, 'a social profile is not a ticket page');
   assert.equal(tea.website_url, 'https://www.instagram.com/boatslip/');
@@ -28797,4 +28797,129 @@ test('undated-row drops reported by the parser reach bearDroppedEvents (results 
   assert.ok(akbar, 'the host has a ledger line');
   assert.equal(akbar.quality.bear.ai_dropped, 1);
   assert.equal(akbar.quality.bear.top_reason, 'undated: no date or cadence on the page');
+});
+
+// ---------------------------------------------------------------------------
+// A calendar door's single row IS the listing (woofsatlanta.com, run
+// 20261017-054812: the EventON month replay answered with one card, the
+// multi-event fall-through re-read it by AI, dated it from an undated flyer,
+// dropped it as a date orphan, and shipped the business-hours block as an
+// event titled "Facebook"). The fixture is that month's one card, verbatim.
+// ---------------------------------------------------------------------------
+test('a calendar door that answers with one card on a multi-event page is read structurally, not re-read by the AI', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { AiWebParser } = require('./parsers/ai-web-parser');
+  const parser = new AiWebParser({ normalizeUrl: (u) => u });
+  parser.core = createCore();
+  const feedCard = fs.readFileSync(path.join(__dirname, 'fixtures', 'eventon-month-feed-single-card.html'), 'utf8');
+  const normalized = parser.normalizeEventOnCalendarHtml(feedCard);
+  assert.match(normalized, /"startDate": "2026-11-13T21:30:00"/, 'the fixed offset is dropped, the wall clock kept');
+  const events = parser.extractEventsFromJsonLd(normalized, 'https://venue.example/calendar/', null);
+  assert.equal(events.length, 1, 'the month replay holds exactly one card');
+  assert.equal(events[0].title, 'FAFO Fridays');
+  assert.ok(events[0].startDate instanceof Date && !Number.isNaN(events[0].startDate.getTime()));
+  assert.ok(!/\/var\/ri-/.test(String(events[0].url || events[0].website || '')), 'the per-night /var/ri- tail is not an address');
+
+  // One door row on a multi-event page is the listing.
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: 'eventon', structuredCount: events.length }), true);
+  for (const door of ['squarespace', 'wix', 'mec', 'elfsight', 'dice']) {
+    assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: door, structuredCount: 1 }), true, door);
+  }
+  // A lone JSON-LD node on a multi-event page still falls through (featured-event markup) …
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: 'jsonld', structuredCount: 1 }), false);
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: 'jsonld', structuredCount: 2 }), true);
+  // … the page's own flight data does not, a link hub's own JSON-LD is never read, a door on a hub is.
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'multi-event-page', structuredSource: 'page-data', structuredCount: 1 }), true);
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'link-aggregator', structuredSource: 'jsonld', structuredCount: 5 }), false);
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'link-aggregator', structuredSource: 'elfsight', structuredCount: 1 }), true);
+  // Discovery-only parsers and empty sets never take the structured route.
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ discoveryOnly: true, pageClassification: 'multi-event-page', structuredSource: 'eventon', structuredCount: 3 }), false);
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'event-page', structuredSource: 'jsonld', structuredCount: 0 }), false);
+});
+
+// Venue recheck 2026-10-17 (fixtures under scripts/fixtures/recheck-venues-2026-10-17)
+
+test('sanity: a time-tiered door price is one price, not a contradiction', () => {
+  const core = createSanityCore();
+  // Eagle NYC writes its door policy in the title; the run's extraction reads
+  // the cover out of it verbatim and 13 of 21 kept events flagged every run.
+  const row = require('./fixtures/recheck-venues-2026-10-17/eagle-nyc-tribe-row.json');
+  const tieredFromTitle = row.title.split('|').slice(-2).map(part => part.trim()).join(', ');
+  assert.equal(tieredFromTitle, 'NO COVER TILL 9PM, $20 COVER AT 9PM');
+  for (const cover of [tieredFromTitle, 'No cover till 9PM, $20 cover at 9PM', 'FREE before 10pm / $10 after', '$10 after midnight, free before']) {
+    assert.deepEqual(sanityCodes(core, { title: 'BEER BLAST', cover }), [], `a tiered cover must not flag: ${JSON.stringify(cover)}`);
+  }
+  // No clock and no condition: still the contradiction the flag was written for.
+  assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover: '$10, NO COVER' }), ['cover-self-contradictory']);
+  assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover: 'FREE / $15' }), ['cover-self-contradictory']);
+  // A clock alone, or a condition alone, is not a tier either.
+  assert.deepEqual(sanityCodes(core, { title: 'PACK PARTY', cover: 'No cover 9pm $20' }), ['cover-self-contradictory']);
+});
+
+test('applyAggregatorWebsitePointers leaves a calendar-door row alone when the embedding page classified link-aggregator', () => {
+  const core = createCore();
+  // rockbarnyc.com's home page is a Squarespace socials hub (classified
+  // link-aggregator) that carries the venue's Elfsight calendar. No widget
+  // row has a link of its own, so the page is the only address a night has.
+  const row = require('./fixtures/recheck-venues-2026-10-17/rockbar-elfsight-row.json');
+  assert.deepEqual(row.actions, [], 'the fixture row carries no per-event link');
+  const urlClassifications = { 'https://www.rockbarnyc.com/': 'link-aggregator' };
+  const page = 'https://www.rockbarnyc.com/';
+  const doorRow = { title: row.name, source: 'elfsight', website: page, url: page, ticketUrl: '', _sourcePageUrl: page };
+  const proseRow = { title: 'Rockbar', source: 'ai-web', website: page, url: page, ticketUrl: '', _sourcePageUrl: page };
+  core.applyAggregatorWebsitePointers([doorRow, proseRow], urlClassifications);
+  assert.equal(doorRow.website, page, 'the door published this row: the page is its listing, not a copy');
+  assert.equal(doorRow.url, page);
+  assert.equal(proseRow.website, '', 'a prose read of the same hub page is still a copy and clears');
+  assert.equal(proseRow.url, '');
+});
+
+// ── Recheck 2026-10-17 (aggregators): the SPA bundle reader's venue slot and
+// grouping code, from verbatim gathrparty.com bundle objects ──────────────────
+test('inline data: a venue slot holding a name and its street line yields both, and the grouping code never travels as `region`', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const fixture = fs.readFileSync(path.join(__dirname, 'fixtures', 'recheck-aggregators-2026-10-17', 'gathr-bundle-excerpt.js'), 'utf8');
+  const { events } = new Function(`${fixture}\nreturn { events, regions };`)();
+  const now = new Date('2026-10-17T12:00:00Z');
+  const byTitle = (title) => events.find((event) => event.title === title);
+  const rowOf = (title) => SharedCore.inlineEventObjectToFeedRows(byTitle(title), now, {})[0];
+
+  // "<Name> <street>" — the half the run lost (bar blank on 7 kept records).
+  const cannonball = rowOf('Cannon Ball Bear Week Pool Party');
+  assert.equal(cannonball.venue, 'Boatslip Resort');
+  assert.equal(cannonball.address, '161 Commercial St.');
+  // "<street> (<Name>)".
+  const reddy = rowOf('Reddy Freddy Ptown Bear Week');
+  assert.equal(reddy.venue, 'Purgatory');
+  assert.equal(reddy.address, '9 Carver St');
+  // A bare street line stays an address of a place the list does not name.
+  const bbq = rowOf('Bear Week BBQ & Pool Party');
+  assert.equal(bbq.venue, undefined);
+  assert.equal(bbq.address, '161 Commercial St');
+  const bearParty = rowOf('The Bear Party');
+  assert.equal(bearParty.venue, undefined);
+  assert.equal(bearParty.address, '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues');
+  // A named venue is untouched; placeholders stay out.
+  assert.equal(rowOf('Rockstrap').venue, 'Rockbar');
+  assert.equal(rowOf('Rockstrap').address, undefined);
+  assert.equal(rowOf('PBG Wiener Roast').venue, undefined, '"TBD" is not a place');
+  assert.equal(rowOf('Bear Happy Hour').venue, undefined, '"TBA" is not a place');
+
+  // The grouping code: `group`, so the JSON-API reader's addressRegion key
+  // (`region`) never picks it up — the run shipped address "PT" on 83 rows.
+  assert.equal(cannonball.group, 'PT');
+  assert.equal(cannonball.region, undefined);
+  assert.equal(rowOf('Rockstrap').group, undefined);
+});
+
+test('splitVenueNameAndStreet: the three shapes a list types into one venue slot', () => {
+  const street = /\d{1,5}\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.' ]{2,40}\b(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pl|place|way|ln|lane|hwy|highway|pkwy|ct|court|sq|square)\b\.?/i;
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('Boatslip Resort 161 Commercial St.', street), { venue: 'Boatslip Resort', address: '161 Commercial St.' });
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('9 Carver St (Purgatory)', street), { venue: 'Purgatory', address: '9 Carver St' });
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', street), { venue: '', address: '232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues' });
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('Provincetown II — MacMillan Pier', street), { venue: 'Provincetown II — MacMillan Pier', address: '' }, 'no street line: a name');
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('The Eagle, 554 W 28th St, New York', street), { venue: 'The Eagle', address: '554 W 28th St, New York' });
+  assert.deepEqual(SharedCore.splitVenueNameAndStreet('', street), { venue: '', address: '' });
 });

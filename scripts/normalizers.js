@@ -357,6 +357,27 @@ class BasicDataNormalizer extends BaseNormalizer {
 }
 
 class BarDataNormalizer extends BaseNormalizer {
+    // A bar name that is a curated bar's own website host ("hereticatlanta"
+    // for The Heretic at hereticatlanta.com): a venue site's pages are read
+    // with the domain as the venue often enough, and no other rung
+    // canonicalizes that spelling, so the same night read off two of the
+    // site's pages carried two bar names and never folded (run
+    // 20261017-054812: "Nightshift w/ Phox…" at "hereticatlanta" beside
+    // "NIGHTSHIFT" at "The Heretic"). Compares the host's first label and the
+    // whole host, letters-and-digits only; a label under five characters is
+    // too short to be a name. No URL parser: this also runs on the phone.
+    static barNameIsWebsiteHost(normalizedBarName, website) {
+        if (!normalizedBarName || typeof website !== 'string' || !website.trim()) return false;
+        const host = website.trim().toLowerCase()
+            .replace(/^[a-z][a-z0-9+.-]*:\/\//, '')
+            .split(/[/?#]/)[0]
+            .replace(/^www\./, '');
+        const label = host.split('.')[0];
+        if (!label || label.length < 5) return false;
+        const normalize = (value) => value.replace(/[^a-z0-9]/g, '');
+        return normalizedBarName === normalize(label) || normalizedBarName === normalize(host);
+    }
+
     normalize(event) {
         if (!event || typeof event !== 'object') return event;
 
@@ -376,6 +397,7 @@ class BarDataNormalizer extends BaseNormalizer {
         if (!cityBars || !Array.isArray(cityBars)) return event;
 
         let matchedBar = null;
+        let barWasSiteHost = false;
 
         const normalizeStr = str => str.replace(/[^a-z0-9]/g, '');
 
@@ -399,6 +421,11 @@ class BarDataNormalizer extends BaseNormalizer {
                     if (typeof b.name !== 'string') return false;
                     return normalizeStr(b.name.toLowerCase()).includes(normalizedEventBar);
                 });
+            }
+            // The venue spelled as its own domain (see barNameIsWebsiteHost).
+            if (!matchedBar) {
+                matchedBar = cityBars.find(b => BarDataNormalizer.barNameIsWebsiteHost(normalizedEventBar, b.website)) || null;
+                if (matchedBar) barWasSiteHost = true;
             }
         }
 
@@ -479,6 +506,13 @@ class BarDataNormalizer extends BaseNormalizer {
 
         if (matchedBar) {
             let modified = false;
+
+            if (barWasSiteHost && typeof matchedBar.name === 'string' && matchedBar.name.trim() !== ''
+                && event.bar !== matchedBar.name) {
+                console.log(`🐻 BarDataNormalizer: bar "${event.bar}" is the website host of curated bar "${matchedBar.name}" — canonicalized`);
+                event.bar = matchedBar.name;
+                modified = true;
+            }
 
             // Set bar name if not already set (since we matched by address/location/description/title)
             if (matchedBar.name && (!event.bar || event.bar.trim() === '' || descriptionWasVenue || titleWasVenue)) {
@@ -1505,7 +1539,17 @@ class LocationNormalizer extends BaseNormalizer {
     backfillCityFromIdentitySignals(event, options = {}) {
         if (!event || !this.core) return event;
         const currentCity = typeof event.city === 'string' ? event.city.trim().toLowerCase() : '';
-        if (currentCity && currentCity !== 'unknown') return event;
+        if (currentCity && currentCity !== 'unknown') {
+            // The city is settled, but the VENUE may not be: a title that
+            // names its city ("BLUF TORONTO" on blackeagletoronto.com, run
+            // 20261017-054812 — 6 of 15 kept events with no bar and no pin
+            // while their siblings got "Black Eagle Toronto" from this very
+            // rung) resolved the city one rung earlier, and the venue fill
+            // below never ran because it rode on the city fill. Same curated
+            // record, same fail-closed gates, city must agree.
+            this.fillVenueFromSiteIdentityInResolvedCity(event, currentCity);
+            return event;
+        }
         const title = event.title || 'unknown';
 
         if (typeof this.core.findCuratedCityByWebsiteHost === 'function'
@@ -1542,6 +1586,32 @@ class LocationNormalizer extends BaseNormalizer {
             console.log(`🗺️ LocationNormalizer: Backfilled city "${normalizedCity}" for "${title}" from the parser config's declared city`);
         }
         return event;
+    }
+
+    // The venue half of the site-identity rung for an event whose city is
+    // already known: the host's single curated claimant fills bar, address
+    // and pin exactly as fillVenueFromCuratedSiteIdentity does, PROVIDED it
+    // sits in the event's own city — a claimant elsewhere says the listing
+    // is a venue site announcing a party out of town, and is left alone.
+    // Silent when there is nothing to fill (the event names a bar already).
+    fillVenueFromSiteIdentityInResolvedCity(event, currentCity) {
+        if (!event || !this.core || typeof this.core.findCuratedCityByWebsiteHost !== 'function'
+            || typeof this.core.getWebsiteHostKey !== 'function') return false;
+        if (typeof event.bar === 'string' && event.bar.trim()) return false;
+        const seenHosts = [];
+        for (const candidate of [event.website, event.url, event._sourcePageUrl]) {
+            const hostKey = this.core.getWebsiteHostKey(candidate);
+            if (!hostKey || seenHosts.includes(hostKey)) continue;
+            seenHosts.push(hostKey);
+            const match = this.core.findCuratedCityByWebsiteHost(hostKey);
+            if (!match || match.ambiguousCities) continue;
+            if (String(match.city || '').toLowerCase() !== currentCity) {
+                console.log(`🗺️ LocationNormalizer: Venue backfill skipped for "${event.title || 'unknown'}" — site ${hostKey} is a curated venue in ${match.city}, the event is in ${currentCity}`);
+                return false;
+            }
+            return this.fillVenueFromCuratedSiteIdentity(event, match, hostKey, event.title || 'unknown');
+        }
+        return false;
     }
 
     // Site identity resolves a curated VENUE, not merely a city (run

@@ -46,6 +46,15 @@ const SOURCE_AUDIT_FILE_NAME = 'source-audit.json';
 const SOURCE_AUDIT_PASS = 'source-audit';
 const DEFAULT_CAP = 3;
 const DEFAULT_BUDGET_MS = 240000;
+// The model's share of page text per host. Measured 2026-10-17 over the
+// page cache: the 52 configured HTML listing pages have a median of 1.9k
+// readable chars, p90 5.3k, 4 over 6k, 28 under 2k (JS shells and home
+// pages) — the cap was never what cut the listing off. What cut it off was
+// the JOIN: three pages' texts were glued together and then sliced to the
+// cap, so the model only ever saw the first page (the configured url, often
+// the home page's nav) and precinctdtla.com's 255k-char calendar never
+// reached it. composeAuditText shares the cap between the pages instead,
+// the page that names the most extracted events first. The cap stays.
 const PAGE_TEXT_CAP = 6000;
 const MAX_RUNS_KEPT = 60;
 const STILL_VERDICTS = ['still-listed', 'site-removed', 'set-aside', 'unknown'];
@@ -75,7 +84,7 @@ function normalizeSourceAuditStore(parsed) {
             run_id: String(entry.run_id || ''),
             verdict: String(entry.verdict || ''),
             badges: Array.isArray(entry.badges) ? entry.badges.map(String) : [],
-            page: entry.page && typeof entry.page === 'object' ? { url: String(entry.page.url || ''), fetchedAt: String(entry.page.fetchedAt || ''), chars: Number(entry.page.chars) || 0 } : null,
+            page: entry.page && typeof entry.page === 'object' ? Object.assign({ url: String(entry.page.url || ''), fetchedAt: String(entry.page.fetchedAt || ''), chars: Number(entry.page.chars) || 0 }, entry.page.kind ? { kind: String(entry.page.kind) } : {}) : null,
             still: Array.isArray(entry.still) ? entry.still.filter((item) => item && item.title && STILL_VERDICTS.includes(item.verdict)).map((item) => Object.assign(
                 { title: String(item.title), verdict: String(item.verdict), checked_at: String(item.checked_at || ''), line: String(item.line || '') },
                 item.how ? { how: String(item.how) } : {}, item.twin ? { twin: String(item.twin) } : {}, item.extracted_on ? { extracted_on: String(item.extracted_on) } : {})) : [],
@@ -86,7 +95,8 @@ function normalizeSourceAuditStore(parsed) {
             wrong: Array.isArray(entry.wrong) ? entry.wrong.filter((item) => item && item.title && item.field).map((item) => ({ title: String(item.title), field: String(item.field), page: String(item.page || ''), extracted: String(item.extracted || ''), issue: String(item.issue || '') })) : [],
             unverified: Number(entry.unverified) || 0,
             note: String(entry.note || ''),
-            ai: String(entry.ai || 'skipped')
+            ai: String(entry.ai || 'skipped'),
+            reason: String(entry.reason || '')
         };
     });
     if (Array.isArray(parsed.runs)) {
@@ -140,7 +150,7 @@ function findingsQueue(store) {
 // troubled ones taking the front of the line more often).
 // ---------------------------------------------------------------------------
 function auditBand(row) {
-    if (['dead', 'stopped', 'shrunk', 'lost'].includes(row.verdict)) return 0;
+    if (['dead', 'stopped', 'shrunk', 'sparse', 'lost'].includes(row.verdict)) return 0;
     if (row.quality && row.quality.offCount >= 2) return 1;
     return 2;
 }
@@ -438,10 +448,13 @@ function parseAuditAnswer(text, options = {}) {
         if (!fold) return false;
         return extractedFolds.some((known) => known === fold || known.includes(fold) || fold.includes(known) || SharedCore.sourceLedgerTitleOverlap(fold, known) >= 0.6);
     };
+    // "HAPPY HOUR" (a heading on the page) is not "Bear Happy Hour" (a real
+    // event we extracted): the extracted title may sit inside the fake's
+    // text, never the fake inside the extracted title.
     const namesExtracted = (title) => {
         const fold = foldAuditText(title);
         if (!fold) return false;
-        return extractedFolds.some((known) => known === fold || known.includes(fold) || fold.includes(known));
+        return extractedFolds.some((known) => known === fold || fold.includes(known));
     };
     const checkAgainstExtracted = extractedFolds.length > 0;
     const today = String(options.today || '');
@@ -497,6 +510,11 @@ function parseAuditAnswer(text, options = {}) {
     // asked — a title held on two nights is wrong only if the page's
     // words fit none of them.
     const records = (Array.isArray(options.events) ? options.events : []).filter((event) => event && event.title);
+    // The model's "page" must be the page's words: with the text in hand, a
+    // quote that is not on it ("no venue named, but title implies host" —
+    // five Heretic rows in one audit) is reasoning, not evidence.
+    const pageFold = typeof options.pageText === 'string' && options.pageText.trim() ? foldAuditText(options.pageText) : '';
+    const quotedFromPage = (page) => !pageFold || pageFold.includes(foldAuditText(page));
     const recordsFor = (title) => {
         const fold = foldAuditText(title);
         return records.filter((event) => { const known = foldAuditText(event.title); return known === fold || known.includes(fold) || fold.includes(known); });
@@ -510,7 +528,7 @@ function parseAuditAnswer(text, options = {}) {
         const field = auditWrongField(raw.field);
         const page = clean(raw.page, 120);
         const matches = recordsFor(title);
-        if (!field || !page || !matches.length) { unverified += 1; return; }
+        if (!field || !page || !matches.length || !quotedFromPage(page)) { unverified += 1; return; }
         const verdicts = matches.map((event) => auditFieldDiffers(field, page, event, today.slice(0, 4)));
         if (verdicts.some((differs) => differs === false)) return;
         if (!verdicts.some((differs) => differs === true)) { unverified += 1; return; }
@@ -564,9 +582,14 @@ function stampStillIntoLossState(sharedRoot, host, verdicts, checkedAt, fsLike =
     return true;
 }
 
-// The pages worth reading for a host: its configured listing url first, then
-// the pages the run itself classified as multi-event pages on that host (the
-// calendar behind a home page, a feed the parser reads) — at most three.
+// The pages worth reading for a host: every url the parsers configured on
+// that host (the ledger line carries only the first), then the pages the
+// run itself classified as multi-event pages there (the calendar behind a
+// home page, a feed the parser reads) — at most four.
+const LISTING_URL_CAP = 4;
+// With this many extracted events and not one named in the pages' readable
+// text, the text is not where the events live and the model is not shown it.
+const NAMES_NONE_MIN_EVENTS = 3;
 function listingUrlsForHost(results, host, configuredUrl) {
     const hostKey = String(host || '').toLowerCase().replace(/^www\./, '');
     const SharedCore = loadSharedCore();
@@ -575,6 +598,10 @@ function listingUrlsForHost(results, host, configuredUrl) {
     if (configuredUrl) push(configuredUrl);
     const parsers = results && Array.isArray(results.parserResults) ? results.parserResults : [];
     parsers.forEach((parser) => {
+        const configured = parser && parser.config && Array.isArray(parser.config.urls) ? parser.config.urls : [];
+        configured.forEach((url) => { if (SharedCore.hostOfUrl(url) === hostKey) push(url); });
+    });
+    parsers.forEach((parser) => {
         const classifications = parser && parser.urlClassifications && typeof parser.urlClassifications === 'object' ? parser.urlClassifications : {};
         Object.keys(classifications).forEach((url) => {
             if (String(classifications[url]) !== 'multi-event-page') return;
@@ -582,7 +609,187 @@ function listingUrlsForHost(results, host, configuredUrl) {
             push(url);
         });
     });
-    return urls.slice(0, 3);
+    return urls.slice(0, LISTING_URL_CAP);
+}
+
+// What a fetched body is, from its first bytes: a JSON API, an ICS
+// calendar, an XML/RSS feed, or a page. A feed is a door the parser reads
+// as data; its text is no listing page and the model is not asked about it.
+function sniffPageKind(body) {
+    const head = String(body || '').replace(/^\uFEFF/, '').trimStart().slice(0, 200);
+    if (/^[\[{]/.test(head)) return 'json';
+    if (/^BEGIN:VCALENDAR/i.test(head)) return 'ics';
+    if (/^<\?xml|^<rss\b|^<feed\b/i.test(head)) return 'xml';
+    return 'html';
+}
+
+// The text the model reads, from several pages under one cap: pages ranked
+// by how many of the extracted titles they name (the listing page, not the
+// home page's nav, comes first), every page given an equal share of the cap,
+// and what a short page leaves over handed down in rank order. Returns
+// { text, pages: [{ url, chars, shown, hits }] }.
+function composeAuditText(pages, cap, extractedTitles) {
+    const list = (Array.isArray(pages) ? pages : []).filter((page) => page && typeof page.text === 'string');
+    const limit = Number.isFinite(cap) && cap > 0 ? Math.floor(cap) : PAGE_TEXT_CAP;
+    if (!list.length) return { text: '', pages: [] };
+    const folds = (Array.isArray(extractedTitles) ? extractedTitles : []).map(foldAuditText).filter((fold) => fold.length >= 4);
+    const ranked = list.map((page, index) => {
+        const fold = foldAuditText(page.text);
+        const hits = folds.reduce((sum, title) => sum + (fold.includes(title) ? 1 : 0), 0);
+        return { page, index, hits };
+    }).sort((a, b) => b.hits - a.hits || a.index - b.index);
+    const share = Math.floor(limit / ranked.length);
+    const shown = ranked.map(({ page }) => Math.min(page.text.length, share));
+    let leftover = limit - shown.reduce((sum, value) => sum + value, 0);
+    ranked.forEach(({ page }, position) => {
+        if (leftover <= 0) return;
+        const more = Math.min(leftover, page.text.length - shown[position]);
+        if (more > 0) { shown[position] += more; leftover -= more; }
+    });
+    const parts = ranked.map(({ page }, position) => {
+        const text = page.text.slice(0, shown[position]);
+        return ranked.length > 1 ? `[${page.url}]\n${text}` : text;
+    });
+    return {
+        text: parts.join('\n\n'),
+        pages: ranked.map(({ page, hits }, position) => ({ url: page.url, chars: page.text.length, shown: shown[position], hits }))
+    };
+}
+
+// A machine door is not a page. The audit reads a host's listing through
+// readableTextFromHtml and hands the model the first PAGE_TEXT_CAP characters
+// — right for a page, wrong for a feed: an iCalendar export is the calendar's
+// whole history oldest-first (calendar.google.com, 270 921 chars → the first
+// 6 000 were 2023 nights, and the 2026-10-12 audit concluded "no events on or
+// after today"), and a ticketing JSON is one event's nested envelope after
+// another (events.ticketsauce.com, 687 658 chars → the first 6 000 were
+// SMOOCH's row alone, and the 2026-10-17 audit called every other extracted
+// event unverifiable). Both audits judged the scraper by a window that never
+// held the feed's events. A feed body is therefore rendered the way the
+// scraper itself reads it — one line per record, "start | title | place",
+// records that ended more than FEED_TEXT_HISTORY_DAYS ago left out (the
+// archive, as readMachineDoorBody treats it), running series kept — and only
+// then capped. HTML, and anything that is neither JSON nor iCalendar, returns
+// null so the caller falls through to the page reader.
+const FEED_TEXT_HISTORY_DAYS = 30;
+
+function feedRecordsFromBody(body) {
+    const text = String(body || '').trim();
+    if (!text) return null;
+    if (/BEGIN:VCALENDAR/i.test(text.slice(0, 512))) {
+        const SharedCore = loadSharedCore();
+        const records = SharedCore.parsePublishedCalendarIcs(text) || [];
+        return records.map((record) => ({
+            title: record.summary || '',
+            start: record.start && record.start.date instanceof Date ? record.start.date : null,
+            end: record.end && record.end.date instanceof Date ? record.end.date : null,
+            place: record.location || '',
+            rrule: record.rrule || '',
+            historical: SharedCore.isHistoricalCalendarRecord(record, Date.now())
+        }));
+    }
+    if (text[0] !== '{' && text[0] !== '[') return null;
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (_) { return null; }
+    const normalizeKey = (key) => String(key || '').replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase();
+    const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+    const textOf = (value) => (typeof value === 'string' ? value : (isPlainObject(value) && typeof value.text === 'string' ? value.text : '')).trim();
+    // The same shapes shared-core's countJsonApiEventObjects accepts as a
+    // start: an ISO-ish string, an epoch in milliseconds, { millis }, or a
+    // when-container whose .start is one of those.
+    const dateOf = (value) => {
+        if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value.trim())) {
+            const parsedDate = new Date(value.trim().replace(' ', 'T'));
+            return Number.isNaN(parsedDate.getTime()) ? new Date(value.trim().slice(0, 10)) : parsedDate;
+        }
+        if (typeof value === 'number' && value > 1e11 && value < 1e13) return new Date(value);
+        if (isPlainObject(value) && typeof value.millis === 'number' && value.millis > 1e11 && value.millis < 1e13) return new Date(value.millis);
+        if (isPlainObject(value) && value.start !== undefined) return dateOf(value.start);
+        return null;
+    };
+    const isStartKey = (key) => /(^|_)starts?(_(at|date|time|datetime|utc))?$/.test(key) || /(^|_)(date|datetime|when)(_|$)/.test(key);
+    const isEndKey = (key) => /(^|_)ends?(_(at|date|time|datetime|utc))?$/.test(key);
+    const titleOf = (obj) => {
+        for (const key of Object.keys(obj)) {
+            const normalized = normalizeKey(key);
+            if ((/^(name|title|summary|listing_title)$/.test(normalized) || /^(event|listing|show|party|performance)_(title|name)$/.test(normalized)) && textOf(obj[key])) return textOf(obj[key]);
+        }
+        return '';
+    };
+    const startOf = (obj) => {
+        for (const key of Object.keys(obj)) {
+            const normalized = normalizeKey(key);
+            if (!isStartKey(normalized) || isEndKey(normalized)) continue;
+            const date = dateOf(obj[key]);
+            if (date && !Number.isNaN(date.getTime())) return date;
+        }
+        return null;
+    };
+    const endOf = (obj) => {
+        for (const key of Object.keys(obj)) {
+            if (!isEndKey(normalizeKey(key))) continue;
+            const date = dateOf(obj[key]);
+            if (date && !Number.isNaN(date.getTime())) return date;
+        }
+        return null;
+    };
+    const placeOf = (obj) => {
+        const parts = [];
+        for (const key of Object.keys(obj)) {
+            const normalized = normalizeKey(key);
+            const value = obj[key];
+            if (/^(venue|venue_name|location|location_name|place|address_title)$/.test(normalized)) {
+                if (textOf(value)) parts.push(textOf(value));
+                else if (isPlainObject(value)) { const name = textOf(value.name) || textOf(value.title) || textOf(value.address_title) || textOf(value.addressTitle); if (name) parts.push(name); }
+            }
+            if (/^(city|address_line2|addressline2)$/.test(normalized) && textOf(value)) parts.push(textOf(value));
+        }
+        return parts.filter((part, index) => parts.indexOf(part) === index).join(', ');
+    };
+    const records = [];
+    const visit = (value, depth) => {
+        if (depth > 8 || value === null || value === undefined) return;
+        if (Array.isArray(value)) { value.forEach((item) => visit(item, depth + 1)); return; }
+        if (!isPlainObject(value)) return;
+        let view = value;
+        // One level of attribute wrapper (JSON:API attributes, Tockify
+        // content) and the envelope shape ({ Event: {…}, Logo, … }): the
+        // event-ish keys live one level down.
+        for (const key of Object.keys(value)) {
+            if (/^(content|attributes|properties|fields)$/.test(normalizeKey(key)) && isPlainObject(value[key])) view = Object.assign({}, value, value[key]);
+        }
+        if (!titleOf(view)) {
+            const members = Object.values(value).filter((member) => isPlainObject(member) && titleOf(member) && startOf(member));
+            if (members.length === 1) view = Object.assign({}, value, members[0]);
+        }
+        const title = titleOf(view);
+        const start = startOf(view);
+        if (title && start) {
+            const end = endOf(view);
+            const ended = (end || start).getTime();
+            records.push({ title, start, end, place: placeOf(view), rrule: '', historical: ended < Date.now() - FEED_TEXT_HISTORY_DAYS * 24 * 60 * 60 * 1000 });
+            return;
+        }
+        Object.values(value).forEach((member) => visit(member, depth + 1));
+    };
+    visit(parsed, 0);
+    return records;
+}
+
+function readableTextFromFeedBody(body, cap = PAGE_TEXT_CAP) {
+    const records = feedRecordsFromBody(body);
+    if (!records) return null;
+    const stamp = (date) => (date instanceof Date && !Number.isNaN(date.getTime()) ? date.toISOString().slice(0, 16).replace('T', ' ') : '');
+    const current = records.filter((record) => !record.historical).sort((a, b) => (a.start ? a.start.getTime() : 0) - (b.start ? b.start.getTime() : 0));
+    const archived = records.length - current.length;
+    const lines = [`Machine feed: ${records.length} record(s), ${current.length} current${archived ? `, ${archived} ended more than ${FEED_TEXT_HISTORY_DAYS} days ago (not shown)` : ''}. One line per record: start | title | place${current.some((record) => record.rrule) ? ' | repeats' : ''}.`];
+    for (const record of current) {
+        lines.push([stamp(record.start), String(record.title).replace(/\s+/g, ' ').trim(), String(record.place).replace(/\s+/g, ' ').trim(), record.rrule ? `repeats ${record.rrule}` : ''].filter(Boolean).join(' | '));
+    }
+    let text = lines.join('\n');
+    const full = text.length;
+    if (cap > 0 && text.length > cap) text = `${text.slice(0, cap)}\u2026`;
+    return { text, chars: full, truncated: cap > 0 && full > cap, records: records.length, current: current.length };
 }
 
 async function fetchListingText(adapter, url, options = {}) {
@@ -595,8 +802,18 @@ async function fetchListingText(adapter, url, options = {}) {
         return { page: null, reason: error && error.message ? error.message : String(error) };
     }
     if (!page || typeof page.html !== 'string' || !page.html) return { page: null, reason: 'empty page' };
-    const readable = reviewQueue.readableTextFromHtml(page.html, options.pageTextCap || PAGE_TEXT_CAP);
-    return { page: { url: page.url || url, fetchedAt: page.fetchedAt || new Date().toISOString(), chars: readable.chars, text: readable.text }, reason: '' };
+    const cap = options.pageTextCap || PAGE_TEXT_CAP;
+    const kind = sniffPageKind(page.html);
+    // An HTML page: its readable text for the model. A feed (ICS / JSON
+    // door): one line per record ("start | title | place") so the
+    // still-on-site title search reads data, not markup — the model is never
+    // asked about a feed (door-is-feed below). A feed whose shape the record
+    // reader does not know falls back to its raw body. Each page is read whole
+    // up to the cap; composeAuditText shares the cap between pages later.
+    const readable = kind === 'html'
+        ? reviewQueue.readableTextFromHtml(page.html, cap)
+        : (readableTextFromFeedBody(page.html, cap) || { text: page.html.slice(0, cap), chars: page.html.length });
+    return { page: { url: page.url || url, fetchedAt: page.fetchedAt || new Date().toISOString(), chars: readable.chars, text: readable.text, kind }, reason: '' };
 }
 
 async function askAi(options, prompt) {
@@ -699,33 +916,63 @@ async function runSourceAudit(options = {}) {
                 }
                 if (fetched.page) pages.push(fetched.page); else if (!reason) reason = fetched.reason;
             }
+            const htmlPages = pages.filter((page) => page.kind === 'html');
+            const feedPages = pages.filter((page) => page.kind !== 'html');
             const fetched = pages.length
-                ? { page: { url: pages.map((page) => page.url).join(' + '), fetchedAt: pages.map((page) => page.fetchedAt).sort()[0] || '', chars: pages.reduce((sum, page) => sum + page.chars, 0), text: pages.map((page) => page.text).join('\n\n') }, reason: '' }
+                ? { page: { url: pages.map((page) => page.url).join(' + '), fetchedAt: pages.map((page) => page.fetchedAt).sort()[0] || '', chars: pages.reduce((sum, page) => sum + page.chars, 0), text: pages.map((page) => page.text).join('\n\n'), kind: htmlPages.length ? 'html' : (feedPages[0] ? feedPages[0].kind : 'html') }, reason: '' }
                 : { page: null, reason };
             if (!fetched.page) {
                 entry.ai = 'no-page';
                 entry.note = `listing page unreachable: ${fetched.reason}`.slice(0, 300);
                 entry.still = (row.lost || []).map((series) => ({ title: series.title, verdict: 'unknown', checked_at: checkedAt, line: '' }));
             } else {
-                entry.page = { url: fetched.page.url, fetchedAt: fetched.page.fetchedAt, chars: fetched.page.chars };
+                entry.page = { url: fetched.page.url, fetchedAt: fetched.page.fetchedAt, chars: fetched.page.chars, kind: fetched.page.kind };
                 entry.still = (row.lost || []).map((series) => {
                     const refined = refineStillVerdict(series, stillOnSite(series.title, fetched.page.text), hostEvents);
                     return Object.assign({ title: series.title, checked_at: checkedAt }, refined);
                 });
-                if (item.full) {
+                if (item.full && !htmlPages.length) {
+                    // The parser's door is a feed (a JSON API, an ICS calendar):
+                    // the still-on-site search above read its data, but there
+                    // is no page for the model to audit against — asking it
+                    // about 6000 chars of JSON or ICS produced "no events on
+                    // the page" for calendar.google.com and ticketleap.
+                    entry.ai = 'no-page';
+                    entry.reason = 'door-is-feed';
+                    entry.note = `the parser reads a ${feedPages.map((page) => page.kind).filter((kind, index, all) => all.indexOf(kind) === index).join('/')} feed, not a page — nothing for the model to audit`.slice(0, 300);
+                } else if (item.full) {
                     // Only what is still ahead: a run a few days old carries nights
                     // that have passed, and the model would call them wrong.
                     const events = hostEvents.filter((event) => !event.day || event.day >= today);
-                    const prompt = buildAuditPrompt(row.host, fetched.page.text, events, { pageTextCap: options.pageTextCap, today });
+                    const extractedTitles = events.map((event) => event.title);
+                    const cap = Number.isFinite(options.pageTextCap) ? options.pageTextCap : PAGE_TEXT_CAP;
+                    const composed = composeAuditText(htmlPages, cap, extractedTitles);
+                    const namedOnPages = composed.pages.reduce((sum, page) => sum + page.hits, 0);
+                    if (extractedTitles.length >= NAMES_NONE_MIN_EVENTS && namedOnPages === 0) {
+                        // The readable text names none of the events the parser
+                        // holds: the events came through structured data or a
+                        // door the audit does not read (a JS-rendered calendar,
+                        // a REST route found from the page). Shown that text,
+                        // the model answers "no events on the page" and invents
+                        // the rest — precinctdtla.com, 3dollarbillbk.com,
+                        // eagle-ny.com in the first week.
+                        entry.ai = 'no-page';
+                        entry.reason = 'page-names-no-events';
+                        entry.note = `the readable text of ${composed.pages.length} page${composed.pages.length === 1 ? '' : 's'} (${composed.pages.reduce((sum, page) => sum + page.chars, 0)} chars) names none of the ${extractedTitles.length} extracted events — they come through a door the audit does not read`.slice(0, 300);
+                        if (entry.still.length) stampStillIntoLossState(sharedRoot, row.host, entry.still, checkedAt, fsLike);
+                        store.hosts[row.host] = entry; summary.audited.push(row.host);
+                        log(`source-audit: ${row.host} — ai no-page (page-names-no-events) — ${entry.note.slice(0, 120)}`);
+                        continue;
+                    }
+                    const prompt = buildAuditPrompt(row.host, composed.text, events, { pageTextCap: cap, today });
                     let answer = null;
                     try { answer = await askAi(options, prompt); } catch (error) { summary.errors.push(`${row.host}: ai ${error.message}`); }
-                    const extractedTitles = events.map((event) => event.title);
-                    let parsed = parseAuditAnswer(answer, { extracted: extractedTitles, events, today, pageText: fetched.page.text });
+                    let parsed = parseAuditAnswer(answer, { extracted: extractedTitles, events, today, pageText: composed.text });
                     if (!parsed && answer) {
                         // Prose instead of JSON: once more with half the page.
-                        const shorter = buildAuditPrompt(row.host, fetched.page.text, events, { pageTextCap: Math.floor((Number.isFinite(options.pageTextCap) ? options.pageTextCap : PAGE_TEXT_CAP) / 2), today });
+                        const shorter = buildAuditPrompt(row.host, composeAuditText(htmlPages, Math.floor(cap / 2), extractedTitles).text, events, { pageTextCap: Math.floor(cap / 2), today });
                         try { answer = await askAi(options, shorter); } catch (error) { summary.errors.push(`${row.host}: ai retry ${error.message}`); }
-                        parsed = parseAuditAnswer(answer, { extracted: extractedTitles, events, today, pageText: fetched.page.text });
+                        parsed = parseAuditAnswer(answer, { extracted: extractedTitles, events, today, pageText: composed.text });
                     }
                     if (parsed) {
                         entry.missing = parsed.missing;
@@ -748,7 +995,7 @@ async function runSourceAudit(options = {}) {
                 summary.losses.push(row.host);
             }
             const stillListed = entry.still.filter((check) => check.verdict === 'still-listed').length;
-            log(`source-audit: ${row.host} — ${item.full ? `${entry.missing.length} missing, ${entry.fake.length} not events, ${entry.wrong.length} wrong${entry.unverified ? ` (+${entry.unverified} the record could not confirm)` : ''}, ai ${entry.ai}` : 'loss check'}${entry.still.length ? `, lost series: ${stillListed} still listed, ${entry.still.filter((check) => check.verdict === 'set-aside').length} held by the run (set aside or renamed), ${entry.still.filter((check) => check.verdict === 'site-removed').length} removed by the site, ${entry.still.filter((check) => check.verdict === 'unknown').length} unknown` : ''}${entry.note ? ` — ${entry.note.slice(0, 120)}` : ''}`);
+            log(`source-audit: ${row.host} — ${item.full ? `${entry.missing.length} missing, ${entry.fake.length} not events, ${entry.wrong.length} wrong${entry.unverified ? ` (+${entry.unverified} the record could not confirm)` : ''}, ai ${entry.ai}${entry.reason ? ` (${entry.reason})` : ''}` : 'loss check'}${entry.still.length ? `, lost series: ${stillListed} still listed, ${entry.still.filter((check) => check.verdict === 'set-aside').length} held by the run (set aside or renamed), ${entry.still.filter((check) => check.verdict === 'site-removed').length} removed by the site, ${entry.still.filter((check) => check.verdict === 'unknown').length} unknown` : ''}${entry.note ? ` — ${entry.note.slice(0, 120)}` : ''}`);
         } catch (error) {
             summary.errors.push(`${row.host}: ${error.message}`);
             log(`source-audit: ${row.host} failed — ${error.message}`);
@@ -762,6 +1009,9 @@ async function runSourceAudit(options = {}) {
 }
 
 module.exports = {
+    FEED_TEXT_HISTORY_DAYS,
+    feedRecordsFromBody,
+    readableTextFromFeedBody,
     SOURCE_AUDIT_FILE_NAME,
     SOURCE_AUDIT_PASS,
     STILL_VERDICTS,
@@ -784,6 +1034,9 @@ module.exports = {
     stampStillIntoLossState,
     fetchListingText,
     listingUrlsForHost,
+    sniffPageKind,
+    composeAuditText,
+    PAGE_TEXT_CAP,
     isAuditEnabled,
     runSourceAudit
 };

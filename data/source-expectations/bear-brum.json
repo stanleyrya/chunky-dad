@@ -5,10 +5,12 @@
   "status": "complete",
   "recheckAfter": "2026-10-22",
   "recon": {
-    "date": "2026-09-22",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "static",
+      "page-cache",
+      "classification-cache"
     ],
     "parserUrlsAtRecon": [
       "https://www.bearbrum.com/"
@@ -29,13 +31,37 @@
         "rowsReturned": 0,
         "truthFlag": null,
         "note": "The linktree he sent: links to bearbrum.com, /guide (404) and the festival's Instagram/Facebook. Nothing of its own."
+      },
+      {
+        "rowsReturned": 1,
+        "truthFlag": "warmup blob: one event-details slug (bear-brum-weekend-pass-1), \"startDate\":\"2026-09-25T16:00:00.000Z\"",
+        "note": "Live read 2026-10-17 (one curl, 981 KB). The Wix events widget still carries exactly one item, the 2026 pass (past). Visible text: \"…then after a bit of a rest, we will look at what 2027 bring for Bear Brum.\" — nothing upcoming is published.",
+        "url": "https://www.bearbrum.com/",
+        "kind": "html",
+        "role": "listing"
+      },
+      {
+        "rowsReturned": 10,
+        "truthFlag": null,
+        "note": "Page cache 2026-10-14 (run 20261017-054812 read it). The weekend schedule as prose: \"FRIDAY 25th SEPTEMBER Welcome Event The Fountain Inn 5pm - 7:30pm … The Hub: Eden - 10pm - Late DANDY returns … SATURDAY 26th SEPTEMBER Midsbears Market Eden Bar 11am - 4pm … The Hub: Eden - 10pm - Late It's BEEFMINCE … SUNDAY 27th SEPTEMBER Bears Do Breakfast Boston Tea Party 11am - 1pm …\" — ten dated, timed, placed items, all past. The run's two kept records came from this page's outbound TICKETS links (DICE for BEEFMINCE, Outsavvy for Dandy), not from the schedule text.",
+        "url": "https://www.bearbrum.com/events",
+        "kind": "html",
+        "role": "listing"
+      },
+      {
+        "rowsReturned": 1,
+        "truthFlag": "JSON-LD DanceEvent, location {name \"The Hub @ Eden\", streetAddress \"The Hub @ Eden, 138 Gooch Street\", geo 52.46975,-1.895193}",
+        "note": "Page cache 2026-10-14; outbound from /events. Run 20261017-054812 shipped \"Dandy : BEAR BRUM 2026\" with NO bar and NO pin although both are in this JSON-LD: venueNameLooksLikeStreetAddress dropped the name because it equals the first comma-part of streetAddress (fixed on branch audit/recheck-venues: the twin rule now needs a house number on that part), and the JSON-LD route never reads Place.geo (geocode then failed: \"full address but no usable geocoordinate\"). Saved as scripts/fixtures/recheck-venues-2026-10-17/outsavvy-dandy-jsonld.json.",
+        "url": "https://www.outsavvy.com/event/35113/dandy-bear-brum-2026",
+        "kind": "html",
+        "role": "event"
       }
     ],
     "notes": "Recon from one cached read of the site on 2026-09-22. Bear Brum is Birmingham's bear festival, 25–27 September 2026. 2026-09-29: the festival has taken place; the home page now opens with a thank-you note and its Wix events blob still carries the one record (BEAR BRUM WEEKEND PASS, 25 September 2026 at 17:00 – 27 September 2026 at 21:00), now past. Runs 20260927-125246 through 20260929-091555 read 0 from this source for the same reason as Xposure Events: a connection failure during a network outage had been cached as a permanent failure of the configured url."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Feed door: every item in the Wix events blob (one). The festival publishes one dated record — the pass — and hands the nights to other promoters.",
+    "basis": "Feed door: every item in the Wix events blob (one). The festival publishes one dated record — the pass — and hands the nights to other promoters. Re-read 2026-10-17: still the one pass in the Wix blob, now past; the /events page keeps the 2026 schedule (10 items, counted not enumerated) and the home page says the next edition is 2027. The run's place-missing record is the Outsavvy Dandy page (reader bug, see door), not this site.",
     "publishedEventCount": 1,
     "documentedEventCount": 1,
     "occurrenceWindow": {
@@ -78,6 +104,43 @@
       "bearVerdict": null
     }
   ],
-  "traps": [],
-  "openQuestions": []
+  "traps": [
+    {
+      "id": "outbound-dandy-outsavvy",
+      "kind": "foreign-promoter",
+      "label": "Dandy : BEAR BRUM 2026 — Outsavvy ticket page linked from /events",
+      "why": "Dandy's night at The Hub @ Eden is sold by Dandy on Outsavvy; bearbrum.com links it as TICKETS. The crawl follows the link and the JSON-LD there yields the event (extraction is correct and attributed to this parser; bar/pin loss was the reader bug noted on the door).",
+      "evidence": {
+        "url": "https://www.bearbrum.com/events",
+        "quote": "The Hub: Eden - 10pm - Late DANDY returns with their infectious mix-tape energy. Kicking off Bear Brum with the best tunes for every body. TICKETS"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": "20261017-054812"
+    },
+    {
+      "id": "outbound-beefmince-dice",
+      "kind": "foreign-promoter",
+      "label": "BEEFMINCE x Bear Brum 2026 — DICE ticket page linked from /events",
+      "why": "BEEFMINCE's Saturday at The Hub: Eden is sold on DICE; the crawl follows the TICKETS link and reads it (kept by run 20261017-054812 with bar \"Eden\", website replaced by the curated promoter link beefmince.com).",
+      "evidence": {
+        "url": "https://www.bearbrum.com/events",
+        "quote": "The Hub: Eden - 10pm - Late It's BEEFMINCE with a brummie accent, bab. DJs Ryan and Jon will make you shake it all night. TICKETS"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      },
+      "seenInRun": "20261017-054812"
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "The /events page publishes the festival's own ten schedule items (Welcome Event at The Fountain Inn 5pm–7:30pm, Midsbears Market at Eden Bar 11am–4pm, Beary Bingo …) as prose with venue and clock, while the Wix feed carries only the pass. Next edition: should those be documented (and extracted) as the festival's events, or does the pass stand for the weekend?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    }
+  ]
 }

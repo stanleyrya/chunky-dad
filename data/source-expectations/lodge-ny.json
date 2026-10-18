@@ -3,12 +3,13 @@
   "source": "Lodge NY",
   "slug": "lodge-ny",
   "status": "complete",
-  "recheckAfter": "2026-10-19",
+  "recheckAfter": "2026-11-16",
   "recon": {
-    "date": "2026-09-19",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "static",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics"
@@ -34,16 +35,16 @@
         "url": "https://calendar.google.com/calendar/ical/info%40lodgeny.com/public/basic.ics",
         "kind": "ics",
         "role": "feed",
-        "rowsReturned": 229,
-        "truthFlag": "229 VEVENTs (the whole calendar since 2023), no paging; 175 had ended more than 30 days before recon",
-        "note": "The calendar's public iCalendar export (text/calendar). DTSTART;TZID=America/New_York wall clocks, weekly/monthly RRULEs (most with UNTIL), LOCATION street lines, DESCRIPTION with the party's own site, SUMMARY = party name + the venue street address. The scraper reads it as a machine door (🚪 MACHINE DOOR … is an iCalendar feed) and drops the archive."
+        "rowsReturned": 232,
+        "truthFlag": "whole calendar in one body (no paging); 232 VEVENTs, 56 not archived (ended within 30 days or a running series)",
+        "note": "Re-read 2026-10-17 from the scraper's cache (fetched 2026-10-16T10:20Z). Properties present across the 232 records: SUMMARY, DTSTART/DTEND (TZID=America/New_York), RRULE ×172, RDATE ×10, EXDATE ×34, RECURRENCE-ID ×31, DESCRIPTION ×223, LOCATION ×180, STATUS (all CONFIRMED), X-GOOGLE-CONFERENCE ×6. Absent on every record: GEO, ATTACH, URL — the feed publishes no coordinates, no artwork and no per-event link. Every LOCATION on a current record is either a street line (\"232 W 37th St 2nd fl, New York, NY 10018, USA\", \"457 W 56th St, 2nd Fl, New York, NY 10036, USA\") or a neighbourhood (\"Garment District, New York, NY, USA\", \"Park Slope, Brooklyn, NY, USA\"); no record names a venue. The SUMMARY carries the party name followed by the street address (\"Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues\")."
       }
     ],
     "notes": "Recon from one cached read of each door on 2026-09-19. 229 VEVENTs; 175 archive records (ended > 30 days ago, or series whose UNTIL passed > 30 days ago); 29 live series, 2 upcoming singles, 0 recent past singles, 23 series that just ended."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Feed door: the iCalendar export, read whole. Every record that is live on 2026-09-19 is documented: series (RRULE without UNTIL or with a future UNTIL) as ONE entry each with the rule's nights in the window, dated records as singles. 175 archive records and 0 recent past singles are counted as past listings, not enumerated. The rendered Google Calendar embed was not read (JavaScript); the iCalendar is the same calendar.",
+    "basis": "Re-read 2026-10-17: the cached feed body of 2026-10-16 holds the same 29 running series and 2 dated Manhole exceptions documented on 2026-09-19 (no series ended, none added; The Fuck Stop Thursday still splits at 2026-10-22). Run 20261017-054812 extracted 300 rows from the two Google feeds, kept 78 from this one = 6 bear series × 13 Sundays/Tuesdays/Wednesdays/Fridays/Saturdays, every one with location (geocoded from the LOCATION street line) and none with bar or image — Earlier basis: Feed door: the iCalendar export, read whole. Every record that is live on 2026-09-19 is documented: series (RRULE without UNTIL or with a future UNTIL) as ONE entry each with the rule's nights in the window, dated records as singles. 175 archive records and 0 recent past singles are counted as past listings, not enumerated. The rendered Google Calendar embed was not read (JavaScript); the iCalendar is the same calendar.",
     "publishedEventCount": 31,
     "documentedEventCount": 31,
     "occurrenceWindow": {
@@ -2418,6 +2419,16 @@
     {
       "q": "The calendar mixes the bear parties (The Bear Party, Dads 'n' Lads, Chub Chaser Party, Workman's Lunch, Blow Buddies) with parties for other crowds (Fluids, NY Uncut, Manhole, The Fuck Stop, Nocturnal NY, Squeeze, Stag HK). All are documented as published events; the bear pass decides which are ours.",
       "raisedOn": "2026-09-19",
+      "blocking": false
+    },
+    {
+      "q": "Venue identity (owner call, 2026-10-17): run 20261017-054812 kept 78 Lodge NY rows and every one has bar empty (place 10% on the calendar.google.com ledger). That is the feed: no record names a venue, LOCATION is a street line or a neighbourhood, and shared-core icsRecordToFeedRow only reads a venue from a LOCATION whose first comma segment has no digit (\"Stonewall Hotel, Sydney\"). The calendar belongs to one promoter/venue (info@lodgeny.com, website lodgeny.com, titles already prefixed \"Lodge NY:\") with two rooms (232 W 37th St 2nd Fl, 457 W 56th St 2nd Fl). Options: (a) leave bar empty — the address and pin are right; (b) a parser-level metadata venue the way metadata.website is stamped today; (c) read the venue from the owner's curated bars by address. Nothing in the feed can decide this; do not invent a venue from the title.",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    },
+    {
+      "q": "Images (2026-10-17): image 0% on this host is the feed — Google Calendar's public iCalendar export carries no ATTACH and no artwork property; the only picture available would be the promoter's favicon/site identity, which is a site-identity question, not an extraction one.",
+      "raisedOn": "2026-10-17",
       "blocking": false
     },
     {

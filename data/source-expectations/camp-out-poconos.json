@@ -5,10 +5,12 @@
   "status": "complete",
   "recheckAfter": "2026-10-19",
   "recon": {
-    "date": "2026-09-19",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "static",
+      "page-cache",
+      "classification-cache"
     ],
     "parserUrlsAtRecon": [
       "https://campoutpoconos.com/"
@@ -37,15 +39,31 @@
         "rowsReturned": 35,
         "truthFlag": null,
         "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached /calendar/ from the home page and read it through the Elfsight calendar widget read on that page one hop down (🗓️ ELFSIGHT, 11 published): 35 events, 4 bear in 12 s — the https://campoutpoconos.com/calendar/ config read 35/4 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-19."
+      },
+      {
+        "rowsReturned": 113,
+        "truthFlag": "113 rows; 3 with end >= 2026-10-17 (CAMPCON: GEEKS & GAYMERS 10/16–18, HALLOWEEN WEEKEND 10/23–25, Friendsgiving 11/21); location [] on every row",
+        "note": "Scraper page cache fetched 2026-10-17 09:40Z by run 20261017-054812 (as good as a fetch). One new row since 2026-09-19: Friendsgiving (2026-11-21 18:00 → 11-22 00:00, isAllDay false, tag \"Nov 21,6PM\"). Weekend rows carry creation-time clocks (LEATHER BEARS 07:57→07:57 with no isAllDay flag; CAMPCON/HALLOWEEN 07:58/08:00 flagged isAllDay) — the site states no real clock for a weekend.",
+        "url": "https://core.service.elfsight.com/p/boot/?w=0b55cd6c-7fb9-4d18-ae23-10a65951a07e",
+        "kind": "json",
+        "role": "feed"
+      },
+      {
+        "rowsReturned": 0,
+        "truthFlag": "no event text; one <img> of the season calendar graphic (2026-Calendar-516-1.jpg, srcset 232w/768w/791w/1275w, alt=\"\")",
+        "note": "Page cache 2026-10-17 09:39Z. The home page's only \"events\" are a 2026 season-calendar GRAPHIC. Run 20261017-054812 (AI route, OCR of the 232x300 srcset thumbnail) extracted \"BEAR WEEKEND (SEASON 5)\" 2027-05-13, \"Friends of Goldilocks (Bear WKND)\" 2027-05-15 and \"SPRING\" 2027-04-23 from it — 3 of the 4 kept events, all midnight (the time 75% of the ledger). See trap season-calendar-graphic.",
+        "url": "https://campoutpoconos.com/",
+        "kind": "html",
+        "role": "listing"
       }
     ],
     "notes": "Recon from one cached read of each door on 2026-09-19. 112 widget entries: 6 future singles, 0 repeating entries with a window occurrence, 105 entries already over (counted, not enumerated), 0 repeating entries with nothing in the window."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Feed door: the Elfsight boot payload lists every entry the widget renders (112). Documented: every entry that is upcoming (6 singles) or repeats into the window (0 series, occurrences by rule). 105 entries ended before 2026-09-19 and are counted as past listings. The page's own HTML carries none of this.",
-    "publishedEventCount": 6,
-    "documentedEventCount": 6,
+    "basis": "Feed door: the Elfsight boot payload lists every entry the widget renders (112). Documented: every entry that is upcoming (6 singles) or repeats into the window (0 series, occurrences by rule). 105 entries ended before 2026-09-19 and are counted as past listings. The page's own HTML carries none of this. Re-read 2026-10-17 from the run's own cache of the boot payload: 113 rows, 3 upcoming (Friendsgiving new). The site states no clock for a weekend (creation-time 07:57/07:58/08:00 clocks, isAllDay on two of three) — the run's one timed record, LEATHER BEARS 07:57, is a data-entry artifact, and the three midnight ones are the home-page graphic's phantom rows.",
+    "publishedEventCount": 7,
+    "documentedEventCount": 7,
     "occurrenceWindow": {
       "start": "2026-09-19",
       "end": "2026-12-18"
@@ -194,8 +212,52 @@
         "extracted": true
       },
       "bearVerdict": null
+    },
+    {
+      "id": "friendsgiving-2026-11-21",
+      "kind": "single",
+      "title": "Friendsgiving",
+      "description": "Join us for Friendsgiving 2026 at Camp! Our first gathering of the off-season and what has become a cherished annual tradition for our community. Click the link below to RSVP and let us know what dish you’ll be bringing to share. RSVP HERE The event is free to attend but RSVP is required.",
+      "startDate": "2026-11-21",
+      "startTime": "18:00",
+      "endDate": "2026-11-22",
+      "endTime": "00:00",
+      "image": "https://files.elfsightcdn.com/eafe4a4d-3436-495d-b748-5bdce62d911d/ac1e598d-f279-429a-929d-85a5a4fca8b4/Camp-Out-Poconos-Friendsgiving.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "note": "Added 2026-10-17: the first off-season social, a real clock (18:00) unlike the weekend rows. Not in run 20261017-054812's kept set (bear check pending).",
+      "evidence": {
+        "url": "https://core.service.elfsight.com/p/boot/?w=0b55cd6c-7fb9-4d18-ae23-10a65951a07e",
+        "jsonPath": "$.data.widgets[\"0b55cd6c-7fb9-4d18-ae23-10a65951a07e\"].data.settings.events[3]"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null
     }
   ],
-  "traps": [],
-  "openQuestions": []
+  "traps": [
+    {
+      "id": "season-calendar-graphic",
+      "kind": "announcement",
+      "label": "2026-Calendar-516-1.jpg — the season calendar graphic on the home page",
+      "why": "A multi-event graphic (\"camp OUT POCONOS, PA 2026-SEASON5 … MAY 15-17 FRIENDS OF GOLDILOCKS (BEAR WKND) … OCT 23-25 HALLOWEEN WEEKEND\"), every row of which the Elfsight widget publishes properly. Run 20261017-054812 read the 232x300 srcset THUMBNAIL's OCR (cached 2026-09-20), which hallucinated rows (\"MAY 13-14 BEAR WEEKEND (SEASON 5)\", \"BEAR WEEKEND (SEASON 6)\", \"RESERVATIONS OPEN MARCH 17, 2025\") that the 791x1024 OCR of the same image does not contain; the model dated them 2026 from the graphic's header and normalizeEventDates then walked the past May dates to 2027 (\"Normalized dates — startDate=2027-05-13\") because no year sat BESIDE the day. Three phantom 2027 events shipped as kept bear events. Generic: (a) OCR the largest srcset candidate, never a thumbnail; (b) a flyer-wide header year counts as the stated year of its undated rows.",
+      "evidence": {
+        "url": "https://campoutpoconos.com/",
+        "quote": "src=\"https://campoutpoconos.com/wp-content/uploads/2026/05/2026-Calendar-516-1.jpg\" alt=\"\" srcset=\"…2026-Calendar-516-1-232x300.jpg 232w, …-791x1024.jpg 791w, … 1275w\""
+      },
+      "expect": {
+        "extracted": false,
+        "kept": null
+      },
+      "seenInRun": "20261017-054812"
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "LEATHER BEARS (2026-10-09 → 10-12) carries start/end clock 07:57 with no isAllDay flag — the time the owner created the entry, read by the run as a 07:57 start. A multi-day row whose start and end clocks are identical and off the 5-minute grid is a date-only entry in all but the flag; should the Elfsight reader treat it as all-day (and should weekend rows be all-day spans at all)?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    }
+  ]
 }

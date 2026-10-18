@@ -4,12 +4,13 @@
   "slug": "beefmince",
   "status": "complete",
   "recon": {
-    "date": "2026-09-10",
+    "date": "2026-10-17",
     "method": [
       "feed",
       "static",
       "rendered",
-      "flyer"
+      "flyer",
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://beefmince.com/"
@@ -254,6 +255,22 @@
         "rowsReturned": 36,
         "truthFlag": null,
         "note": "Root proof 2026-10-08 (dry run on the scratch copy, crawler branch crawl-from-roots): configured at the bare domain, the crawl reached its /events page from the home page and read it through the DICE event-list widget, which rides on the home page as well and is read there (🎟️ DICE, 9 rows incl. a linkout): 36 events, 13 bear in 14 s — the https://beefmince.com/events config read 36/13 the same day. parserUrlsAtRecon now names the root; the doors above were read through the subpath on 2026-09-10."
+      },
+      {
+        "url": "https://dice.fm/promoters/beefmince-3oorg",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 8,
+        "truthFlag": null,
+        "note": "Re-read 2026-10-17 from the scraper's cache (fetched 2026-10-16): the promoter listing's cards state a day and a venue but no clock (SPOOKMINCE Sat 31 Oct UNLOCKED; TURKEYMINCE Sat 19 Dec RVT; New Year's Eve Thu 31 Dec The Steel Yard; New Year's Day Fri 1 Jan 2027 Horizon) and link each event under its 24-hex id (dice.fm/event/6a58e45e…), while the event pages declare themselves under the slug URL (dice.fm/event/ww93qg-turkeymince-…-tickets). Run 20261017-054812 saved the four as time-less twins beside the timed rows (time 77%, description 69% on the ledger): the identity guard refused the fold because the destinations differ. The scheduled run was still on the 2026-10-14 checkout; the alias learner that folds one page under two spellings (#1897, merged after it) was absent. Verified 2026-10-17: SharedCore.noteUrlAlias on origin/main reads the cached id page's rel=canonical and folds the pair."
+      },
+      {
+        "url": "https://beefmince.com/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": null,
+        "note": "Re-read 2026-10-17 from the cache (fetched 2026-10-16): the events widget renders client-side; the static page carries only the banner \"NEXT: SATURDAY 17 oCTOBER BEEFMINCE NEON at the rvt\" and a STEEL YARD \"BOOK NOW\" block."
       }
     ],
     "notes": "Parser config at recon: name BEEFMINCE, urls [https://beefmince.com/events], no urlDiscoveryDepth / maxAdditionalUrls / discoveryAllowedPatterns / discoveryBlockedPatterns / alwaysBear / siteRole / automationEnabled set (all defaults; adaptive crawling). Platform: Astro/Zyrosite (Hostinger) static page embedding the DICE Event List Widget, confirmed by the working partners-endpoint.dice.fm/api/v2 call using the page's own partnerId JKRM6GMD + apiKey; /api/v1 was not tried (brief: 404).\nTime semantics: feed date/date_end are true instants (Z). The 8 'event' rows and the Welly linkout carry timezone Europe/London and convert cleanly (22:00 BST/GMT starts; the dice.fm event pages print the same wall-clock). The 4 Sitges linkouts carry timezone Africa/Algiers (x3) and Africa/Tunis (x1), both UTC+1 year-round, so their 00:00Z start is 01:00 in that zone but 02:00 in Europe/Madrid; beefmince.com/sitges ('from 01:00 until 06:00'), the news post ('Doors open 01:00') and the sitgesbearcave JSON-LD (01:00+02:00) all say 01:00, so this file records 01:00 Europe/Madrid and treats the feed instant as one hour off. The Butlin's linkout carries timezone Europe/Rome with 17:00Z-17:00Z three days apart; only the date range is trusted.\nDate-in-name trap: the Sitges row names say 'Wednesday 9 Sept' etc. (the party night) while the ISO date is the following calendar day (01:00 on the 10th). startDate here is the calendar date of the 01:00 start, matching the sitgesbearcave JSON-LD.\nRun 20260909-072307 (parserResults BEEFMINCE, parserType ai-web, urlClassifications {https://beefmince.com/events: multi-event-page}): totalEvents 21, duplicatesRemoved 9, 12 kept, 0 bear-dropped. The 12 = the 8 DICE 'event' rows (ticketUrl = dice.fm/event/<slug> canonical pages, website https://beefmince.com) + the 4 Sitges nights (from the sitgesbearcave.com pages: title 'BEEFMINCE MEET MARKET' etc., bar The Bear Cave, startDate 2026-09-09T23:00:00.000Z = 01:00 Madrid on the 10th, correct). The 9 duplicates are the same events reached twice (widget row vs promoter page / linkout destination). Missing from the run: the Welly Takeover (2026-09-26 linkout) and the Butlin's Don't Tell Mama linkout (2027-01-29).\nThe Bear Calendar (data/source-expectations/the-bear-calendar.json) republishes 8 BEEFMINCE rows (belongsToSource BEEFMINCE) — theirs to tag, not this file's. 7 of the 8 map onto feed rows (its 'BEEFMINCE x RVT' 2026-09-19 row is the Brief Encounter event: same link.dice.fm/P0194faadd01); its 8th, SPOOKMINCE 2026-10-31 (link.dice.fm/Gffadd9feb4a), is a DICE 404 and absent from the BEEFMINCE feed on 2026-09-10.\nNo events are flyer-only: all 13 distinct DICE images (flyers/) are brand art; only the Welly flyer carries a date ('saturday 26 september') and it agrees with the feed."
@@ -273,7 +290,9 @@
       "end": "2026-12-09"
     },
     "pastListingsPresent": false,
-    "knownGaps": []
+    "knownGaps": [
+      "2026-10-17: the DICE partners feed was not re-read; counts rest on the 2026-09-10 read plus the cached promoter page of 2026-10-16 (8 rows, every one among the 14 documented)."
+    ]
   },
   "events": [
     {
@@ -410,9 +429,7 @@
       "image": "https://dice-media.imgix.net/attachments/2026-08-17/6602b147-308f-4a7e-a729-4e903dfb3142.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "sameEventAs": [
-        "the-bear-calendar#beefmince-x-rvt-2026-09-19"
-      ],
+      "sameEventAs": [],
       "evidence": {
         "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
         "jsonPath": "$.data[4]",
@@ -471,9 +488,7 @@
       "image": "https://dice-media.imgix.net/attachments/2026-03-29/7ec0f877-c521-402f-9647-d48e7e765d89.jpg",
       "sourceRung": "feed",
       "confidence": "high",
-      "sameEventAs": [
-        "the-bear-calendar#beefmince-x-bear-brum-2026-2026-09-26"
-      ],
+      "sameEventAs": [],
       "evidence": {
         "url": "https://partners-endpoint.dice.fm/api/v2/events?page[size]=100&types=linkout,event&filter[promoters][]=BEEFMINCE",
         "jsonPath": "$.data[6]",
@@ -875,6 +890,21 @@
         "extracted": false
       },
       "seenInRun": null
+    },
+    {
+      "seenInRun": "20261017-054812",
+      "id": "dice-promoter-listing-id-url-twins",
+      "label": "dice.fm/promoters cards under the 24-hex id URL beside the slug-URL event pages",
+      "kind": "duplicate-listing",
+      "why": "One event under two spellings of its page: the listing links dice.fm/event/<24-hex>, the page declares dice.fm/event/<id>-<words>-tickets. Run 20261017-054812 kept SPOOKMINCE (folded by its shared ticket link) once but TURKEYMINCE, New Year's Eve and New Year's Day twice. Expected to fold from the first run on origin/main after 2026-10-14 (noteUrlAlias).",
+      "evidence": {
+        "url": "https://dice.fm/promoters/beefmince-3oorg",
+        "quote": "TURKEYMINCE Sat 19 Dec The Royal Vauxhall Tavern London"
+      },
+      "expect": {
+        "extracted": true,
+        "kept": null
+      }
     }
   ],
   "openQuestions": [
@@ -897,6 +927,12 @@
       "q": "Run 20260909-072307 kept 12 of 14 published rows — both misses are non-DICE linkouts (Welly Takeover at Duke of Wellington 2026-09-26, Butlin's 2027-01-29). Does the scraper's DICE path drop type 'linkout' rows without an external JSON-LD page, or did it only reach these via the promoter page (which omits linkouts)?",
       "raisedOn": "2026-09-10",
       "blocking": false
+    },
+    {
+      "q": "Butlin's weekender (2026-10-17): run 20261017-054812 flagged \"BEEFMINCE x Don't Tell Mama - Butlin's Bognor Regis\" improbable-overnight-span (18:00 Fri → 18:00 Mon, 72 h). The source states a three-night weekender; the flag reads a festival-length span as an AM/PM typo. Product call: a span that lands on the same wall clock N days later is a multi-day event, not a typo.",
+      "raisedOn": "2026-10-17",
+      "blocking": false
     }
-  ]
+  ],
+  "recheckAfter": "2026-11-16"
 }

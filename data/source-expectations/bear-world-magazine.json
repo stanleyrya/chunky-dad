@@ -2,13 +2,12 @@
   "schemaVersion": 1,
   "source": "Bear World Magazine",
   "slug": "bear-world-magazine",
-  "status": "publishes-nothing",
-  "recheckAfter": "2026-10-08",
+  "status": "complete",
   "recon": {
-    "date": "2026-09-24",
+    "date": "2026-10-17",
     "method": [
       "feed",
-      "static"
+      "page-cache"
     ],
     "parserUrlsAtRecon": [
       "https://bearworldmag.com/wp-json/wp/v2/posts?categories=10&per_page=10&_fields=id,date,modified,link,title,content"
@@ -19,47 +18,144 @@
         "kind": "json",
         "role": "feed",
         "rowsReturned": 10,
-        "truthFlag": "X-WP-Total 513 posts in category 10 (events); newest first",
-        "note": "WordPress 7.0.6 REST posts endpoint, open, robots.txt disallows nothing. One request answers the ten newest posts of the site's own 'events' category (id 10) with their bodies (552 KB). Three of the ten are listings the listing-prose reader takes apart: 'Bear nights and events in the USA & Canada this July!' (2026-07-01; 106 lines under 28 city headings → 129 dated nights, July 2026), 'Bear nights and parties in your city this month!' (2026-06-02; 82 lines under 25 headings → 104 nights, June 2026), 'Urban Bear NYC marks 18 years…' (2026-09-02; 8 schedule lines, Sep 17–20 2026). Every date in every listing is before the recon date. The other seven posts are recaps and announcements in prose (URGE Miami Nov 27–30 in sentences, Bear Ball XL recap, MAD.BEAR recap, Harbour City Bears 'Wk1 of September: Saturday 5th September 2026 : Polly's' day-first schedule, BEEFMINCE Sitges h3 schedule, Bareburger feature, Bears On The River recap) — shapes the reader does not claim."
-      },
-      {
-        "url": "https://bearworldmag.com/category/events/",
-        "kind": "html",
-        "role": "listing",
-        "rowsReturned": 10,
-        "truthFlag": "paged archive (page/2/ …)",
-        "note": "The human archive of the same category: ten post cards per page, newest first, the same ten posts as the feed on the recon date. Confirms the feed's order and that no newer listing exists."
+        "truthFlag": "newest first; per_page=10",
+        "note": "As cached 2026-10-16T09:50Z (368 KB): the ten newest \"events\"-category posts with bodies. Four announce upcoming events (Bear Fuzz Fest 2026-10-15, PLPN 10-08, Bear Jamboree tea dance 09-29, URGE Miami 09-24); six are recaps/announcements of past dates. No monthly roundup since July 2026 (the listing-prose reader's shape); every article goes through the AI route (📰 ARTICLE FEED: 10 article(s), read as pages)."
       },
       {
         "url": "https://bearworldmag.com/robots.txt",
         "kind": "other",
         "role": "other",
         "rowsReturned": 0,
-        "truthFlag": "Disallow: (empty); Sitemap: wp-sitemap.xml",
-        "note": "Allows everything."
-      },
-      {
-        "url": "https://bearworldmag.com/wp-json/wp/v2/categories?per_page=100",
-        "kind": "json",
-        "role": "other",
-        "rowsReturned": 100,
-        "truthFlag": null,
-        "note": "Category directory: 'events' is id 10 (513 posts); 'chub-events' (4788) is a small sibling. No events plugin (wp-json/wp/v2/types lists post, page, media, … only)."
+        "truthFlag": "Disallow: (empty)",
+        "note": "Cached 2026-10-16 (174 bytes)."
       }
     ],
-    "notes": "Recon 2026-09-24 from one cached read per door (home, robots, sitemap index, types, categories, the posts feed, the category archive, the June/July roundups, the AU/NZ/Asia festival calendar). Monthly roundups appeared for June and July 2026 and none since; the AU/NZ/Asia 'Calendar of Bear Events' (2026-04-26) is a festival list in prose. The source is worth one request per run: the day a new roundup is posted, its hundred nights arrive with the venue and the party's own link each."
+    "notes": "Recheck 2026-10-17 from the cached feed. The September \"publishes-nothing\" is stale: four posts since 2026-09-24 announce upcoming events, which is why the source keeps yielding 19 kept rows a run. Of run 20261017-054812's 26 rows, 4 are these events, 3 are photo captions, 15 are past recap records, and the rest are sub-lines of the Urban Bear / HCB schedules. Time missing 51%: announcements in prose rarely print a clock (Fuzz Fest, URGE days) — the site's shape."
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Two doors agree nothing upcoming is listed on 2026-09-24: the posts feed's ten newest 'events' posts hold three listings whose every date is past (latest 2026-09-20), and the category archive shows the same ten posts newest-first. Past listings are counted (241 dated lines), not enumerated.",
-    "publishedEventCount": 0,
-    "documentedEventCount": 0,
-    "occurrenceWindow": null,
+    "basis": "Feed door: the ten newest posts read in full; every event announced for a date on or after the recon date is documented (4); the six past-dated posts are counted as past listings (recaps), not enumerated.",
+    "publishedEventCount": 4,
+    "documentedEventCount": 4,
+    "occurrenceWindow": {
+      "start": "2026-10-17",
+      "end": "2027-01-15"
+    },
     "pastListingsPresent": true,
     "knownGaps": []
   },
   "defaults": {},
-  "events": [],
+  "events": [
+    {
+      "id": "bear-fuzz-fest-2026",
+      "kind": "single",
+      "title": "Bear Fuzz Fest",
+      "description": "Central PA Bears' first bear run: a weekend retreat with classes, demos and parties at the Eisenhower Hotel & Conference Center.",
+      "bar": "Eisenhower Hotel & Conference Center",
+      "city": "gettysburg",
+      "timezone": "America/New_York",
+      "startDate": "2026-12-10",
+      "startTime": null,
+      "endDate": "2026-12-13",
+      "endTime": null,
+      "website": "https://bearfuzzfest.com/",
+      "ticketUrl": "https://bearfuzzfest.com/",
+      "image": "https://bearworldmag.com/wp-content/uploads/2026/10/NEW_Bears-Fuzz-Fest-Logo_Orange.webp",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearworldmag.com/bear-fuzz-fest-2026/",
+        "quote": "Central PA Bears are putting on Bear Fuzz Fest as their very first bear run from December 10th through the 13th in Gettysburg, PA."
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Post of 2026-10-15. Run 20261017-054812 extracted it with city gettysburg, no bar, and website https://islandhousekeywest.com/ — the first link of the article's sponsor/ad block, not the run's own site (bearfuzzfest.com is linked in the body: \"clicking here: BearFuzzFest\")."
+    },
+    {
+      "id": "philadelphia-leather-pride-night-2026-11-01",
+      "kind": "single",
+      "title": "Philadelphia Leather Pride Night",
+      "description": "17th annual PLPN: an afternoon and evening of community and a live charity auction.",
+      "bar": "Congregation Rodeph Shalom",
+      "city": "philly",
+      "timezone": "America/New_York",
+      "startDate": "2026-11-01",
+      "startTime": "15:00",
+      "endDate": "2026-11-01",
+      "endTime": null,
+      "website": null,
+      "ticketUrl": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearworldmag.com/philadelphia-leather-pride-night-returns-november-1st/",
+        "quote": "Sunday, November 1, 2026 Doors: 3:00 PM | Live Auction: 4:15 PM Congregation Rodeph Shalom | Center City Philadelphia"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Post of 2026-10-08. Run 20261017-054812 extracted it (dropped by the AI bear check: leather, not bear) with ticketUrl https://the-bear-shop.fourthwall.com/promo/LAUNCHOFFER — again an ad-block link."
+    },
+    {
+      "id": "bear-jamboree-sunday-tea-dance-2026-10-18",
+      "kind": "single",
+      "title": "Bear Jamboree's first Sunday Tea Dance",
+      "description": "Kristine W performs (2:45PM) with DJ Nani Soul and DJ Joe Pacheco, during Come Out With Pride Orlando weekend.",
+      "bar": "Anthem Orlando",
+      "address": "43 W. Washington St., Orlando FL 32801",
+      "city": "orlando",
+      "timezone": "America/New_York",
+      "startDate": "2026-10-18",
+      "startTime": "12:00",
+      "endDate": "2026-10-18",
+      "endTime": "18:00",
+      "website": null,
+      "ticketUrl": null,
+      "image": "https://bearworldmag.com/wp-content/uploads/2026/10/82828606",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearworldmag.com/kristine-w-to-perform-at-bear-jamborees-first-sunday-tea-dance/",
+        "quote": "Bear Jamboree will present their very first Sunday Tea Dance on Sunday, October 18th, during the weekend of Come Out With Pride Orlando. Join the bear community for some amazing music and furry fun from 12PM to 6PM at 43 W. Washington St., Orlando FL 32801, behind the Anthem Orlando club."
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Post of 2026-09-29. Run 20261017-054812 kept it (12:00–18:00, Anthem Orlando) with website https://thebearmag.com/newsstand/ — an ad-block link; the image id is as the run carried it (truncated in the run record)."
+    },
+    {
+      "id": "urge-miami-festival-2026",
+      "kind": "single",
+      "title": "URGE Miami Festival",
+      "description": "Thanksgiving-weekend festival: opening party Fri 2PM at a Miami Beach hotel, pool party, the URGE Beach Party Sun 2PM–9PM between 6th and 7th Streets off Ocean Drive, WE \"Heroes\" at M2 Miami Sun 10:30PM–5AM, RAW after-hours at Paraiso Estereo Mon from 5AM.",
+      "bar": null,
+      "city": "miami",
+      "timezone": "America/New_York",
+      "startDate": "2026-11-27",
+      "startTime": "14:00",
+      "endDate": "2026-11-30",
+      "endTime": null,
+      "website": null,
+      "ticketUrl": null,
+      "image": null,
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://bearworldmag.com/urge-miami-festival-returns-this-coming-thanksgiving-weekend/",
+        "quote": "URGE Miami Festival returns November 27th through the 30th with three daytime events and four nighttime experiences."
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Post of 2026-09-24. Run 20261017-054812 extracted two URGE records (11-27 05:00Z and 11-27 19:00Z), both dropped by the AI bear check (circuit festival, not bear). The article names seven parties; documented as the festival, as the magazine announces it."
+    }
+  ],
   "traps": [
     {
       "id": "past-roundup-july-2026",
@@ -90,9 +186,61 @@
         "kept": null
       },
       "seenInRun": null
+    },
+    {
+      "id": "photo-captions-as-events",
+      "kind": "gallery",
+      "label": "<figcaption>: \"Robert Valin, photo by Catalin Stelian\" (Urban Bear post), \"PLPN Flag – Photo Credit: Alex Atamian Photography\" (PLPN post), \"Bears enjoying a cold pint in Halifax. – Photo Credit: Jon Morse\" (Bear Ball XL recap)",
+      "why": "Captions under the posts' photos; run 20261017-054812 turned each into a dated \"event\" (the caption's words appear nowhere else in the article). Dropped by the page-furniture guard added in this recheck (a title found only inside a <figcaption>).",
+      "evidence": {
+        "url": "https://bearworldmag.com/urban-bear-street-fair-2026/",
+        "quote": "<figcaption class=\"wp-element-caption\">Robert Valin, photo by Catalin Stelian</figcaption>"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261017-054812"
+    },
+    {
+      "id": "photo-recaps-are-past",
+      "kind": "past-event",
+      "label": "\"Photo Recap: Bears Sitges 2026\" (10-07), \"Bear Ball XL: Canada's Newest Bear Run\" (09-22), \"Photo Recap: MAD.BEAR Beach 2026\" (09-15), \"Urban Bear NYC marks 18 years…\" (09-02), \"Harbour City Bears 2026 Bear Pride\" (08-26), \"BEEFMINCE returns to Bear Sitges Week\" (08-18)",
+      "why": "Six of the ten newest posts recount or announce events whose dates are all before the recon date (Sitges Sep 3–13, Halifax Jul 2–5, Torremolinos Aug 7–18, Urban Bear Sep 17–20, HCB Sep 5–20, BEEFMINCE Sitges Sep 9–12). Counted as past listings; run 20261017-054812 extracted 15 records from them (MISTER BEAR SITGES 2026 at \"@bearsmeets\", \"Wk1 of September\", Urban Bear NYC, the BEEFMINCE nights …) which fold into what the calendar already holds or sit as past.",
+      "evidence": {
+        "url": "https://bearworldmag.com/photo-recap-bears-sitges-2026/",
+        "quote": "The 2026 edition of Bears Sitges Week, celebrating their 25th anniversary, took place from September 3rd through the 13th."
+      },
+      "expect": {
+        "extracted": true,
+        "note": "Past records under allowPastEvents; the recap captions are the trap above."
+      },
+      "seenInRun": "20261017-054812"
+    },
+    {
+      "id": "sponsor-ad-links-adopted-as-website",
+      "kind": "navigation",
+      "label": "The ad block under every post: islandhousekeywest.com, keywestbearweekend.com, tulkengear.com, thebearmag.com/newsstand/, the-bear-shop.fourthwall.com …",
+      "why": "Sponsor links in the article template, not the event's own site. Run 20261017-054812 shipped them as website/ticketUrl on Bear Fuzz Fest (islandhousekeywest.com), PLPN (fourthwall promo) and the Bear Jamboree tea dance (thebearmag.com/newsstand/). An article's event link is the one in its body (\"clicking here: BearFuzzFest\" → bearfuzzfest.com).",
+      "evidence": {
+        "url": "https://bearworldmag.com/bear-fuzz-fest-2026/",
+        "quote": "https://islandhousekeywest.com/"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261017-054812"
     }
   ],
   "openQuestions": [
-    "Whether the magazine resumes monthly roundups (June and July 2026 only so far); recheck the feed's newest titles on the recheck date."
+    {
+      "q": "The monthly roundups (\"Bear nights and events in the USA & Canada this July!\") have not returned since July 2026; the listing-prose reader waits for them. Recheck the newest titles monthly.",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    },
+    {
+      "q": "An article template's sponsor/ad block supplies the first outbound links on every post; should the AI route rank body links above template links for website/ticketUrl (generic: links inside the article body vs. after it)?",
+      "raisedOn": "2026-10-17",
+      "blocking": false
+    }
   ]
 }
