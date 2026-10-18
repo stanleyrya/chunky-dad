@@ -218,6 +218,29 @@ const scraperConfig = {
       discoveryBlockedPatterns: ["ursamen.org/about", "ursamen.org/contact", "ursamen.org/the-board", "ursamen.org/our-sponsors", "ursamen.org/general-events", "coming-soon", "zeffy.com/donation-form"],
     },
     {
+      name: "Folsom Europe",
+      // Berlin's September fetish week. folsomeurope.berlin/program/ is a
+      // WordPress page whose body is ONE iframe of the festival's programme
+      // on Switched's "Event Control" (ems.switchedapp.com) — server-rendered,
+      // one day per page, the other days behind ?day= tabs; the parser's
+      // programme door reads every day (110 cards across five days for the
+      // 2026 edition). The WordPress site's own Tribe calendar holds only
+      // volunteer shifts, so the programme is configured directly: it is a
+      // root, so its day tabs are first-party reads although the host's
+      // robots.txt disallows crawlers (owner ruling 2026-10-18, as for the
+      // Google Calendar and TicketSauce feeds). Cards name their venue in
+      // the title or the blurb only (the Map link is a JS shell), so the
+      // bars data places them; the heading "Folsom Europe 2026" names the
+      // curated festival, which lends the city. The festival is a registry
+      // identity (data/promoters.json), so no metadata or alwaysBear here.
+      // Between editions the programme shows the past one, which the
+      // horizon drops.
+      urls: ["https://ems.switchedapp.com/programme/folsomeurope"],
+      // Every outbound link is the platform's tracking redirect (/url/<guid>)
+      // or a map shell; nothing on the host is worth following.
+      urlDiscoveryDepth: 0,
+    },
+    {
       name: "Bear Fuzz Fest",
       // Central PA Bears' winter bear weekend at the Eisenhower Hotel &
       // Conference Center, Gettysburg (December 10-13, 2026). A plain

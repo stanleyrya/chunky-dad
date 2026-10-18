@@ -22997,3 +22997,74 @@ test("an inline bundle row's grouping code is never read as the address region (
     assert.ok(!/\bPT\b/.test(String(event.address || '')), `${event.title}: address "${event.address}" carries the grouping code`);
   }
 });
+
+test('Switched programme door: every day tab is read first-party, cards become the programme\'s own events, the heading places them, FROM is no end and an end before its start is the next morning', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const parser = createParser();
+  const cities = require('../scraper-cities');
+  parser.core.festivals = [{ name: 'Folsom Europe', cityKey: 'berlin', start: '2026-09-10', end: '2026-09-13' }];
+  const dir = path.join(__dirname, '..', 'fixtures', 'switched-programme-2026-10-18');
+  const page = (name) => fs.readFileSync(path.join(dir, name), 'utf8');
+  const url = 'https://ems.switchedapp.com/programme/folsomeurope';
+  // One tab is sent to another host: the door never leaves the page's own site.
+  const landing = page('landing-wed.html').replace('href="/Programme/folsomeurope?day=4302585b-6fa4-4fc1-bb5a-08dd6eac4b22"', 'href="https://other.example/Programme/folsomeurope?day=4302585b-6fa4-4fc1-bb5a-08dd6eac4b22"');
+  const detected = parser.detectSwitchedProgramme(landing, url);
+  assert.equal(detected.heading, 'Folsom Europe 2026');
+  assert.deepEqual(detected.days.map(d => [d.label, d.selected]), [['Wed 9', true], ['Thu 10', false], ['Fri 11', false], ['Sat 12', false], ['Sun 13', false]]);
+  assert.equal(parser.detectSwitchedProgramme('<ul class="days"><li><a href="?day=abc12345">Mon</a></li></ul><p>No cards</p>', url), null, 'tabs without the date-line grammar are not a programme');
+
+  const fetched = [];
+  const httpAdapter = {
+    fetchData: async (requestUrl, options) => {
+      fetched.push({ requestUrl, referer: options && options.headers && options.headers.Referer });
+      if (/day=c3e8a255/.test(requestUrl)) return { html: page('day-fri.html'), url: requestUrl };
+      if (/day=80fd8a2a/.test(requestUrl)) return { html: page('day-sat.html'), url: requestUrl };
+      throw new Error('HTTP 500');
+    }
+  };
+  const programme = await parser.collectSwitchedProgramme({ url, html: landing }, { name: 'Folsom Europe' }, httpAdapter);
+  assert.deepEqual(fetched.map(f => f.requestUrl), [
+    'https://ems.switchedapp.com/Programme/folsomeurope?day=a36674e3-dac5-4298-bb57-08dd6eac4b22',
+    'https://ems.switchedapp.com/Programme/folsomeurope?day=c3e8a255-5894-4d73-bb58-08dd6eac4b22',
+    'https://ems.switchedapp.com/Programme/folsomeurope?day=80fd8a2a-174f-479c-bb59-08dd6eac4b22'
+  ], 'the selected day is the page itself, the foreign-host tab is skipped, the rest are read in order');
+  assert.ok(fetched.every(f => f.referer === url), 'the tabs are asked for as the page asks for them');
+  assert.equal(programme.days, 3, 'a day that failed to load stands aside; the others are read');
+  assert.equal(programme.cards.length, 5);
+  assert.ok(programme.html.includes('BEAR DANCE FOLSOM') && !programme.html.includes('X-ARRIVALS'), 'the fetched days join the page; the page itself is not repeated');
+
+  const events = parser.buildSwitchedProgrammeEvents(programme, url, cities);
+  const byKey = Object.fromEntries(events.map(e => [`${e.title}|${e.startDate.toISOString()}`, e]));
+  assert.deepEqual(Object.keys(byKey).sort(), [
+    'BEAR DANCE FOLSOM|2026-09-11T22:00:00.000Z',
+    'Boxer Berlin|2026-09-09T10:00:00.000Z',
+    'Böse Buben|2026-09-11T19:00:00.000Z',
+    'Böse Buben|2026-09-12T20:00:00.000Z',
+    'Woof Berlin|2026-09-11T18:00:00.000Z'
+  ]);
+  for (const event of events) {
+    assert.equal(event.city, 'berlin', `${event.title}: the heading names the curated festival, which lends its city`);
+    assert.equal(event.timezone, 'Europe/Berlin');
+    assert.equal(event._timezoneUnresolved, true, 'wall-clock times anchor in the city zone downstream');
+    assert.equal(event.url, url);
+    assert.match(event.image, /^https:\/\/eventcontrol[^/]+\.blob\.core\.windows\.net\//, `${event.title} keeps its artwork`);
+  }
+  const bearDance = byKey['BEAR DANCE FOLSOM|2026-09-11T22:00:00.000Z'];
+  assert.equal(bearDance.endDate, null, '"FROM 22:00" states no end');
+  assert.match(bearDance.description, /^with darkroom and smokers lounge/);
+  assert.equal(bearDance.bar, '', 'the Map link is a JS shell: no venue is invented; the bars data places the card downstream');
+  const red = byKey['Böse Buben|2026-09-11T19:00:00.000Z'];
+  assert.equal(red.endDate.toISOString(), '2026-09-12T05:00:00.000Z', '"19:00 - 05:00" ends the next morning');
+  assert.equal(red.description, 'Red-Session – Long-Term Fist Party', 'entities are decoded');
+  const sat = byKey['Böse Buben|2026-09-12T20:00:00.000Z'];
+  assert.equal(sat.endDate.toISOString(), '2026-09-13T04:00:00.000Z');
+  assert.match(sat.ticketUrl, /^https:\/\/ems\.switchedapp\.com\/url\/[0-9a-f-]+\?isource=WebProgramme$/, 'the Web link is the card\'s own pointer');
+  const boxer = byKey['Boxer Berlin|2026-09-09T10:00:00.000Z'];
+  assert.equal(boxer.endDate.toISOString(), '2026-09-09T21:00:00.000Z', 'a same-day end stays on its day');
+  assert.equal(boxer.description, 'X-ARRIVALS: 20 YEARS BOXER BARCELONA.');
+
+  assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'link-aggregator', structuredSource: 'programme', structuredCount: 5 }), true, 'a programme the page itself opened is read whatever the shell around it reads as');
+  assert.equal(parser.buildSwitchedProgrammeJsonLd([]), '');
+  assert.ok(parser.buildSwitchedProgrammeJsonLd([{ title: 'A</script><b>', startLocal: '2026-09-09T10:00:00' }]).split('</script>').length === 2, 'a closing tag inside a card never ends the script block');
+});

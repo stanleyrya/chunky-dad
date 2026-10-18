@@ -1264,6 +1264,15 @@ class AiWebParser {
                 eventOnHtml = await this.collectEventOnCalendarHtml(effectiveHtmlData, parserConfig, httpAdapter);
                 if (eventOnHtml) effectiveHtmlData = { ...effectiveHtmlData, html: `${effectiveHtmlData.html}\n${eventOnHtml}` };
             }
+            // A festival programme served by Switched's "Event Control" shows
+            // ONE day per page; the other days are tabs. Every day is read
+            // here and its cards become the programme's own events (see
+            // collectSwitchedProgramme).
+            let programme = null;
+            if (jsonApiPayload === null) {
+                programme = await this.collectSwitchedProgramme(effectiveHtmlData, parserConfig, httpAdapter);
+                if (programme && programme.html) effectiveHtmlData = { ...effectiveHtmlData, html: `${effectiveHtmlData.html}\n${programme.html}` };
+            }
             const html = effectiveHtmlData && effectiveHtmlData.html ? effectiveHtmlData.html : '';
             // Calendar month feeds: a MEC month-grid page gets its NEXT
             // month(s) fetched by replaying the page's own AJAX call, and the
@@ -1368,6 +1377,7 @@ class AiWebParser {
             if (eventOnEvents.length > 0) {
                 console.log(`📅 EVENTON: built ${eventOnEvents.length} event(s) from the calendar's own cards for ${sourceUrl}`);
             }
+            const programmeEvents = programme ? this.buildSwitchedProgrammeEvents(programme, sourceUrl, cityConfig) : [];
             // JSON-API structured events run through the SAME completeness gate
             // and the SAME enrichment/stamping as JSON-LD (structured data
             // enriches, never bypasses). JSON-LD wins when both exist — in
@@ -1451,6 +1461,8 @@ class AiWebParser {
                 ? 'squarespace'
                 : (eventOnEvents.length > 0 && eventOnEvents.length >= completeJsonLdEvents.length
                     ? 'eventon'
+                : (programmeEvents.length > 0 && programmeEvents.length >= completeJsonLdEvents.length
+                    ? 'programme'
                 : (wixEvents.length > 0 && wixEvents.length >= completeJsonLdEvents.length
                     ? 'wix'
                 : (mecEvents.length > 0 && mecEvents.length >= completeJsonLdEvents.length
@@ -1462,13 +1474,15 @@ class AiWebParser {
                             : (pageDataEvents.length > 0
                                 ? 'page-data'
                             : (elfsightEvents.length > 0 ? 'elfsight' : (diceEvents.length > 0 ? 'dice'
-                                : (listingProseEvents.length > 0 && completeJsonLdEvents.length === 0 ? 'listing-prose' : null)))))))));
+                                : (listingProseEvents.length > 0 && completeJsonLdEvents.length === 0 ? 'listing-prose' : null))))))))));
             const structuredEvents = structuredSource === 'squarespace'
                 ? squarespaceEvents
                 : (structuredSource === 'listing-prose'
                     ? listingProseEvents
                 : (structuredSource === 'eventon'
                     ? eventOnEvents
+                : (structuredSource === 'programme'
+                    ? programmeEvents
                 : (structuredSource === 'wix'
                     ? wixEvents
                 : (structuredSource === 'mec'
@@ -1479,7 +1493,7 @@ class AiWebParser {
                             ? completeJsonApiEvents
                             : (structuredSource === 'page-data'
                                 ? pageDataEvents
-                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents))))))));
+                            : (structuredSource === 'elfsight' ? elfsightEvents : diceEvents)))))))));
             // A link hub's own JSON-LD / page data is not read (bearracuda.com
             // marks up a partial set on its hub; the detail pages are read
             // instead) — but a calendar DOOR the page itself opened (a widget
@@ -1509,6 +1523,8 @@ class AiWebParser {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the MEC month grid(s) — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'eventon') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the EventON calendar — skipping the OCR sweep and AI extraction (event artwork is still read)`);
+                } else if (structuredSource === 'programme') {
+                    console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the festival programme's own cards — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'wix') {
                     console.log(`🤖 AI Web: Extracted ${structuredEvents.length} event(s) from the Wix events widget — skipping the OCR sweep and AI extraction (event artwork is still read)`);
                 } else if (structuredSource === 'json-api') {
@@ -10294,6 +10310,183 @@ class AiWebParser {
         return event;
     }
 
+    // ── Switched "Event Control" web programme ──────────────────────────
+    // A festival programme hosted by Switched (ems.switchedapp.com) and
+    // framed into the festival's own site (folsomeurope.berlin/program/ is
+    // an <iframe> and nothing else). Server-rendered, ONE day per page; the
+    // other days are tabs (`?day=<guid>`, minted per edition). Each card
+    // prints a date line — "FRI - 11 SEP 2026 - 22:00 - 04:00", or
+    // "... - FROM 22:00" for an open end — a title line, a description,
+    // its artwork, a "Web" link (the platform's redirect to the event's
+    // page) and a "Map" link (a JS map shell: no address in the HTML, so
+    // the venue is whatever the title and description name, filled by the
+    // bars data like any other text). Platform-shaped: the day tabs and the
+    // date-line grammar gate it, never the host. The configured programme
+    // page is a root, so its day tabs are first-party reads (the host's
+    // robots.txt disallows crawlers — the programme is how the festival
+    // serves its own schedule; owner ruling 2026-10-18, as for the
+    // Google Calendar and TicketSauce feeds).
+    static get SWITCHED_DATE_LINE() {
+        return /\b(MON|TUE|WED|THU|FRI|SAT|SUN)\s*-\s*(\d{1,2})\s+(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)\s+(\d{4})\s*-\s*(?:FROM\s+(\d{1,2}:\d{2})|(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2}))/i;
+    }
+
+    detectSwitchedProgramme(html, sourceUrl) {
+        const source = String(html || '');
+        if (!/<ul\b[^>]*class="[^"]*\bdays\b[^"]*"/i.test(source)) return null;
+        const dayPattern = /<a\b([^>]*)href="([^"]*[?&]day=[0-9a-f-]{8,}[^"]*)"([^>]*)>\s*([^<]*?)\s*<\/a>/gi;
+        const days = [];
+        let match;
+        while ((match = dayPattern.exec(source)) !== null) {
+            const url = this.normalizeUrl(this.decodeEntitiesFully(match[2]), sourceUrl);
+            if (!url || days.some(day => day.url === url)) continue;
+            const attributes = `${match[1]} ${match[3]}`;
+            days.push({ url, label: this.normalizeWhitespace(match[4]), selected: /\bclass="[^"]*\bselected\b/.test(attributes) });
+        }
+        if (days.length === 0 || !AiWebParser.SWITCHED_DATE_LINE.test(source)) return null;
+        const headingMatch = source.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
+        const heading = headingMatch ? this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(headingMatch[1]))) : '';
+        return { heading, days };
+    }
+
+    // The cards of one programme page, as the page states them: local
+    // wall-clock dates (the venue's zone applies downstream, as for
+    // EventON), an end before its start is the next morning, "FROM" is an
+    // open end (no end: see the one-end contract).
+    readSwitchedProgrammeCards(html) {
+        const source = String(html || '');
+        const cards = [];
+        const MONTHS = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6, JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
+        const pad = (value) => String(value).padStart(2, '0');
+        const text = (value) => this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(String(value || ''))));
+        const itemPattern = /<div\b[^>]*class="[^"]*\bitem\b[^"]*"[^>]*>([\s\S]*?)(?=<div\b[^>]*class="[^"]*\bitem\b[^"]*"|<footer\b|$)/gi;
+        let item;
+        while ((item = itemPattern.exec(source)) !== null) {
+            const block = item[1];
+            const paragraphs = [];
+            const paragraphPattern = /<p\b([^>]*)>([\s\S]*?)<\/p>/gi;
+            let paragraph;
+            while ((paragraph = paragraphPattern.exec(block)) !== null) {
+                paragraphs.push({ attributes: paragraph[1], inner: paragraph[2], text: text(paragraph[2]) });
+            }
+            const dateParagraph = paragraphs.find(p => AiWebParser.SWITCHED_DATE_LINE.test(p.text));
+            if (!dateParagraph) continue;
+            const date = dateParagraph.text.match(AiWebParser.SWITCHED_DATE_LINE);
+            const month = MONTHS[date[3].toUpperCase()];
+            const day = `${date[4]}-${pad(month)}-${pad(date[2])}`;
+            const startClock = date[5] || date[6];
+            const startLocal = `${day}T${pad(startClock.split(':')[0])}:${startClock.split(':')[1]}:00`;
+            let endLocal = null;
+            if (date[7]) {
+                const endClock = `${pad(date[7].split(':')[0])}:${date[7].split(':')[1]}`;
+                let endDay = day;
+                if (endClock <= `${pad(startClock.split(':')[0])}:${startClock.split(':')[1]}`) {
+                    const next = new Date(`${day}T00:00:00Z`);
+                    next.setUTCDate(next.getUTCDate() + 1);
+                    endDay = next.toISOString().slice(0, 10);
+                }
+                endLocal = `${endDay}T${endClock}:00`;
+            }
+            const after = paragraphs.slice(paragraphs.indexOf(dateParagraph) + 1);
+            const titleParagraph = after.find(p => p.text && !/<(?:a|img)\b/i.test(p.inner));
+            if (!titleParagraph) continue;
+            const descriptionParagraph = after.find(p => p !== titleParagraph && p.text && !/<(?:a|img)\b/i.test(p.inner));
+            const imageMatch = block.match(/<img\b[^>]*src="(https?:\/\/[^"]+)"/i);
+            const webMatch = block.match(/<a\b[^>]*href="([^"]+)"[^>]*>\s*Web\s*<\/a>/i);
+            const mapMatch = block.match(/<a\b[^>]*href="([^"]*\/location\?[^"]*)"/i);
+            cards.push({
+                title: titleParagraph.text,
+                description: descriptionParagraph
+                    ? this.decodeEntitiesFully(this.stripTags(descriptionParagraph.inner)).replace(/\r\n?/g, '\n').replace(/[ \t]+\n/g, '\n').trim()
+                    : '',
+                startLocal,
+                endLocal,
+                image: imageMatch ? this.decodeEntitiesFully(imageMatch[1]) : '',
+                webUrl: webMatch ? this.decodeEntitiesFully(webMatch[1]) : '',
+                mapUrl: mapMatch ? this.decodeEntitiesFully(mapMatch[1]) : ''
+            });
+        }
+        return cards;
+    }
+
+    // The cards as JSON-LD Event nodes, so the ordinary structured-data
+    // reader builds the events (dates, artwork slots, cover, title cleanup)
+    // exactly as it does for every other door.
+    buildSwitchedProgrammeJsonLd(cards) {
+        const nodes = (Array.isArray(cards) ? cards : []).map(card => {
+            const node = { '@context': 'https://schema.org', '@type': 'Event', name: card.title, startDate: card.startLocal };
+            if (card.endLocal) node.endDate = card.endLocal;
+            if (card.description) node.description = card.description;
+            if (card.image) node.image = card.image;
+            if (card.webUrl) node.url = card.webUrl;
+            return node;
+        });
+        if (nodes.length === 0) return '';
+        return `<script type="application/ld+json">${JSON.stringify(nodes).replace(/<\//g, '<\\/')}</script>`;
+    }
+
+    async collectSwitchedProgramme(htmlData, parserConfig, httpAdapter) {
+        const html = htmlData && htmlData.html ? htmlData.html : '';
+        const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
+        if (!html || !sourceUrl) return null;
+        const programme = this.detectSwitchedProgramme(html, sourceUrl);
+        if (!programme) return null;
+        const pageDomain = this.getRegistrableDomainFromUrl(sourceUrl);
+        const ownDay = programme.days.find(day => day.selected) || programme.days.find(day => day.url === sourceUrl) || null;
+        const parts = [{ label: ownDay ? ownDay.label : 'this page', html }];
+        for (const day of programme.days) {
+            if (day === ownDay) continue;
+            if (this.getRegistrableDomainFromUrl(day.url) !== pageDomain) continue;
+            if (!httpAdapter || typeof httpAdapter.fetchData !== 'function') break;
+            try {
+                const response = await httpAdapter.fetchData(day.url, { headers: { Referer: sourceUrl } });
+                const dayHtml = response && typeof response.html === 'string' ? response.html : '';
+                if (!dayHtml) throw new Error('empty answer');
+                parts.push({ label: day.label, html: dayHtml });
+            } catch (error) {
+                console.warn(`🗓️ PROGRAMME: day "${day.label}" (${day.url}) could not be read (${error.message}) — the other days stand`);
+            }
+        }
+        const cards = [];
+        for (const part of parts) {
+            const read = this.readSwitchedProgrammeCards(part.html);
+            console.log(`🗓️ PROGRAMME: ${programme.heading || sourceUrl} — day "${part.label}": ${read.length} card(s)`);
+            cards.push(...read);
+        }
+        return {
+            heading: programme.heading,
+            days: parts.length,
+            cards,
+            html: parts.slice(1).map(part => part.html).join('\n'),
+            jsonLd: this.buildSwitchedProgrammeJsonLd(cards)
+        };
+    }
+
+    // The programme's heading ("Folsom Europe 2026") is the group label of
+    // every card: it names the city, directly or through the curated
+    // festival it names (the same rule a bundle row's region label
+    // follows). A card with no place of its own takes that city and its
+    // zone, so its wall-clock times anchor there.
+    buildSwitchedProgrammeEvents(programme, sourceUrl, cityConfig = null) {
+        if (!programme || !programme.jsonLd) return [];
+        const events = this.extractEventsFromJsonLd(programme.jsonLd, sourceUrl, cityConfig);
+        const heading = String(programme.heading || '');
+        const headingCity = heading && cityConfig
+            ? (this.findCityKeyInText(heading, cityConfig) || this.findCityKeyForFestivalLabel(heading, cityConfig))
+            : '';
+        const timezone = headingCity ? this.getTimezoneForCity(headingCity, cityConfig) : '';
+        let placed = 0;
+        for (const event of events) {
+            if (event.city || !headingCity) continue;
+            event.city = headingCity;
+            if (timezone) event.timezone = timezone;
+            placed += 1;
+        }
+        if (events.length > 0) {
+            console.log(`🗓️ PROGRAMME: built ${events.length} event(s) from ${programme.days} day page(s) of "${heading || sourceUrl}"${headingCity ? ` — ${placed} placed in ${headingCity} by the heading` : ' — the heading names no city'}`);
+        }
+        return events;
+    }
+
     // ── EventON (WordPress calendar plugin) ─────────────────────────────
     // The page ships a frame per calendar (<div id="evcal_calendar_N" class=
     // "ajde_evcal_calendar … ajax_loading_cal"> + data-sc='{shortcode}') and
@@ -10362,7 +10555,7 @@ class AiWebParser {
     // it from an undated flyer, dropped it as a date orphan, and shipped the
     // page's business-hours block as an event titled "Facebook" instead.
     static shouldReadStructuredEvents({ discoveryOnly = false, pageClassification = '', structuredSource = null, structuredCount = 0 } = {}) {
-        const DOOR_READ_SOURCES = new Set(['squarespace', 'eventon', 'wix', 'mec', 'elfsight', 'dice']);
+        const DOOR_READ_SOURCES = new Set(['squarespace', 'eventon', 'programme', 'wix', 'mec', 'elfsight', 'dice']);
         if (discoveryOnly || !structuredSource || !(structuredCount > 0)) return false;
         const isDoor = DOOR_READ_SOURCES.has(structuredSource);
         if (pageClassification === 'link-aggregator' && !isDoor) return false;

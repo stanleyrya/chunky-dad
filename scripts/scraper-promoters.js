@@ -376,7 +376,8 @@ const scraperPromoters = [
     "instagram": "https://www.instagram.com/folsomeurope",
     "website": "https://folsomeurope.berlin",
     "urlPatterns": [
-      "folsomeurope.berlin"
+      "folsomeurope.berlin",
+      "ems.switchedapp.com/programme/folsomeurope"
     ]
   },
   {
