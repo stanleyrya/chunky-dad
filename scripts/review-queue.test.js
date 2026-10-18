@@ -1512,3 +1512,102 @@ test('buildDeck: a gone-from-source candidate is a card of kind gone under its o
   const text = rq.formatRejectionsText(kept);
   assert.ok(text.includes('[KEPT] GONE Gone Party — 2030-10-04 @ Rockbar [Furball] kept on the calendar (furball.nyc has not listed it for 2 runs) {still happening} — saw the flyer'), text);
 });
+
+// ---------------------------------------------------------------------------
+// A party the verdict store holds both ways (owner ruling 2026-10-18: "show
+// the conflict on the deck") — one card, one settle, nothing automatic.
+// ---------------------------------------------------------------------------
+
+const DALLAS_EAGLE = { bar: 'Dallas Eagle', address: '525 S Riverfront Blvd, Dallas, TX 75207', location: '32.7693483, -96.8112576', city: 'dallas' };
+function dallasVerdict(title, verdict, stampedAt) {
+  return { verdict, stampedAt, title, venue: DALLAS_EAGLE.bar, address: DALLAS_EAGLE.address, location: DALLAS_EAGLE.location, city: DALLAS_EAGLE.city };
+}
+
+test('bear verdicts: a settle replaces EVERY entry it covers — the title stored twice, and a year spelling held the other way — and the undo puts them all back; agreeing spellings are left alone', () => {
+  const core = rq.createDeckCore({ config: { cities: CITIES } }, {});
+  const store = [
+    dallasVerdict('Underwear Night and Contest with DJ Michael Jon', 'not_bear', '2026-09-21T04:15:45.423Z'),
+    dallasVerdict('Leather Night', 'bear', '2026-09-25T00:00:00.000Z'),
+    dallasVerdict('Underwear Night and Contest 2026', 'bear', '2026-10-06T23:03:19.733Z'),
+    dallasVerdict('UNDERWEAR NIGHT AND CONTEST', 'not_bear', '2026-10-07T00:00:00.000Z')
+  ];
+  assert.equal(rq.findBearVerdictStoreConflicts(store, core).length, 1, 'the store holds one title both ways');
+  assert.deepEqual(rq.findBearVerdictStoreConflicts(store, core)[0].hits.map((hit) => hit.stampedAt.slice(0, 10)), ['2026-10-07', '2026-10-06', '2026-09-21'], 'newest first');
+  const identity = { title: 'Underwear Night and Contest', ...DALLAS_EAGLE };
+  const settled = rq.upsertBearVerdict(store, core, identity, 'bear', { now: new Date('2026-10-18T12:00:00.000Z') });
+  assert.deepEqual(settled.verdicts.map((entry) => [entry.title, entry.verdict]), [['Underwear Night and Contest', 'bear'], ['Leather Night', 'bear']], 'one entry where three stood, in the first slot they held');
+  assert.deepEqual(settled.replacedAll, [store[0], store[2], store[3]]);
+  assert.equal(settled.replaced, store[0], 'the single-entry shape older callers read');
+  assert.equal(rq.findBearVerdictStoreConflicts(settled.verdicts, core).length, 0);
+  core.bearVerdicts = settled.verdicts;
+  assert.equal(core.findStoredBearVerdict(identity).verdict, 'bear', 'the next run reads one verdict');
+  core.bearVerdicts = [];
+
+  const undone = rq.restoreBearVerdict(settled.verdicts, core, settled.replacedAll, identity);
+  assert.equal(undone.restored, true);
+  assert.deepEqual(undone.verdicts, [store[0], store[2], store[3], store[1]], 'every earlier entry back verbatim, the settle gone');
+  assert.equal(rq.findBearVerdictStoreConflicts(undone.verdicts, core).length, 1, 'and the conflict is back for the deck');
+  assert.equal(rq.restoreBearVerdict(settled.verdicts, core, [], identity).restored, false);
+  assert.equal(rq.restoreBearVerdict(settled.verdicts, core, [{ verdict: 'maybe', title: 'x' }], identity).restored, false);
+
+  // Agreeing entries under another spelling are not touched: a tap on the
+  // plain name beside a bear "… 2026" adds its own entry, as before.
+  const agreeing = [dallasVerdict('Underwear Night and Contest 2026', 'bear', '2026-10-06T23:03:19.733Z')];
+  const tap = rq.upsertBearVerdict(agreeing, core, identity, 'bear');
+  assert.equal(tap.verdicts.length, 2);
+  assert.equal(tap.replaced, null);
+  assert.deepEqual(tap.replacedAll, []);
+});
+
+test('buildDeck: a party the store holds both ways is ONE verdict-conflict card from whichever list the run put it in, carrying every entry and the run\'s own row; the dropped card yields to it; the store-wide count rides in counts; a settled store builds no card', () => {
+  const start = FUTURE + 7 * 24 * 3600 * 1000;
+  const night = (title, at) => ({ title, startDate: iso(at), endDate: iso(at + 3 * 3600 * 1000), ...DALLAS_EAGLE, timezone: 'America/Chicago', source: 'ai-web', url: 'https://dallaseagle.com/events', image: 'https://x/underwear.jpg', description: 'Underwear night with a contest.' });
+  const drop = (event) => ({ title: event.title, startDate: event.startDate, venue: event.bar, reason: 'manual store: not_bear (verdict stamped 2026-09-21)', host: 'dallaseagle.com', event });
+  const payload = runPayload({
+    analyzedEvents: [],
+    parserResults: [{ name: 'Dallas Eagle', events: [night('Underwear Night and Contest', start), night('Underwear Night and Contest', start + 7 * 24 * 3600 * 1000)] }],
+    bearDroppedEvents: [drop(night('Underwear Night and Contest', start)), drop(night('Underwear Night and Contest', start + 7 * 24 * 3600 * 1000)), drop(night('Underwear Night and Contest', Date.UTC(2020, 0, 1)))]
+  });
+  const verdicts = [
+    dallasVerdict('Underwear Night and Contest with DJ Michael Jon', 'not_bear', '2026-09-21T04:15:45.423Z'),
+    dallasVerdict('Underwear Night and Contest 2026', 'bear', '2026-10-06T23:03:19.733Z')
+  ];
+  const deck = deckOf(payload, rq.emptyDecisionStore(), { bearVerdicts: verdicts });
+  const cards = deck.cards.filter((card) => card.kind === 'verdict-conflict');
+  assert.equal(cards.length, 1, 'one card per party, not per row');
+  const card = cards[0];
+  assert.ok(card.key.startsWith('verdict-conflict|underwear night contest|'), card.key);
+  assert.equal(card.proposal.title, 'Underwear Night and Contest');
+  assert.equal(card.proposal.occurrences, 4, 'the two dropped future nights and the two parser rows; the past night is not counted');
+  assert.equal(card.proposal.runSaid, 'dropped — manual store: not_bear (verdict stamped 2026-09-21)');
+  assert.equal(card.proposal.matchedBy, 'title');
+  assert.deepEqual(card.proposal.hits.map((hit) => [hit.verdict, hit.stampedAt.slice(0, 10), hit.title]), [
+    ['bear', '2026-10-06', 'Underwear Night and Contest 2026'],
+    ['not_bear', '2026-09-21', 'Underwear Night and Contest with DJ Michael Jon']
+  ], 'every entry, newest first, with the spelling it was given on');
+  assert.equal(card.proposal.image, 'https://x/underwear.jpg');
+  assert.equal(card.display.image, 'https://x/underwear.jpg');
+  assert.equal(card.display.bearIdentity.title, 'Underwear Night and Contest');
+  assert.equal(card.display.bearVerdict, null, 'no stored verdict applies while the store is split');
+  assert.equal(deck.cards.filter((entry) => entry.kind === 'dropped').length, 0, 'the dropped card yields to the conflict card');
+  assert.equal(deck.counts['verdict-conflict'], 1);
+  assert.equal(deck.counts.verdictConflictsInStore, 1);
+  assert.equal(deck.counts.pending, 1);
+  assert.equal(deck.decided.length, 0, 'a conflict has no decided state');
+
+  // Settled: the store is of one mind, the card is gone, the dropped rows
+  // are decided by the one verdict like any stored one.
+  const core = rq.createDeckCore({ config: { cities: CITIES } }, {});
+  const settled = rq.upsertBearVerdict(verdicts, core, card.display.bearIdentity, 'bear', { now: new Date('2026-10-18T12:00:00.000Z') });
+  const after = deckOf(payload, rq.emptyDecisionStore(), { bearVerdicts: settled.verdicts });
+  assert.equal(after.cards.filter((entry) => entry.kind === 'verdict-conflict').length, 0);
+  assert.equal(after.counts.verdictConflictsInStore, 0);
+  const decidedDrop = after.decided.find((entry) => entry.kind === 'dropped');
+  assert.equal(decidedDrop.decision.bearVerdict, 'bear');
+
+  // A store with no conflict and a run that never lists the split party:
+  // no card, but the store-wide count still says so.
+  const unrelated = deckOf(runPayload({ analyzedEvents: [newEvent()] }), rq.emptyDecisionStore(), { bearVerdicts: verdicts });
+  assert.equal(unrelated.cards.filter((entry) => entry.kind === 'verdict-conflict').length, 0);
+  assert.equal(unrelated.counts.verdictConflictsInStore, 1);
+});

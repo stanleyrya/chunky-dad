@@ -28636,3 +28636,71 @@ test('a replaced primary picture takes its stale crop with it: the saved orienta
   assert.ok(!finalEvent.imageVertical, `stale crop dropped: ${finalEvent.imageVertical}`);
   assert.ok(logs.some(line => line.includes('dropped imageVertical — a crop of the replaced primary picture')), logs.join('\n'));
 });
+
+test('bear verdict store: a title held both ways at one place decides nothing and says so; agreeing duplicates keep the first entry (never newest-wins); a bare year is not another party', () => {
+  const core = createCore();
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    // The same title, stored twice, pointing both ways: no stored verdict
+    // applies — not the older (which stood first and used to win), not the
+    // newer. The conflict is exposed for the deck.
+    core.bearVerdicts = [
+      eagleNycVerdict('UNDERWEAR NIGHT @ Eagle NYC', { verdict: 'not_bear', stampedAt: '2026-09-21T04:15:45.423Z' }),
+      eagleNycVerdict('Underwear Night', { verdict: 'bear', stampedAt: '2026-10-06T23:03:19.733Z' })
+    ];
+    const event = eagleNycEvent('Underwear Night');
+    assert.equal(core.findStoredBearVerdictMatch(event), null, 'newest-wins is NOT applied on the title path');
+    assert.equal(core.findStoredBearVerdict(event), null);
+    assert.ok(logs.some((line) => line.includes('🐻 BEAR CHECK: "Underwear Night" — the verdict store holds this title both ways (') && line.includes('no stored verdict applied')), logs.join('\n'));
+    const conflict = core.findStoredBearVerdictConflict(event);
+    assert.equal(conflict.matchedBy, 'title');
+    assert.deepEqual(conflict.hits.map((hit) => [hit.verdict, hit.title]), [['not_bear', 'UNDERWEAR NIGHT @ Eagle NYC'], ['bear', 'Underwear Night']]);
+    // Another place is another party: no conflict there, no match either.
+    const elsewhere = { ...event, bar: 'Rockbar', address: '185 Christopher St, New York, NY', location: '' };
+    assert.equal(core.findStoredBearVerdictConflict(elsewhere), null);
+    assert.equal(core.findStoredBearVerdict(elsewhere), null);
+
+    // Agreeing duplicates: the first entry speaks, as it always did.
+    core.bearVerdicts = [
+      eagleNycVerdict('Underwear Night', { verdict: 'bear', stampedAt: '2026-09-21T00:00:00.000Z' }),
+      eagleNycVerdict('UNDERWEAR NIGHT @ Eagle NYC', { verdict: 'bear', stampedAt: '2026-10-06T00:00:00.000Z' })
+    ];
+    const agreeing = core.findStoredBearVerdictMatch(event);
+    assert.equal(agreeing.matchedBy, 'title');
+    assert.equal(agreeing.entry, core.bearVerdicts[0]);
+    assert.equal(core.findStoredBearVerdictConflict(event), null);
+
+    // A year-blind sibling the other way withholds the exact hit (Dallas
+    // Eagle, store 2026-10-18: bear on "… 2026", not bear on the plain title).
+    core.bearVerdicts = [
+      eagleNycVerdict('Underwear Night and Contest with DJ Michael Jon', { verdict: 'not_bear', stampedAt: '2026-09-21T04:15:45.423Z' }),
+      eagleNycVerdict('Underwear Night and Contest 2026', { verdict: 'bear', stampedAt: '2026-10-06T23:03:19.733Z' })
+    ];
+    const plain = eagleNycEvent('Underwear Night and Contest');
+    assert.equal(core.findStoredBearVerdictMatch(plain), null);
+    const yearConflict = core.findStoredBearVerdictConflict(plain);
+    assert.equal(yearConflict.matchedBy, 'title');
+    assert.equal(yearConflict.hits.length, 2);
+    // …but a year-blind sibling alone never becomes a match: fail closed.
+    core.bearVerdicts = [eagleNycVerdict('Underwear Night and Contest 2026', { verdict: 'bear' })];
+    assert.equal(core.findStoredBearVerdict(plain), null);
+    assert.equal(core.findStoredBearVerdictConflict(plain), null);
+    assert.equal(SharedCore.getBearVerdictYearBlindKey('underwear night contest 2026'), 'underwear night contest');
+    assert.equal(SharedCore.getBearVerdictYearBlindKey('route 66'), 'route 66', 'only a year is blind, not every number');
+
+    // The party fold both ways (no exact entry): the same refusal, exposed
+    // as a party conflict.
+    core.bearVerdicts = JOCKSTRAP_DECORATED.map((title) => eagleNycVerdict(title))
+      .concat([eagleNycVerdict('🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ PAPA SMURF | $20 CASH COVER', { verdict: 'bear', stampedAt: '2026-09-28T00:00:00.000Z' })]);
+    const party = eagleNycEvent('Jockstrap Wednesday');
+    assert.equal(core.findStoredBearVerdictMatch(party), null);
+    const partyConflict = core.findStoredBearVerdictConflict(party);
+    assert.equal(partyConflict.matchedBy, 'party');
+    assert.equal(partyConflict.hits.length, 4);
+    assert.ok(logs.some((line) => line.includes('holds this party both ways')));
+  } finally {
+    console.log = originalLog;
+  }
+});
