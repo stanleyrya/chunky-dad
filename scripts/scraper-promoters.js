@@ -265,6 +265,19 @@ const scraperPromoters = [
     "bearAffinity": "always"
   },
   {
+    "name": "Bear Fuzz Fest",
+    "aliases": [
+      "Fuzz Fest"
+    ],
+    "shortName": "FUZZ FEST",
+    "website": "https://bearfuzzfest.com",
+    "facebook": "https://www.facebook.com/bearfuzzfest",
+    "urlPatterns": [
+      "bearfuzzfest.com"
+    ],
+    "bearAffinity": "always"
+  },
+  {
     "name": "Urban Bear",
     "aliases": [
       "Urban Bear NYC",

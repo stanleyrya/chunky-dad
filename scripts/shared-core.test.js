@@ -532,6 +532,40 @@ test('extractJsonLdEventNodes finds Event nodes in plain, @graph, and list conta
   assert.equal(core.extractJsonLdEventNodes(mixedHtml).length, 1);
 });
 
+test('extractJsonLdEventNodes reads the shows a Place lists under its event / events / Events key', () => {
+  const core = createCore();
+
+  // redroom.club/events as served on 2026-10-18 (Seat Engine): ONE JSON-LD
+  // block, a Place whose shows sit in an "Events" array — capital E, a
+  // spelling schema.org never had. The structured-data path used to walk
+  // only `events` and found nothing on the page; the AI then re-read the
+  // list by eye.
+  const fs = require('fs');
+  const path = require('path');
+  const fixturePath = path.join(__dirname, 'fixtures', 'redroom-club-events-2026-10-18.html');
+  const nodes = core.extractJsonLdEventNodes(fs.readFileSync(fixturePath, 'utf8'));
+  assert.equal(nodes.length, 7, 'the seven upcoming shows are read out of the Place');
+  assert.deepEqual(nodes.map((node) => node.name).slice(0, 2), ['Dark Rooms:Jackie Cox', 'FURBALL:Howl Underwear and Gear Party']);
+  assert.equal(nodes[1].startDate, '2026-10-30T01:30:00Z');
+  assert.equal(nodes[1].url, 'https://redroom.club/shows/387797');
+  assert.equal(nodes[1].location && nodes[1].location.name, 'Red Room ');
+
+  // schema.org's own spellings: `event` on a Place, `events` on an Organization.
+  const placeHtml = `
+    <script type="application/ld+json">
+      {"@type":"Place","name":"A Bar","event":[{"@type":"Event","name":"Night One","startDate":"2026-11-05T21:00:00-05:00"}]}
+    </script>
+    <script type="application/ld+json">
+      {"@type":"Organization","name":"A Promoter","events":{"@type":"DanceEvent","name":"Night Two","startDate":"2026-11-06"}}
+    </script>`;
+  assert.deepEqual(core.extractJsonLdEventNodes(placeHtml).map((node) => node.name), ['Night One', 'Night Two']);
+
+  // The container itself is never an event, whatever it is called.
+  const containerOnly = `
+    <script type="application/ld+json">{"@type":"Place","name":"Just A Place","startDate":"2026-11-05","Events":[]}</script>`;
+  assert.equal(core.extractJsonLdEventNodes(containerOnly).length, 0);
+});
+
 test('classifyPage prefers JSON-LD Event count over the month-name heuristic', () => {
   const core = createCore();
 

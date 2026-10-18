@@ -181,6 +181,22 @@ const scraperConfig = {
       urlDiscoveryDepth: 1, // follow Zeffy/ThunderTix ticket links
       discoveryBlockedPatterns: ["ursamen.org/about", "ursamen.org/contact", "ursamen.org/the-board", "ursamen.org/our-sponsors", "ursamen.org/general-events", "coming-soon", "zeffy.com/donation-form"],
     },
+    {
+      name: "Bear Fuzz Fest",
+      // Central PA Bears' winter bear weekend at the Eisenhower Hotel &
+      // Conference Center, Gettysburg (December 10-13, 2026). A plain
+      // WordPress site, no calendar plugin: the home page states the dates
+      // and the hotel in prose, which is the one event it publishes. The
+      // /event-schedule/ page is a tabbed programme (THURSDAY..SUNDAY) whose
+      // rows carry clock times and rooms but no date anywhere on the page —
+      // read alone they can only be dated by guessing, so the crawl stays on
+      // the home page (see data/source-expectations/bear-fuzz-fest.json).
+      // A pure source like Spooky Bear's: the festival is a registry identity
+      // (data/promoters.json carries its website, facebook and bearAffinity
+      // "always"), so no metadata or alwaysBear here.
+      urls: ["https://bearfuzzfest.com/"],
+      urlDiscoveryDepth: 0,
+    },
     // ── Onboarding batch 2026-07-27 (recon-verified) — run each one alone
     // via the parser picker and review before including it in bigger runs. ──
     {
@@ -732,6 +748,64 @@ const scraperConfig = {
       urls: ["https://woofsatlanta.com/calendar/"],
       urlDiscoveryDepth: 0,
       metadata: { website: { value: "https://woofsatlanta.com" } },
+    },
+    // ── Sources added 2026-10-18 (owner-approved from the discovery audit;
+    // one cached read per door, see data/source-expectations) ──
+    {
+      name: "The Boatslip",
+      // Provincetown's tea-dance resort (161 Commercial St), a Shopify site.
+      // /pages/events carries an Elfsight calendar widget — Rockbar's door,
+      // read by collectElfsightCalendarEvents: the boot payload holds the
+      // widget's whole history (232 entries on 2026-10-18: 11 nights left in
+      // 2026, the entire 2027 season already dated, the rest archive). Bear
+      // Week and Spooky Bear teas sit among general ones: the bear check
+      // decides. Everything is in the widget, and the rest of the site is
+      // rooms, dining and a store, so the crawl stays on the configured page.
+      urls: ["https://theboatslip.com/pages/events"],
+      urlDiscoveryDepth: 0,
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://theboatslip.com" } },
+    },
+    {
+      name: "Red Room Ptown",
+      // Provincetown cabaret and nightclub (258 Commercial St) on Seat
+      // Engine. /events is the "Upcoming Events" list: every show with its
+      // weekday date, time and copy, and the page's JSON-LD (a Place whose
+      // `Events` list holds one Event per show, with the show's own
+      // /shows/<id> page and headshot) is read by the structured-data path
+      // without AI. /calendar carries the same block over a month grid that
+      // never states its month in text, so the list page is the door. Each
+      // card's /events/<id> link answers with this same list (a redirect),
+      // so the crawl stays on the page; the shows' own /shows/<id> pages are
+      // still read as ticket-link enrichment (one request a show, each with
+      // the same JSON-LD). Hosts Furball, Belly and Spooky Bear nights among
+      // comedy and cabaret: the bear check decides.
+      urls: ["https://redroom.club/events"],
+      urlDiscoveryDepth: 0,
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://redroom.club" } },
+    },
+    {
+      name: "Spa Excess",
+      // Toronto bathhouse (105 Carlton St). WordPress home page with an
+      // EventON calendar frame — Precinct DTLA's door (📅 EVENTON): the
+      // month's cards come from the plugin's own AJAX call, replayed with
+      // the page's nonce, later months walked to the usual horizon. The
+      // plugin pre-expands its weekly nights into dated cards (Bears in
+      // Excess, Naked Night, CLIMAX! Fridays, Latin Night, Happy Hour). The
+      // cards' times print with a fixed +0:00 that the reader drops in
+      // favour of the venue's own clock. General programming: the bear
+      // check decides. The rest of the site is rooms, rates and policies, so
+      // the crawl stays on the home page and the cards' own pages, like
+      // Woofs Atlanta's — a dozen distinct event pages a run on top of the
+      // four month replays.
+      urls: ["https://spaexcess.com/"],
+      urlDiscoveryDepth: 0,
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://spaexcess.com" } },
     },
     {
       name: "Gathr",
