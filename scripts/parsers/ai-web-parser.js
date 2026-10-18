@@ -1928,7 +1928,7 @@ class AiWebParser {
             // The only event read off a page the crawl reached, dated by
             // nothing beside its own name, is offered to the owner, not
             // proposed (see markLoneCrawlEvent).
-            this.markLoneCrawlEvent(keptEvents, effectiveHtmlData, parserConfig, sourceUrl);
+            this.markLoneCrawlEvent(keptEvents, effectiveHtmlData, parserConfig, sourceUrl, pageClassification);
             // A page that places its cards in its own prose (see
             // placeEventsAtPageStatedVenue).
             this.placeEventsAtPageStatedVenue(keptEvents, effectiveHtmlData, parserConfig);
@@ -3359,10 +3359,16 @@ class AiWebParser {
     // sidebar or footer. A listing (the configured page) with one event
     // is a quiet night, not this; a page with two or more read events has
     // rows; and a date printed within a few lines of the name is the page
-    // stating it. Such a record is withheld from every automatic write
-    // and shown on the deck with the lines around its name, for the owner
-    // to approve or reject (present data when unclear).
-    markLoneCrawlEvent(events, htmlData, parserConfig, sourceUrl) {
+    // stating it. On a page that is about ONE event (classified
+    // event-page) the whole page is the event's own text: on every real
+    // event page of run 20261018-161635 the stated date sat 104–141 lines
+    // below the name, past the site's navigation (Tribe single-event
+    // pages on bearsevents.com and sitgesbearcave.com), while the junk
+    // pages stated no matching date anywhere — so there the whole page
+    // is read. Such a record is withheld from every automatic write and
+    // shown on the deck with the lines around its name, for the owner to
+    // approve or reject (present data when unclear).
+    markLoneCrawlEvent(events, htmlData, parserConfig, sourceUrl, pageClassification = '') {
         const list = Array.isArray(events) ? events.filter(Boolean) : [];
         if (list.length !== 1 || !sourceUrl) return;
         const event = list[0];
@@ -3390,13 +3396,32 @@ class AiWebParser {
             // paraphrase): nothing beside it can state the date.
             at = -1;
         }
+        const wholePage = String(pageClassification || '') === 'event-page';
         const near = at >= 0 ? lines.slice(Math.max(0, at - 6), at + 7) : [];
         const dayParts = this.localDateParts(event.startDate, event._timezoneUnresolved ? 'UTC' : (event.timezone || null));
-        const stated = dayParts ? AiWebParser.textStatesDate(near.join('\n'), dayParts) : false;
-        if (stated) return;
-        const reason = at < 0
-            ? 'the only event read from a page the crawl reached, and its name is not in the page\'s text'
-            : 'the only event read from a page the crawl reached, and no date is stated within six lines of its name';
+        if (!dayParts) return;
+        if (AiWebParser.textStatesDate((wholePage ? lines : near).join('\n'), dayParts)) return;
+        // A flyer on the page that names the event is the event's own
+        // statement, however far down the corpus its OCR text sits: when
+        // such a flyer states the day, the page dated it (owner, 2026-10-18).
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const titleTokens = title.split(/[^\p{L}\p{N}]+/u).filter(token => token.length >= 3);
+        const namesEvent = (text) => {
+            const haystack = fold(text);
+            if (title && haystack.includes(title)) return true;
+            if (titleTokens.length < 2) return false;
+            const hits = titleTokens.filter(token => haystack.includes(token)).length;
+            return hits >= Math.max(2, Math.ceil(titleTokens.length * 0.6));
+        };
+        const flyerStates = this.splitOcrAndPageChunks(html)
+            .filter(chunk => chunk && chunk.corpus === 'ocr' && namesEvent(chunk.text))
+            .some(chunk => AiWebParser.textStatesDate(chunk.text, dayParts));
+        if (flyerStates) return;
+        const reason = wholePage
+            ? 'the only event read from a page the crawl reached, and its date is stated nowhere on that page'
+            : (at < 0
+                ? 'the only event read from a page the crawl reached, and its name is not in the page\'s text'
+                : 'the only event read from a page the crawl reached, and no date is stated within six lines of its name');
         event._loneCrawlWithheld = {
             page: sourceUrl,
             day: dayParts ? `${dayParts.year}-${String(dayParts.month).padStart(2, '0')}-${String(dayParts.day).padStart(2, '0')}` : '',

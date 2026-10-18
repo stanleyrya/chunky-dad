@@ -23154,7 +23154,7 @@ test('the only model-read event of a crawled page is withheld for the owner when
     // The contact page, verbatim (run 20261018-161635): the model named an event after the day-view heading and dated it from the sidebar.
     const contact = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'crawl-views-2026-10-18', 'bearsevents-contact-us-2.html'), 'utf8');
     const lone = { title: 'Events for September 25, 2026', startDate: new Date('2026-09-03T20:00:00.000Z'), timezone: 'Europe/Madrid', source: 'ai-web' };
-    parser.markLoneCrawlEvent([lone], { html: contact, url: 'https://www.bearsevents.com/contact-us-2/' }, parserConfig, 'https://www.bearsevents.com/contact-us-2/');
+    parser.markLoneCrawlEvent([lone], { html: contact, url: 'https://www.bearsevents.com/contact-us-2/' }, parserConfig, 'https://www.bearsevents.com/contact-us-2/', 'multi-event-page');
     assert.ok(lone._loneCrawlWithheld, 'withheld');
     assert.equal(lone._loneCrawlWithheld.page, 'https://www.bearsevents.com/contact-us-2/');
     assert.equal(lone._loneCrawlWithheld.day, '2026-09-03');
@@ -23181,6 +23181,27 @@ test('the only model-read event of a crawled page is withheld for the owner when
       assert.ok(undated._loneCrawlWithheld, `"${line}" does not state 2026-09-03`);
       assert.deepEqual(undated._loneCrawlWithheld.near.slice(0, 2), ['LUCHA BEAR', line].map(s => parser.foldDayPhraseText(s).trim()), 'the lines around the name travel to the deck');
     }
+    // A flyer on the page that names the event and states the day is the page dating it, wherever its OCR text sits.
+    const flyered = { title: 'LUCHA BEAR', startDate: new Date('2026-11-13T22:00:00.000Z'), timezone: 'Europe/Madrid' };
+    const flyerPage = '<html><body><h1>LUCHA BEAR</h1><p>Tickets</p>' + '<p>filler</p>'.repeat(30) + '\nOCR_IMAGE_URL: https://popairparty.com/flyer.jpg\nLUCHA BEAR\nSAFARI SITGES\n13 NOVIEMBRE 2026\n</body></html>';
+    parser.markLoneCrawlEvent([flyered], { html: flyerPage, url: 'https://popairparty.com/' }, parserConfig, 'https://popairparty.com/');
+    assert.equal(flyered._loneCrawlWithheld, undefined, 'the flyer names the party and states the day');
+    const otherFlyer = { title: 'LUCHA BEAR', startDate: new Date('2026-11-13T22:00:00.000Z'), timezone: 'Europe/Madrid' };
+    parser.markLoneCrawlEvent([otherFlyer], { html: flyerPage.replace('LUCHA BEAR\nSAFARI', 'POP AIR XXL\nSAFARI'), url: 'https://popairparty.com/' }, parserConfig, 'https://popairparty.com/');
+    assert.ok(otherFlyer._loneCrawlWithheld, 'another party\'s flyer dates nothing for this one');
+    // A page about ONE event states its date past the navigation, ~100 lines below the name (every real
+    // event page of run 20261018-161635): classified event-page, the whole page counts; as a mixed page it does not.
+    const farPage = '<html><body><h1>Bear Week Drag Brunch</h1>' + '<p>nav</p>'.repeat(100) + '<p>September 14, 2025 @ 1:30 pm - 4:00 pm</p><p>Le Patio Sitges</p></body></html>';
+    const onEventPage = { title: 'Bear Week Drag Brunch', startDate: new Date('2025-09-14T11:30:00.000Z'), timezone: 'Europe/Madrid' };
+    parser.markLoneCrawlEvent([onEventPage], { html: farPage, url: 'https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition/' }, parserConfig, 'https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition/', 'event-page');
+    assert.equal(onEventPage._loneCrawlWithheld, undefined, 'an event page dates its one event anywhere on it');
+    const onMixedPage = { title: 'Bear Week Drag Brunch', startDate: new Date('2025-09-14T11:30:00.000Z'), timezone: 'Europe/Madrid' };
+    parser.markLoneCrawlEvent([onMixedPage], { html: farPage, url: 'https://www.bearsevents.com/x/' }, parserConfig, 'https://www.bearsevents.com/x/', 'multi-event-page');
+    assert.ok(onMixedPage._loneCrawlWithheld, 'a mixed page does not: a date 100 lines away could be anything\'s');
+    const undatedEventPage = { title: 'Bears Week Sitges 2027 - SEPTEMBER EDITION', startDate: new Date('2026-09-03T20:00:00.000Z'), timezone: 'Europe/Madrid' };
+    parser.markLoneCrawlEvent([undatedEventPage], { html: '<html><body><h1>Bears Week Sitges 2027 - SEPTEMBER EDITION</h1><p>See you in September 2027!</p></body></html>', url: 'https://www.bearsevents.com/' }, parserConfig, 'https://www.bearsevents.com/', 'event-page');
+    assert.ok(undatedEventPage._loneCrawlWithheld, 'an event page that never states the model\'s day is still held');
+    assert.match(undatedEventPage._loneCrawlWithheld.reason, /stated nowhere on that page/);
     // Structured data dated it: not the model's guess.
     const structured = { title: 'LUCHA BEAR', startDate: new Date('2026-09-03T20:00:00.000Z'), _startDateRawText: '2026-09-03T22:00:00+02:00' };
     parser.markLoneCrawlEvent([structured], { html: '<html><body><h1>LUCHA BEAR</h1></body></html>', url: 'https://popairparty.com/' }, parserConfig, 'https://popairparty.com/');
