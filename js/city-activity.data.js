@@ -2,14 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-10-14",
+ "generatedAt": "2026-10-18",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-10-14",
-    "2026-10-15",
-    "2026-10-16",
-    "2026-10-17",
     "2026-10-18",
     "2026-10-20",
     "2026-10-21",
@@ -95,9 +91,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-10-15",
-    "2026-10-16",
-    "2026-10-17",
     "2026-10-18",
     "2026-10-22",
     "2026-10-23",
@@ -178,7 +171,6 @@ window.CITY_ACTIVITY = {
   },
   "london": {
    "dates": [
-    "2026-10-17",
     "2026-11-13",
     "2026-11-21",
     "2026-12-11",
@@ -191,9 +183,6 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-10-14",
-    "2026-10-16",
-    "2026-10-17",
     "2026-10-18",
     "2026-10-20",
     "2026-10-21",
@@ -230,7 +219,6 @@ window.CITY_ACTIVITY = {
   },
   "palm-springs": {
    "dates": [
-    "2026-10-15",
     "2026-11-06",
     "2026-12-24"
    ],
@@ -278,8 +266,6 @@ window.CITY_ACTIVITY = {
   },
   "sf": {
    "dates": [
-    "2026-10-16",
-    "2026-10-17",
     "2026-10-18",
     "2026-10-23",
     "2026-10-24",
@@ -328,7 +314,6 @@ window.CITY_ACTIVITY = {
   },
   "boston": {
    "dates": [
-    "2026-10-15",
     "2026-10-18",
     "2026-10-24",
     "2026-10-25",
@@ -361,9 +346,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": "2026-11-01"
   },
   "san-diego": {
-   "dates": [
-    "2026-10-16"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -432,8 +415,6 @@ window.CITY_ACTIVITY = {
   },
   "fort-lauderdale": {
    "dates": [
-    "2026-10-16",
-    "2026-10-17",
     "2026-10-21",
     "2026-10-23",
     "2026-10-24",
@@ -470,7 +451,6 @@ window.CITY_ACTIVITY = {
   },
   "montreal": {
    "dates": [
-    "2026-10-15",
     "2026-10-30",
     "2026-11-13"
    ],
@@ -571,7 +551,6 @@ window.CITY_ACTIVITY = {
   },
   "sydney": {
    "dates": [
-    "2026-10-16",
     "2026-11-13"
    ],
    "recurring": 0,
@@ -638,9 +617,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "cologne": {
-   "dates": [
-    "2026-10-16"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
