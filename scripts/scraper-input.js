@@ -172,6 +172,42 @@ const scraperConfig = {
       // reroutes to single-event extraction, whose payload window misses the schedule
     },
     {
+      name: "Sitges Bear Cave",
+      // The Bear Cave, Carrer de Bonaire 12 — Sitges's bear bar, the room the
+      // Bears Sitges Week programme links for the BEEFMINCE and MEGAWOOF
+      // nights. WordPress + The Events Calendar: the listing links its Tribe
+      // REST route and ?ical=1, which the crawler adopts itself (🚪 MACHINE
+      // DOOR). Its calendar holds only the festival week — six nights in
+      // September 2026 on 2026-10-18, nothing upcoming — so an empty feed is
+      // this source's normal state most of the year; the listing then shows
+      // a "Latest Past Events" block, not upcoming rows. The feed dates each
+      // after-midnight party on the morning it runs ("Thursday 10th September
+      // – BEEFMINCE DISCO" starts 2026-09-11 01:00) while the title names the
+      // night before. A bear bar on its own site: alwaysBear, and the curated
+      // record in data/bars/sitges.json ("The Bear Cave", the feed's own
+      // venue name) fills bar, address and coordinates.
+      urls: ["https://sitgesbearcave.com/events/"],
+      alwaysBear: true,
+      siteRole: "venue",
+      metadata: { website: { value: "https://sitgesbearcave.com" } },
+    },
+    {
+      name: "Bears Events (Sitges)",
+      // Bears Sitges Club's own ticket shop (the Bear Cave's footer reads
+      // "Copyright - Bears Events" too): WordPress + WooCommerce + The Events
+      // Calendar, so the Tribe REST route the listing links is the door. It
+      // carries the ticketed festival-week extras the programme page only
+      // names — the Bears Sunset Tea Dance at Hotel Mim, the Drag Brunch Bear
+      // Edition at Le Patio, the VIP Zone — with venue, address, price and
+      // flyer per row, where bearssitges.org gives a line of text. Six rows in
+      // its whole archive on 2026-10-18 and nothing upcoming: empty is normal
+      // between editions. The feed stamps every row timezone "UTC+0" although
+      // the venues are in Sitges — the wall-clock times are local. The
+      // promoter registry maps bearsevents.com to Bears Sitges Club.
+      urls: ["https://www.bearsevents.com/events/"],
+      alwaysBear: true,
+    },
+    {
       name: "Spooky Bear",
       // Northeast Ursamen's Provincetown Halloween weekend. 2026 schedule
       // publishes on THIS url ~Sept/Oct (2025 precedent: full text schedule,
