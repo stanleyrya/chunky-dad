@@ -6,6 +6,11 @@
       "description": "Build chunky.dad calendar events and preview them instantly."
     },
     {
+      "name": "fit-check.html",
+      "icon": "📐",
+      "description": "Fit check: drop a floor plan, set the scale, drag furniture drawn to scale, share the layout by link."
+    },
+    {
       "name": "index.html",
       "icon": "📄",
       "description": "Test file"
