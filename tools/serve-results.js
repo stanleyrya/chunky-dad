@@ -782,6 +782,8 @@ function renderReviewNotesChangeRows(display = {}, shown = {}) {
 function renderReviewBadges(display = {}) {
     const badges = [];
     if (display.bigDrift) badges.push(`<span class="badge warn drift">🧭 big drift — ${escapeHtmlText(display.bigDrift.reason || 'identity changed')} · withheld until you decide</span>`);
+    if (display.aggregatorUnbacked) badges.push(`<span class="badge warn drift">🧭 ${escapeHtmlText(display.aggregatorUnbacked.aggregator || 'aggregator')}'s copy — ${escapeHtmlText(display.aggregatorUnbacked.site || 'the site it points at')} lists no such night · withheld until you decide</span>`);
+    if (display.imageReusedFrom) badges.push(`<span class="badge warn">🖼️ picture cleared — it is the flyer of “${escapeHtmlText(display.imageReusedFrom.title || 'another event')}” (${escapeHtmlText(display.imageReusedFrom.day || 'another night')})</span>`);
     if (display.recurring) badges.push(display.seriesWrite ? '<span class="badge">🔁 recurring — the phone writes it once approved</span>' : '<span class="badge">🔁 recurring — ICS only</span>');
     if (display.seriesMatchTitle) badges.push(`<span class="badge">🔁 matches saved series “${escapeHtmlText(display.seriesMatchTitle)}”</span>`);
     if (Array.isArray(display.sanityCodes) && display.sanityCodes.length > 0) badges.push(`<span class="badge warn">⚠️ ${escapeHtmlText(display.sanityCodes.join(', '))}</span>`);
@@ -810,6 +812,34 @@ function renderReviewDriftFacts(display = {}) {
         `<div class="fact"><span class="fact-k">calendar link</span><span class="fact-v">${drift.calendarUrl ? reviewAnchor(drift.calendarUrl, reviewUrlLabel(drift.calendarUrl, 60)) : '<span class="none">∅</span>'}</span></div>`
     ];
     return `<div class="drift"><div class="drift-head">🧭 Big drift — nothing is written until you decide</div>${rows.join('')}</div>`;
+}
+
+// An aggregator's copy that the site it points at does not list
+// (review-queue buildReviewDisplayContext → shared-core
+// reconcileAggregatorPointers): what the aggregator says, where it points,
+// what that site lists, the nearest event there — and, when the copy wore
+// another night's flyer, whose picture that was.
+function renderReviewPointerFacts(display = {}) {
+    const unbacked = display && display.aggregatorUnbacked && typeof display.aggregatorUnbacked === 'object' ? display.aggregatorUnbacked : null;
+    const reused = display && display.imageReusedFrom && typeof display.imageReusedFrom === 'object' ? display.imageReusedFrom : null;
+    if (!unbacked && !reused) return '';
+    const rows = [];
+    if (unbacked) {
+        rows.push(`<div class="fact"><span class="fact-k">${escapeHtmlText(unbacked.aggregator || 'aggregator')} says</span><span class="fact-v">${escapeHtmlText(unbacked.day || 'undated')}</span></div>`);
+        rows.push(`<div class="fact"><span class="fact-k">points at</span><span class="fact-v">${unbacked.link ? reviewAnchor(unbacked.link, reviewUrlLabel(unbacked.link, 60)) : escapeHtmlText(unbacked.site || '∅')}</span></div>`);
+        const sameNight = Array.isArray(unbacked.sameNight) ? unbacked.sameNight : [];
+        if (sameNight.length > 0) {
+            rows.push(`<div class="fact"><span class="fact-k">that night the site lists</span><span class="fact-v warn">${sameNight.map((entry) => `${entry.url ? reviewAnchor(entry.url, escapeHtmlText(entry.title || 'event')) : escapeHtmlText(entry.title || 'event')}${entry.bar ? ` · ${escapeHtmlText(entry.bar)}` : ''}`).join(' · ')} — not folded with this copy: one event or two?</span></div>`);
+        } else {
+            rows.push(`<div class="fact"><span class="fact-k">that site lists</span><span class="fact-v warn">${escapeHtmlText(`${unbacked.siteEvents} event${unbacked.siteEvents === 1 ? '' : 's'} (read by ${unbacked.source || 'its source'} this run) — none that night`)}</span></div>`);
+        }
+        const nearest = unbacked.nearest;
+        if (sameNight.length === 0) rows.push(`<div class="fact"><span class="fact-k">nearest there</span><span class="fact-v">${nearest ? `${nearest.url ? reviewAnchor(nearest.url, escapeHtmlText(nearest.title || 'event')) : escapeHtmlText(nearest.title || 'event')} · ${escapeHtmlText(nearest.day || '')}${nearest.bar ? ` · ${escapeHtmlText(nearest.bar)}` : ''}` : '<span class="none">nothing</span>'}</span></div>`);
+    }
+    if (reused) {
+        rows.push(`<div class="fact"><span class="fact-k">its picture</span><span class="fact-v warn">${reused.image ? reviewAnchor(reused.image, 'the flyer') : 'the flyer'} of ${reused.url ? reviewAnchor(reused.url, escapeHtmlText(reused.title || 'another event')) : escapeHtmlText(reused.title || 'another event')} (${escapeHtmlText(reused.day || 'another night')}, ${escapeHtmlText(reused.source || 'its source')}) — cleared</span></div>`);
+    }
+    return `<div class="drift"><div class="drift-head">🧭 An aggregator's copy — nothing is written until you decide</div>${rows.join('')}</div>`;
 }
 
 function renderReviewEvidence(lines) {
@@ -950,8 +980,76 @@ function renderReviewLinkHistory(entry, proposal, display) {
     return '';
 }
 
+// A "gone from its source" card: the saved event as the calendar holds
+// it, the source's read this run (how many events, how far ahead), how
+// many runs it has been missing, why it is here (gone / the extra copy of
+// a twin / moved / date moved), what the site lists instead that night,
+// the same name on other nights, and the audit's deep check when there is
+// one. Right swipe = the phone removes it on the next execute; left swipe
+// = keep it.
+function renderReviewGoneCard(entry, ctx = {}) {
+    const p = entry && entry.proposal ? entry.proposal : {};
+    const adapter = ctx.adapter;
+    const tz = p.timezone || null;
+    const wholeDay = p.isAllDay ? 'all-day' : '';
+    const dateLine = formatReviewDateLine(p.startDate, p.endDate, tz, { wholeDay });
+    const cityConfig = adapter && adapter.cities && p.city ? adapter.cities[p.city] : null;
+    const calendarName = cityConfig && typeof cityConfig.calendar === 'string' ? cityConfig.calendar : '';
+    const horizon = p.horizonDay ? reviewDateParts(`${p.horizonDay}T12:00:00Z`, 'UTC') : null;
+    const readLine = `${escapeHtmlText(p.source || p.host || 'the source')} read ${escapeHtmlText(p.host || p.site || '')} this run — ${Number(p.siteEvents) || 0} event${Number(p.siteEvents) === 1 ? '' : 's'}${horizon ? `, listings through ${escapeHtmlText(horizon.day)}` : ''} — and has not listed this one for <b>${Number(p.misses) || 0} run${Number(p.misses) === 1 ? '' : 's'}</b> in a row`;
+    const reasonLine = p.reason === 'duplicate' && p.duplicateOf
+        ? `<div class="line">👯 The site does list it — and the run matched that to the saved “${escapeHtmlText(p.duplicateOf.title || '')}” (${escapeHtmlText(String(p.duplicateOf.uid || '').slice(0, 8))}…). This record (${escapeHtmlText(String(p.uid || '').slice(0, 8))}…) is the extra copy.</div>`
+        : p.reason === 'moved'
+        ? '<div class="line">📍 The site lists it that night at another place — it moved, or the saved place is wrong. The new place is on its own card.</div>'
+        : p.reason === 'date-moved'
+        ? '<div class="line">📆 The site lists the same name on other nights only — the date moved, or this night is over.</div>'
+        : '';
+    const night = (row) => {
+        const parts = reviewDateParts(row.startDate, tz);
+        return parts ? parts.time : '';
+    };
+    const sameNight = Array.isArray(p.instead && p.instead.sameNight) ? p.instead.sameNight : [];
+    const sameTitle = Array.isArray(p.instead && p.instead.sameTitle) ? p.instead.sameTitle : [];
+    const insteadRows = sameNight.map((row) => {
+        const flag = row.samePlace && row.similar ? ' <span class="muted">— same place, same name</span>'
+            : row.samePlace ? ' <span class="muted">— same place</span>'
+            : row.similar ? ' <span class="muted">— similar name, other place</span>'
+            : row.dropped ? ' <span class="muted">— dropped as not bear</span>' : '';
+        return `<li>${escapeHtmlText(row.title || '')}${night(row) ? ` <span class="muted">${escapeHtmlText(night(row))}</span>` : ''}${row.bar ? ` <span class="muted">at ${escapeHtmlText(row.bar)}</span>` : ''}${flag}</li>`;
+    }).join('');
+    const movedRows = sameTitle.map((row) => {
+        const parts = reviewDateParts(row.startDate, tz);
+        return `<li>${escapeHtmlText(row.title || '')}${parts ? ` <span class="muted">— ${escapeHtmlText(parts.day)}</span>` : ''}${row.bar ? ` <span class="muted">at ${escapeHtmlText(row.bar)}</span>` : ''}</li>`;
+    }).join('');
+    const deep = p.deepCheck && p.deepCheck.verdict
+        ? `<div class="line muted">🔎 deep check${p.deepCheck.at ? ` (${escapeHtmlText(String(p.deepCheck.at).slice(0, 10))})` : ''}: ${escapeHtmlText(p.deepCheck.verdict === 'site-removed' ? 'the site removed it' : p.deepCheck.verdict)}</div>`
+        : '';
+    const chips = [
+        reviewChip(ctx, 'website', '🔗', p.url),
+        reviewChip(ctx, 'tickets', '🎟', p.ticketUrl),
+        p.cover ? `<span class="chip">💵 ${escapeHtmlText(p.cover)}</span>` : ''
+    ].filter(Boolean).join('');
+    const description = String(p.description || '');
+    return `<div class="card-body">
+  ${renderReviewThumb({}, p.image)}
+  <div class="kind-row"><span class="kind kind-gone">🕳️ ${p.reason === 'duplicate' ? 'Extra copy of a saved event' : 'Gone from its source'}</span><span class="muted reason">→ remove from the calendar · ← keep</span></div>
+  <h2>${escapeHtmlText(p.title)}</h2>
+  <div class="line">📅 ${escapeHtmlText(dateLine)}</div>
+  ${renderReviewRouteLine(ctx, { bar: p.bar, address: p.address, city: p.city, coordinates: p.location })}
+  <div class="line muted">${calendarName ? `📱 ${escapeHtmlText(calendarName)} · ` : ''}saved event ${escapeHtmlText(String(p.uid || '').slice(0, 8))}…</div>
+  <div class="line">${readLine}</div>
+  ${reasonLine}
+  ${deep}
+  ${insteadRows ? `<div class="label">That night the site lists</div><ul class="sources">${insteadRows}</ul>` : '<div class="line muted">That night the site lists nothing.</div>'}
+  ${movedRows ? `<div class="label">Same name on other nights</div><ul class="sources">${movedRows}</ul>` : ''}
+  ${chips ? `<div class="chips">${chips}</div>` : ''}
+  ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
+</div>`;
+}
+
 function renderReviewCard(entry, ctx = {}) {
     if (entry && entry.kind === 'bar') return renderReviewBarCard(entry, ctx);
+    if (entry && entry.kind === 'gone') return renderReviewGoneCard(entry, ctx);
     const proposal = entry && entry.proposal ? entry.proposal : {};
     const display = entry && entry.display ? entry.display : {};
     const adapter = ctx.adapter;
@@ -1030,6 +1128,7 @@ function renderReviewCard(entry, ctx = {}) {
   ${renderReviewPictureRow(entry)}
   ${isMerge ? renderReviewChangeRows(changes, proposal, ctx, display.changeContext, renderReviewNotesChangeRows(display, changes)) : ''}
   ${isMerge ? renderReviewDriftFacts(display) : ''}
+  ${renderReviewPointerFacts(display)}
   ${description ? `<div class="desc clamped">${escapeHtmlText(description)}</div>${description.length > 220 ? '<div class="desc-more">… more</div>' : ''}` : ''}
   ${renderReviewNotes(display.notes, ctx)}
 </div>`;
@@ -1058,6 +1157,120 @@ function renderReviewPictureRow(entry = {}) {
 }
 
 // The Source audit page: read-only findings of the Mac's automated audit
+// The source ledger on the Mac: GET /metrics renders what the phone's
+// Sources view shows — the verdict table and the yield table — from the
+// same builders (scripts/metrics-sections.js), so the owner at the Mac
+// sees "Sparse · place 10%" without opening the phone. Sorting is a page
+// reload with ?sort=&dir= (Sources) and ?ysort=&ydir= (Yield): the sort
+// buttons the builders emit are turned into links by a few lines of script.
+// Read only; nothing here writes.
+function renderMetricsPage(loaded, options = {}) {
+    const esc = escapeHtmlText;
+    const MetricsSections = require(path.join(repoRoot, 'scripts', 'metrics-sections'));
+    const health = loaded && loaded.health ? loaded.health : null;
+    const records = loaded && Array.isArray(loaded.records) ? loaded.records : [];
+    const sourceSort = options.sourceSort || null;
+    const yieldSort = options.yieldSort || null;
+    const faviconUrl = (row) => `https://chunky.dad/img/favicons/favicon-${String(row.host).replace(/[^a-zA-Z0-9.-]/g, '-')}-64px.ico`;
+    const hostUrl = (row) => (row.url ? String(row.url) : `https://${row.host}/`);
+    const yieldData = MetricsSections.buildSourceYieldRows(records, { runs: 7 });
+    const counters = health ? MetricsSections.buildSourceCountersHtml(health) : '';
+    const sourcesTable = health ? MetricsSections.buildSourcesTableHtml(health, { sortState: sourceSort, hostUrl, faviconUrl }) : `<div class="muted">${esc(MetricsSections.SOURCE_LEDGER_EMPTY_MESSAGE)}</div>`;
+    const yieldTable = MetricsSections.buildSourceYieldTableHtml(yieldData, { sortState: yieldSort, hostUrl, faviconUrl });
+    const verdictCss = (MetricsSections.SOURCE_VERDICT_ORDER || []).map((verdict) => `.verdict-${verdict} { color: var(--v-${verdict}); border-color: var(--v-${verdict}); }`).join('\n');
+    const troubled = health ? `${health.troubled} of ${health.hosts} sites need a look` : 'no source ledger yet';
+    return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Metrics · chunky.dad (on your Mac)</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/favicons/favicon-32x32.png">
+<meta name="theme-color" content="#151412">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root { color-scheme:dark; --bg:#0b0d13; --card:#1c2235; --ink:#f6f7ff; --muted:#8e94b6; --line:rgba(255,255,255,0.09); --accent:#ff7b2f; --accent-soft:#ffa24a; --brand:#667eea; --background-light:rgba(255,255,255,.06); --border-color:var(--line); --text-secondary:var(--muted); --color-neutral:#a7b0cc; --color-success:#2ed573;
+  --v-dead:#ff6b6b; --v-stopped:#ff9f43; --v-shrunk:#feca57; --v-sparse:#f0a04b; --v-drift:#c8a2ff; --v-lost:#ff7eb6; --v-empty:#9b8cff; --v-vanished:#e056a0; --v-quiet:#54a0ff; --v-companion:#8395a7; --v-ok:#a7b0cc; }
+* { box-sizing:border-box; }
+html { background:var(--bg); }
+body { background:radial-gradient(circle at top, #1b2033 0%, #0b0d13 45%, #07090f 100%) fixed; margin:0; color:var(--ink); font:14px/1.4 -apple-system, "SF Pro Text", system-ui, sans-serif; }
+a { color:var(--accent); }
+.top { position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; padding:10px 14px 11px; background:var(--brand); border-bottom:1px solid rgba(255,255,255,.18); }
+.top .brand { display:flex; align-items:center; gap:8px; color:#fff; text-decoration:none; }
+.top .brand-name { font:700 21px/1.1 Poppins, -apple-system, system-ui, sans-serif; }
+.top .tool-page-label { font:600 11px/1 Poppins, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.88); padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.14); }
+.top h1 { margin:0; } .top h1 .logo { width:34px; height:34px; }
+.top .tool-buttons { display:flex; gap:8px; flex-wrap:wrap; margin-left:auto; }
+.action-button { display:inline-flex; align-items:center; gap:7px; font:600 13px/1 Poppins, sans-serif; padding:9px 13px; border-radius:12px; text-decoration:none; color:#c4c8e4; background:rgba(15,20,34,.9); border:1px solid rgba(255,162,74,.25); }
+.wrap { max-width:1200px; margin:14px auto 40px; padding:0 14px; }
+.intro { color:var(--muted); font-size:13px; margin:0 0 12px; }
+.card { background:var(--card); border-radius:18px; padding:14px 16px 16px; margin-bottom:14px; }
+.card h2 { margin:0 0 8px; font:700 18px/1.2 Poppins, sans-serif; }
+.card .sub { color:var(--muted); font-size:12px; margin:-4px 0 10px; }
+.muted { color:var(--muted); }
+.source-counters { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.metric-chip { display:inline-flex; gap:6px; align-items:baseline; font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--line); background:var(--background-light); }
+.metric-chip-value { font-weight:700; }
+.metric-chip.danger { border-color:var(--v-dead); color:var(--v-dead); }
+.table-wrapper { overflow-x:auto; }
+.metrics-table { width:100%; border-collapse:collapse; font-size:13px; }
+.metrics-table th, .metrics-table td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
+.metrics-table th.num, .metrics-table td.num { text-align:right; }
+.sort-button { background:none; border:none; color:var(--muted); font:600 11px/1 Poppins, sans-serif; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; padding:0; }
+.sort-button.active { color:var(--ink); }
+.cell-title { font-weight:600; } .cell-subtitle { font-size:11px; color:var(--muted); }
+.row-link { color:var(--ink); text-decoration:none; }
+.source-site { display:flex; align-items:center; gap:6px; }
+.source-favicon { width:14px; height:14px; border-radius:3px; } .source-favicon.placeholder { display:inline-block; border:1px dashed var(--line); }
+.verdict-chip { display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:8px; border:1px solid; margin-right:3px; }
+${verdictCss}
+.quality-chips { display:flex; flex-wrap:wrap; gap:3px; max-width:200px; }
+.quality-chip { font-size:10px; padding:1px 6px; border-radius:8px; border:1px solid var(--v-shrunk); color:var(--v-shrunk); white-space:nowrap; }
+.quality-chip.quality-audit { border-color:var(--v-lost); color:var(--v-lost); font-weight:700; }
+.quality-chip.quality-flagged { border-color:var(--v-sparse); color:var(--v-sparse); font-weight:700; }
+.quality-chip.quality-ok { border-color:var(--color-success); color:var(--color-success); }
+.quality-chip.quality-more { border-color:var(--line); color:var(--muted); }
+.sparkline { color:var(--accent-soft); }
+.lost-count { color:var(--v-lost); }
+.field-bars { display:inline-flex; gap:2px; align-items:flex-end; }
+.field-bar { position:relative; width:11px; height:22px; border-radius:2px; background:var(--background-light); overflow:hidden; color:var(--color-neutral); }
+.field-bar.low { color:var(--v-sparse); } .field-bar.none { border:1px dashed var(--line); background:transparent; }
+.field-bar-fill { position:absolute; left:0; right:0; bottom:0; background:currentColor; opacity:.75; }
+.field-bar-key { position:absolute; left:0; right:0; bottom:-1px; font-size:7px; line-height:1; text-align:center; color:var(--muted); }
+.lowest-low { color:var(--v-sparse); }
+</style></head>
+<body>
+<header class="top">
+  <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label">Metrics</span></a></h1>
+  <div class="tool-buttons">
+    <a class="action-button" href="/review"><i class="bi bi-layers" aria-hidden="true"></i><span>Review</span></a>
+    <a class="action-button" href="/review/source-audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit</span></a>
+    <a class="action-button" href="/metrics.json"><i class="bi bi-braces" aria-hidden="true"></i><span>JSON</span></a>
+    <a class="action-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>
+  </div>
+</header>
+<div class="wrap">
+<p class="intro">The source ledger (metrics/sources.ndjson, one line per run per website) as the phone's Sources view reads it: ${esc(troubled)}. Read only.</p>
+<div class="card"><h2>Sources</h2><div class="sub">one row per website host, trouble first · Extr · Bear · Up = the latest run</div>${counters}${sourcesTable}</div>
+<div class="card"><h2>Yield</h2><div class="sub">bear kept / extracted (medians over the last ${esc(String(yieldData.runs.length))} runs) · bars = share of kept events with a time, place, coordinates, link, image, description · lowest yield first</div>${yieldTable}</div>
+</div>
+<script>
+(function () {
+  var params = new URLSearchParams(location.search);
+  document.querySelectorAll('[data-sort-view]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var view = button.getAttribute('data-sort-view');
+      var keyName = view === 'yield' ? 'ysort' : 'sort';
+      var dirName = view === 'yield' ? 'ydir' : 'dir';
+      params.set(keyName, button.getAttribute('data-sort-key') || '');
+      params.set(dirName, button.getAttribute('data-sort-dir') || 'asc');
+      location.search = params.toString();
+    });
+  });
+})();
+</script>
+</body></html>`;
+}
+
 // (tools/source-audit.js) — per audited host the date, its badges, what the
 // page lists that we did not extract, what we extracted that is not an
 // event, and how each lost series fared on the site. The deck's look, no
@@ -1071,11 +1284,12 @@ function renderSourceAuditPage(store, options = {}) {
     const quiet = hosts.filter((entry) => !sourceAudit.hostHasOpenFindings(entry)).sort((x, y) => String(y.date).localeCompare(String(x.date)) || x.host.localeCompare(y.host));
     const stillChip = (item) => item.verdict === 'still-listed'
         ? `<span class="badge still-listed">still listed — our miss</span>`
-        : (item.verdict === 'site-removed' ? '<span class="badge still-removed">site removed</span>' : '<span class="badge">unknown</span>');
+        : (item.verdict === 'site-removed' ? '<span class="badge still-removed">site removed</span>'
+            : (item.verdict === 'set-aside' ? `<span class="badge still-removed">held by the run${item.how === 'bear-dropped' ? ' — bear check' : (item.how === 'renamed' ? ' — renamed' : '')}</span>` : '<span class="badge">unknown</span>'));
     const card = (entry) => `
 <div class="card${sourceAudit.hostHasOpenFindings(entry) ? ' open' : ''}">
   <h2><img src="https://chunky.dad/img/favicons/favicon-${esc(entry.host.replace(/[^a-zA-Z0-9.-]/g, '-'))}-64px.ico" alt="" onerror="this.remove()">${esc(entry.host)}<span class="when">${esc(entry.date)}${entry.run_id ? ` · run ${esc(entry.run_id)}` : ''}</span></h2>
-  <div class="badges"><span class="badge verdict v-${esc(entry.verdict || 'ok')}">${esc(entry.verdict || 'ok')}</span>${entry.badges.map((chip) => `<span class="badge quality">${esc(chip)}</span>`).join('')}${entry.ai !== 'ok' ? `<span class="badge">ai: ${esc(entry.ai)}</span>` : ''}</div>
+  <div class="badges"><span class="badge verdict v-${esc(entry.verdict || 'ok')}">${esc(entry.verdict || 'ok')}</span>${entry.badges.map((chip) => `<span class="badge quality">${esc(chip)}</span>`).join('')}${entry.ai !== 'ok' ? `<span class="badge">ai: ${esc(entry.ai)}${entry.reason ? ` · ${esc(entry.reason)}` : ''}</span>` : ''}</div>
   ${entry.page && entry.page.url ? `<p class="page-meta"><a href="${esc(entry.page.url)}" target="_blank" rel="noopener">${esc(entry.page.url)}</a>${entry.page.fetchedAt ? ` · fetched ${esc(String(entry.page.fetchedAt).slice(0, 16).replace('T', ' '))}Z` : ''}${entry.page.chars ? ` · ${esc(String(entry.page.chars))} chars` : ''}</p>` : '<p class="page-meta">no listing page could be read</p>'}
   <div class="cols">
     <div><h3>On the page, not extracted (${entry.missing.length})</h3>${entry.missing.length ? `<ul class="findings">${entry.missing.map((item) => `<li><b>${esc(item.title)}</b>${item.date ? ` <span class="muted">${esc(item.date)}</span>` : ''}</li>`).join('')}</ul>` : '<p class="muted">none</p>'}</div>
@@ -1124,7 +1338,7 @@ a { color:var(--accent); }
 .badge { font-size:12px; padding:2px 8px; border-radius:6px; background:var(--bg); border:1px solid var(--line); color:var(--ink); }
 .badge.verdict { font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
 .badge.v-dead, .badge.v-stopped { color:var(--no); border-color:var(--no); }
-.badge.v-shrunk, .badge.v-empty { color:var(--accent-soft); border-color:var(--accent-soft); }
+.badge.v-shrunk, .badge.v-empty, .badge.v-sparse { color:var(--accent-soft); border-color:var(--accent-soft); }
 .badge.v-lost { color:var(--lost); border-color:var(--lost); }
 .badge.v-ok { color:var(--ok); border-color:var(--ok); }
 .badge.quality { color:var(--accent-soft); }
@@ -1230,6 +1444,7 @@ function renderReviewPage(deck, options = {}) {
         counts: deck.counts,
         lastExecution: deck.lastExecution || null,
         tags: reviewQueue.REVIEW_REASON_TAGS,
+        goneTags: reviewQueue.GONE_REASON_TAGS,
         executeLink: scriptLink,
         friends: Array.isArray(deck.friends) ? deck.friends : [],
         adviceBase: deck.adviceBase || reviewQueue.ADVICE_PAGE_DEFAULT_BASE,
@@ -1391,6 +1606,8 @@ body { overscroll-behavior-y:none; }
 .kind-merge { background:rgba(255,107,53,.16); color:var(--accent); }
 .kind-bar { background:rgba(80,120,255,.14); color:#4a6cf7; }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
+.kind-gone { background:rgba(122,92,199,.16); color:#7a5cc7; }
+.sheet.gone .sheet-modes .mode-notbear, .sheet.gone .sheet-modes .mode-never, .sheet.gone .sheet-fix-note { display:none; }
 .curated { color:var(--ok); font-weight:700; }
 .bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
 .missing-cal { margin:8px 16px 0; padding:8px 12px; border:1px solid var(--no); border-radius:10px; font-size:13px; background:var(--card); }
@@ -1533,7 +1750,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
   <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" srcset="/favicons/favicon-96x96.png 1x, /favicons/favicon-192x192.png 2x" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label" id="top-title">${options.friendMode === true ? 'Phone a friend' : 'Review'}</span></a></h1>
   <div class="tool-buttons">
     <select id="run-select" class="action-button secondary-button" aria-label="Run" onchange="location.href='/review?run='+encodeURIComponent(this.value)">${runOptions}</select>
-    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>${options.friendMode === true ? '' : `\n    <a id="source-audit-link" class="action-button secondary-button" href="/review/source-audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit${Number(options.sourceAuditOpen) > 0 ? ` (${Number(options.sourceAuditOpen)})` : ''}</span></a>`}
+    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>${options.friendMode === true ? '' : `\n    <a id="source-audit-link" class="action-button secondary-button" href="/review/source-audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit${Number(options.sourceAuditOpen) > 0 ? ` (${Number(options.sourceAuditOpen)})` : ''}</span></a>\n    <a id="metrics-link" class="action-button secondary-button" href="/metrics"><i class="bi bi-activity" aria-hidden="true"></i><span>Metrics</span></a>`}
     <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send back</span></a>
   </div>
 </header>
@@ -1830,14 +2047,14 @@ window.__startDeck = function () {
     if (join && series) join.onclick = function () { delete solo[series.key]; toast('Folded back — one swipe decides them all'); render(); };
   }
   function counts() {
-    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, dropped: 0 };
+    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, gone: 0, dropped: 0 };
     queue.forEach(function (c) { out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
     return out;
   }
   function renderFilters() {
     var c = counts();
     var html = '';
-    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['dropped', 'Not bear']].forEach(function (pair) {
+    [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['gone', 'Gone'], ['dropped', 'Not bear']].forEach(function (pair) {
       html += '<span class="pill' + (filter === pair[0] ? ' on' : '') + '" data-f="' + pair[0] + '">' + pair[1] + ' <b>' + (c[pair[0]] || 0) + '</b></span>';
     });
     document.getElementById('filters').innerHTML = html;
@@ -1907,6 +2124,7 @@ window.__startDeck = function () {
   function renderExecute() {
     var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped' && d.pendingExecute; }).length;
     var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
+    var removals = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'gone' && d.pendingExecute; }).length;
     var el = document.getElementById('execute');
     var last = deck.lastExecution;
     // The phone's own tally of the approvals it was handed (the run file's
@@ -1928,7 +2146,7 @@ window.__startDeck = function () {
       ? '<small>🖼️ ' + picturesWaiting.length + ' of these wait' + (picturesWaiting.length === 1 ? 's' : '') + ' for the pictures PR' + (picturesWaiting[0].picture.pr && picturesWaiting[0].picture.pr.url ? ' <a href="' + escapeHtml(picturesWaiting[0].picture.pr.url) + '">#' + escapeHtml(String(picturesWaiting[0].picture.pr.number || '')) + '</a>' : '') + ' — merge it first, or they are written without their flyer.</small>'
       : '';
     if (approved > 0 && deck.executeLink) {
-      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals, and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
+      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
     } else {
       el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
     }
@@ -2168,7 +2386,7 @@ window.__startDeck = function () {
     var html = order.length === 0 ? '<div class="empty">Nothing here. 🐻</div>' : '';
     order.forEach(function (name) {
       var g = groups[name];
-      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'series' ? 'series' : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
+      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'series' ? 'series' : k === 'gone' ? 'gone' : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
       html += '<div class="src" data-s="' + escapeHtml(name) + '"><h4>' + escapeHtml(name) + ' <small>' + g.cards.length + ' card' + (g.cards.length === 1 ? '' : 's') + ' · ' + escapeHtml(kinds) + '</small></h4>'
         + '<div class="facts">' + (Object.keys(g.hosts).length ? 'links: ' + top(g.hosts, 4) + '<br>' : 'links: none<br>') + (Object.keys(g.places).length ? 'where: ' + top(g.places, 4) : 'where: nothing placed') + '</div>'
         + '<div class="sacts"><button type="button" data-act="list">List these</button><button type="button" data-act="stack">Review these</button><button type="button" class="ok" data-act="approve">Approve all ' + g.cards.length + '</button><button type="button" class="no" data-act="reject">Not yet, all ' + g.cards.length + '…</button></div></div>';
@@ -2224,7 +2442,7 @@ window.__startDeck = function () {
   function notBearItem(item, quiet) {
     var c = item.cards[0];
     if (c.kind === 'dropped') { decide(item, 'reject', null, 'gone-left'); return; }
-    if (c.kind === 'bar') { if (!quiet) { pending = item; openSheet(item); } return; }
+    if (c.kind === 'bar' || c.kind === 'gone') { if (!quiet) { pending = item; openSheet(item); } return; }
     decide(item, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     if (!quiet) toast('Not bear — final');
   }
@@ -2351,7 +2569,7 @@ window.__startDeck = function () {
       var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
       if (friendMode) { toast(verdict === 'approve' ? 'Looks right — got it' : 'Noted'); return; }
-      toast((card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      toast((card.kind === 'gone' ? (verdict === 'approve' ? 'Removal approved — the phone takes it off the calendar on the next execute' : 'Kept on the calendar') : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
       renderDecided(); renderExecute(); renderWaiting();
     }).catch(function (error) {
       toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' ' + unitOf(item.series, left.length) + ' back on the stack)' : ''));
@@ -2410,19 +2628,23 @@ window.__startDeck = function () {
   function openSheet(item) {
     var card = item.bulk ? item.bulk[0].cards[0] : item.cards[0];
     var isDropped = !item.bulk && card.kind === 'dropped';
-    document.getElementById('sheet-fix').querySelector('b').textContent = isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
-    document.getElementById('sheet-fix').querySelector('span').textContent = isDropped
+    var isGone = !item.bulk && card.kind === 'gone';
+    sheet.classList.toggle('gone', isGone);
+    document.getElementById('sheet-fix').querySelector('b').textContent = isGone ? '✅ Keep it on the calendar' : isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
+    document.getElementById('sheet-fix').querySelector('span').textContent = isGone
+      ? 'The saved event stays as it is. Say why, so the read can be fixed if the source is the problem.'
+      : isDropped
       ? 'It IS ours, and the card is wrong. The next run keeps it; it waits, and comes back by itself once the card changes.'
       : 'Good event, wrong card. It waits, and comes back by itself once the card changes.';
     document.getElementById('sheet-notbear').querySelector('span').textContent = isDropped ? 'Right call. Final — every night of this party.' : 'Not ours. Final — every night of this party.';
     document.getElementById('sheet-title').textContent = item.bulk
       ? item.label + ' — the same answer for every one'
       : (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '');
-    sheetTags.innerHTML = deck.tags.filter(function (t) { return t !== 'not bear'; }).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
+    sheetTags.innerHTML = (isGone ? (deck.goneTags || []) : deck.tags.filter(function (t) { return t !== 'not bear'; })).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
     document.getElementById('sheet-text').placeholder = 'Anything else (optional)';
-    document.getElementById('sheet-heading').textContent = friendMode ? 'What’s not right?' : 'Not yet — why?';
+    document.getElementById('sheet-heading').textContent = isGone ? 'Keep it — why?' : friendMode ? 'What’s not right?' : 'Not yet — why?';
     if (friendMode) {
       document.getElementById('sheet-fix').querySelector('span').textContent = 'A real bear event, but something on the card is wrong. Tap what, add a note.';
       document.getElementById('sheet-notbear').querySelector('span').textContent = 'Not a bear crowd.';
@@ -2589,6 +2811,8 @@ window.__startDeck = function () {
     sheet.classList.remove('open'); fitSheet(); pending = null;
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
+    // A gone card's only answer is "keep" (its left swipe is not a rejection).
+    if (!card.bulk && card.cards[0].kind === 'gone') mode = 'keep';
     var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
     // A bulk answer: every item of the set gets this reason.
     if (card.bulk) {
@@ -2602,7 +2826,7 @@ window.__startDeck = function () {
     // On a not-bear card, "not bear" is the plain confirmation it always was.
     if (card.cards[0].kind === 'dropped') { decide(card, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
     decide(card, 'reject', reason, 'gone-left');
-    toast(mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
+    toast(mode === 'keep' ? 'Kept on the calendar' : mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
   }
   document.getElementById('sheet-fix').onclick = function () { answerSheet('fix'); };
   document.getElementById('sheet-notbear').onclick = function () { answerSheet('not-bear'); };
@@ -2610,7 +2834,7 @@ window.__startDeck = function () {
   function notBearTop() {
     var c = topItem(); if (!c) return;
     if (c.cards[0].kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }
-    if (c.cards[0].kind === 'bar') { pending = c; openSheet(c); return; }
+    if (c.cards[0].kind === 'bar' || c.cards[0].kind === 'gone') { pending = c; openSheet(c); return; }
     decide(c, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     toast('Not bear — final');
   }
@@ -3524,6 +3748,31 @@ async function handleRequest(state, req, res) {
         }
     }
 
+    // Metrics: the source ledger's verdicts and yield, read only.
+    if ((pathname === '/metrics' || pathname === '/metrics.json') && req.method === 'GET') {
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        try {
+            const loaded = reviewQueue.loadSourceHealth(sharedRoot) || { health: null, records: [] };
+            const sortOf = (key, dir) => (query[key] ? { key: String(query[key]), direction: String(query[dir] || '') === 'desc' ? 'desc' : 'asc' } : null);
+            if (pathname === '/metrics.json') {
+                const MetricsSections = require(path.join(repoRoot, 'scripts', 'metrics-sections'));
+                const health = loaded.health;
+                return sendJson(res, 200, {
+                    ok: true,
+                    hosts: health ? health.hosts : 0,
+                    troubled: health ? health.troubled : 0,
+                    counts: health ? health.counts : {},
+                    rows: health ? health.rows.map((row) => ({ host: row.host, verdict: row.verdict, flags: row.flags, since: row.since, sparse: row.sparse, flagged: row.flagged, extracted: row.latest.extracted, bear: row.latest.bear, upcoming: row.latest.upcoming, lostDays: row.lostDays, badges: row.quality && row.quality.badges ? row.quality.badges.map((badge) => badge.chip) : [] })) : [],
+                    yield: MetricsSections.buildSourceYieldRows(loaded.records, { runs: 7 })
+                });
+            }
+            return sendHtml(res, 200, renderMetricsPage(loaded, { sourceSort: sortOf('sort', 'dir'), yieldSort: sortOf('ysort', 'ydir') }));
+        } catch (error) {
+            console.error(`Metrics render failed: ${error.stack || error}`);
+            return sendText(res, 500, `Metrics render failed: ${error.message}`);
+        }
+    }
+
     // Source audit: the Mac's automated findings (read only) and the fix queue.
     if (pathname === '/review/source-audit' && req.method === 'GET') {
         const sourceAudit = require(path.join(__dirname, 'source-audit'));
@@ -3569,7 +3818,7 @@ async function handleRequest(state, req, res) {
         return res.end(found.buffer);
     }
 
-    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/source-audit /review/source-audit.json /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
+    return sendText(res, 404, 'Not found. Endpoints: / /run /run-form /log /ics/<id> /ics-batch/<id> /review /review/deck.json /review/decide /review/bear /review/decisions.json /review/rejections /review/source-audit /review/source-audit.json /metrics /metrics.json /review/ask /review/friend-link /review/advice /advice/ /inbox/file/<name>');
 }
 
 function parsePortFromArgv(argv) {
@@ -3627,6 +3876,7 @@ module.exports = {
     tailLines,
     renderRunFormPage,
     renderSourceAuditPage,
+    renderMetricsPage,
     countSourceAuditOpen,
     renderConfirmRunPage,
     parsePortFromArgv,

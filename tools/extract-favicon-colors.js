@@ -87,6 +87,8 @@ const EVENT_COLORS_DIR = path.join(ROOT, 'data', 'event-colors');
 const {
   convertWebsiteUrlToFaviconPath,
   isLinktreeUrl,
+  isInstagramProfileUrl,
+  generateInstagramFaviconFilename,
   isWikipediaUrl,
   generateLinktreeFaviconFilename,
   generateWikipediaFaviconFilename,
@@ -141,6 +143,13 @@ function isGenericPlatformUrl(url) {
   }
 }
 
+// An Instagram PROFILE is the one platform address with its own curated icon
+// slot (isInstagramProfileUrl in filename-utils, filled by hand) — every other
+// platform URL's favicon is the platform's glyph and must not seed colours.
+function isBarredIconSource(url) {
+  return isGenericPlatformUrl(url) && !isInstagramProfileUrl(url);
+}
+
 /**
  * Given a website URL, return the absolute path to the already-downloaded
  * local favicon file (or null if the file doesn't exist / URL is skipped).
@@ -148,7 +157,7 @@ function isGenericPlatformUrl(url) {
  */
 function localFaviconPath(websiteUrl) {
   if (!websiteUrl) return null;
-  if (isGenericPlatformUrl(websiteUrl)) return null;
+  if (isBarredIconSource(websiteUrl)) return null;
 
   let filename;
   if (isWikipediaUrl(websiteUrl)) {
@@ -162,6 +171,13 @@ function localFaviconPath(websiteUrl) {
     // Try both 64px and 256px — prefer 64px
     for (const size of ['64', '256']) {
       const f = path.join(FAVICONS_DIR, generateLinktreeFaviconFilename(websiteUrl, size));
+      if (fs.existsSync(f)) return f;
+    }
+    return null;
+  } else if (isInstagramProfileUrl(websiteUrl)) {
+    // Curated per-handle slot (never fetched) — prefer 64px
+    for (const size of ['64', '256']) {
+      const f = path.join(FAVICONS_DIR, generateInstagramFaviconFilename(websiteUrl, size));
       if (fs.existsSync(f)) return f;
     }
     return null;
@@ -926,7 +942,7 @@ async function processEvents(cityKey) {
     // Goldiloxx's linktree profile pic sat downloaded on disk while this
     // loop only ever consulted the website field.
     const eventFaviconUrl = typeof event.favicon === 'string' && event.favicon
-        && !isGenericPlatformUrl(event.favicon) ? event.favicon : null;
+        && !isBarredIconSource(event.favicon) ? event.favicon : null;
     const websiteUrl = chooseBestUrl(event);
     const url = eventFaviconUrl || websiteUrl;
     const faviconPath = url ? localFaviconPath(url) : null;
@@ -977,7 +993,7 @@ async function processEvents(cityKey) {
   // Brand identity = the event's favicon field when it is entity-specific,
   // else its chosen URL — the same precedence the site displays.
   const faviconIdentityKey = (event) => {
-    const fav = typeof event.favicon === 'string' && event.favicon && !isGenericPlatformUrl(event.favicon)
+    const fav = typeof event.favicon === 'string' && event.favicon && !isBarredIconSource(event.favicon)
       ? event.favicon : null;
     const raw = fav || chooseBestUrl(event);
     return raw ? String(raw).trim().toLowerCase().replace(/\/+$/, '') : null;

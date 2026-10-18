@@ -12224,3 +12224,112 @@ test('all-day merge write goes to the live record behind the analysis view', () 
   assert.equal(core.viewStoredAllDayRecord(timed, 'Europe/London'), timed, 'a timed record passes through untouched');
   assert.equal(SharedCore.getNativeCalendarRecord(timed), timed);
 });
+
+// ---------------------------------------------------------------------------
+// Approved removals ("gone from its source"): the one place the scraper
+// removes a calendar event — only on the owner's approval of a gone card,
+// and only after the live record is verified against it.
+// ---------------------------------------------------------------------------
+
+function goneCandidate(uid, title, extra = {}) {
+  return {
+    key: `gone|nyc|${uid}`, kind: 'gone', city: 'nyc', uid, identifier: `cal:${uid}`, title,
+    startDate: REVIEW_RUN_START, endDate: '2030-10-04T06:00:00.000Z', timezone: 'America/New_York', bar: 'Rockbar',
+    host: 'furball.nyc', source: 'Furball', reason: 'gone', misses: 2, instead: { sameNight: [], sameTitle: [] }, ...extra
+  };
+}
+
+function installGoneCalendarStubs(captured, records) {
+  const previous = { CalendarEvent: global.CalendarEvent, Calendar: global.Calendar };
+  global.Calendar = { forEvents: async () => [{ title: 'chunky-dad-nyc' }] };
+  global.CalendarEvent = { between: async (from, to, calendars) => { captured.windows.push({ from, to, calendars }); return records; } };
+  return () => { global.CalendarEvent = previous.CalendarEvent; global.Calendar = previous.Calendar; };
+}
+
+test('executeReviewedSavedRun removes an approved gone card only after verifying the live record (same identifier, title and night, not recurring), withholds the rest with a reason, and leaves the full trail', async () => {
+  const adapter = buildAdapter();
+  adapter.cities = { nyc: { calendar: 'chunky-dad-nyc', timezone: 'America/New_York', patterns: ['nyc'] } };
+  const captured = { notices: [], removed: [], windows: [], snapshots: [], notifications: [], ledgerRows: [] };
+  instrumentReviewedRunAdapter(adapter, [], captured);
+  adapter.getOrCreateCalendar = async (name) => ({ title: name });
+  adapter.postSavedRunExecutionNotification = async (title, lines) => { captured.notifications.push({ title, lines }); };
+  adapter.writeCalendarSnapshots = async (cities) => { captured.snapshots.push(cities); return []; };
+  adapter.recordWrittenLedger = async (ledger, rows) => { captured.ledgerRows.push(...rows); return rows.length; };
+  const live = (identifier, title, extra = {}) => ({
+    identifier, title, startDate: new Date(REVIEW_RUN_START), endDate: new Date('2030-10-04T06:00:00.000Z'), recurrenceRules: [],
+    remove() { captured.removed.push(identifier); }, ...extra
+  });
+  const restore = installGoneCalendarStubs(captured, [
+    live('cal:A', 'Gone Party'),
+    live('cal:B', 'Renamed Since'),
+    live('cal:C', 'Weekly Thing', { recurrenceRules: [{ frequency: 'weekly' }] }),
+    live('cal:E', 'Moved Night', { startDate: new Date('2030-10-06T02:00:00.000Z') })
+  ]);
+  try {
+    const results = {
+      ...buildReviewedRunResults([]),
+      goneFromSource: { candidates: [goneCandidate('A', 'Gone Party'), goneCandidate('B', 'Old Name'), goneCandidate('C', 'Weekly Thing'), goneCandidate('D', 'Vanished Already'), goneCandidate('E', 'Moved Night'), goneCandidate('F', 'Not Approved')], state: {}, summary: {} }
+    };
+    const decisions = ['A', 'B', 'C', 'D', 'E'].map((uid) => ({ key: `gone|nyc|${uid}`, kind: 'gone', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} }))
+      .concat([{ key: 'gone|nyc|F', kind: 'gone', verdict: 'reject', stampedAt: '2030-01-01T00:00:00.000Z', reason: { tags: ['still happening'], text: '', mode: 'keep' } }]);
+    const summary = await adapter.executeReviewedSavedRun(results, decisions);
+    assert.deepEqual(captured.removed, ['cal:A'], 'only the verified record is removed');
+    assert.equal(summary.deleted, 1);
+    assert.equal(summary.deleteWithheld, 4, 'renamed, recurring, not found, moved night: all withheld');
+    assert.equal(summary.deleteFailed, 0);
+    assert.equal(captured.windows.length, 5, 'one calendar read per approved card');
+    assert.deepEqual(captured.windows[0].calendars, [{ title: 'chunky-dad-nyc' }]);
+    assert.deepEqual(captured.ledgerRows, [{ key: 'gone|nyc|A', action: 'deleted', title: 'Gone Party' }]);
+    assert.equal(captured.analyzed, undefined, 'no event approvals → no live re-analysis');
+    assert.equal(captured.executed, undefined, 'no calendar writes');
+    assert.equal(captured.persisted, results, 'the run file records the execution');
+    assert.equal(results.savedRunExecutions[0].via, 'owner-review');
+    assert.equal(results.savedRunExecutions[0].deleted, 1);
+    assert.equal(results.savedRunExecutions[0].deleteWithheld, 4);
+    assert.equal(results.savedRunExecutions[0].actionCounts.delete, 1);
+    assert.equal(results.runContext.trigger, 'owner-review');
+    assert.match(captured.housekeeping.options.logRunId, /^20260810-101010-review-\d{8}-\d{6}$/);
+    assert.deepEqual(captured.snapshots, [['nyc']], 'the calendar that changed is snapshotted for the Mac');
+    assert.equal(captured.notifications[0].title, 'Calendar Updated');
+    const last = captured.notices[captured.notices.length - 1];
+    assert.equal(last.title, 'Calendar Updated');
+    assert.ok(last.message.includes('Removed 1') && last.message.includes('4 removal(s) withheld'), last.message);
+  } finally {
+    restore();
+  }
+});
+
+test('executeReviewedSavedRun: a removal the ledger already records since the approval is not attempted again; a run without a calendar API attempts nothing', async () => {
+  const adapter = buildAdapter();
+  adapter.cities = { nyc: { calendar: 'chunky-dad-nyc', timezone: 'America/New_York', patterns: ['nyc'] } };
+  const captured = { notices: [], removed: [], windows: [], snapshots: [], notifications: [], ledgerRows: [] };
+  instrumentReviewedRunAdapter(adapter, [], captured);
+  adapter.getOrCreateCalendar = async (name) => ({ title: name });
+  adapter.postSavedRunExecutionNotification = async () => {};
+  adapter.writeCalendarSnapshots = async (cities) => { captured.snapshots.push(cities); return []; };
+  adapter.recordWrittenLedger = async (ledger, rows) => { captured.ledgerRows.push(...rows); return rows.length; };
+  adapter.loadWrittenLedger = async () => ({ version: 1, entries: { 'gone|nyc|A': { executedAt: '2030-02-01T00:00:00.000Z', action: 'deleted', title: 'Gone Party' } } });
+  const restore = installGoneCalendarStubs(captured, [{ identifier: 'cal:A', title: 'Gone Party', startDate: new Date(REVIEW_RUN_START), endDate: new Date('2030-10-04T06:00:00.000Z'), recurrenceRules: [], remove() { captured.removed.push('cal:A'); } }]);
+  try {
+    const results = { ...buildReviewedRunResults([]), goneFromSource: { candidates: [goneCandidate('A', 'Gone Party')], state: {}, summary: {} } };
+    const summary = await adapter.executeReviewedSavedRun(results, [{ key: 'gone|nyc|A', kind: 'gone', verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} }]);
+    assert.deepEqual(captured.removed, [], 'already removed on an earlier execute');
+    assert.equal(summary.deleted, 0);
+    assert.equal(captured.windows.length, 0, 'the calendar is not even read');
+    const last = captured.notices[captured.notices.length - 1];
+    assert.ok(last.message.includes('1 removed by an earlier execution'), last.message);
+  } finally {
+    restore();
+  }
+  // No calendar API (a Node-side load): nothing is attempted, nothing crashes.
+  const previous = { CalendarEvent: global.CalendarEvent, Calendar: global.Calendar };
+  delete global.CalendarEvent;
+  try {
+    const bare = buildAdapter();
+    const out = await bare.applyGoneDeletions({}, [{ candidate: goneCandidate('A', 'Gone Party'), decision: { stampedAt: '2030-01-01T00:00:00.000Z' } }], { version: 1, entries: {} });
+    assert.deepEqual({ attempted: out.attempted, deleted: out.deleted }, { attempted: 0, deleted: 0 });
+  } finally {
+    global.CalendarEvent = previous.CalendarEvent;
+    global.Calendar = previous.Calendar;
+  }
+});

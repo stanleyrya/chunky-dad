@@ -1273,6 +1273,78 @@ class WebAdapter {
         };
     }
 
+    // The previous run's source-upcoming state (hosts' expected events,
+    // signal history, gone-from-source streaks). Null when unreadable.
+    async loadSourceUpcoming() {
+        if (!this.isNode || !this.sharedStorageRoot || !this.fs || !this.path) return null;
+        try {
+            return JSON.parse(await this.fs.promises.readFile(this.getSourceLedgerPaths().upcoming, 'utf8'));
+        } catch (_) {
+            return null;
+        }
+    }
+
+    // Every saved upcoming event per city, for the gone-from-source check:
+    // the phone's snapshot when it is fresh and covers the window, else the
+    // published ICS expanded over today-1 → +400 days. Each record carries
+    // its identifier, the uid behind it, and `series` for an occurrence of
+    // a recurring event (never a candidate). { city: { source, events } }.
+    async listSavedUpcomingEvents(cityKeys) {
+        const out = {};
+        const core = this.getSharedCoreRef();
+        if (!core) return out;
+        const start = new Date();
+        start.setDate(start.getDate() - 1);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date();
+        end.setDate(end.getDate() + 400);
+        end.setHours(23, 59, 59, 999);
+        for (const cityKey of Array.isArray(cityKeys) ? cityKeys : []) {
+            const city = String(cityKey || '').trim();
+            if (!city) continue;
+            try {
+                let events = null;
+                let source = '';
+                const snapshot = await this.getPhoneCalendarSnapshot(city);
+                if (snapshot && snapshot.windowStart && snapshot.windowEnd
+                    && snapshot.windowStart.getTime() <= start.getTime() && snapshot.windowEnd.getTime() >= end.getTime()) {
+                    events = snapshot.events.filter((event) => event.startDate && event.startDate.getTime() >= start.getTime() && event.startDate.getTime() <= end.getTime());
+                    source = 'phone';
+                } else {
+                    const published = await this.getPublishedCalendarEvents(city);
+                    if (!published) continue;
+                    events = core.expandPublishedCalendarEventsInWindow(published.records, start, end).events;
+                    source = 'published';
+                }
+                // An identifier shared by several occurrences is a series.
+                const perIdentifier = new Map();
+                for (const event of events) {
+                    const id = String(event.identifier || '');
+                    if (id) perIdentifier.set(id, (perIdentifier.get(id) || 0) + 1);
+                }
+                out[city] = {
+                    source,
+                    events: events.map((event) => ({
+                        identifier: String(event.identifier || ''),
+                        uid: typeof core.savedEventUid === 'function' ? core.savedEventUid(event.identifier) : String(event.identifier || ''),
+                        title: String(event.title || ''),
+                        startDate: event.startDate,
+                        endDate: event.endDate || null,
+                        location: String(event.location || ''),
+                        notes: String(event.notes || ''),
+                        url: String(event.url || ''),
+                        isAllDay: event.isAllDay === true,
+                        series: Boolean(event.recurrence) || (perIdentifier.get(String(event.identifier || '')) || 0) > 1
+                    }))
+                };
+                console.log(`🖥️ WebAdapter: saved upcoming events for ${city} — ${out[city].events.length} from the ${source === 'phone' ? 'phone snapshot' : 'published calendar'} (gone-from-source check)`);
+            } catch (error) {
+                console.log(`🖥️ WebAdapter: saved upcoming events for ${city} unreadable (${error.message}) — not checked for gone-from-source`);
+            }
+        }
+        return out;
+    }
+
     async appendSourceLedger(payload, runId) {
         if (!this.isNode || !this.sharedStorageRoot || !this.fs || !this.path) return null;
         const SharedCoreRef = this.getSharedCoreRef();
@@ -1351,6 +1423,12 @@ class WebAdapter {
                     // them as cards.
                     ...(Array.isArray(results.newVenueCandidates) && results.newVenueCandidates.length > 0
                         ? { newVenueCandidates: results.newVenueCandidates }
+                        : {}),
+                    // "Gone from its source" cards and their streak state
+                    // (SharedCore.buildGoneFromSourceCandidates): the deck
+                    // offers the cards, the ledger carries the state.
+                    ...(results.goneFromSource && typeof results.goneFromSource === 'object'
+                        ? { goneFromSource: results.goneFromSource }
                         : {})
                 };
                 const runFilePath = this.path.join(runsDir, `${runId}.json`);
@@ -1664,8 +1742,22 @@ class WebAdapter {
             // fails too. A page the browser brought back is a page.
             const refusalStatus = Number(error && error.statusCode) || Number((error && error.politeness && String(error.message || '').match(/\b(429|403)\b/) || [])[1]) || 0;
             const refused = refusalStatus === 429 || refusalStatus === 403;
+            // The browser and the phone are for the sites we read (the
+            // registrable domain of a configured URL), never for an
+            // outbound link a page happens to carry — see
+            // FetchPoliteness.isConfiguredSiteRequest.
+            const gate = typeof this.getFetchPoliteness === 'function' ? this.getFetchPoliteness() : null;
+            const ownSite = !gate || typeof gate.isConfiguredSiteRequest !== 'function' || gate.isConfiguredSiteRequest(url);
+            if (refused && !ownSite) {
+                const hostKey = (String(url).match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+                if (!this._browserSkippedHosts) this._browserSkippedHosts = new Set();
+                if (hostKey && !this._browserSkippedHosts.has(hostKey)) {
+                    this._browserSkippedHosts.add(hostKey);
+                    console.log(`🧭 BROWSER: ${url} not tried — not a site we read (an outbound link); its refusal stands`);
+                }
+            }
             // Pages only: never robots.txt, never an API call, never a POST.
-            if (refused && (options.method || 'GET').toUpperCase() === 'GET' && !options.body && !options.apiCall && !/\/robots\.txt(?:[?#]|$)/i.test(String(url))) {
+            if (refused && ownSite && (options.method || 'GET').toUpperCase() === 'GET' && !options.body && !options.apiCall && !/\/robots\.txt(?:[?#]|$)/i.test(String(url))) {
                 const browserPage = await this.fetchWithBrowser(url, options);
                 if (browserPage && browserPage.html) {
                     if (canUseCache && isCacheableResponse(browserPage)) await this.writeCachedPage(url, browserPage, pageCacheConfig);
@@ -1686,10 +1778,10 @@ class WebAdapter {
             }
             if (error && error.politeness) {
                 console.log(`🚦 POLITE: skipped ${url} — ${error.message}`);
-                if (refused && !options.apiCall) this.noteInboxRequest(url, `the host answers the Mac ${refusalStatus}`);
+                if (refused && ownSite && !options.apiCall) this.noteInboxRequest(url, `the host answers the Mac ${refusalStatus}`);
             } else {
                 console.log(`🌐 Web: ✗ HTTP request failed for ${url}: ${error.message}`);
-                if (refused && !options.apiCall) this.noteInboxRequest(url, `HTTP ${refusalStatus}`);
+                if (refused && ownSite && !options.apiCall) this.noteInboxRequest(url, `HTTP ${refusalStatus}`);
             }
             const wrapped = new Error(`HTTP request failed for ${url}: ${error.message}`);
             if (error && typeof error.retryable === 'boolean') wrapped.retryable = error.retryable;

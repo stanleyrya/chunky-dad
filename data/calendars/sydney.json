@@ -5,59 +5,6 @@
   },
   "events": [
     {
-      "name": "Furry Friday",
-      "day": "Friday",
-      "time": "7PM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": -33.8749589,
-        "lng": 151.2219447
-      },
-      "startDate": "2026-10-09T19:00:00",
-      "endDate": "2026-10-09T22:00:00",
-      "unprocessedDescription": "description: a community group for hairy, gay men, their frie\rnds and their admirers.\nbar: Kings Cross Hotel\naddress: 244-248 William Street, Kings Cross\ntimezone: Australia/Sydney\nfacebook: https://www.facebook.com/aconhealth\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\naddressSource: page\nwebsite: https://hcbears.com.au/event-6700980/Registration\ngmaps: https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross\npinSource: curated\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: furry-friday|2026-10-09|kings cross hotel\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\nimageSource: json-api\nbarSource: curated\nbearSource: keyword\nshortName: FURRY FRIDAY\nendUnknown: true",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Australia/Sydney",
-      "wasUTC": true,
-      "sourceUid": "13A4CAA0-9472-4A76-BBDC-00789032A0F2",
-      "uid": "13A4CAA0-9472-4A76-BBDC-00789032A0F2",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Kings Cross Hotel",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
-      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
-      "tea": "a community group for hairy, gay men, their friends and their admirers.",
-      "cadence": "FREQ=WEEKLY;BYDAY=FR",
-      "address": "244-248 William Street, Kings Cross",
-      "website": "https://hcbears.com.au/event-6700980/Registration",
-      "facebook": "https://www.facebook.com/aconhealth",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross",
-      "shortName": "FURRY FRIDAY",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://hcbears.com.au/event-6700980/Registration",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/aconhealth",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "furry-friday-6baf4435"
-    },
-    {
       "name": "BEEFCAKE Leather 🥩 Sydney",
       "day": "Friday",
       "time": "9PM-4AM",
@@ -146,6 +93,112 @@
         }
       ],
       "slug": "thick-n-juicy-sydney-october-long-weekend-628b5e4f"
+    },
+    {
+      "name": "Furry Friday",
+      "day": "Friday",
+      "time": "7PM-4PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": -33.8749589,
+        "lng": 151.2219447
+      },
+      "startDate": "2026-10-16T19:00:00",
+      "endDate": "2026-10-18T16:00:00",
+      "unprocessedDescription": "description: Furry Friday\\: Kilt\nbar: Kings Cross Hotel\naddr\ress: 244-248 William Street, Kings Cross\ntimezone: Australia/Sydney\nfacebook: https://www.facebook.com/aconhealth\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\naddressSource: page\nwebsite: https://hcbears.com.au/event-6700980/Registration\ngmaps: https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross\npinSource: curated\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: furry-friday|2026-10-16|kings cross hotel\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\nimageSource: json-api\nbarSource: curated\nbearSource: keyword\nshortName: FURRY FRIDAY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Sydney",
+      "wasUTC": true,
+      "sourceUid": "7848F567-25CF-4742-8C03-4A824C37A7FE",
+      "uid": "7848F567-25CF-4742-8C03-4A824C37A7FE",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Kings Cross Hotel",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
+      "tea": "Furry Friday: Kilt",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "244-248 William Street, Kings Cross",
+      "website": "https://hcbears.com.au/event-6700980/Registration",
+      "facebook": "https://www.facebook.com/aconhealth",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross",
+      "shortName": "FURRY FRIDAY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://hcbears.com.au/event-6700980/Registration",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/aconhealth",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "furry-friday-39c44ecf"
+    },
+    {
+      "name": "Furry Friday",
+      "day": "Friday",
+      "time": "7PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": -33.8749589,
+        "lng": 151.2219447
+      },
+      "startDate": "2026-10-09T19:00:00",
+      "endDate": "2026-10-09T22:00:00",
+      "unprocessedDescription": "description: a community group for hairy, gay men, their frie\rnds and their admirers.\nbar: Kings Cross Hotel\naddress: 244-248 William Street, Kings Cross\ntimezone: Australia/Sydney\nfacebook: https://www.facebook.com/aconhealth\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\naddressSource: page\nwebsite: https://hcbears.com.au/event-6700980/Registration\ngmaps: https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross\npinSource: curated\ncadence: FREQ=WEEKLY;BYDAY=FR\nkey: furry-friday|2026-10-09|kings cross hotel\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\nimageSource: json-api\nbarSource: curated\nbearSource: keyword\nshortName: FURRY FRIDAY\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Sydney",
+      "wasUTC": true,
+      "sourceUid": "13A4CAA0-9472-4A76-BBDC-00789032A0F2",
+      "uid": "13A4CAA0-9472-4A76-BBDC-00789032A0F2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Kings Cross Hotel",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
+      "tea": "a community group for hairy, gay men, their friends and their admirers.",
+      "cadence": "FREQ=WEEKLY;BYDAY=FR",
+      "address": "244-248 William Street, Kings Cross",
+      "website": "https://hcbears.com.au/event-6700980/Registration",
+      "facebook": "https://www.facebook.com/aconhealth",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross",
+      "shortName": "FURRY FRIDAY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://hcbears.com.au/event-6700980/Registration",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/aconhealth",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "furry-friday-6baf4435"
     }
   ]
 }

@@ -1,9 +1,80 @@
 {
   "metadata": {
     "calendarTimezone": "America/Los_Angeles",
-    "timezoneData": null
+    "timezoneData": {
+      "tzid": "America/Los_Angeles",
+      "location": "America/Los_Angeles",
+      "daylight": {
+        "offsetFrom": "-0800",
+        "offsetTo": "-0700",
+        "name": "PDT",
+        "dtstart": "19700308T020000",
+        "rrule": "FREQ=YEARLY;BYMONTH=3;BYDAY=2SU"
+      },
+      "standard": {
+        "offsetFrom": "-0700",
+        "offsetTo": "-0800",
+        "name": "PST",
+        "dtstart": "19701101T020000",
+        "rrule": "FREQ=YEARLY;BYMONTH=11;BYDAY=1SU"
+      }
+    }
   },
   "events": [
+    {
+      "name": "Western Xposure's XXL",
+      "day": "Thursday",
+      "time": "9AM-11:59PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.7796835,
+        "lng": -116.4689784
+      },
+      "startDate": "2026-10-15T09:00:00",
+      "endDate": "2026-10-18T23:59:59",
+      "unprocessedDescription": "description: Western Xposure's XXL is weekend 2 of Western Xpos\rure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbrite.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Angeles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
+      "uid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "CCBC Resort Hotel",
+      "cover": "$1-$180",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
+      "tea": "Western Xposure's XXL is weekend 2 of Western Xposure Fall 2026!",
+      "cadence": null,
+      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
+      "website": "https://www.westernxposure.com/westernxposurexxl",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+      "ticketUrl": "https://xxl2026.eventbrite.com/",
+      "shortName": "WESTERN XPOSURE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.westernxposure.com/westernxposurexxl",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://xxl2026.eventbrite.com/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "western-xposures-xxl-27c8c346"
+    },
     {
       "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
       "day": "Friday",
@@ -64,6 +135,47 @@
         }
       ],
       "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
+    },
+    {
+      "name": "WOOF",
+      "day": "Wednesday",
+      "time": "7PM-10PM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1WE",
+      "coordinates": {
+        "lat": 33.8210557,
+        "lng": -116.5444345
+      },
+      "startDate": "2026-11-04T19:00:00",
+      "endDate": "2026-11-04T22:00:00",
+      "unprocessedDescription": "description: Monthly bear party at Dick's on Arenas, first Wed\rnesday of the month, 7–10pm. Guest DJs every time.\nbar: Dick's on Arenas\naddress: 301 E Arenas Rd, Palm Springs, CA 92262\ninstagram: https://www.instagram.com/woof.ps\nfavicon: https://www.instagram.com/woof.ps\nrecurrence: FREQ=MONTHLY;BYDAY=1WE",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "woof-20261011T020000Z@chunky.dad",
+      "uid": "woof-20261011T020000Z@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dick's on Arenas",
+      "favicon": "https://www.instagram.com/woof.ps",
+      "tea": "Monthly bear party at Dick's on Arenas, first Wednesday of the month, 7–10pm. Guest DJs every time.",
+      "cadence": null,
+      "address": "301 E Arenas Rd, Palm Springs, CA 92262",
+      "website": null,
+      "instagram": "https://www.instagram.com/woof.ps",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/woof.ps",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "woof-080ebf02"
     },
     {
       "name": "MEGAWOOF",
@@ -238,7 +350,7 @@
       },
       "startDate": "2026-11-06T22:00:00",
       "endDate": "2026-11-07T02:00:00",
-      "unprocessedDescription": "description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na\rddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nimage: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimageSource: page\nimageVertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nbarSource: page-adjacent\naddressSource: page\nwebsite: https://www.tickettailor.com/events/toucanstikilounge\ngmaps: https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE\npinSource: geocoded-exact",
+      "unprocessedDescription": "description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na\rddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nimage: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-palm-springs-pride|2026-11-07|toucans tiki lounge\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
@@ -252,18 +364,26 @@
       "bar": "Toucans Tiki Lounge",
       "image": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
       "imageVertical": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
       "tea": "SAM GEE marcos moreno",
       "cadence": null,
       "address": "2100 PALM CANYON DRIVE",
-      "website": "https://www.tickettailor.com/events/toucanstikilounge",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
       "ticketUrl": "https://www.tickettailor.com/events/toucanstikilounge",
+      "shortName": "FUR­BALL",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.tickettailor.com/events/toucanstikilounge",
+          "url": "https://www.furball.nyc",
           "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
@@ -277,60 +397,6 @@
         }
       ],
       "slug": "furball-palm-springs-pride-719921a0"
-    },
-    {
-      "name": "Western Xposure's XXL",
-      "day": "Thursday",
-      "time": "9AM-11:59PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.7796835,
-        "lng": -116.4689784
-      },
-      "startDate": "2026-10-15T09:00:00",
-      "endDate": "2026-10-18T23:59:59",
-      "unprocessedDescription": "description: Western Xposure's XXL is weekend 2 of Western Xpos\rure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbrite.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Angeles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
-      "uid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "CCBC Resort Hotel",
-      "cover": "$1-$180",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa",
-      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
-      "tea": "Western Xposure's XXL is weekend 2 of Western Xposure Fall 2026!",
-      "cadence": null,
-      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
-      "website": "https://www.westernxposure.com/westernxposurexxl",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-      "ticketUrl": "https://xxl2026.eventbrite.com/",
-      "shortName": "WESTERN XPOSURE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.westernxposure.com/westernxposurexxl",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://xxl2026.eventbrite.com/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "western-xposures-xxl-27c8c346"
     }
   ]
 }

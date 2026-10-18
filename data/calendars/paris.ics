@@ -5,4 +5,28 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-paris
 X-WR-TIMEZONE:Europe/Paris
+BEGIN:VEVENT
+DTSTART:20261024T210000Z
+DTEND:20261025T050000Z
+DTSTAMP:20261014T001801Z
+UID:3730A615-721D-44A5-A458-E3D131C66D86
+CREATED:20261013T224702Z
+DESCRIPTION:description: FURRWOODS DJ JOSHET\nbar: AU WORKSHOP\naddress: 17
+ 3 Rue Saint-Martin\, 75003 Paris\ntimezone: Europe/Paris\nimage: https://cd
+ n.whereto.party/media/events/583791ce-4316-453b-8ddc-ac82b7db161f.jpeg\nima
+ geSource: page\nimageVertical: https://cdn.whereto.party/media/events/58379
+ 1ce-4316-453b-8ddc-ac82b7db161f.jpeg\nbarSource: page-adjacent\naddressSour
+ ce: page\ngmaps: https://www.google.com/maps/search/?api=1&query=AU%20WORKS
+ HOP%2C%20173%20Rue%20Saint-Martin%2C%2075003%20Paris\npinSource: geocoded-e
+ xact\nkey: bears-paname-—-bonbon|2026-10-24|au workshop\nbearSource: keywor
+ d\nshortName: BEARS PANAME
+LAST-MODIFIED:20261013T224702Z
+LOCATION:48.8626210\, 2.3520602
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEARS PANAME — BONBON
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

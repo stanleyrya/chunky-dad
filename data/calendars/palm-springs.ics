@@ -5,10 +5,57 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-palm-springs
 X-WR-TIMEZONE:America/Los_Angeles
+BEGIN:VTIMEZONE
+TZID:America/Los_Angeles
+X-LIC-LOCATION:America/Los_Angeles
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0800
+TZOFFSETTO:-0700
+TZNAME:PDT
+DTSTART:19700308T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+END:DAYLIGHT
+BEGIN:STANDARD
+TZOFFSETFROM:-0700
+TZOFFSETTO:-0800
+TZNAME:PST
+DTSTART:19701101T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+DTSTART:20261015T160000Z
+DTEND:20261019T065959Z
+DTSTAMP:20261011T203743Z
+UID:E7DD7B68-E0A5-485C-A244-88F7F3E58450
+CREATED:20260919T161250Z
+DESCRIPTION:description: Western Xposure's XXL is weekend 2 of Western Xpos
+ ure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbri
+ te.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%
+ 2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&f
+ it=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=
+ d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Ang
+ eles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: 
+ ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizon
+ tal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/even
+ t-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 
+ Gay Resort Drive\, Cathedral City\, CA 92234\npinSource: curated\naddressSo
+ urce: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.goo
+ gle.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20
+ Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234
+LAST-MODIFIED:20260930T202319Z
+LOCATION:33.7796835\, -116.4689784
+SEQUENCE:1
+STATUS:CONFIRMED
+SUMMARY:Western Xposure's XXL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260911T180000Z
 DTEND:20260914T070000Z
-DTSTAMP:20261009T140835Z
+DTSTAMP:20261011T203743Z
 UID:E21A39AC-AC29-47E3-A8C2-23C3D36AD105
 CREATED:20260802T134345Z
 DESCRIPTION:bar: CCBC Resort\naddress: 68-300 Gay Resort Dr\, Cathedral Cit
@@ -39,9 +86,28 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20261104T190000
+DTEND;TZID=America/Los_Angeles:20261104T220000
+RRULE:FREQ=MONTHLY;BYDAY=1WE
+DTSTAMP:20261011T203743Z
+UID:woof-20261011T020000Z@chunky.dad
+CREATED:20261011T200917Z
+DESCRIPTION:description: Monthly bear party at Dick's on Arenas\, first Wed
+ nesday of the month\, 7–10pm. Guest DJs every time.\nbar: Dick's on Arenas\
+ naddress: 301 E Arenas Rd\, Palm Springs\, CA 92262\ninstagram: https://www
+ .instagram.com/woof.ps\nfavicon: https://www.instagram.com/woof.ps\nrecurre
+ nce: FREQ=MONTHLY\;BYDAY=1WE
+LAST-MODIFIED:20261011T200919Z
+LOCATION:33.8210557\, -116.5444345
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:WOOF
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260222T050000Z
 DTEND:20260222T200000Z
-DTSTAMP:20261009T140835Z
+DTSTAMP:20261011T203743Z
 UID:88686A1C-DD82-4C9B-A917-74B3647FD814
 CREATED:20260117T210201Z
 DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
@@ -68,7 +134,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260925T070000Z
 DTEND:20260928T065959Z
-DTSTAMP:20261009T140835Z
+DTSTAMP:20261011T203743Z
 UID:1FF301F0-00FE-4849-BB32-A779D9362E83
 CREATED:20260919T161248Z
 DESCRIPTION:bar: Casa Oliver\naddress: 535 South Warm Sands Drive\, Palm Sp
@@ -94,7 +160,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261224T180000Z
 DTEND:20261228T030000Z
-DTSTAMP:20261009T140835Z
+DTSTAMP:20261011T203743Z
 UID:F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC
 CREATED:20260930T202318Z
 DESCRIPTION:description: Celebrate the season with your chosen family at We
@@ -124,62 +190,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261107T060000Z
-DTEND:20261107T100000Z
-DTSTAMP:20261009T140835Z
-UID:23BBF494-F864-4D6E-A461-70D7CC0DAA0E
-CREATED:20261009T134029Z
-DESCRIPTION:description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na
- ddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: h
- ttps://www.tickettailor.com/events/toucanstikilounge\nimage: https://static
- .wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimage
- Source: page\nimageVertical: https://static.wixstatic.com/media/238fae_a7e6
- 192f31144d07b98b9272b94a4887~mv2.jpg\nbarSource: page-adjacent\naddressSour
- ce: page\nwebsite: https://www.tickettailor.com/events/toucanstikilounge\ng
- maps: https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Loun
- ge%2C%202100%20PALM%20CANYON%20DRIVE\npinSource: geocoded-exact
-LAST-MODIFIED:20261009T134030Z
-LOCATION:33.8486910\, -116.5480960
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:FURBALL Palm Springs PRIDE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261015T160000Z
-DTEND:20261019T065959Z
-DTSTAMP:20261009T140835Z
-UID:E7DD7B68-E0A5-485C-A244-88F7F3E58450
-CREATED:20260919T161250Z
-DESCRIPTION:description: Western Xposure's XXL is weekend 2 of Western Xpos
- ure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbri
- te.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%
- 2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&f
- it=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=
- d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Ang
- eles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: 
- ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizon
- tal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/even
- t-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 
- Gay Resort Drive\, Cathedral City\, CA 92234\npinSource: curated\naddressSo
- urce: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.goo
- gle.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20
- Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234
-LAST-MODIFIED:20260930T202319Z
-LOCATION:33.7796835\, -116.4689784
-SEQUENCE:1
-STATUS:CONFIRMED
-SUMMARY:Western Xposure's XXL
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20261008T160000Z
 DTEND:20261012T065959Z
-DTSTAMP:20261009T140835Z
+DTSTAMP:20261011T203743Z
 UID:CF94E9E5-F620-4918-AB7E-6B3BC007FB5C
 CREATED:20260919T161250Z
 DESCRIPTION:description: Western Xposure's HAUNTED GAY RESORT returns this 
@@ -203,6 +216,32 @@ LOCATION:33.7796835\, -116.4689784
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Western Xposure: Fall 2026
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261107T060000Z
+DTEND:20261107T100000Z
+DTSTAMP:20261011T203743Z
+UID:23BBF494-F864-4D6E-A461-70D7CC0DAA0E
+CREATED:20261009T134029Z
+DESCRIPTION:description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na
+ ddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: h
+ ttps://www.tickettailor.com/events/toucanstikilounge\nimage: https://static
+ .wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimage
+ Vertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b927
+ 2b94a4887~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ni
+ nstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/fur
+ ballnyc\nkey: furball-palm-springs-pride|2026-11-07|toucans tiki lounge\nbe
+ arSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSou
+ rce: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/sea
+ rch/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE
+LAST-MODIFIED:20261010T213256Z
+LOCATION:33.8486910\, -116.5480960
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL Palm Springs PRIDE
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

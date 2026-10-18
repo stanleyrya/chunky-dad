@@ -64,6 +64,11 @@ const REVIEW_REASON_TAGS = [
     'wrong link', 'wrong image', 'wrong title', 'wrong venue',
     'should merge', 'recurring', 'wrong date or time', 'not bear', 'other'
 ];
+// Why a "gone from its source" card is KEPT on the calendar (a left
+// swipe there is "keep", not "reject"): the chips the keep sheet offers.
+const GONE_REASON_TAGS = [
+    'still happening', 'renamed on the site', 'moved venue', 'date moved', 'source is wrong', 'not sure'
+];
 
 function resolveSharedRoot(env = process.env) {
     const raw = env && env.CHUNKY_SHARED_STORAGE_DIR;
@@ -346,7 +351,8 @@ function normalizeReason(reason) {
     // waits for the card to change, 'never' is final. "Not bear" stays a tag —
     // older stores, the phone and the bear verdict all read it there.
     const rawMode = typeof reason.mode === 'string' ? reason.mode.trim().toLowerCase() : '';
-    const mode = rawMode === 'fix' || rawMode === 'never' ? rawMode : '';
+    // 'keep' is the gone card's left swipe: the saved event stays.
+    const mode = rawMode === 'fix' || rawMode === 'never' || rawMode === 'keep' ? rawMode : '';
     if (tags.length === 0 && !text && !mode) return null;
     return mode ? { tags, text, mode } : { tags, text };
 }
@@ -359,7 +365,7 @@ function buildDecision(input, options = {}) {
     if (!key) throw new Error('decision needs a key');
     const verdict = input.verdict === 'approve' || input.verdict === 'reject' ? input.verdict : null;
     if (!verdict) throw new Error('verdict must be approve or reject');
-    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' || input.kind === 'series' ? input.kind : 'new';
+    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' || input.kind === 'series' || input.kind === 'gone' ? input.kind : 'new';
     const snapshot = input.snapshot && typeof input.snapshot === 'object' ? input.snapshot : null;
     const now = options.now instanceof Date ? options.now : new Date();
     return {
@@ -679,8 +685,39 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         sourcePageUrl: String(drift.sourcePageUrl || ''),
         calendarUrl: String(drift.calendarUrl || '')
     } : null;
+    // An aggregator's copy the site it points at does not list (shared-core
+    // reconcileAggregatorPointers): both sides' facts for the card.
+    const unbacked = event._aggregatorUnbackedWithheld && typeof event._aggregatorUnbackedWithheld === 'object' ? event._aggregatorUnbackedWithheld : null;
+    const aggregatorUnbacked = unbacked ? {
+        aggregator: String(unbacked.aggregator || ''),
+        site: String(unbacked.site || ''),
+        source: String(unbacked.source || ''),
+        link: String(unbacked.link || ''),
+        siteEvents: Number(unbacked.siteEvents) || 0,
+        day: String(unbacked.day || ''),
+        reason: String(unbacked.reason || ''),
+        sameNight: (Array.isArray(unbacked.sameNight) ? unbacked.sameNight : []).filter((entry) => entry && typeof entry === 'object').map((entry) => ({
+            title: String(entry.title || ''), bar: String(entry.bar || ''), url: String(entry.url || '')
+        })),
+        nearest: unbacked.nearest && typeof unbacked.nearest === 'object' ? {
+            title: String(unbacked.nearest.title || ''),
+            day: String(unbacked.nearest.day || ''),
+            bar: String(unbacked.nearest.bar || ''),
+            url: String(unbacked.nearest.url || '')
+        } : null
+    } : null;
+    const reused = event._imageReusedFrom && typeof event._imageReusedFrom === 'object' ? event._imageReusedFrom : null;
+    const imageReusedFrom = reused ? {
+        image: String(reused.image || ''),
+        title: String(reused.title || ''),
+        day: String(reused.day || ''),
+        source: String(reused.source || ''),
+        url: String(reused.url || '')
+    } : null;
     return {
         bigDrift,
+        aggregatorUnbacked,
+        imageReusedFrom,
         bearVerdict: storedVerdict ? storedVerdict.verdict : null,
         bearVerdictStampedAt: storedVerdict ? storedVerdict.stampedAt || null : null,
         bearVerdictOn: storedMatch && storedMatch.matchedBy === 'party' ? String(storedVerdict.title || '') : '',
@@ -1538,7 +1575,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
     // its fresh action; the run file's executions[] dates it. Executions
@@ -1554,7 +1591,7 @@ function buildDeck(runPayload, store, options = {}) {
         .sort((a, b) => a.executedAt.localeCompare(b.executedAt));
     const lastExecutedAt = executions.length > 0 ? executions[executions.length - 1].executedAt : '';
     const ledger = options.writtenLedger && typeof options.writtenLedger === 'object' ? options.writtenLedger : {};
-    const executedMark = (entry, decision) => {
+    const ledgerMark = (entry, decision) => {
         // The phone's ledger: written since this approval was made, on any
         // run (a newer approval than the write is a re-approval, pending).
         const written = ledger[entry.key];
@@ -1562,6 +1599,11 @@ function buildDeck(runPayload, store, options = {}) {
             && (!decision || String(written.executedAt) >= String(decision.stampedAt || ''))) {
             return { at: written.executedAt, as: written.action || 'created' };
         }
+        return null;
+    };
+    const executedMark = (entry, decision) => {
+        const fromLedger = ledgerMark(entry, decision);
+        if (fromLedger) return fromLedger;
         const event = analyzed[entry.sourceIndex];
         if (!event || !event._ownerReviewApproved) return null;
         // A series the phone only reported (seriesWrites: report) or could
@@ -1571,8 +1613,11 @@ function buildDeck(runPayload, store, options = {}) {
     };
     const file = (entry, decision) => {
         if (decision) {
-            const isEventKind = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override' || entry.kind === 'series';
-            const executed = isEventKind ? executedMark(entry, decision) : null;
+            const isEventKind = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override' || entry.kind === 'series'
+                // A gone card's approval is a removal the phone executes; the
+                // ledger (action 'deleted') is the only mark of it.
+                || entry.kind === 'gone';
+            const executed = entry.kind === 'gone' ? ledgerMark(entry, decision) : isEventKind ? executedMark(entry, decision) : null;
             // Still waiting for "Execute on phone": an approval the phone has
             // not written, and that is newer than the run's last execution
             // (an older one was already handed to the phone — written or
@@ -1676,6 +1721,19 @@ function buildDeck(runPayload, store, options = {}) {
             { id: `b${index}`, kind: 'bar', key: proposal.key, sourceIndex: index, proposal },
             SharedCore.findOwnerDecision(proposal, decisions)
         );
+    });
+
+    // "Gone from its source" (SharedCore.buildGoneFromSourceCandidates):
+    // a saved upcoming event its first-party source has not listed for two
+    // runs. One card per saved event, decided by its exact key only; a
+    // right swipe is a removal the phone executes, a left swipe keeps it.
+    const gone = payload.goneFromSource && Array.isArray(payload.goneFromSource.candidates) ? payload.goneFromSource.candidates : [];
+    gone.forEach((candidate, index) => {
+        if (!candidate || typeof candidate !== 'object' || typeof candidate.key !== 'string' || !candidate.key) return;
+        const startMs = SharedCore.toEpochMillis(candidate.startDate);
+        if (startMs !== null && startMs < now) { counts.pastSkipped++; return; }
+        const decision = decisions.find((entry) => entry && entry.key === candidate.key && (entry.verdict === 'approve' || entry.verdict === 'reject')) || null;
+        file({ id: `g${index}`, kind: 'gone', key: candidate.key, sourceIndex: index, proposal: { ...candidate, kind: 'gone' } }, decision);
     });
 
     // Events the bear check DROPPED (flag, don't drop — they are in the run
@@ -1997,48 +2055,53 @@ function findCachedListingPage(sharedRoot, host, preferredUrls = [], fsLike = fs
 // Events the latest run extracted from one host (attributed the way the
 // ledger attributes them: the event's own page host when it is one of the
 // parser's hosts, else the parser's first host), as plain rows.
+// Everything the run extracted from one host — the events it kept AND the
+// ones the bear gate dropped (the page lists those too) — attributed exactly
+// as the ledger attributes its counts (SharedCore.sourceLedgerParserHosts /
+// sourceLedgerEventHost / sourceLedgerDroppedHost), as plain rows.
 function eventsForHost(payload, host) {
     const SharedCore = loadSharedCore();
     const hostKey = String(host || '').toLowerCase().replace(/^www\./, '');
     const rows = [];
+    const allHomeHosts = new Set();
+    const describe = (event, extra) => {
+        const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
+        let time = '';
+        if (!(event.timeUnknown === true || event.allDay === true) && event.startDate) {
+            try {
+                time = new Intl.DateTimeFormat('en-US', Object.assign({ hour: 'numeric', minute: '2-digit' }, event.timezone ? { timeZone: event.timezone } : {})).format(new Date(event.startDate));
+            } catch (_) { time = ''; }
+        }
+        return Object.assign({
+            title: String(event.title || ''),
+            day: day || '',
+            time,
+            place: String(event.bar || event.venue || event.city || ''),
+            url: String(event.website || event.url || event.ticketUrl || ''),
+            bear: event.isBearEvent === true,
+            dropped: false,
+            reason: '',
+            source: String(event.source || ''),
+            parser: ''
+        }, extra);
+    };
     const parsers = payload && Array.isArray(payload.parserResults) ? payload.parserResults : [];
     parsers.forEach((parser) => {
         if (!parser || typeof parser !== 'object') return;
-        const config = parser.config && typeof parser.config === 'object' ? parser.config : {};
-        const urls = Array.isArray(config.urls) ? config.urls : [];
-        const home = [];
-        urls.forEach((url) => { const h = SharedCore.hostOfUrl(url); if (h && !home.includes(h)) home.push(h); });
-        const events = Array.isArray(parser.events) ? parser.events : [];
-        if (!home.length) {
-            const counts = new Map();
-            events.forEach((event) => { const h = SharedCore.hostOfUrl(event && (event.website || event.url)); if (h) counts.set(h, (counts.get(h) || 0) + 1); });
-            const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-            home.push(top ? top[0] : String(parser.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-        }
-        const primary = home[0];
-        events.forEach((event) => {
+        const hosts = SharedCore.sourceLedgerParserHosts(parser);
+        hosts.homeHosts.forEach((home) => allHomeHosts.add(home));
+        hosts.events.forEach((event) => {
             if (!event || typeof event !== 'object') return;
-            const eventHost = SharedCore.hostOfUrl(event.website || event.url);
-            const owner = home.includes(eventHost) ? eventHost : primary;
-            if (owner !== hostKey) return;
-            const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
-            let time = '';
-            if (!(event.timeUnknown === true || event.allDay === true) && event.startDate) {
-                try {
-                    time = new Intl.DateTimeFormat('en-US', Object.assign({ hour: 'numeric', minute: '2-digit' }, event.timezone ? { timeZone: event.timezone } : {})).format(new Date(event.startDate));
-                } catch (_) { time = ''; }
-            }
-            rows.push({
-                title: String(event.title || ''),
-                day: day || '',
-                time,
-                place: String(event.bar || event.venue || event.city || ''),
-                url: String(event.website || event.url || event.ticketUrl || ''),
-                bear: event.isBearEvent === true,
-                source: String(event.source || ''),
-                parser: String(parser.name || '')
-            });
+            if (SharedCore.sourceLedgerEventHost(event, hosts) !== hostKey) return;
+            rows.push(describe(event, { parser: hosts.name }));
         });
+    });
+    const dropped = payload && Array.isArray(payload.bearDroppedEvents) ? payload.bearDroppedEvents : [];
+    dropped.forEach((drop) => {
+        if (!drop || typeof drop !== 'object') return;
+        if (SharedCore.sourceLedgerDroppedHost(drop, allHomeHosts) !== hostKey) return;
+        const event = drop.event && typeof drop.event === 'object' ? drop.event : { title: drop.title, startDate: drop.startDate, bar: drop.venue };
+        rows.push(describe(event, { title: String(event.title || drop.title || ''), bear: false, dropped: true, reason: String(drop.reason || '').replace(/\s+/g, ' ').trim().slice(0, 120) }));
     });
     rows.sort((a, b) => a.day.localeCompare(b.day) || a.title.localeCompare(b.title));
     return rows;
@@ -2084,6 +2147,8 @@ function formatRejectionsText(store) {
         }
         const label = snap.kind === 'bar'
             ? `BAR ${snap.name || ''} (${snap.city || ''})`
+            : snap.kind === 'gone'
+            ? `GONE ${snap.title || ''} — ${when} @ ${snap.bar || snap.city || ''} [${snap.source || ''}] kept on the calendar (${snap.host || 'its source'} has not listed it for ${snap.misses || '?'} runs)`
             : `${(snap.kind || decision.kind || 'new').toUpperCase()} ${snap.title || ''} — ${when} @ ${snap.bar || snap.city || ''} [${snap.source || ''}]`;
         const tags = decision.reason && decision.reason.tags && decision.reason.tags.length > 0
             ? ` {${decision.reason.tags.join(', ')}}`
@@ -2092,7 +2157,7 @@ function formatRejectionsText(store) {
         const changes = snap.changes && typeof snap.changes === 'object'
             ? Object.keys(snap.changes).map((field) => `${field}: ${snap.changes[field].from || '∅'} → ${snap.changes[field].to || '∅'}`).join('; ')
             : '';
-        const modeLabel = mode === 'fix' ? 'NEEDS FIX' : mode === 'never' ? 'NOT AN EVENT' : mode === 'not-bear' ? 'NOT BEAR' : 'REJECTED';
+        const modeLabel = snap.kind === 'gone' ? 'KEPT' : mode === 'fix' ? 'NEEDS FIX' : mode === 'never' ? 'NOT AN EVENT' : mode === 'not-bear' ? 'NOT BEAR' : 'REJECTED';
         lines.push({ rank: mode === 'fix' ? 0 : mode === '' ? 1 : 2, line: `- [${modeLabel}] ${label}${tags}${text}${changes ? ` (${changes})` : ''}` });
     }
     // What needs fixing first; final answers last.
@@ -2132,6 +2197,7 @@ module.exports = {
     defaultSharedRoot,
     DECISIONS_FILE_NAME,
     REVIEW_REASON_TAGS,
+    GONE_REASON_TAGS,
     RUN_ID_PATTERN,
     resolveSharedRoot,
     getRunsDir,

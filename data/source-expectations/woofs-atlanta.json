@@ -5,10 +5,10 @@
   "status": "complete",
   "recheckAfter": "2026-10-20",
   "recon": {
-    "date": "2026-09-20",
+    "date": "2026-10-17",
     "method": [
-      "feed",
-      "static"
+      "page-cache",
+      "feed"
     ],
     "parserUrlsAtRecon": [
       "https://woofsatlanta.com/calendar/"
@@ -19,28 +19,27 @@
         "kind": "html",
         "role": "listing",
         "rowsReturned": 0,
-        "truthFlag": null,
-        "note": "EventON calendar page (WordPress). The HTML carries only empty calendar frames (class ajax_loading_cal) with their shortcode settings in data-sc, and a short-lived nonce in evo_general_params; no event text."
+        "truthFlag": "two EventON frames (ajax_loading_cal) that print \"No Events\" for the current month; \"Current Month october, 2026\"",
+        "note": "Scraper page cache storage/pages/woofsatlanta.com/calendar.json, fetched 2026-10-17T09:42:03Z (112,747 bytes) — a read from today. The HTML carries the empty calendar frames with their shortcode settings, a Business Hours block (Monday 11:30 AM - 11:00 PM … Sunday 11:30 AM - 12:00 AM), the Follow-us links (Facebook / Instagram / Google), the address and a contact form. No event text at all. wp-json tribe / wp/v2/events / feed.json probes answer 404."
       },
       {
         "url": "https://woofsatlanta.com/wp-admin/admin-ajax.php",
         "kind": "form-post",
         "role": "feed",
-        "rowsReturned": 2,
-        "truthFlag": "2026-09: 0 cards; 2026-10: 1 cards; 2026-11: 1 cards; 2026-12: 0 cards",
-        "note": "The plugin's own eventon_init_load call, replayed as a form POST (nonce + cals[<frame>][sc][…]) once for the page's own frames and once per later month (fixed_month / fixed_year / focus range stepped). The answer holds each calendar's rendered cards; every card carries a schema.org Event block with name, url, image, description and wall-clock start/end. The printed UTC offset is fixed and ignores daylight saving, so the wall clock is what is documented. The nonce lives about half a day: a stored page needs one fresh read first."
+        "rowsReturned": 1,
+        "truthFlag": "2026-10: 0 cards; 2026-11: 1 card; 2026-12: 0 cards; 2027-01: 0 cards",
+        "note": "The plugin’s own eventon_init_load call, replayed by the scraper as a form POST per month and cached under ?eventon_month=YYYY-MM (storage/pages/woofsatlanta.com/calendar--q-*.json, all fetched 2026-10-17T09:42Z). October answers \"No Events\" (json: []); November answers one card with a schema.org Event block: \"FAFO Fridays\", startDate 2026-11-13T21:30-4:00, endDate 2026-11-14T00:00-4:00, url https://woofsatlanta.com/events/fafo-fridays/var/ri-9.l-L1, image IMG_3240.jpeg, subtitle \"DVJ Mr. Richard spinning music videos till LATE\". The Oct 9 card of the 2026-09-20 recon has left the calendar."
       }
-    ],
-    "notes": "Recon from the scraper's own cached answers on 2026-09-20 (one page read, 4 POSTs). 2 cards across 2026-09, 2026-10, 2026-11, 2026-12: 2 on or after 2026-09-20 inside the window, 0 earlier this month, 0 past the window, 0 \"CLOSED\" day markers (notices, not events)."
+    ]
   },
   "coverage": {
     "confidence": "high",
-    "basis": "Feed door: every card the calendar answers with, for each month to the scraper's horizon. Each night is its own card (the plugin pre-expands repeats), so every entry is a single. \"CLOSED\" markers are excluded as notices.",
-    "publishedEventCount": 2,
-    "documentedEventCount": 2,
+    "basis": "Feed door: every card the calendar answers with for each month to the scraper’s horizon (Oct 2026 – Jan 2027): one. The page itself prints no events. Each night is its own card (the plugin pre-expands repeats; the Nov 13 card’s repeat_intervals list later 2027 dates outside the horizon), so the entry is a single.",
+    "publishedEventCount": 1,
+    "documentedEventCount": 1,
     "occurrenceWindow": {
-      "start": "2026-09-20",
-      "end": "2026-12-19"
+      "start": "2026-10-17",
+      "end": "2027-01-15"
     },
     "pastListingsPresent": false,
     "knownGaps": []
@@ -52,32 +51,10 @@
   },
   "events": [
     {
-      "id": "fafo-fridays-2026-10-09",
-      "kind": "single",
-      "title": "FAFO Fridays",
-      "description": null,
-      "startDate": "2026-10-09",
-      "startTime": "21:30",
-      "endDate": "2026-10-10",
-      "endTime": "00:00",
-      "website": "https://woofsatlanta.com/events/fafo-fridays/",
-      "image": "https://woofsatlanta.com/wp-content/uploads/IMG_3240.jpeg",
-      "sourceRung": "feed",
-      "confidence": "high",
-      "evidence": {
-        "url": "https://woofsatlanta.com/wp-admin/admin-ajax.php",
-        "quote": "\"name\": \"FAFO Fridays\", \"startDate\": \"2026-10-09T21:30:00\""
-      },
-      "expect": {
-        "extracted": true
-      },
-      "bearVerdict": null
-    },
-    {
       "id": "fafo-fridays-2026-11-13",
       "kind": "single",
       "title": "FAFO Fridays",
-      "description": null,
+      "description": "DVJ Mr. Richard spinning music videos till LATE",
       "startDate": "2026-11-13",
       "startTime": "21:30",
       "endDate": "2026-11-14",
@@ -88,14 +65,30 @@
       "confidence": "high",
       "evidence": {
         "url": "https://woofsatlanta.com/wp-admin/admin-ajax.php",
-        "quote": "\"name\": \"FAFO Fridays\", \"startDate\": \"2026-11-13T21:30:00\""
+        "quote": "\"name\": \"FAFO Fridays\", \"url\": \"https://woofsatlanta.com/events/fafo-fridays/var/ri-9.l-L1\", \"startDate\": \"2026-11-13T21:30-4:00\", \"endDate\": \"2026-11-14T00:00-4:00\""
       },
       "expect": {
         "extracted": true
       },
-      "bearVerdict": null
+      "bearVerdict": null,
+      "note": "Run 20261017-054812 built this record from the November card (\"EVENTON: built 1 event(s) from the calendar’s own cards\") and then threw it away: one structured row on a multi-event page fell through to the AI pass, whose re-read dated the card from the undated flyer (2025-11-14 → 2026-11-15) and was dropped as a date orphan. Fixed on branch audit/recheck-zero: a calendar door’s single row is the listing."
     }
   ],
-  "traps": [],
+  "traps": [
+    {
+      "id": "business-hours-and-social-links",
+      "kind": "navigation",
+      "label": "Business Hours block (\"Sunday 11:30 AM - 12:00 AM\") followed by the Follow-us links \"Facebook / Instagram / Google\"",
+      "why": "Opening hours and social-link labels sit next to the empty calendar frames; with no event text on the page, a text-window read fuses them into an event. Run 20261017-054812 shipped exactly that: title \"Facebook\", dated the next Sunday 11:30 (weekday-derived), bar/address filled from the curated venue, kept as bear on the keyword \"woof\" in the venue name — one record every run since 2026-10-12, flagged junk-title + weekday-derived-date, never written.",
+      "evidence": {
+        "url": "https://woofsatlanta.com/calendar/",
+        "quote": "Sunday 11:30 AM - 12:00 AM Follow us on Facebook Instagram Google"
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": "20261017-054812"
+    }
+  ],
   "openQuestions": []
 }

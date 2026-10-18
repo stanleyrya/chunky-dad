@@ -5,9 +5,124 @@
   },
   "events": [
     {
+      "name": "Goldiloxx: Tricks & Treat",
+      "day": "Saturday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0496268,
+        "lng": -70.1900224
+      },
+      "startDate": "2026-10-31T00:00:00",
+      "endDate": "2026-11-01T00:00:00",
+      "unprocessedDescription": "description: Goldiloxx brings Tricks & Treat to Purgatory for H\ralloween night.\nbar: Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instagram.com/goldiloxx__\nshortName: GOLDI­LOXX\nshorterName: GLX\nfavicon: https://linktr.ee/goldiloxx\nkey: goldiloxx-tricks-treat|2026-10-31|purgatory\ntimeUnknown: true\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "C2CA8263-B167-4BC8-9AF6-87738E966BCA",
+      "uid": "C2CA8263-B167-4BC8-9AF6-87738E966BCA",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Purgatory",
+      "favicon": "https://linktr.ee/goldiloxx",
+      "tea": "Goldiloxx brings Tricks & Treat to Purgatory for Halloween night.",
+      "cadence": null,
+      "address": "SB",
+      "website": null,
+      "instagram": "https://www.instagram.com/goldiloxx__",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+      "shortName": "GOLDI­LOXX",
+      "shorterName": "GLX",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/goldiloxx__",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "goldiloxx-tricks-treat-6a67edae"
+    },
+    {
+      "name": "Motherdisco",
+      "day": "Friday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0502291,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-30T21:00:00",
+      "endDate": "2026-10-31T01:00:00",
+      "unprocessedDescription": "description: Motherdisco returns to Provincetown for a special \rSpooky Bear takeover at the Crown & Anchor. Dead Disco Prom is your invitation to dress up, get down, and dance all night to a high-energy mix of disco, house, and queer nightlife favorites. Expect killer looks, sweaty dancing, spooky glamour, and a packed dance floor as Motherdisco brings its signature NYC energy back to Ptown for Halloween.\nbar: Crown & Anchor\naddress: 247 Commercial Street, Provincetown, MA 02657\nticketUrl: https://www.tryst.events/e/mother-disco-spooky-bear/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png\ncover: $38\ntimezone: America/New_York\naddressSource: page\nwebsite: https://tryst.events/e/mother-disco-spooky-bear\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: motherdisco|2026-10-31|crown & anchor\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "A846A338-A48E-4DFF-A6AD-AD9CD5F73D58",
+      "uid": "A846A338-A48E-4DFF-A6AD-AD9CD5F73D58",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crown & Anchor",
+      "cover": "$38",
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png",
+      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Motherdisco returns to Provincetown for a special Spooky Bear takeover at the Crown & Anchor. Dead Disco Prom is your invitation to dress up, get down, and dance all night to a high-energy mix of disco, house, and queer nightlife favorites. Expect killer looks, sweaty dancing, spooky glamour, and a packed dance floor as Motherdisco brings its signature NYC energy back to Ptown for Halloween.",
+      "cadence": null,
+      "address": "247 Commercial Street, Provincetown, MA 02657",
+      "website": "https://tryst.events/e/mother-disco-spooky-bear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+      "ticketUrl": "https://www.tryst.events/e/mother-disco-spooky-bear/tickets",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://tryst.events/e/mother-disco-spooky-bear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tryst.events/e/mother-disco-spooky-bear/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "motherdisco-5a1935cb"
+    },
+    {
       "name": "FURBALL Provincetown",
       "day": "Thursday",
-      "time": "9:30PM-12:30AM",
+      "time": "9:30PM-11:59PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
@@ -15,8 +130,8 @@
         "lng": -70.1876737
       },
       "startDate": "2026-10-29T21:30:00",
-      "endDate": "2026-10-30T00:30:00",
-      "unprocessedDescription": "description: Get your tickets now! Last year it sold out. Thurs\rday Night! Brooklyn Joe brings his underwear party back to Red Room for Spooky Bear!\nbar: Red Room\naddress: 258 Commercial St, Provincetown, MA 02657\nimage: https://static.wixstatic.com/media/238fae_ca15afbae4d24d32b03c0db59a7806bc~mv2.png\ntimezone: America/New_York\naddressSource: curated\nwebsite: https://redroom.club/shows/387797\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-provincetown|2026-10-30|red room\nimageSource: page\nbarSource: curated\nbearSource: keyword",
+      "endDate": "2026-10-29T23:59:59",
+      "unprocessedDescription": "description: Get your tickets now! Last year it sold out. Thurs\rday Night! Brooklyn Joe brings his underwear party back to Red Room for Spooky Bear!\nbar: Red Room\naddress: 258 Commercial St, Provincetown, MA 02657\nimage: https://static.wixstatic.com/media/238fae_ca15afbae4d24d32b03c0db59a7806bc~mv2.png\ntimezone: America/New_York\nwebsite: https://redroom.club/shows/387797\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-provincetown|2026-10-30|red room\nbearSource: keyword\ncover: $26\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Red%20Room%2C%20258%20Commercial%20St%2C%20Provincetown%2C%20MA%2002657",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
@@ -25,9 +140,10 @@
       "uid": "4F5C20C9-C452-44E6-93DA-0F71CCB32065",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
+      "sequence": 1,
       "overrideIdentityType": null,
       "bar": "Red Room",
+      "cover": "$26",
       "image": "https://static.wixstatic.com/media/238fae_ca15afbae4d24d32b03c0db59a7806bc~mv2.png",
       "favicon": "https://linktr.ee/furballnyc",
       "tea": "Get your tickets now! Last year it sold out. Thursday Night! Brooklyn Joe brings his underwear party back to Red Room for Spooky Bear!",
@@ -35,7 +151,7 @@
       "address": "258 Commercial St, Provincetown, MA 02657",
       "website": "https://redroom.club/shows/387797",
       "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Red%20Room%2C%20258%20Commercial%20St%2C%20Provincetown%2C%20MA%2002657",
       "shortName": "FUR­BALL",
       "bearReview": null,
       "links": [
@@ -51,11 +167,349 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+          "url": "https://www.google.com/maps/search/?api=1&query=Red%20Room%2C%20258%20Commercial%20St%2C%20Provincetown%2C%20MA%2002657",
           "label": "🗺️ Google Maps"
         }
       ],
       "slug": "furball-provincetown-59b3a5be"
+    },
+    {
+      "name": "Witch Perfect",
+      "day": "Saturday",
+      "time": "7PM-8:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0502291,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-31T19:00:00",
+      "endDate": "2026-10-31T20:30:00",
+      "unprocessedDescription": "description: Doors @ 6\\:30PM | Show @ 7\\:00PM Witch Perfect,\r is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul's Drag Race\\: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8's Alexis Michelle as Mary. The show features hits from such pop icons as Lady Gaga, Madonna and Cher, as well as Disney classics Little Mermaid and The Lion King.\nbar: Crown & Anchor\naddress: 247 Commercial St, Provencetown, MA 02657\nticketUrl: https://www.tryst.events/e/witch-perfect-10-31-2026/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png\ncover: $45-$75\naddressSource: page\nwebsite: https://tryst.events/e/witch-perfect-10-31-2026\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: witch-perfect|2026-10-31|crown & anchor\ntimezone: America/New_York\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png\nimageSource: json-api\nbarSource: curated\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "9E8225F7-D8D2-4C51-87AE-E0AAA848F382",
+      "uid": "9E8225F7-D8D2-4C51-87AE-E0AAA848F382",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crown & Anchor",
+      "cover": "$45-$75",
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png",
+      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Doors @ 6:30PM | Show @ 7:00PM Witch Perfect, is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul's Drag Race: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8's Alexis Michelle as Mary. The show features hits from such pop icons as Lady Gaga, Madonna and Cher, as well as Disney classics Little Mermaid and The Lion King.",
+      "cadence": null,
+      "address": "247 Commercial St, Provencetown, MA 02657",
+      "website": "https://tryst.events/e/witch-perfect-10-31-2026",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657",
+      "ticketUrl": "https://www.tryst.events/e/witch-perfect-10-31-2026/tickets",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://tryst.events/e/witch-perfect-10-31-2026",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tryst.events/e/witch-perfect-10-31-2026/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "witch-perfect-117cd24d"
+    },
+    {
+      "name": "Spooky Tea",
+      "day": "Saturday",
+      "time": "4PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2026-10-31T16:00:00",
+      "endDate": "2026-10-31T21:00:00",
+      "unprocessedDescription": "description: Spooky Bear Weekend's biggest tea dance. Special e\rxtended hours from 4 to 9 PM, time enough for a couple of costume changes! Attire\\: it's Halloween, you know what to do.\nbar: Boatslip\naddress: SB\nimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\nimageSource: json-api\ntimezone: America/New_York\nimageHorizontal: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\npinSource: curated\ninstagram: https://www.instagram.com/boatslipresort\nkey: spooky-tea|2026-10-31|boatslip\nbearSource: keyword\nshortName: SPOOKY TEA",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "A6FDC452-F814-4A77-A628-B03B0E6691D7",
+      "uid": "A6FDC452-F814-4A77-A628-B03B0E6691D7",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg",
+      "imageHorizontal": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg",
+      "tea": "Spooky Bear Weekend's biggest tea dance. Special extended hours from 4 to 9 PM, time enough for a couple of costume changes! Attire: it's Halloween, you know what to do.",
+      "cadence": null,
+      "address": "SB",
+      "website": null,
+      "instagram": "https://www.instagram.com/boatslipresort",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+      "shortName": "SPOOKY TEA",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/boatslipresort",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "spooky-tea-4387dbfb"
+    },
+    {
+      "name": "HIMBO / Jockstrap (Night 2 of 2)",
+      "day": "Friday",
+      "time": "10PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0496268,
+        "lng": -70.1900224
+      },
+      "startDate": "2026-10-30T22:00:00",
+      "endDate": "2026-10-31T01:00:00",
+      "unprocessedDescription": "description: Night two of HIMBO / Jockstrap at Purgatory.\nbar:\r Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house\nkey: himbo-jockstrap-night-2-of-2)|2026-10-31|purgatory\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "02D26467-021B-44C5-AA44-004F9BA89370",
+      "uid": "02D26467-021B-44C5-AA44-004F9BA89370",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Purgatory",
+      "tea": "Night two of HIMBO / Jockstrap at Purgatory.",
+      "cadence": null,
+      "address": "SB",
+      "website": null,
+      "instagram": "https://www.instagram.com/gifford_house",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/gifford_house",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "himbo-jockstrap-night-2-of-2-5eb156ad"
+    },
+    {
+      "name": "HIMBO / Jockstrap (Night 1 of 2)",
+      "day": "Thursday",
+      "time": "10PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0496268,
+        "lng": -70.1900224
+      },
+      "startDate": "2026-10-29T22:00:00",
+      "endDate": "2026-10-30T01:00:00",
+      "unprocessedDescription": "description: Night one of HIMBO / Jockstrap at Purgatory.\nbar:\r Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house\nkey: himbo-jockstrap-night-1-of-2)|2026-10-30|purgatory\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "B294E101-C461-4F2A-B6F1-5B50CC22078F",
+      "uid": "B294E101-C461-4F2A-B6F1-5B50CC22078F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Purgatory",
+      "tea": "Night one of HIMBO / Jockstrap at Purgatory.",
+      "cadence": null,
+      "address": "SB",
+      "website": null,
+      "instagram": "https://www.instagram.com/gifford_house",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/gifford_house",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "himbo-jockstrap-night-1-of-2-75bc0deb"
+    },
+    {
+      "name": "Witch Perfect",
+      "day": "Friday",
+      "time": "7PM-8:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0502291,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-30T19:00:00",
+      "endDate": "2026-10-30T20:30:00",
+      "unprocessedDescription": "description: Doors @ 6\\:30PM | Show @ 7\\:00PM Witch Perfect,\r is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul's Drag Race\\: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8's Alexis Michelle as Mary. The show features hits from such pop icons as Lady Gaga, Madonna and Cher, as well as Disney classics Little Mermaid and The Lion King.\nbar: Crown & Anchor\naddress: 247 Commercial St, Provencetown, MA 02657\nticketUrl: https://www.tryst.events/e/witch-perfect-10-30-2026/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN-819x1024.png\ncover: $45-$75\naddressSource: page\nwebsite: https://tryst.events/e/witch-perfect-10-30-2026\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: witch-perfect|2026-10-30|crown & anchor\ntimezone: America/New_York\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN-819x1024.png\nimageSource: json-api\nbarSource: curated\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "9D92759E-52C9-4D91-B707-CA2D152246FD",
+      "uid": "9D92759E-52C9-4D91-B707-CA2D152246FD",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crown & Anchor",
+      "cover": "$45-$75",
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN-819x1024.png",
+      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN-819x1024.png",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Doors @ 6:30PM | Show @ 7:00PM Witch Perfect, is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul's Drag Race: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8's Alexis Michelle as Mary. The show features hits from such pop icons as Lady Gaga, Madonna and Cher, as well as Disney classics Little Mermaid and The Lion King.",
+      "cadence": null,
+      "address": "247 Commercial St, Provencetown, MA 02657",
+      "website": "https://tryst.events/e/witch-perfect-10-30-2026",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657",
+      "ticketUrl": "https://www.tryst.events/e/witch-perfect-10-30-2026/tickets",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://tryst.events/e/witch-perfect-10-30-2026",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tryst.events/e/witch-perfect-10-30-2026/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "witch-perfect-6321d1bb"
+    },
+    {
+      "name": "Fat Slut: Spooky Bear",
+      "day": "Thursday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0502291,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-29T21:00:00",
+      "endDate": "2026-10-30T01:00:00",
+      "unprocessedDescription": "description: LA drag superstar Meatball is bringing her hit par\rty FAT SLUT to Spooky Bear 2026! Bears know how to party in the fattest and sluttiest way possible. -DRAG SHOWS & SPECIAL GUEST -SEXY GOGO DANCERS -DANCE PARTY -THE ORIGINAL SEXY FOOD EATING COMPETITION\nbar: Crown & Anchor\naddress: 247 Commercial Street, Provincetown, MA 02657\nticketUrl: https://www.tryst.events/e/fat-slut-spooky-bear/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/07/ange-gradient-5.75-x-8.75-in-Instagram-Post-45-819x1024.png\ncover: $22\ntimezone: America/New_York\naddressSource: page\nwebsite: https://tryst.events/e/fat-slut-spooky-bear\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: fat-slut-spooky-bear|2026-10-30|crown & anchor\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "70C49CFF-E896-4B98-A398-6415EC3B2AAE",
+      "uid": "70C49CFF-E896-4B98-A398-6415EC3B2AAE",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crown & Anchor",
+      "cover": "$22",
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/07/ange-gradient-5.75-x-8.75-in-Instagram-Post-45-819x1024.png",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "LA drag superstar Meatball is bringing her hit party FAT SLUT to Spooky Bear 2026! Bears know how to party in the fattest and sluttiest way possible. -DRAG SHOWS & SPECIAL GUEST -SEXY GOGO DANCERS -DANCE PARTY -THE ORIGINAL SEXY FOOD EATING COMPETITION",
+      "cadence": null,
+      "address": "247 Commercial Street, Provincetown, MA 02657",
+      "website": "https://tryst.events/e/fat-slut-spooky-bear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+      "ticketUrl": "https://www.tryst.events/e/fat-slut-spooky-bear/tickets",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://tryst.events/e/fat-slut-spooky-bear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tryst.events/e/fat-slut-spooky-bear/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "fat-slut-spooky-bear-1efd445e"
     },
     {
       "name": "Riptide",
@@ -117,45 +571,106 @@
       "slug": "riptide-3342cdd1"
     },
     {
-      "name": "The Belly Party - SPOOKY BEAR!",
-      "day": "Friday",
-      "time": "9PM-1AM",
+      "name": "FURBALL P'Town",
+      "day": "Tuesday",
+      "time": "10PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 42.0510476,
         "lng": -70.1876737
       },
-      "startDate": "2026-10-30T21:00:00",
-      "endDate": "2026-10-31T01:00:00",
-      "unprocessedDescription": "bar: Red Room\naddress: 258 Commercial Street Provincetown, Ma\rssachusetts, 02657 United States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\ntimezone: America/New_York\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\naddressSource: page\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: the-belly-party-spooky-bear|2026-10-31|red room\ndescription: BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
+      "startDate": "2026-08-18T22:00:00",
+      "unprocessedDescription": "description: Carnival Deep Sea Disco\nbar: Red Room\naddress: 2\r58 Commercial St, Provincetown, MA 02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week\nimage: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-p'town|2026-08-19|red room\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "34E17B66-94AA-4026-AC08-441617D79F1E",
-      "uid": "34E17B66-94AA-4026-AC08-441617D79F1E",
+      "sourceUid": "42DA779D-6393-4D26-B639-49FBB415029D",
+      "uid": "42DA779D-6393-4D26-B639-49FBB415029D",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Red Room",
-      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
-      "imageVertical": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
-      "favicon": "https://www.ursamen.org/spookybear",
-      "tea": "BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.",
+      "image": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Carnival Deep Sea Disco",
       "cadence": null,
-      "address": "258 Commercial Street Provincetown, Massachusetts, 02657 United States",
-      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
+      "address": "258 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
+      "shortName": "FUR-BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-ptown-2d335fcd"
+    },
+    {
+      "name": "Death Becomes Them",
+      "day": "Saturday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0502291,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-31T21:00:00",
+      "endDate": "2026-11-01T01:00:00",
+      "unprocessedDescription": "description: Step into a decadent night of glamour, drag, dan\rcing, and deliciously dark surprises at Death Becomes Them, a Roaring Twenties Halloween Costume Ball at the Crown & Anchor. Featuring killer performances by Jan Sport & Tina Burner with music by Jake Glass and VJ Tom Yaz keeping the party alive all night long. Dress to impress, because we’re searching for the most drop dead gorgeous look of the night. Enter the Costume Contest for your chance to take home the $500 Grand Prize. October 31 at 9 PMCrown & Anchor, Provincetown Come glamorous.\nbar: Crown & Anchor\naddress: 247 Commercial Street, Provincetown, MA 02657\nticketUrl: https://www.tryst.events/e/death-becomes-them-spooky-bear/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg\ncover: $27\ntimezone: America/New_York\naddressSource: page\nwebsite: https://tryst.events/e/death-becomes-them-spooky-bear\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: death-becomes-them|2026-11-01|crown & anchor\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg\nimageSource: json-api\nbarSource: curated\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "3896CDD2-87E1-4BD0-9B28-30AAC665BA5A",
+      "uid": "3896CDD2-87E1-4BD0-9B28-30AAC665BA5A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crown & Anchor",
+      "cover": "$27",
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg",
+      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Step into a decadent night of glamour, drag, dancing, and deliciously dark surprises at Death Becomes Them, a Roaring Twenties Halloween Costume Ball at the Crown & Anchor. Featuring killer performances by Jan Sport & Tina Burner with music by Jake Glass and VJ Tom Yaz keeping the party alive all night long. Dress to impress, because we’re searching for the most drop dead gorgeous look of the night. Enter the Costume Contest for your chance to take home the $500 Grand Prize. October 31 at 9 PMCrown & Anchor, Provincetown Come glamorous.",
+      "cadence": null,
+      "address": "247 Commercial Street, Provincetown, MA 02657",
+      "website": "https://tryst.events/e/death-becomes-them-spooky-bear",
       "instagram": "https://www.instagram.com/ne.ursamen",
       "facebook": "https://www.facebook.com/NEUrsamen",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+      "ticketUrl": "https://www.tryst.events/e/death-becomes-them-spooky-bear/tickets",
       "shortName": "SPOOKY BEAR",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
+          "url": "https://tryst.events/e/death-becomes-them-spooky-bear",
           "label": "🌐 Website"
         },
         {
@@ -170,11 +685,16 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
           "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tryst.events/e/death-becomes-them-spooky-bear/tickets",
+          "label": "🎫 Tickets"
         }
       ],
-      "slug": "the-belly-party-spooky-bear-4b3e1332"
+      "slug": "death-becomes-them-7bb47d4b"
     },
     {
       "name": "The Belly Party (Bear Week)",
@@ -236,63 +756,64 @@
       "slug": "the-belly-party-bear-week-68204385"
     },
     {
-      "name": "FURBALL P'Town",
-      "day": "Tuesday",
-      "time": "10PM",
+      "name": "The Belly Party - SPOOKY BEAR!",
+      "day": "Friday",
+      "time": "9PM-1AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 42.0510476,
         "lng": -70.1876737
       },
-      "startDate": "2026-08-18T22:00:00",
-      "unprocessedDescription": "description: Carnival Deep Sea Disco\nbar: Red Room\naddress: 2\r58 Commercial St, Provincetown, MA 02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week\nimage: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-p'town|2026-08-19|red room\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "startDate": "2026-10-30T21:00:00",
+      "endDate": "2026-10-31T01:00:00",
+      "unprocessedDescription": "bar: Red Room\naddress: 258 Commercial Street Provincetown, Ma\rssachusetts, 02657 United States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\ntimezone: America/New_York\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\naddressSource: page\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: the-belly-party-spooky-bear|2026-10-31|red room\ndescription: BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "42DA779D-6393-4D26-B639-49FBB415029D",
-      "uid": "42DA779D-6393-4D26-B639-49FBB415029D",
+      "sourceUid": "34E17B66-94AA-4026-AC08-441617D79F1E",
+      "uid": "34E17B66-94AA-4026-AC08-441617D79F1E",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Red Room",
-      "image": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "Carnival Deep Sea Disco",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
+      "imageVertical": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.",
       "cadence": null,
-      "address": "258 Commercial St, Provincetown, MA 02657",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
+      "address": "258 Commercial Street Provincetown, Massachusetts, 02657 United States",
+      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
-      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
-      "shortName": "FUR-BALL",
+      "shortName": "SPOOKY BEAR",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.furball.nyc",
+          "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
+          "url": "https://www.instagram.com/ne.ursamen",
           "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
           "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
           "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
-          "label": "🎫 Tickets"
         }
       ],
-      "slug": "furball-ptown-2d335fcd"
+      "slug": "the-belly-party-spooky-bear-4b3e1332"
     },
     {
       "name": "FURBALL",

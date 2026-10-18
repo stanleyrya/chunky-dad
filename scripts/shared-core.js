@@ -251,6 +251,25 @@ function isPlatformIdentityHost(host) {
         normalized === platform || normalized.endsWith(`.${platform}`));
 }
 
+// LINK HUBS: a host whose pages are the handle pages of many unrelated
+// parties (linktr.ee/cubhouse beside linktr.ee/megawoof_america). A source
+// configured on one covers only its own handle's path, never the host — the
+// scope a platform organizer page gets in buildFirstPartySiteCoverage. Run
+// 20261012-180543: The Bear Calendar's "MEGAWOOF - CHICAGO" (website
+// linktr.ee/megawoof_america) was read as pointing into Cubhouse's site and
+// "withheld" because Cubhouse lists no such night.
+// Data only — shared-core stays platform-pure.
+const LINK_HUB_HOSTS = [
+    'linktr.ee', 'linktree.com', 'beacons.ai', 'lnk.bio', 'bio.site', 'carrd.co',
+    'allmylinks.com', 'solo.to', 'campsite.bio', 'tap.bio', 'hoo.be', 'linkin.bio'
+];
+
+function isLinkHubHost(host) {
+    const normalized = String(host || '').toLowerCase();
+    if (!normalized) return false;
+    return LINK_HUB_HOSTS.some(hub => normalized === hub || normalized.endsWith(`.${hub}`));
+}
+
 // Social platform → the event field a PROFILE link on that platform belongs
 // in. Every host here is already named in PLATFORM_IDENTITY_HOSTS — this maps
 // existing classification to a destination field, it is not a new host list.
@@ -324,6 +343,7 @@ const VENUE_CONTACT_MERGE_FIELDS = new Set(['instagram', 'facebook', 'website', 
 // mergeParsedEvents. Everything else (ticketUrl, cover, address, description,
 // bar…) still merges by the ordinary rules: that is what enrichment is for.
 const LISTING_AUTHORITY_FIELDS = new Set(['title', 'image', 'imageVertical', 'imageHorizontal', 'endDate']);
+const IMAGE_SLOT_FIELDS = new Set(['image', 'imageVertical', 'imageHorizontal']);
 
 // Notes lines the scraper REGENERATES every run and the results UI refuses to
 // render as a diff row (owner review 2026-09-12: "save what is needed, just
@@ -418,6 +438,19 @@ const COVER_FREE_PHRASE_ANYWHERE_PATTERN = new RegExp(
     `(?:^|[^a-z])(?:${[...COVER_FREE_PHRASES].sort((a, b) => b.length - a.length).join('|')})(?:$|[^a-z])`,
     'i'
 );
+// A door policy that changes with the clock is ONE price stated in two
+// halves, not two claims: "No cover till 9PM, $20 cover at 9PM" (Eagle NYC's
+// Sunday Beer Blast, 13 of 21 kept events flagged every run through
+// 20261017-054812), "FREE before 10pm / $10 after". The tell is a clock
+// expression beside a time-conditional word; "$10, NO COVER" has neither
+// and stays the contradiction it is.
+const COVER_TIER_CLOCK_PATTERN = /\b\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?|h)\b|\b\d{1,2}:\d{2}\b|\bmidnight\b|\bnoon\b/i;
+const COVER_TIER_WORD_PATTERN = /\b(?:till|til|'til|until|before|b4|after|from|past|doors?|early|late)\b/i;
+// Calendar doors a page opens itself — widget boots, collection twins, month
+// grids. Their rows are the site's own calendar whatever the HTML shell
+// around the embed classified as (the same set ai-web-parser's structured
+// route calls doorReadSources).
+const CALENDAR_DOOR_SOURCES = new Set(['squarespace', 'eventon', 'wix', 'mec', 'elfsight', 'dice']);
 
 // The ONE calendar target an unrecognized city may produce. See
 // SharedCore.resolveCalendarTarget — the fallback must never be derived from
@@ -491,6 +524,17 @@ const TITLE_LEGALESE_PHRASES = Object.freeze([
     'non transferable',
     'terms and conditions',
     'all sales final'
+]);
+
+// A title that is nothing but the name of a social network or media
+// platform is a page's "follow us" link read as an event (Woofs Atlanta,
+// run 20261011-154844: "Facebook", dated to the next Sunday, proposed as a
+// CREATE — owner: "Not an event"). Whole-title matches only, on the same
+// folded text as the fine-print table: "Facebook Live Party" is a title.
+const TITLE_SOCIAL_PLATFORM_NAMES = Object.freeze([
+    'facebook', 'instagram', 'twitter', 'tiktok', 'youtube', 'threads', 'bluesky',
+    'snapchat', 'linkedin', 'whatsapp', 'telegram', 'discord', 'linktree',
+    'spotify', 'soundcloud', 'mixcloud', 'twitch', 'tumblr', 'pinterest', 'reddit'
 ]);
 
 // start-long-past: a CREATE-shaped write whose start is further back than
@@ -967,6 +1011,16 @@ class SharedCore {
             const jsonApiEventCount = this.countJsonApiEventObjects(html);
             if (jsonApiEventCount === 1) return { classification: 'event-page', signal: 'json-api' };
             if (jsonApiEventCount >= 2) return { classification: 'multi-event-page', signal: 'json-api' };
+            // A JSON body of two or more rows that are not event-shaped (a
+            // WordPress posts feed, an article list) is still a LIST, read by
+            // the structured readers (the article-feed door, listing prose) —
+            // never one event. Classified structurally so the text model's
+            // second opinion never sees it: bearworldmag.com's posts feed
+            // was "multi-event-page via heuristic", the model called the ten
+            // articles "a single event", the verdict was cached, and the
+            // source read 1 instead of 129 on every run (20261010-152315).
+            const jsonRowCount = this.countJsonBodyRows(html);
+            if (jsonRowCount >= 2) return { classification: 'multi-event-page', signal: 'json-rows' };
         }
 
         // 1. URL pattern rules (deterministic, no HTML needed)
@@ -1006,6 +1060,36 @@ class SharedCore {
         }
 
         return { classification: 'unknown', signal: 'none' };
+    }
+
+    // Rows in a raw JSON body, whatever their shape: a top-level array of
+    // plain objects, or the first wrapper key (data/items/results/posts/
+    // events/entries/rows) holding one. 0 for non-JSON, scalars, or objects
+    // with no such list. Structural: no key names an event here.
+    countJsonBodyRows(html) {
+        const text = String(html || '').trim();
+        if (!text || (text[0] !== '{' && text[0] !== '[')) return 0;
+        let parsed;
+        try {
+            parsed = JSON.parse(text);
+        } catch (_) {
+            return 0;
+        }
+        const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+        const rowsOf = (value) => (Array.isArray(value) && value.every(isPlainObject) ? value.length : 0);
+        if (Array.isArray(parsed)) return rowsOf(parsed);
+        if (!isPlainObject(parsed)) return 0;
+        for (const key of ['data', 'items', 'results', 'posts', 'events', 'entries', 'rows']) {
+            if (Array.isArray(parsed[key])) return rowsOf(parsed[key]);
+        }
+        return 0;
+    }
+
+    // Is this body a JSON document? The text model classifies prose; a JSON
+    // body is never sent for a second opinion.
+    isJsonBody(html) {
+        const head = String(html || '').trim().slice(0, 1);
+        return head === '{' || head === '[';
     }
 
     // Count event-shaped objects in a raw JSON API response body (non-JSON or
@@ -1242,7 +1326,7 @@ class SharedCore {
     // parser detects the zero-yield outcome and calls this; persistence stays
     // behind the injected cache provider (this file never touches the
     // filesystem). Returns true when an entry was deleted.
-    async invalidateAiClassificationCacheEntry(url, html, aiConfig, cache) {
+    async invalidateAiClassificationCacheEntry(url, html, aiConfig, cache, reason = 'cached verdict yielded zero segments and zero events') {
         if (!cache || typeof cache.invalidate !== 'function') return false;
         const cacheSignature = this.buildAiClassificationCacheSignature(aiConfig, html);
         // Forget the in-run hit marker so the follow-up fresh classification
@@ -1253,7 +1337,7 @@ class SharedCore {
         try {
             const removed = await cache.invalidate(url, cacheSignature);
             if (removed) {
-                console.log(`🗂️ SharedCore: Invalidated AI classification cache entry for ${url} (cached verdict yielded zero segments and zero events)`);
+                console.log(`🗂️ SharedCore: Invalidated AI classification cache entry for ${url} (${reason})`);
             }
             return Boolean(removed);
         } catch (error) {
@@ -1525,7 +1609,7 @@ class SharedCore {
     rekeyOwnerDecisions(decisions) {
         if (!Array.isArray(decisions)) return [];
         return decisions.map(decision => {
-            if (!decision || typeof decision !== 'object' || decision.kind === 'bar' || decision.kind === 'dropped') return decision;
+            if (!decision || typeof decision !== 'object' || decision.kind === 'bar' || decision.kind === 'dropped' || decision.kind === 'gone') return decision;
             const snapshot = decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : null;
             if (!snapshot || !snapshot.title || !snapshot.startDate) return decision;
             const key = this.getOwnerReviewKey({
@@ -1885,11 +1969,89 @@ class SharedCore {
         return date.toISOString().slice(0, 10);
     }
 
+    // Title-only junk detection shared by the sanity flags (rule 9 / 9c:
+    // link/CTA text ending in an arrow, ticketing fine-print) and the source
+    // ledger, whose event identities must never be a caption like
+    // "View Event →" (run 20261010-152315: it became an "expected" series,
+    // then a "lost" one, and the audit found its words on the page). The
+    // address-shaped / venue-name / date-phrase families need the event's
+    // other fields and stay in getEventSanityFlags.
+    static junkTitleReason(rawTitle) {
+        const title = String(rawTitle || '').trim();
+        if (!title) return null;
+        const arrowTail = title.match(/(?:\s*(?:→|⇒|⟶|➔|➜|›|»|≫|>|▶|►)+)+$/u);
+        if (arrowTail) {
+            const preArrow = title.slice(0, title.length - arrowTail[0].length).trim();
+            const tokens = preArrow ? preArrow.split(/\s+/) : [];
+            if (tokens.length > 0 && tokens.length <= 3 && tokens.every(token => /^\p{L}+$/u.test(token))) {
+                return `title reads as link/CTA text (${tokens.length} plain word${tokens.length === 1 ? '' : 's'} ending in an arrow/chevron)`;
+            }
+        }
+        if (/\p{L}/u.test(title)) {
+            const folded = title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+            const paddedTitle = ` ${folded} `;
+            const legalese = TITLE_LEGALESE_PHRASES.find(phrase => paddedTitle.includes(` ${phrase} `));
+            if (legalese) return `title is ticketing fine-print ("${legalese}")`;
+            if (TITLE_SOCIAL_PLATFORM_NAMES.includes(folded)) return `title is a social-network name ("${folded}")`;
+        }
+        return null;
+    }
+
+    // Which website a parser's events belong to — THE attribution the ledger
+    // uses for its per-host counts, shared with the audit so both sides
+    // count the same events: the parser's configured urls name its home
+    // hosts (a shared-pages/inbox parser without urls takes the majority
+    // host of its events, else its name); an event belongs to its own page's
+    // host when that is one of the home hosts, else to the first home host —
+    // a ticket page or the organiser's site in `website` never moves it.
+    static sourceLedgerParserHosts(parser) {
+        const name = String(parser && parser.name || '').trim() || 'unnamed';
+        const config = parser && parser.config && typeof parser.config === 'object' ? parser.config : {};
+        const configUrls = Array.isArray(config.urls) ? config.urls : (parser && Array.isArray(parser.urls) ? parser.urls : []);
+        const events = parser && Array.isArray(parser.events) ? parser.events : [];
+        const homeHosts = [];
+        configUrls.forEach((url) => {
+            const host = SharedCore.hostOfUrl(url);
+            if (host && !homeHosts.includes(host)) homeHosts.push(host);
+        });
+        if (homeHosts.length === 0) {
+            const counts = new Map();
+            events.forEach((event) => {
+                const host = SharedCore.hostOfUrl(event && (event.website || event.url));
+                if (host) counts.set(host, (counts.get(host) || 0) + 1);
+            });
+            const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+            homeHosts.push(top ? top[0] : name.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
+        }
+        return { name, config, configUrls, events, homeHosts, primary: homeHosts[0] };
+    }
+
+    // The page the record was read off outranks the links it carries: a
+    // widget row's own link is a ticketing host (dice.fm), the page it sat
+    // on is the venue's. Then the record's own link; then the parser's
+    // primary host.
+    static sourceLedgerEventHost(event, hosts) {
+        const pageHost = SharedCore.hostOfUrl(event && event._sourcePageUrl);
+        if (hosts.homeHosts.includes(pageHost)) return pageHost;
+        const eventHost = SharedCore.hostOfUrl(event && (event.website || event.url));
+        return hosts.homeHosts.includes(eventHost) ? eventHost : hosts.primary;
+    }
+
+    // A dropped-as-not-bear record names its host; failing that, its page.
+    static sourceLedgerDroppedHost(drop, allHomeHosts) {
+        const event = drop && drop.event && typeof drop.event === 'object' ? drop.event : {};
+        let host = String(drop && drop.host || '').toLowerCase().replace(/^www\./, '');
+        if (!allHomeHosts.has(host)) host = SharedCore.hostOfUrl(event.website || event.url);
+        return allHomeHosts.has(host) ? host : '';
+    }
+
     // 'title tokens|place|local day' — stable across runs, independent of
-    // the merge (no calendar identity needed).
+    // the merge (no calendar identity needed). A junk title (link text,
+    // fine-print) has no key: it is never upcoming, expected or lost.
     static sourceLedgerEventKey(event) {
         if (!event || typeof event !== 'object') return '';
         const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim();
+        if (SharedCore.junkTitleReason(event.title || event.name)) return '';
         const title = fold(event.title || event.name);
         if (!title) return '';
         const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
@@ -1947,6 +2109,9 @@ class SharedCore {
         const lost = {};
         Object.keys(prev.lost && typeof prev.lost === 'object' ? prev.lost : {}).forEach((series) => {
             const entry = prev.lost[series] || {};
+            // A series whose title is junk (a key written before the rule)
+            // is dropped here, never reported again.
+            if (SharedCore.junkTitleReason(entry.title || series)) return;
             lost[series] = { title: entry.title || series, bear: entry.bear === true, seen: Number(entry.seen) || 0, days: Object.assign({}, entry.days || {}) };
             // The audit's "still on the site?" verdict rides with the series
             // (tools/source-audit.js stamps it into the state).
@@ -1982,6 +2147,8 @@ class SharedCore {
             const expected = new Set();
             counts.forEach((count, id) => {
                 const day = id.slice(id.lastIndexOf('|') + 1);
+                const last = lastSeen.get(id);
+                if (last && SharedCore.junkTitleReason(last.title)) { delete misses[id]; return; }
                 if (count >= minSeen && day >= todayKey) expected.add(id);
             });
             // Anything seen again is no longer missing, confirmed or not.
@@ -2094,6 +2261,83 @@ class SharedCore {
         };
     }
 
+    // ── Host signals and drift ───────────────────────────────────────────
+    // What a host GAVE this run besides a row count: records read through
+    // a structured door (JSON-LD, a widget API, page data) vs. the AI
+    // route, and pages reached. A host that still loads and still yields
+    // rows but has lost a signal it used to give (its JSON-LD gone, its
+    // widget door closed) is in DRIFT: the read is thinner than it looks,
+    // and nothing it fails to list can be trusted as "gone".
+    static collectHostSignals(run) {
+        const payload = run && typeof run === 'object' ? run : {};
+        const parserResults = Array.isArray(payload.parserResults) ? payload.parserResults : [];
+        const analyzedEvents = Array.isArray(payload.analyzedEvents) ? payload.analyzedEvents : [];
+        const allHomeHosts = new Set();
+        const signals = new Map();
+        const hostOf = (host) => {
+            if (!signals.has(host)) signals.set(host, { structured: 0, ai: 0, pages: 0 });
+            return signals.get(host);
+        };
+        parserResults.forEach((parser) => {
+            if (!parser || typeof parser !== 'object') return;
+            const hosts = SharedCore.sourceLedgerParserHosts(parser);
+            hosts.homeHosts.forEach((host) => { allHomeHosts.add(host); hostOf(host); });
+            const classifications = parser.urlClassifications && typeof parser.urlClassifications === 'object' ? Object.keys(parser.urlClassifications) : [];
+            classifications.forEach((url) => {
+                const host = SharedCore.hostOfUrl(url);
+                if (hosts.homeHosts.includes(host)) hostOf(host).pages += 1;
+            });
+        });
+        analyzedEvents.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            const pageHost = SharedCore.hostOfUrl(event._sourcePageUrl);
+            const eventHost = allHomeHosts.has(pageHost) ? pageHost : SharedCore.hostOfUrl(event.website || event.url);
+            if (!allHomeHosts.has(eventHost)) return;
+            const source = String(event._extractionSource || '').trim().toLowerCase();
+            if (!source || source === 'unknown') return;
+            if (source === 'ai' || source === 'ocr') hostOf(eventHost).ai += 1;
+            else hostOf(eventHost).structured += 1;
+        });
+        return signals;
+    }
+
+    // A signal that collapsed to nothing while the host still yields rows:
+    // the median of the last seven ok runs was ≥ 3 (structured records) or
+    // ≥ 2 (pages), and this run has 0. One-run flukes are not drift: the
+    // median needs at least three runs behind it.
+    static assessHostDrift(previousHostState, signals) {
+        const prev = previousHostState && typeof previousHostState === 'object' ? previousHostState : {};
+        const history = Array.isArray(prev.signals_history) ? prev.signals_history.filter((entry) => entry && typeof entry === 'object') : [];
+        const current = signals && typeof signals === 'object' ? signals : {};
+        if (history.length < 3 || !(Number(current.extracted) > 0)) return [];
+        const median = (values) => {
+            const sorted = values.slice().sort((a, b) => a - b);
+            if (sorted.length === 0) return null;
+            const middle = Math.floor(sorted.length / 2);
+            return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+        };
+        const drift = [];
+        [['structured', 3], ['pages', 2]].forEach(([signal, floor]) => {
+            const before = median(history.map((entry) => Number(entry[signal]) || 0));
+            const now = Number(current[signal]) || 0;
+            if (before !== null && before >= floor && now === 0) drift.push({ signal, before, now });
+        });
+        return drift;
+    }
+
+    // The ICS uid behind a calendar identifier: the text after the first
+    // colon (EventKit's "<calendar>:<uid>"), cut at a recurrence suffix; a
+    // bare uid (the published ICS) is itself.
+    static savedEventUid(identifier) {
+        const text = String(identifier === null || identifier === undefined ? '' : identifier).trim();
+        if (!text) return '';
+        const colonIndex = text.indexOf(':');
+        const afterColon = colonIndex >= 0 ? text.slice(colonIndex + 1) : text;
+        const rid = afterColon.search(/\/RID=/i);
+        const uid = (rid >= 0 ? afterColon.slice(0, rid) : afterColon).trim();
+        return uid;
+    }
+
     static buildSourceLedger(payload, options = {}) {
         const run = payload && typeof payload === 'object' ? payload : {};
         const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
@@ -2121,7 +2365,7 @@ class SharedCore {
                     host, parsers: [], pages: 0, outbound_pages: 0, page_errors: 0, errors: [],
                     extracted: 0, events: 0, bear: 0, upcoming: 0, duration_ms: 0,
                     proposals: { new: 0, merge: 0 }, upcomingKeys: {}, eventKeyIndex: new Set(),
-                    roles: [], url: '',
+                    roles: [], url: '', signals: { structured: 0, ai: 0 },
                     quality: { n: 0, time: 0, place: 0, coords: 0, url: 0, image: 0, desc: 0, keys: new Set(), maxDay: '', flags: {}, aiDropped: 0, manualDropped: 0, dropReasons: new Map(), dedupRemoved: 0, merges: 0, changed: 0, churnFields: {}, errors: {} }
                 });
             }
@@ -2132,27 +2376,8 @@ class SharedCore {
 
         parserResults.forEach((parser) => {
             if (!parser || typeof parser !== 'object') return;
-            const name = String(parser.name || '').trim() || 'unnamed';
-            const config = parser.config && typeof parser.config === 'object' ? parser.config : {};
-            const configUrls = Array.isArray(config.urls) ? config.urls : (Array.isArray(parser.urls) ? parser.urls : []);
-            const homeHosts = [];
-            configUrls.forEach((url) => {
-                const host = SharedCore.hostOfUrl(url);
-                if (host && !homeHosts.includes(host)) homeHosts.push(host);
-            });
-            const events = Array.isArray(parser.events) ? parser.events : [];
-            if (homeHosts.length === 0) {
-                // No configured urls (shared pages, inbox, local imports): the
-                // majority host of its events, else the parser's name.
-                const counts = new Map();
-                events.forEach((event) => {
-                    const host = SharedCore.hostOfUrl(event && (event.website || event.url));
-                    if (host) counts.set(host, (counts.get(host) || 0) + 1);
-                });
-                const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
-                homeHosts.push(top ? top[0] : name.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
-            }
-            const primary = homeHosts[0];
+            const hosts = SharedCore.sourceLedgerParserHosts(parser);
+            const { name, config, configUrls, events, homeHosts, primary } = hosts;
             const siteRole = String(config.siteRole || '').trim().toLowerCase();
             homeHosts.forEach((host) => {
                 allHomeHosts.add(host);
@@ -2183,8 +2408,7 @@ class SharedCore {
 
             events.forEach((event) => {
                 if (!event || typeof event !== 'object') return;
-                const eventHost = SharedCore.hostOfUrl(event.website || event.url);
-                const host = homeHosts.includes(eventHost) ? eventHost : primary;
+                const host = SharedCore.sourceLedgerEventHost(event, hosts);
                 const row = hostOf(host);
                 row.events += 1;
                 if (event.isBearEvent === true) row.bear += 1;
@@ -2220,9 +2444,8 @@ class SharedCore {
         bearDropped.forEach((drop) => {
             if (!drop || typeof drop !== 'object') return;
             const event = drop.event && typeof drop.event === 'object' ? drop.event : {};
-            let host = String(drop.host || '').toLowerCase().replace(/^www\./, '');
-            if (!allHomeHosts.has(host)) host = SharedCore.hostOfUrl(event.website || event.url);
-            if (!allHomeHosts.has(host)) return;
+            const host = SharedCore.sourceLedgerDroppedHost(drop, allHomeHosts);
+            if (!host) return;
             const q = hostOf(host).quality;
             const reason = String(drop.reason || '').replace(/\s+/g, ' ').trim();
             if (/^manual/i.test(reason)) q.manualDropped += 1; else q.aiDropped += 1;
@@ -2239,12 +2462,18 @@ class SharedCore {
             const key = SharedCore.sourceLedgerEventKey(event);
             let host = key ? eventKeyToHost.get(key) : '';
             if (!host) {
-                const eventHost = SharedCore.hostOfUrl(event.website || event.url);
+                const pageHost = SharedCore.hostOfUrl(event._sourcePageUrl);
+                const eventHost = allHomeHosts.has(pageHost) ? pageHost : SharedCore.hostOfUrl(event.website || event.url);
                 host = allHomeHosts.has(eventHost) ? eventHost : '';
             }
             if (!host) return;
             const row = hostOf(host);
             row.proposals[action] += 1;
+            const extraction = String(event._extractionSource || '').trim().toLowerCase();
+            if (extraction && extraction !== 'unknown') {
+                if (extraction === 'ai' || extraction === 'ocr') row.signals.ai += 1;
+                else row.signals.structured += 1;
+            }
             const q = row.quality;
             (Array.isArray(event._sanityFlags) ? event._sanityFlags : []).forEach((flag) => {
                 const code = typeof flag === 'string' ? flag : (flag && flag.code);
@@ -2312,6 +2541,12 @@ class SharedCore {
             const qualityState = status === 'ok'
                 ? { keys: [...row.quality.keys], runs_since_new: runsSinceNew }
                 : { keys: prev && Array.isArray(prev.keys) ? prev.keys : [], runs_since_new: runsSinceNew };
+            // Signals and drift (SharedCore.assessHostDrift): what the host
+            // gave besides rows, against its last seven ok runs.
+            const signals = { structured: row.signals.structured, ai: row.signals.ai, pages: row.pages, extracted: row.extracted };
+            const drift = status === 'ok' ? SharedCore.assessHostDrift(prev, signals) : [];
+            const previousSignals = prev && Array.isArray(prev.signals_history) ? prev.signals_history : [];
+            qualityState.signals_history = status === 'ok' ? previousSignals.slice(-6).concat([signals]) : previousSignals;
             records.push({
                 v: 1,
                 run_id: runId,
@@ -2337,7 +2572,9 @@ class SharedCore {
                 lost: loss.lost,
                 suspected: loss.suspected,
                 listing_gone: loss.listing_gone,
-                quality
+                quality,
+                signals,
+                drift
             });
             hosts[row.host] = status === 'dead' && prev
                 ? Object.assign({}, prev, loss.state, qualityState)
@@ -2349,9 +2586,15 @@ class SharedCore {
             if (!hosts[host]) hosts[host] = previous[host];
         });
 
+        // The "gone from source" streaks ride in the same file: the run
+        // that checked them carries the new state, any other run carries
+        // the previous one forward.
+        const gone = run.goneFromSource && run.goneFromSource.state && typeof run.goneFromSource.state === 'object'
+            ? run.goneFromSource.state
+            : (options.previousUpcoming && options.previousUpcoming.gone && typeof options.previousUpcoming.gone === 'object' ? options.previousUpcoming.gone : {});
         return {
             records,
-            upcoming: { version: 2, run_id: runId, finished_at: finishedAt, hosts }
+            upcoming: { version: 2, run_id: runId, finished_at: finishedAt, hosts, gone }
         };
     }
 
@@ -3224,6 +3467,15 @@ class SharedCore {
     // (𝐑𝐞𝐝 𝐰𝐫𝐢𝐬𝐭𝐛𝐚𝐧𝐝… — U+1D400 block, observed in a real run) cannot dodge
     // classification (String.prototype.normalize is available in iOS
     // JavaScriptCore). Platform-pure — no URL parsing, no network, no config.
+    // "No cover till 9PM, $20 cover at 9PM": a tiered door price — the free
+    // phrase and the amount are bound to different clocks. Needs BOTH a clock
+    // expression and a time-conditional word, so "$10, NO COVER" (no clock,
+    // no condition) is never read as a tier.
+    isTieredCoverText(value) {
+        const text = String(value === null || value === undefined ? '' : value).normalize('NFKC');
+        return COVER_TIER_CLOCK_PATTERN.test(text) && COVER_TIER_WORD_PATTERN.test(text);
+    }
+
     classifyCoverShape(value) {
         const text = String(value === null || value === undefined ? '' : value)
             .normalize('NFKC')
@@ -3240,6 +3492,57 @@ class SharedCore {
     // A genuine conflict: both sides non-empty primitives whose serialized forms
     // differ. Same-instant Date vs ISO string is NOT a conflict, and neither are
     // whitespace-only cover formatting twins.
+    // Is this venue value a word of the event's own title and no curated bar
+    // of its city? "Belly" in "The Belly Party" is the party; "SF Eagle" in
+    // "SF Eagle Beer Bust" is the Eagle.
+    barIsPartyName(value, recordA, recordB, context) {
+        const fold = (text) => String(text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+        const bar = fold(value);
+        if (!bar || bar.length < 3) return false;
+        const titles = [recordA && recordA.title, recordB && recordB.title].map(fold).filter(Boolean);
+        if (!titles.some(title => ` ${title} `.includes(` ${bar} `))) return false;
+        const cityKey = (context && context.cityKey) || (recordA && recordA.city) || (recordB && recordB.city) || '';
+        const cityBars = this.getCuratedCityBars(cityKey);
+        return !(cityBars && this.findCuratedBarByName(cityBars, value));
+    }
+
+    // The pixel width an image URL states about itself — Squarespace's
+    // ?format=300w, Wix's /w_300, a ?w=300 or &width=300 query, a 300x300
+    // segment — or null when the URL says nothing.
+    static imageUrlWidthHint(value) {
+        const text = String(value || '');
+        if (!/^https?:\/\//i.test(text)) return null;
+        const patterns = [
+            /[?&]format=(\d{2,4})w\b/i,
+            /[?&](?:w|width)=(\d{2,4})\b/i,
+            /\/w_(\d{2,4})(?:[,/]|$)/i,
+            /[/_-](\d{2,4})x\d{2,4}(?:[./_-]|$)/i
+        ];
+        for (const pattern of patterns) {
+            const match = text.match(pattern);
+            if (match) return Number(match[1]);
+        }
+        return null;
+    }
+
+    // The listing-authority rung keeps a configured listing's OWN artwork
+    // against a ticket page's. A detail page of the SAME site is that source
+    // speaking at length: when the listing carried a card thumbnail (≤ 400 px
+    // by its own URL) and its own detail page a larger picture, the page
+    // re-illustrates the card (Mass Bears, run 20261011-154844: The Belly
+    // Party's card showed the contest hero at ?format=300w, the event page
+    // its flyer at 1500w — owner: "Is there a better image? This is low
+    // quality"). Another host keeps the rung as it was.
+    ownSiteDetailPageReIllustrates(listingRecord, crawlRecord, listingValue, crawlValue) {
+        const hostOf = (record) => this.getHostFromUrl((record && record._sourcePageUrl) || '').toLowerCase().replace(/^www\./, '');
+        const listingHost = hostOf(listingRecord);
+        if (!listingHost || listingHost !== hostOf(crawlRecord)) return false;
+        const listingWidth = SharedCore.imageUrlWidthHint(listingValue);
+        if (listingWidth === null || listingWidth > 400) return false;
+        const crawlWidth = SharedCore.imageUrlWidthHint(crawlValue);
+        return crawlWidth === null || crawlWidth > listingWidth;
+    }
+
     isGenuineFieldConflict(fieldName, valueA, valueB) {
         if (this.isEmptyArbitrationValue(valueA) || this.isEmptyArbitrationValue(valueB)) return false;
         const isPrimitive = (v) => this.isDateLike(v) || typeof v !== 'object';
@@ -3471,6 +3774,23 @@ class SharedCore {
             }
         }
         this._configuredListingUrlKeys = keys;
+        const domains = new Set();
+        for (const parserConfig of Array.isArray(parserConfigs) ? parserConfigs : []) {
+            for (const url of Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : []) {
+                const domain = this.getRegistrableDomainFromUrl(String(url || '').trim());
+                if (domain) domains.add(domain);
+            }
+        }
+        this._configuredSiteDomains = domains;
+    }
+
+    // Is this URL on a site we read — the registrable domain of any
+    // configured URL of this run? (FetchPoliteness.isConfiguredSiteRequest)
+    isConfiguredSiteDomainUrl(value) {
+        const domains = this._configuredSiteDomains;
+        if (!(domains instanceof Set) || domains.size === 0) return false;
+        const domain = this.getRegistrableDomainFromUrl(String(value || '').trim());
+        return Boolean(domain) && domains.has(domain);
     }
 
     isConfiguredListingUrl(value) {
@@ -4293,7 +4613,8 @@ class SharedCore {
                     detail: `cover "${coverText}" is neither a price nor a free-admission phrase`
                 });
             } else if (coverShape === 'price'
-                && COVER_FREE_PHRASE_ANYWHERE_PATTERN.test(coverText.normalize('NFKC'))) {
+                && COVER_FREE_PHRASE_ANYWHERE_PATTERN.test(coverText.normalize('NFKC'))
+                && !this.isTieredCoverText(coverText)) {
                 flags.push({
                     code: 'cover-self-contradictory',
                     detail: `cover "${coverText}" states both a price and free admission`
@@ -4346,17 +4667,9 @@ class SharedCore {
         //    records (the card still shows them — flag, don't drop; the
         //    withhold lives at the write site, not here).
         if (title) {
-            const arrowTail = title.match(/(?:\s*(?:→|⇒|⟶|➔|➜|›|»|≫|>|▶|►)+)+$/u);
-            if (arrowTail) {
-                const preArrow = title.slice(0, title.length - arrowTail[0].length).trim();
-                const tokens = preArrow ? preArrow.split(/\s+/) : [];
-                if (tokens.length > 0 && tokens.length <= 3
-                    && tokens.every(token => /^\p{L}+$/u.test(token))) {
-                    flags.push({
-                        code: 'junk-title',
-                        detail: `title reads as link/CTA text (${tokens.length} plain word${tokens.length === 1 ? '' : 's'} ending in an arrow/chevron)`
-                    });
-                }
+            const ctaReason = SharedCore.junkTitleReason(title);
+            if (ctaReason && ctaReason.startsWith('title reads as link/CTA text')) {
+                flags.push({ code: 'junk-title', detail: ctaReason });
             }
         }
 
@@ -4469,14 +4782,21 @@ class SharedCore {
         //     name, so the report-only boilerplate flag gains the enforced
         //     junk-title sibling. The letterless branch of rule 3 stays
         //     report-only (no letters ≠ fine-print).
-        if (title && !hasJunkTitleFlag() && /\p{L}/u.test(title)) {
-            const paddedTitle = ` ${foldForCompare(title)} `;
-            const legalese = TITLE_LEGALESE_PHRASES.find(phrase => paddedTitle.includes(` ${phrase} `));
-            if (legalese) {
-                flags.push({
-                    code: 'junk-title',
-                    detail: `title is ticketing fine-print ("${legalese}")`
-                });
+        if (title && !hasJunkTitleFlag()) {
+            const legaleseReason = SharedCore.junkTitleReason(title);
+            if (legaleseReason && legaleseReason.startsWith('title is ticketing fine-print')) {
+                flags.push({ code: 'junk-title', detail: legaleseReason });
+            }
+        }
+
+        // 9f. SOCIAL-NETWORK titles ("Facebook", run 20261011-154844,
+        //     woofsatlanta.com/calendar/: the page's follow link read as an
+        //     event, dated to the next Sunday) — the same enforced family,
+        //     the same whole-title table lookup (TITLE_SOCIAL_PLATFORM_NAMES).
+        if (title && !hasJunkTitleFlag()) {
+            const socialReason = SharedCore.junkTitleReason(title);
+            if (socialReason && socialReason.startsWith('title is a social-network name')) {
+                flags.push({ code: 'junk-title', detail: socialReason });
             }
         }
 
@@ -6364,11 +6684,52 @@ class SharedCore {
             }
         }
 
+        if (fieldName === 'title' && context && context.records && context.sideLabels
+            && context.sideLabels.a === 'calendar' && context.sideLabels.b === 'scraped'
+            && context.records.a && context.records.b) {
+            // A record read from its OWN event page, whose title is the
+            // page's stated one (JSON-LD / the site's listing, not the
+            // model's), names itself. A saved record that links no page of
+            // its own — a bare root, a listing, nothing — got its title from
+            // a card or an earlier merge and yields: a rename, which the
+            // drift guard holds for the deck. SF Eagle, run 20261011-154844:
+            // the saved "BLUF SF HARD" of Oct 24 (an earlier chimera — Big
+            // Boy's slot under BLUF's name, website = the site root) was
+            // matched by the real "Bad Boy" read from /events/big-boy/, and
+            // the AI kept the saved name as "more descriptive".
+            const scraped = context.records.b;
+            if (scraped._titleFromListing === true && this.scrapedRecordIsOwnPage(scraped)
+                && this.getOwnEventPageLinks(context.records.a).length === 0
+                && !this.haveContradictingIdentityEvidence(context.records.a, scraped)) {
+                const page = this.getOwnEventPageLinks(scraped)[0];
+                if (page && this.eventSlugNamesTitle(page.slug, valueA) && !this.eventSlugNamesTitle(page.slug, valueB)) {
+                    // The page's own slug spells the SAVED title — the page
+                    // is that event under another name; leave it to the ladder.
+                } else if (page) {
+                    return { winner: 'b', reason: `the event's own page (${page.slug}) states this title; the saved record links no page of its own` };
+                }
+            }
+        }
+
         if (fieldName === 'bar') {
             const placeholderA = SharedCore.isPlaceholderVenueText(valueA);
             const placeholderB = SharedCore.isPlaceholderVenueText(valueB);
             if (placeholderA && !placeholderB && String(valueB || '').trim()) return { winner: 'b', reason: 'a named venue beats a placeholder ("' + String(valueA).trim() + '")' };
             if (placeholderB && !placeholderA && String(valueA || '').trim()) return { winner: 'a', reason: 'a named venue beats a placeholder ("' + String(valueB).trim() + '")' };
+            // A party's own name in the venue slot ("Belly" for The Belly
+            // Party) yields to a venue the event's own page states in its
+            // structured data (Mass Bears, run 20261011-154844: the AI called
+            // "Belly" "the physical venue name" over the page's JSON-LD "Red
+            // Room"). A curated bar whose name sits in the title ("SF Eagle
+            // Beer Bust") is a venue, never a party name.
+            if (context && context.records && context.records.a && context.records.b) {
+                const partyNameA = this.barIsPartyName(valueA, context.records.a, context.records.b, context);
+                const partyNameB = this.barIsPartyName(valueB, context.records.a, context.records.b, context);
+                const structuredA = context.records.a._barFromJsonLd === true && this.normalizeBarNameKey(context.records.a.bar) === this.normalizeBarNameKey(valueA);
+                const structuredB = context.records.b._barFromJsonLd === true && this.normalizeBarNameKey(context.records.b.bar) === this.normalizeBarNameKey(valueB);
+                if (partyNameA && !partyNameB && structuredB) return { winner: 'b', reason: `the page's structured data names the venue — "${String(valueA).trim()}" is the party's own name` };
+                if (partyNameB && !partyNameA && structuredA) return { winner: 'a', reason: `the page's structured data names the venue — "${String(valueB).trim()}" is the party's own name` };
+            }
         }
 
         // Corrected-time healing (doors-vs-party, run 20260812-001228 FURBALL
@@ -6892,10 +7253,45 @@ class SharedCore {
                         const candidate = typeof value === 'string' ? value.trim() : '';
                         if (!recordImage || !candidate || recordImage !== candidate) return '';
                         const imageSource = typeof record.imageSource === 'string' ? record.imageSource.trim() : '';
-                        return (imageSource === 'og-image' || imageSource === 'jsonld') ? imageSource : '';
+                        return SharedCore.isPublisherSuppliedImageSource(imageSource) ? imageSource : '';
                     };
                     const provenanceA = getOgGradeImageProvenance(contextRecords.a, valueA);
                     const provenanceB = getOgGradeImageProvenance(contextRecords.b, valueB);
+                    // Both sides are the page's own artwork and the scraped
+                    // record is THIS RUN's reading of the page the saved
+                    // record points at: the live page's picture is the current
+                    // one. A saved imageSource stamp records what the page
+                    // said when it was saved, not what it says now — the Oct
+                    // 17 BEEFMINCE night was saved as the generic monthly
+                    // "BEEFMINCE x RVT" with its 2024 logo; DICE then renamed
+                    // it "Neon x RVT" and published a new flyer, and the stale
+                    // stamp won deterministically every run (20261012-214806).
+                    // Same reasoning the cover field uses: freshness wins. The
+                    // orientation slots follow: a saved slot that is a crop of
+                    // the replaced primary is just as stale.
+                    const freshnessLabels = context.sideLabels && typeof context.sideLabels === 'object' ? context.sideLabels : null;
+                    const calendarVsScraped = Boolean(freshnessLabels && freshnessLabels.a === 'calendar' && freshnessLabels.b === 'scraped');
+                    if (calendarVsScraped && fieldName === 'image' && provenanceA && provenanceB
+                        && this.destinationsAgree(contextRecords.a, contextRecords.b)) {
+                        return {
+                            winner: 'b',
+                            reason: `the live page's own artwork (${provenanceB}), read this run from the page the saved record points at — freshness wins over the saved stamp (${provenanceA})`
+                        };
+                    }
+                    if (calendarVsScraped && fieldName !== 'image'
+                        && !this.isEmptyArbitrationValue(valueA) && !this.isEmptyArbitrationValue(valueB)) {
+                        const savedPrimaryKey = SharedCore.getImageMediaKey(contextRecords.a && contextRecords.a.image);
+                        const livePrimaryKey = SharedCore.getImageMediaKey(contextRecords.b && contextRecords.b.image);
+                        if (savedPrimaryKey && livePrimaryKey && savedPrimaryKey !== livePrimaryKey
+                            && SharedCore.getImageMediaKey(valueA) === savedPrimaryKey
+                            && SharedCore.isPublisherSuppliedImageSource(contextRecords.b && contextRecords.b.imageSource)
+                            && this.destinationsAgree(contextRecords.a, contextRecords.b)) {
+                            return {
+                                winner: 'b',
+                                reason: `the saved ${fieldName} is a crop of the saved primary picture, which the live page has replaced — the slots follow the primary`
+                            };
+                        }
+                    }
                     // For the ORIENTATION SLOTS, one-sided attribution must
                     // not decide. imageSource describes the PRIMARY image
                     // only, so a slot holding a URL different from its own
@@ -7679,8 +8075,12 @@ class SharedCore {
     // matching the same URL always wins.
     getBuiltInPageClassificationRules() {
         return [
-            { pattern: /eventbrite\.com\/e\//i, classification: 'event-page' },
-            { pattern: /eventbrite\.com\/o\//i, classification: 'multi-event-page' },
+            // Every Eventbrite storefront, not only .com: an organizer in
+            // Berlin lives at eventbrite.de/o/…, one in London at
+            // eventbrite.co.uk/o/… — the same pages on another country's
+            // domain (the hosts are listed together in TICKETING hosts above).
+            { pattern: /eventbrite\.(?:com|com\.au|co\.uk|co\.nz|[a-z]{2})\/e\//i, classification: 'event-page' },
+            { pattern: /eventbrite\.(?:com|com\.au|co\.uk|co\.nz|[a-z]{2})\/o\//i, classification: 'multi-event-page' },
             { pattern: /linktr\.ee/i, classification: 'link-aggregator' }
         ];
     }
@@ -7828,6 +8228,10 @@ class SharedCore {
 
         // Global URL tracking across all parsers to prevent duplicate processing
         const globalProcessedUrls = new Set();
+        // Which parser processed each of those URLs — a page on a parser's
+        // OWN configured site is read for that parser even when another
+        // parser crawled it first (see crawlUrlsForEvents).
+        this._processedUrlOwners = new Map();
         // Parsers never started because the network gave up part-way through.
         const networkTruncatedParsers = [];
         this.noteConfiguredListingUrls(config.parsers);
@@ -7836,6 +8240,7 @@ class SharedCore {
         if (httpAdapter && typeof httpAdapter.getFetchPoliteness === 'function') {
             const gate = httpAdapter.getFetchPoliteness();
             if (gate && typeof gate.setConfiguredRootTest === 'function') gate.setConfiguredRootTest((url) => this.isConfiguredListingUrl(url));
+            if (gate && typeof gate.setConfiguredSiteTest === 'function') gate.setConfiguredSiteTest((url) => this.isConfiguredSiteDomainUrl(url));
         }
         // Which source reads which configured page IN THIS RUN — only a
         // source that will actually run owns its page (a one-parser run, or a
@@ -8462,6 +8867,16 @@ class SharedCore {
                 && this.classifyUrlByRules(sourcePageUrl) !== 'link-aggregator') {
                 continue;
             }
+            // A row the page's OWN calendar door published is the site's
+            // calendar, not a copy of someone else's listing — the shell
+            // around the embed says nothing about it. Rockbar's home page
+            // (a Squarespace socials hub carrying the Elfsight embed) was
+            // classified link-aggregator and its 13 bear nights lost the only
+            // address they have (no widget row carries an actions[] link;
+            // run 20261017-054812, url 0% for 50 runs), while Black Eagle
+            // Toronto's identical embed on a multi-event-page kept it. The
+            // door decides, not the shell.
+            if (CALENDAR_DOOR_SOURCES.has(String(event.source || '').toLowerCase())) continue;
             const websiteIsOwnSourcePage = Boolean(website) && this.getUrlDedupeKey(website) === sourcePageKey;
             const ticketHost = ticketUrl ? this.getHostFromUrl(ticketUrl) : '';
             const ticketUrlIsOutbound = Boolean(ticketHost) && !this.areUrlHostsSameSite(ticketHost, sourceHost);
@@ -9050,8 +9465,17 @@ class SharedCore {
                 && !(event._staticFields && Object.prototype.hasOwnProperty.call(event._staticFields, 'website'))) {
                 const hubPromoterEntry = this.getCuratedPromoterIdentityEntry(event);
                 if (hubPromoterEntry && this.getPromoterEntryIdentityWebsite(hubPromoterEntry)) {
-                    delete event.website;
-                    console.log(`🔗 LINKS: cleared website ${hubWebsite} for "${event.title || 'event'}" — 3+ differently titled events of this batch point at it: a hub page is a front door, not this event's page`);
+                    // The page the card was read from beats the registry's
+                    // front door: BeefDip's cards link only the dog-tag shop,
+                    // so every party published the bare root while the
+                    // listing that names the night sat one click away (owner
+                    // note on MAD.BEAR RED BALL, 2026-10-12). Same stand-in
+                    // the dead-link rung uses.
+                    const standIn = this.getStandInSourcePage(event);
+                    const standInApplies = Boolean(standIn && !this.isSameLinkTarget(standIn, hubWebsite));
+                    if (standInApplies) event.website = standIn;
+                    else delete event.website;
+                    console.log(`🔗 LINKS: cleared website ${hubWebsite} for "${event.title || 'event'}" — 3+ differently titled events of this batch point at it: a hub page is a front door, not this event's page${standInApplies ? `; the page it was read from stands in (${standIn})` : ''}`);
                 }
             }
 
@@ -10714,13 +11138,27 @@ class SharedCore {
                 }
             }
             if (this.hasProcessedUrl(processedUrls, url)) {
-                if (currentDepth === 0) {
-                    await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
+                // A page of THIS parser's own site that ANOTHER parser crawled
+                // first is still this parser's to read: cmoneverybody.com's
+                // /events was discovered and read by Thotyssey (parser 22),
+                // its 42 widget rows folded away under the aggregator, and
+                // the venue's own crawl (parser 27, configured at the root)
+                // then skipped /events as "already processed" — 43 → 0 (run
+                // 20261010-152315). Before the root switch the configured
+                // URL was /events itself, which is never skipped. The same
+                // page read twice yields twins that dedup folds.
+                const processedBy = this.getProcessedUrlOwner(url);
+                if (this.isOwnSitePageProcessedByAnother(url, parserConfig)) {
+                    await displayAdapter.logInfo(`SYSTEM: 🏠 OWN SITE: ${url} read for its own site although "${processedBy}" already crawled it — a page of a source's own site is that source's to read; twins fold in dedup`);
+                } else {
+                    if (currentDepth === 0) {
+                        await displayAdapter.logWarn(`SYSTEM: Skipping duplicate URL (already processed globally): ${url}`);
+                    }
+                    continue;
                 }
-                continue;
             }
 
-            this.markProcessedUrl(processedUrls, url);
+            this.markProcessedUrl(processedUrls, url, parserConfig && parserConfig.name);
 
             // Processing-time hygiene for DISCOVERED URLs (configured roots are
             // left alone): both checks run against the normalized URL that is
@@ -11292,7 +11730,7 @@ class SharedCore {
                     continue;
                 }
 
-                const deduplicatedUrls = this.deduplicateUrls(linksToConsider, processedUrls);
+                const deduplicatedUrls = this.deduplicateUrls(linksToConsider, processedUrls, parserConfig);
 
                 if (shouldFollowLinks) {
                     if (discoveryTreeCollector) {
@@ -12879,15 +13317,32 @@ class SharedCore {
         // are relying on the crude month-count heuristic. Costs one small text-model
         // request per weak-signal page.
         const aiClassifyEnabled = !(parserConfig && parserConfig.ai && parserConfig.ai.classifyPages === false);
-        const weakSignal = classificationSignal === 'heuristic' || classificationSignal === 'none';
+        // Weak = the month-count heuristic or nothing at all — AND prose: a
+        // JSON body (a feed the structural tiers could not read as events)
+        // is never handed to the text model, which reads ten posts as one.
+        const weakSignal = (classificationSignal === 'heuristic' || classificationSignal === 'none')
+            && !this.isJsonBody(htmlData.html);
+        // A structural signal with two or more rows (JSON-LD, a JSON API or
+        // feed body, a machine door's rows) is final: the model never
+        // downgrades it, and a verdict it cached for this page earlier is
+        // stale — forgotten, so no later weak read can inherit it.
+        const structuralRows = (classificationSignal === 'json-api' || classificationSignal === 'json-ld' || classificationSignal === 'json-rows')
+            && pageClassification === 'multi-event-page';
+        const aiParser = parsers && parsers['ai-web'];
+        const aiConfig = aiParser && typeof aiParser.getAiConfig === 'function'
+            ? aiParser.getAiConfig(parserConfig)
+            : null;
+        const classificationCache = aiParser && typeof aiParser.getAiClassificationCache === 'function'
+            ? aiParser.getAiClassificationCache()
+            : null;
+        if (structuralRows && classificationCache) {
+            const removed = await this.invalidateAiClassificationCacheEntry(url, htmlData.html, aiConfig, classificationCache,
+                `a ${classificationSignal} signal with two or more rows classifies this page structurally; the model's cached verdict is stale`);
+            if (removed) {
+                await displayAdapter.logInfo(`SYSTEM: 🗂️ Forgot a cached AI verdict for ${url} — the page classifies structurally (${classificationSignal}, ${pageClassification}) and the model's opinion never applies to it`);
+            }
+        }
         if (aiClassifyEnabled && weakSignal) {
-            const aiParser = parsers && parsers['ai-web'];
-            const aiConfig = aiParser && typeof aiParser.getAiConfig === 'function'
-                ? aiParser.getAiConfig(parserConfig)
-                : null;
-            const classificationCache = aiParser && typeof aiParser.getAiClassificationCache === 'function'
-                ? aiParser.getAiClassificationCache()
-                : null;
             try {
                 const aiResult = await this.classifyPageWithAi(url, htmlData.html, aiConfig, httpAdapter, classificationCache);
                 if (aiResult && aiResult.classification && aiResult.classification !== pageClassification) {
@@ -13012,14 +13467,14 @@ class SharedCore {
     }
 
     // Generic URL deduplication utility
-    deduplicateUrls(urls, processedUrls = new Set()) {
+    deduplicateUrls(urls, processedUrls = new Set(), parserConfig = null) {
         if (!urls || !Array.isArray(urls)) {
             return [];
         }
-        
+
         const uniqueUrls = new Set();
         const result = [];
-        
+
         for (const url of urls) {
             if (!url || typeof url !== 'string') {
                 continue;
@@ -13028,9 +13483,12 @@ class SharedCore {
             if (!key) {
                 continue;
             }
-            
-            // Skip if already processed globally
-            if (processedUrls.has(key)) {
+
+            // Skip if already processed globally — unless it is a page of
+            // this parser's own site that another parser read (see the
+            // 🏠 OWN SITE rule in crawlUrlsForEvents, which lets it through
+            // again at processing time).
+            if (processedUrls.has(key) && !this.isOwnSitePageProcessedByAnother(url, parserConfig)) {
                 continue;
             }
             
@@ -13091,15 +13549,44 @@ class SharedCore {
         return !!key && processedUrls.has(key);
     }
 
-    markProcessedUrl(processedUrls, url) {
+    markProcessedUrl(processedUrls, url, ownerName = '') {
         const key = this.getUrlDedupeKey(url);
         if (key) {
             processedUrls.add(key);
+            // Every parser that read the page, in order: the first names
+            // who crawled it, the rest keep a parser from reading its own
+            // page twice in one run.
+            if (ownerName && this._processedUrlOwners instanceof Map) {
+                if (!this._processedUrlOwners.has(key)) this._processedUrlOwners.set(key, []);
+                const readers = this._processedUrlOwners.get(key);
+                if (!readers.includes(String(ownerName))) readers.push(String(ownerName));
+            }
         }
+    }
+
+    // The parser that first processed this URL in the run ('' when unknown).
+    getProcessedUrlOwner(url) {
+        const key = this.getUrlDedupeKey(url);
+        const readers = key && this._processedUrlOwners instanceof Map ? this._processedUrlOwners.get(key) : null;
+        return Array.isArray(readers) && readers.length > 0 ? readers[0] : '';
+    }
+
+    // A page of this parser's own configured site that OTHER parsers
+    // processed and this one has not — the one case a globally-processed
+    // URL is read again (once).
+    isOwnSitePageProcessedByAnother(url, parserConfig) {
+        if (!parserConfig) return false;
+        const key = this.getUrlDedupeKey(url);
+        const readers = key && this._processedUrlOwners instanceof Map ? this._processedUrlOwners.get(key) : null;
+        if (!Array.isArray(readers) || readers.length === 0) return false;
+        const ownName = typeof parserConfig.name === 'string' ? parserConfig.name : '';
+        if (readers.includes(ownName)) return false;
+        return this.isConfiguredSiteUrl(url, parserConfig);
     }
 
     getUrlDedupeKey(url) {
         if (!url || typeof url !== 'string') return '';
+        url = this.resolveUrlAlias(url);
 
         const normalized = this.normalizeUrl(url) || String(url);
         const parsed = this.parseUrl(normalized);
@@ -14922,7 +15409,7 @@ class SharedCore {
             event.key = key;
 
             const mergeIntoExisting = async (existing) => {
-                const merged = await this.mergeParsedEvents(existing, event, { httpAdapter, globalConfig });
+                const merged = await this.mergeParsedEvents(existing, event, { httpAdapter, globalConfig, passPageKeys: excludedTicketUrlKeys });
                 merged.key = existing.key;
                 seen.set(existing.key, merged);
                 const index = deduplicated.indexOf(existing);
@@ -15421,6 +15908,606 @@ class SharedCore {
         return merged;
     }
 
+    // ── An aggregator's record is a pointer ─────────────────────────────
+    // Owner ruling 2026-10-11, after the deck's "CHUNK — Nov 11 @ C'mon
+    // Everybody" card: Gathr's entry was the July 4 lineup and flyer with
+    // a new date, linking the bare chunk-party.com root; chunk-party.com
+    // itself, read in the same run by the CHUNK source, listed thirteen
+    // events and none that night. An aggregator's record is worth exactly
+    // where it points. When it points into a site one of this run's
+    // FIRST-PARTY sources read in full, that site's own events are the
+    // complete statement and the copy must fold into one of them
+    // (deduplicateEvents — the aggregator loses every field). A copy still
+    // standing after the fold is a claim the site does not back: withheld
+    // from every automatic write and shown on the deck with both sides'
+    // facts, where an approval lets it through. A copy pointing at a site
+    // nobody reads, or nowhere, is proposed as found (discovery —
+    // unchanged). Nothing about dates or venues is hand-coded: the fold
+    // decided, this pass only reads the result.
+    //
+    // Fails closed: a first-party read with crawl errors or no events
+    // covers nothing; a configured url on a ticketing/social PLATFORM (an
+    // Eventbrite organizer page) covers that organizer's path, never the
+    // platform's whole host; a copy the site DID list that night but the
+    // bear check dropped is left as found (the site backs it).
+
+    // registrable domain → [{ source, segments, events, dropped }] for every
+    // first-party parser that ran and read cleanly.
+    buildFirstPartySiteCoverage(parserResults) {
+        const coverage = new Map();
+        for (const result of Array.isArray(parserResults) ? parserResults : []) {
+            const config = result && result.config && typeof result.config === 'object' ? result.config : null;
+            if (!config || String(config.siteRole || '').trim().toLowerCase() === 'aggregator') continue;
+            const events = Array.isArray(result.events) ? result.events.filter(Boolean) : [];
+            if (events.length === 0) continue;
+            if (Array.isArray(result.crawlErrors) && result.crawlErrors.length > 0) continue;
+            const dropped = (Array.isArray(result.bearDroppedEvents) ? result.bearDroppedEvents : [])
+                .map(entry => entry && typeof entry === 'object' ? entry.event : null)
+                .filter(Boolean);
+            // The pages this read reached: its configured listings and every
+            // page a record (kept or bear-dropped) carries. The read vouches
+            // for these and for nothing beyond them — Atlanta Eagle's
+            // listing reached Nov 7 while The Bear Calendar pointed at
+            // atlantaeagle.com/event/southern-bears-bar-night/ (Nov 14), a
+            // page it never fetched (run 20261012-180543).
+            const pagesRead = new Set();
+            for (const url of Array.isArray(config.urls) ? config.urls : []) {
+                const key = SharedCore.getPointerPageKey(url);
+                if (key) pagesRead.add(key);
+            }
+            for (const record of [...events, ...dropped]) {
+                for (const field of ['url', 'website', 'ticketUrl']) {
+                    const key = SharedCore.getPointerPageKey(record && record[field]);
+                    if (key) pagesRead.add(key);
+                }
+            }
+            for (const url of Array.isArray(config.urls) ? config.urls : []) {
+                const parts = this.getUrlRuleParts(url);
+                if (!parts || !parts.host) continue;
+                const platform = isPlatformIdentityHost(parts.host) || this.isKnownTicketingPlatformHost(parts.host) || isLinkHubHost(parts.host);
+                // A platform root names the platform, not a site of ours.
+                if (platform && parts.segments.length === 0) continue;
+                const domain = this.getRegistrableDomainFromUrl(url);
+                if (!domain) continue;
+                if (!coverage.has(domain)) coverage.set(domain, []);
+                coverage.get(domain).push({
+                    source: String(config.name || result.name || ''),
+                    segments: platform ? parts.segments.map(segment => segment.toLowerCase()) : [],
+                    events,
+                    dropped,
+                    pagesRead
+                });
+            }
+        }
+        return coverage;
+    }
+
+    // The first-party coverage entry an aggregator record's links point
+    // into, or null. Links: url / website / ticketUrl on the record and in
+    // its notes.
+    getAggregatorPointerTarget(record, coverage) {
+        if (!record || !this.isAggregatorRecord(record) || !(coverage instanceof Map) || coverage.size === 0) return null;
+        const fields = typeof record.notes === 'string' && record.notes ? this.parseNotesIntoFields(record.notes) : {};
+        const links = [record.url, record.website, record.ticketUrl, fields.url, fields.website, fields.ticketUrl]
+            .map(value => (typeof value === 'string' ? value.trim() : ''))
+            .filter(value => /^https?:\/\//i.test(value));
+        for (const link of links) {
+            const domain = this.getRegistrableDomainFromUrl(link);
+            const entries = domain ? coverage.get(domain) : null;
+            if (!entries || entries.length === 0) continue;
+            const parts = this.getUrlRuleParts(link);
+            const segments = parts ? parts.segments.map(segment => segment.toLowerCase()) : [];
+            const entry = entries.find(candidate => candidate.segments.length === 0
+                || (segments.length >= candidate.segments.length && candidate.segments.every((segment, index) => segment === segments[index])));
+            if (entry) {
+                const pageKey = SharedCore.getPointerPageKey(link);
+                return {
+                    link,
+                    site: domain,
+                    ...entry,
+                    // A link deeper than the covered root names one page of
+                    // the site; `pageRead` says whether this run's read of
+                    // the site reached that page.
+                    namesPage: segments.length > entry.segments.length,
+                    pageRead: Boolean(pageKey && entry.pagesRead instanceof Set && entry.pagesRead.has(pageKey))
+                };
+            }
+        }
+        return null;
+    }
+
+    // ── A saved event its source no longer lists ────────────────────────
+    // Owner ruling 2026-10-17 (SF Eagle's "BLUF SF HARD" next to the
+    // site's "Bad Boy"): the scraper never deletes, but it can SAY. A
+    // saved upcoming event whose own links point into a site one of this
+    // run's first-party sources read in full, that no record of this run
+    // matched, is a miss; two misses in a row make it a card ("gone from
+    // its source") for the owner to delete or keep. Fails closed on every
+    // side: an aggregator covers nothing; a day beyond the furthest night
+    // the source showed is outside its statement; a read that is THIN
+    // (upcoming rows under half the host's recent median) or in DRIFT
+    // (SharedCore.assessHostDrift) freezes the streaks — it neither counts
+    // nor clears; a series occurrence is never a candidate (deleting one
+    // is deleting the series). The card carries what the site lists
+    // instead that night (same place + similar name = a rename, which the
+    // merge ladder did not fold) and the same name on other nights (a date
+    // move), so the owner decides with both sides' facts.
+    //
+    // `savedByCity`: { city: { events: [{ identifier, uid?, title,
+    // startDate, endDate, location, notes, url, isAllDay, series? }] } }
+    // from the adapter (the phone snapshot or the published ICS on the Mac).
+    // Returns { candidates, state, summary }; `state` is the next run's
+    // `previousUpcoming.gone`.
+    buildGoneFromSourceCandidates(results, savedByCity, options = {}) {
+        const run = results && typeof results === 'object' ? results : {};
+        const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
+        const nowIso = now.toISOString();
+        const todayKey = nowIso.slice(0, 10);
+        const confirmAfter = Number.isFinite(options.confirmAfter) ? options.confirmAfter : 2;
+        const previous = options.previousUpcoming && typeof options.previousUpcoming === 'object' ? options.previousUpcoming : {};
+        const previousHosts = previous.hosts && typeof previous.hosts === 'object' ? previous.hosts : {};
+        const previousGone = previous.gone && typeof previous.gone === 'object' ? previous.gone : {};
+        const parserResults = Array.isArray(run.parserResults) ? run.parserResults : [];
+        const analyzedEvents = Array.isArray(run.analyzedEvents) ? run.analyzedEvents : [];
+        const cityConfigs = options.cities && typeof options.cities === 'object' ? options.cities : (this.cities || {});
+        const summary = { cities: 0, saved: 0, attributed: 0, seen: 0, firstMisses: 0, candidates: 0, duplicates: 0, identityMisses: 0, beyondHorizon: 0, series: 0, suppressedThin: 0, suppressedDrift: 0, sites: 0 };
+        const cities = savedByCity && typeof savedByCity === 'object' ? savedByCity : {};
+        const identityMisses = [];
+        const iso = (value) => {
+            const ms = SharedCore.toEpochMillis(value);
+            return ms === null ? null : new Date(ms).toISOString();
+        };
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, ' ').trim();
+        const median = (values) => {
+            const sorted = values.slice().sort((a, b) => a - b);
+            if (sorted.length === 0) return null;
+            const middle = Math.floor(sorted.length / 2);
+            return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+        };
+        const pruneState = (cityState) => {
+            const kept = {};
+            Object.keys(cityState && typeof cityState === 'object' ? cityState : {}).forEach((uid) => {
+                const entry = cityState[uid];
+                if (entry && typeof entry === 'object' && String(entry.day || '') >= todayKey) kept[uid] = entry;
+            });
+            return kept;
+        };
+        const state = {};
+        const candidates = [];
+        const coverage = this.buildFirstPartySiteCoverage(parserResults);
+        const checkedCities = new Set();
+
+        // Per source: its host, the furthest night it showed, its upcoming
+        // count against the host's recent median (thin), its drift.
+        const signalsByHost = SharedCore.collectHostSignals(run);
+        const sourceFacts = new Map();
+        parserResults.forEach((parser) => {
+            if (!parser || typeof parser !== 'object') return;
+            const hosts = SharedCore.sourceLedgerParserHosts(parser);
+            const name = String((parser.config && parser.config.name) || parser.name || '').trim();
+            const dropped = (Array.isArray(parser.bearDroppedEvents) ? parser.bearDroppedEvents : []).map((entry) => entry && entry.event).filter(Boolean);
+            let horizonDay = '';
+            let upcoming = 0;
+            [...hosts.events, ...dropped].forEach((record) => {
+                const day = SharedCore.sourceLedgerLocalDay(record && record.startDate, record && record.timezone);
+                if (!day) return;
+                if (day >= todayKey) upcoming += 1;
+                if (day > horizonDay) horizonDay = day;
+            });
+            const prevHost = previousHosts[hosts.primary] && typeof previousHosts[hosts.primary] === 'object' ? previousHosts[hosts.primary] : null;
+            const history = prevHost && Array.isArray(prevHost.history) ? prevHost.history : [];
+            const pastCounts = history.map((entry) => Object.keys(entry && entry.upcoming && typeof entry.upcoming === 'object' ? entry.upcoming : {}).length);
+            const usual = median(pastCounts);
+            const thin = usual !== null && usual >= 4 && upcoming < usual / 2;
+            const signals = Object.assign({ structured: 0, ai: 0, pages: 0 }, signalsByHost.get(hosts.primary) || {}, { extracted: hosts.events.length });
+            const drift = SharedCore.assessHostDrift(prevHost, signals);
+            sourceFacts.set(name, { source: name, host: hosts.primary, horizonDay, extracted: hosts.events.length, upcoming, usual, thin, drift });
+        });
+
+        // Every saved record this run's analysis matched (merge target,
+        // conflict, slot) — by identifier and by its uid.
+        const matched = new Set();
+        const noteMatched = (identifier) => {
+            const text = String(identifier || '').trim();
+            if (!text) return;
+            matched.add(text);
+            const uid = SharedCore.savedEventUid(text);
+            if (uid) matched.add(uid);
+        };
+        analyzedEvents.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            if (event._existingEvent && typeof event._existingEvent === 'object') noteMatched(event._existingEvent.identifier);
+            if (event._existingKey) matched.add(String(event._existingKey));
+            (Array.isArray(event._conflicts) ? event._conflicts : []).forEach((conflict) => { if (conflict && typeof conflict === 'object') noteMatched(conflict.identifier); });
+        });
+
+        const placeKeyOf = (bar, address) => this.normalizeBarNameKey(bar || '') || fold(address || '');
+        // Similar titles: 60% of the shorter one's tokens in the other, and
+        // the shorter one at least two tokens — "B BAR" is inside "HAPPY
+        // THANKSGIVING – BAR OPENS AT 6PM" and says nothing.
+        const tokenCount = (value) => String(value || '').split(' ').filter((word) => word.length > 2).length;
+        const similarTitles = (a, b) => Boolean(a) && (a === b || (Math.min(tokenCount(a), tokenCount(b)) >= 2 && SharedCore.sourceLedgerTitleOverlap(a, b) >= 0.6));
+        // What the run made of each record, by title and local night: the
+        // saved record it merged into, or a proposal of its own.
+        const analyzedIndex = new Map();
+        analyzedEvents.forEach((event) => {
+            if (!event || typeof event !== 'object') return;
+            const day = SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
+            const key = `${fold(event.title)}|${day}`;
+            if (!key || !day) return;
+            const existing = event._existingEvent && typeof event._existingEvent === 'object' ? event._existingEvent : null;
+            if (!analyzedIndex.has(key)) analyzedIndex.set(key, []);
+            analyzedIndex.get(key).push({
+                action: String(event._action || ''),
+                existingIdentifier: existing && existing.identifier ? String(existing.identifier) : '',
+                existingTitle: existing && existing.title ? String(existing.title) : ''
+            });
+        });
+        const sitesUsed = new Set();
+        Object.keys(cities).forEach((city) => {
+            const entry = cities[city];
+            const saved = Array.isArray(entry) ? entry : (entry && Array.isArray(entry.events) ? entry.events : []);
+            checkedCities.add(city);
+            if (saved.length === 0) return;
+            summary.cities += 1;
+            const timezone = (cityConfigs[city] && cityConfigs[city].timezone) || (entry && entry.timezone) || '';
+            const previousCity = previousGone[city] && typeof previousGone[city] === 'object' ? previousGone[city] : {};
+            const cityState = {};
+            saved.forEach((record) => {
+                if (!record || typeof record !== 'object') return;
+                const identifier = String(record.identifier || '').trim();
+                const uid = String(record.uid || '').trim() || SharedCore.savedEventUid(identifier);
+                if (!uid) return;
+                const day = SharedCore.sourceLedgerLocalDay(record.startDate, timezone);
+                if (!day || day < todayKey) return;
+                summary.saved += 1;
+                if (record.series === true || record.recurrence || record.recurrenceRule) { summary.series += 1; return; }
+                const notes = typeof record.notes === 'string' ? record.notes : '';
+                const fields = notes ? this.parseNotesIntoFields(notes) : {};
+                const links = [record.url, fields.website, fields.ticketUrl, fields.url]
+                    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+                    .filter((value) => /^https?:\/\//i.test(value));
+                let target = null;
+                let link = '';
+                for (const candidateLink of links) {
+                    const domain = this.getRegistrableDomainFromUrl(candidateLink);
+                    const entries = domain ? coverage.get(domain) : null;
+                    if (!entries || entries.length === 0) continue;
+                    const parts = this.getUrlRuleParts(candidateLink);
+                    const segments = parts ? parts.segments.map((segment) => segment.toLowerCase()) : [];
+                    const found = entries.find((candidate) => candidate.segments.length === 0
+                        || (segments.length >= candidate.segments.length && candidate.segments.every((segment, index) => segment === segments[index])));
+                    if (found) { target = Object.assign({}, found, { site: domain }); link = candidateLink; break; }
+                }
+                if (!target) return;
+                const facts = sourceFacts.get(target.source) || null;
+                if (!facts) return;
+                summary.attributed += 1;
+                sitesUsed.add(target.site);
+                if (facts.horizonDay && day > facts.horizonDay) { summary.beyondHorizon += 1; return; }
+                const prior = previousCity[uid] && typeof previousCity[uid] === 'object' ? previousCity[uid] : null;
+                if (matched.has(uid) || (identifier && matched.has(identifier))) { summary.seen += 1; return; }
+                if (facts.thin || facts.drift.length > 0) {
+                    if (facts.thin) summary.suppressedThin += 1; else summary.suppressedDrift += 1;
+                    if (prior) cityState[uid] = prior;
+                    return;
+                }
+                const misses = (prior && Number.isFinite(Number(prior.misses)) ? Number(prior.misses) : 0) + 1;
+                const savedTitleFold = fold(record.title);
+                const savedPlace = placeKeyOf(fields.bar, fields.address);
+                const sameNight = [];
+                const sameTitle = [];
+                [...(target.events || []), ...(target.dropped || []).map((dropped) => Object.assign({}, dropped, { _gone_dropped: true }))].forEach((siteRecord) => {
+                    if (!siteRecord || typeof siteRecord !== 'object') return;
+                    const siteDay = SharedCore.sourceLedgerLocalDay(siteRecord.startDate, siteRecord.timezone || timezone);
+                    if (!siteDay) return;
+                    const overlap = SharedCore.sourceLedgerTitleOverlap(fold(siteRecord.title), savedTitleFold);
+                    const alike = similarTitles(fold(siteRecord.title), savedTitleFold);
+                    const sitePlace = placeKeyOf(siteRecord.bar, siteRecord.address);
+                    const row = {
+                        title: String(siteRecord.title || ''),
+                        startDate: iso(siteRecord.startDate),
+                        day: siteDay,
+                        bar: String(siteRecord.bar || ''),
+                        url: String(siteRecord.url || siteRecord.website || siteRecord.ticketUrl || ''),
+                        samePlace: Boolean(savedPlace && sitePlace && savedPlace === sitePlace),
+                        titleOverlap: Math.round(overlap * 100) / 100,
+                        similar: alike,
+                        dropped: siteRecord._gone_dropped === true
+                    };
+                    if (siteDay === day) sameNight.push(row);
+                    else if (alike && siteDay >= todayKey) sameTitle.push(row);
+                });
+                sameNight.sort((a, b) => (b.samePlace ? 1 : 0) - (a.samePlace ? 1 : 0) || b.titleOverlap - a.titleOverlap);
+                sameTitle.sort((a, b) => a.day.localeCompare(b.day));
+                // The site DOES list it that night at that place: it is not
+                // gone. Either the run gave the row to ANOTHER saved record
+                // (this one is the extra copy — a duplicate card), or the
+                // run proposes it as new / dropped it (the identity gate
+                // did not fold them — logged, never a delete).
+                const listedHere = sameNight.filter((row) => row.samePlace && row.similar);
+                let reason = 'gone';
+                let duplicateOf = null;
+                if (listedHere.length > 0) {
+                    const twins = listedHere.flatMap((row) => analyzedIndex.get(`${fold(row.title)}|${row.day}`) || []);
+                    const other = twins.find((twin) => twin.existingIdentifier && twin.existingIdentifier !== identifier && SharedCore.savedEventUid(twin.existingIdentifier) !== uid);
+                    if (other) {
+                        reason = 'duplicate';
+                        duplicateOf = { identifier: other.existingIdentifier, uid: SharedCore.savedEventUid(other.existingIdentifier), title: other.existingTitle };
+                    } else {
+                        summary.identityMisses += 1;
+                        identityMisses.push({ city, uid, title: String(record.title || ''), day, bar: String(fields.bar || ''), host: facts.host, source: target.source, listed: listedHere[0].title, proposal: twins.length > 0 ? twins[0].action || 'proposal' : (listedHere[0].dropped ? 'dropped' : 'none') });
+                        if (prior) cityState[uid] = prior;
+                        return;
+                    }
+                } else if (sameNight.some((row) => row.similar)) {
+                    reason = 'moved';
+                } else if (sameTitle.length > 0) {
+                    reason = 'date-moved';
+                }
+                const stateEntry = {
+                    title: String(record.title || ''), day, host: facts.host, source: target.source, misses,
+                    first_miss: (prior && prior.first_miss) || nowIso, last_checked: nowIso
+                };
+                cityState[uid] = stateEntry;
+                if (misses === 1) summary.firstMisses += 1;
+                if (misses < confirmAfter) return;
+                // The audit's "still on the site?" verdict for the same
+                // title, when the loss state has one. Its words still on
+                // the site ('still-listed'), or found in the run under
+                // another title ('set-aside'): a read problem, never a
+                // delete — logged like an identity miss.
+                let deepCheck = null;
+                const prevHost = previousHosts[facts.host];
+                const lost = prevHost && prevHost.lost && typeof prevHost.lost === 'object' ? prevHost.lost : null;
+                if (lost) {
+                    const series = lost[savedTitleFold] || Object.keys(lost).map((key) => lost[key]).find((item) => item && similarTitles(fold(item.title), savedTitleFold));
+                    if (series && series.still && series.still.verdict) deepCheck = { verdict: String(series.still.verdict), at: String(series.still.at || '') };
+                }
+                if (deepCheck && (deepCheck.verdict === 'still-listed' || deepCheck.verdict === 'set-aside')) {
+                    summary.identityMisses += 1;
+                    identityMisses.push({ city, uid, title: String(record.title || ''), day, bar: String(fields.bar || ''), host: facts.host, source: target.source, listed: '', proposal: deepCheck.verdict });
+                    return;
+                }
+                summary.candidates += 1;
+                if (reason === 'duplicate') summary.duplicates += 1;
+                candidates.push({
+                    key: `gone|${city}|${uid}`,
+                    kind: 'gone',
+                    reason,
+                    duplicateOf,
+                    city,
+                    uid,
+                    identifier,
+                    title: String(record.title || ''),
+                    startDate: iso(record.startDate),
+                    endDate: iso(record.endDate),
+                    timezone,
+                    isAllDay: record.isAllDay === true,
+                    bar: String(fields.bar || ''),
+                    address: String(fields.address || ''),
+                    location: String(record.location || ''),
+                    url: String(fields.website || record.url || ''),
+                    ticketUrl: String(fields.ticketUrl || ''),
+                    image: String(fields.image || ''),
+                    cover: String(fields.cover || ''),
+                    description: String(fields.description || '').slice(0, 400),
+                    link,
+                    site: target.site,
+                    host: facts.host,
+                    source: target.source,
+                    siteEvents: facts.extracted,
+                    horizonDay: facts.horizonDay,
+                    misses,
+                    firstMiss: stateEntry.first_miss,
+                    deepCheck,
+                    instead: { sameNight: sameNight.slice(0, 6), sameTitle: sameTitle.slice(0, 6) }
+                });
+            });
+            const pruned = pruneState(cityState);
+            if (Object.keys(pruned).length > 0) state[city] = pruned;
+        });
+        // Cities this run did not check keep their streaks, past days dropped.
+        Object.keys(previousGone).forEach((city) => {
+            if (checkedCities.has(city)) return;
+            const kept = pruneState(previousGone[city]);
+            if (Object.keys(kept).length > 0) state[city] = kept;
+        });
+        summary.sites = sitesUsed.size;
+        candidates.sort((a, b) => b.misses - a.misses || String(a.startDate || '').localeCompare(String(b.startDate || '')));
+        return { candidates, state, summary, identityMisses };
+    }
+
+    // One key per page: scheme dropped, host lowercased without "www.", the
+    // path without its trailing slash, the query kept (some sites address an
+    // event by it), the fragment dropped.
+    static getPointerPageKey(url) {
+        const raw = typeof url === 'string' ? url.trim() : '';
+        const match = raw.match(/^https?:\/\/(?:www\.)?([^/?#]+)([^?#]*)(\?[^#]*)?/i);
+        if (!match) return '';
+        const host = match[1].toLowerCase();
+        const path = (match[2] || '').replace(/\/+$/, '').toLowerCase();
+        return `${host}${path}${match[3] || ''}`;
+    }
+
+    // The picture file behind an image URL: host + path, query dropped,
+    // a CDN's render recipe (Wix "/v1/fill/w_1240,h_699,…/") cut off. Two
+    // URLs with one key show one file.
+    static getImageMediaKey(url) {
+        const raw = typeof url === 'string' ? url.trim() : '';
+        if (!/^https?:\/\//i.test(raw)) return '';
+        let path = raw.split(/[?#]/)[0].replace(/^https?:\/\//i, '').replace(/^www\./i, '').toLowerCase();
+        const recipe = path.search(/\/v1\/(?:fill|fit|crop|crop_fill)\//);
+        if (recipe > 0) path = path.slice(0, recipe);
+        return path.replace(/\/+$/, '');
+    }
+
+    // An image the PUBLISHER supplied — the page's og:image/twitter:image
+    // meta, or its structured data by any of the parser's three spellings
+    // (jsonld / json-ld / json-api) — as opposed to a picture found in the
+    // page's content, OCR or a segment. Mirrors ai-web-parser's
+    // isPublisherSuppliedImageSource; the merge rungs must see one class.
+    static isPublisherSuppliedImageSource(imageSource) {
+        const stamp = String(imageSource || '').trim().toLowerCase();
+        return stamp === 'og-image' || stamp === 'jsonld' || stamp === 'json-ld' || stamp === 'json-api';
+    }
+
+    static getAggregatorImageFields() {
+        return ['image', 'imageHorizontal', 'imageVertical'];
+    }
+
+    // picture key → the first-party records that show it.
+    indexFirstPartyImages(events) {
+        const index = new Map();
+        for (const event of Array.isArray(events) ? events : []) {
+            if (!event || typeof event !== 'object' || this.isAggregatorRecord(event)) continue;
+            for (const field of SharedCore.getAggregatorImageFields()) {
+                const key = SharedCore.getImageMediaKey(event[field]);
+                if (!key) continue;
+                if (!index.has(key)) index.set(key, []);
+                if (!index.get(key).includes(event)) index.get(key).push(event);
+            }
+        }
+        return index;
+    }
+
+    // The corollary: a picture a first-party source shows on one of ITS
+    // events belongs to that event. An aggregator's record wearing the same
+    // file on another night has reused a flyer — the fields are cleared and
+    // the card says whose picture it was. A same-night first-party record
+    // showing the file keeps the picture in play (it may be this event's).
+    clearReusedAggregatorImage(event, index, aggregatorName) {
+        if (!event || typeof event !== 'object' || !(index instanceof Map) || index.size === 0) return false;
+        const day = this.normalizeEventDateLocal(event.startDate, event.timezone || null);
+        if (!day) return false;
+        let owner = null;
+        let worn = '';
+        for (const field of SharedCore.getAggregatorImageFields()) {
+            const key = SharedCore.getImageMediaKey(event[field]);
+            if (!key) continue;
+            const owners = index.get(key);
+            if (!owners || owners.length === 0) continue;
+            const sameNight = owners.some(candidate => this.normalizeEventDateLocal(candidate.startDate, candidate.timezone || event.timezone || null) === day);
+            if (sameNight) return false;
+            owner = owners[0];
+            worn = String(event[field]).trim();
+            break;
+        }
+        if (!owner) return false;
+        const cleared = [];
+        for (const field of SharedCore.getAggregatorImageFields()) {
+            if (typeof event[field] === 'string' && event[field].trim()) {
+                cleared.push(field);
+                event[field] = '';
+            }
+        }
+        const ownerDay = this.normalizeEventDateLocal(owner.startDate, owner.timezone || event.timezone || null);
+        const ownerSource = String((owner._parserConfig && owner._parserConfig.name) || owner.source || 'its own source');
+        event._imageReusedFrom = {
+            image: worn,
+            title: String(owner.title || ''),
+            startDate: owner.startDate instanceof Date ? owner.startDate.toISOString() : String(owner.startDate || ''),
+            day: ownerDay,
+            source: ownerSource,
+            url: String(owner.url || owner.website || '')
+        };
+        console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregatorName || 'an aggregator'}, ${day}) wears the picture of "${owner.title || 'event'}" (${ownerDay || 'undated'}, ${ownerSource}) — another night's flyer; ${cleared.join(', ')} cleared`);
+        return true;
+    }
+
+    // The pass. Runs on the whole run AFTER the cross-parser fold, with
+    // the parser results it came from. Returns counts for the log.
+    reconcileAggregatorPointers(events, results = {}) {
+        const list = Array.isArray(events) ? events.filter(event => event && typeof event === 'object') : [];
+        const summary = { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 };
+        if (list.length === 0) return summary;
+        const coverage = this.buildFirstPartySiteCoverage(results && results.parserResults);
+        const firstPartyImages = this.indexFirstPartyImages(list);
+        for (const event of list) {
+            if (!this.isAggregatorRecord(event)) continue;
+            const aggregator = String((event._parserConfig && event._parserConfig.name) || 'an aggregator');
+            if (this.clearReusedAggregatorImage(event, firstPartyImages, aggregator)) summary.imagesCleared++;
+            if (coverage.size === 0) continue;
+            const target = this.getAggregatorPointerTarget(event, coverage);
+            if (!target) continue;
+            const day = this.normalizeEventDateLocal(event.startDate, event.timezone || null);
+            if (!day) continue;
+            const backing = target.dropped.find(candidate => this.normalizeEventDateLocal(candidate.startDate, candidate.timezone || event.timezone || null) === day);
+            if (backing) {
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} lists "${backing.title || 'an event'}" that night but the bear check dropped it; the copy stands as found`);
+                summary.backedByDropped++;
+                continue;
+            }
+            // The link names a page of the site that this run's read never
+            // reached (a listing's horizon ends before that night, a page
+            // only the aggregator links): the read cannot say the night is
+            // unlisted. The copy stands as found.
+            if (target.namesPage && !target.pageRead) {
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.link}, a page ${target.source} did not read this run — the copy stands as found`);
+                summary.pageUnread++;
+                continue;
+            }
+            // The site DOES list something that night and the fold still
+            // left the copy standing (Gathr's "CHUNK: San Francisco Folsom
+            // '26" at "F8 (1192 Folsom St)" beside the site's "CHUNK FOLSOM"
+            // at "F8 Nightclub & Bar", replay 2026-10-11): one event the
+            // fold missed, or two? The card shows both and says which night.
+            const sameNight = target.events.filter(candidate => this.normalizeEventDateLocal(candidate.startDate, candidate.timezone || event.timezone || null) === day);
+            const startMs = SharedCore.toEpochMillis(event.startDate);
+            let nearest = null;
+            let nearestGap = Infinity;
+            for (const candidate of target.events) {
+                const ms = SharedCore.toEpochMillis(candidate.startDate);
+                if (!Number.isFinite(ms) || !Number.isFinite(startMs)) continue;
+                const gap = Math.abs(ms - startMs);
+                if (gap < nearestGap) { nearestGap = gap; nearest = candidate; }
+            }
+            const nearestDay = nearest ? this.normalizeEventDateLocal(nearest.startDate, nearest.timezone || event.timezone || null) : '';
+            const describe = (candidate) => `"${candidate.title || 'event'}"${candidate.bar ? ` at ${candidate.bar}` : ''}`;
+            const reason = sameNight.length > 0
+                ? `${aggregator} points at ${target.site}, where ${target.source} lists ${sameNight.map(describe).join(' and ')} that same night — the two did not fold as one event`
+                : `${aggregator} points at ${target.site}, which ${target.source} read this run (${target.events.length} event${target.events.length === 1 ? '' : 's'}) and lists no event that night`;
+            event._aggregatorUnbackedWithheld = {
+                aggregator,
+                site: target.site,
+                source: target.source,
+                link: target.link,
+                siteEvents: target.events.length,
+                day,
+                claim: {
+                    title: String(event.title || ''),
+                    startDate: event.startDate instanceof Date ? event.startDate.toISOString() : String(event.startDate || ''),
+                    bar: String(event.bar || '')
+                },
+                sameNight: sameNight.map(candidate => ({
+                    title: String(candidate.title || ''),
+                    startDate: candidate.startDate instanceof Date ? candidate.startDate.toISOString() : String(candidate.startDate || ''),
+                    bar: String(candidate.bar || ''),
+                    url: String(candidate.url || candidate.website || '')
+                })),
+                nearest: nearest ? {
+                    title: String(nearest.title || ''),
+                    startDate: nearest.startDate instanceof Date ? nearest.startDate.toISOString() : String(nearest.startDate || ''),
+                    day: nearestDay,
+                    bar: String(nearest.bar || ''),
+                    url: String(nearest.url || nearest.website || '')
+                } : null,
+                reason
+            };
+            if (sameNight.length > 0) {
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} lists ${sameNight.map(describe).join(' and ')} that same night and the fold left this copy standing; one event or two? Withheld to the deck.`);
+            } else {
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} read it this run (${target.events.length} events) and lists nothing that night${nearest ? `; nearest there: "${nearest.title || 'event'}" ${nearestDay}` : ''}. Withheld to the deck.`);
+            }
+            summary.withheld++;
+        }
+        return summary;
+    }
+
+    static isAggregatorUnbackedWithheld(event) {
+        return Boolean(event && typeof event === 'object' && event._aggregatorUnbackedWithheld && !event._ownerReviewApproved);
+    }
+
     async mergeParsedEvents(existingEvent, newEvent, options = {}) {
         // Exactly one side from an aggregator: no arbitration, no priorities —
         // the event's own source wins (see "Aggregators are for DISCOVERY").
@@ -15432,6 +16519,19 @@ class SharedCore {
                 : this.mergeAggregatorCopyIntoOwnRecord(existingEvent, newEvent);
         }
         const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
+        // A page shared by 3+ records over 2+ nights (the batch's pass-page
+        // finding, see deduplicateEvents) describes the series, not one
+        // night: a record READ FROM such a page may fill a sibling's blanks,
+        // but never its dates. hcbears.com.au's registration page, shared by
+        // 13 Furry Friday occurrences, listed "Sunday Bears 18 Oct 16:00" in
+        // its sidebar; that became the Oct 16 night's END and the night ran
+        // 45 hours (run 20261012-214806).
+        const passPageKeys = options && options.passPageKeys instanceof Set ? options.passPageKeys : null;
+        const passPageOf = (record) => {
+            if (!passPageKeys || passPageKeys.size === 0 || !record || typeof record !== 'object') return '';
+            const page = typeof record._sourcePageUrl === 'string' ? record._sourcePageUrl.trim() : '';
+            return page && passPageKeys.has(this.getUrlDedupeKey(page)) ? page : '';
+        };
 
         // Start with newEvent as base to preserve metadata
         const mergedEvent = { ...newEvent };
@@ -15793,7 +16893,24 @@ class SharedCore {
                 const newIsListing = newEvent._pageOrigin === 'listing';
                 const existingIsCrawl = existingEvent._pageOrigin === 'crawl';
                 const newIsCrawl = newEvent._pageOrigin === 'crawl';
-                if ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl)) {
+                const listingThumbnailReIllustrated = ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl))
+                    && IMAGE_SLOT_FIELDS.has(fieldName)
+                    && this.ownSiteDetailPageReIllustrates(
+                        existingIsListing ? existingEvent : newEvent, existingIsListing ? newEvent : existingEvent,
+                        existingIsListing ? existingValue : newValue, existingIsListing ? newValue : existingValue);
+                if (listingThumbnailReIllustrated) {
+                    const chosenValue = existingIsListing ? newValue : existingValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    console.log(`🖼️ MERGE: "${mergeEventTitle}" field=${fieldName} — the source's own detail page re-illustrates the listing's card thumbnail with its full picture`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: "own-site detail page: the source's full picture replaces its listing's card thumbnail"
+                    });
+                    return;
+                } else if ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl)) {
                     const chosenValue = existingIsListing ? existingValue : newValue;
                     mergedEvent[fieldName] = chosenValue;
                     console.log(`🔒 MERGE: "${mergeEventTitle}" field=${fieldName} kept the configured listing's own value — an enrich/crawl page fills blanks, it never restates the listing`);
@@ -15818,6 +16935,22 @@ class SharedCore {
             // by the coverless homepage-segment record).
             const existingSideEmpty = isEmpty(existingValue);
             const newSideEmpty = isEmpty(newValue);
+            if (existingSideEmpty !== newSideEmpty && (fieldName === 'startDate' || fieldName === 'endDate')) {
+                const passPage = passPageOf(existingSideEmpty ? newEvent : existingEvent);
+                if (passPage) {
+                    const emptyValue = existingSideEmpty ? existingValue : newValue;
+                    mergedEvent[fieldName] = emptyValue;
+                    console.log(`⏰ MERGE: "${mergeEventTitle}" ${fieldName} not filled from ${passPage} — a page shared by many nights describes none of them`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: emptyValue,
+                        reason: 'a pass page shared by many nights never dates one of them'
+                    });
+                    return;
+                }
+            }
             if (existingSideEmpty !== newSideEmpty) {
                 const chosenValue = existingSideEmpty ? newValue : existingValue;
                 mergedEvent[fieldName] = chosenValue;
@@ -16680,6 +17813,35 @@ class SharedCore {
             // arbitrated even when a parser config says clobber — silently overwriting
             // a differing calendar date is how good ends get destroyed. A failed
             // arbitration still falls back to the scraped value (exactly clobber).
+            // A scraped start at exact local midnight with no stated time is
+            // a date-only read (the parser's "no time stated" placeholder),
+            // and a date-only read can never overwrite a saved clock on the
+            // same night. The parser-merge rung already knows this shape;
+            // the calendar merge sent it to the AI, which picked midnight for
+            // "SPOOKY PLAYGROUND" (saved 22:00 Montreal, flyer "portes 22h")
+            // with a non-reason (run 20261012-214806).
+            if (fieldName === 'startDate'
+                && !this.isEmptyArbitrationValue(calendarValue) && !this.isEmptyArbitrationValue(scraperValue)
+                && String(calendarValue) !== String(scraperValue)) {
+                const calendarLocal = this.getMergeLocalStartParts(calendarObject);
+                const scrapedLocal = this.getMergeLocalStartParts(scraperObject);
+                if (calendarLocal && scrapedLocal && calendarLocal.localDay === scrapedLocal.localDay
+                    && scrapedLocal.minutesOfDay === 0 && !scraperObject.startTime && calendarLocal.minutesOfDay !== 0) {
+                    const dateOnlyReason = 'the scraped start is a date-only read (local midnight, no stated time); the saved clock stands';
+                    mergedObject[fieldName] = calendarValue;
+                    console.log(`⏰ MERGE: "${mergeTitle}" field=startDate kept calendar value — ${dateOnlyReason}`);
+                    aiDecisionRecords.push({
+                        field: fieldName,
+                        existingValue: calendarValue,
+                        newValue: scraperValue,
+                        chosenValue: calendarValue,
+                        reason: dateOnlyReason,
+                        source: 'deterministic'
+                    });
+                    continue;
+                }
+            }
+
             const routeDateConflictToAi = (fieldName === 'startDate' || fieldName === 'endDate')
                 && mergeStrategy === 'clobber'
                 && this.isArbitrationEligibleField(fieldName)
@@ -16958,6 +18120,34 @@ class SharedCore {
                         : 'scraped gmaps adopted (calendar had none)',
                     source: 'deterministic'
                 });
+            }
+        }
+
+        // A replaced primary picture takes its stale crops with it: a saved
+        // orientation slot that is a crop of the OLD primary, with nothing
+        // scraped for that slot, would otherwise ride along as "kept
+        // calendar value" (BEEFMINCE Neon x RVT: new flyer, 2024 logo's
+        // portrait crop still in imageVertical, replay 2026-10-14).
+        const savedPrimaryKey = SharedCore.getImageMediaKey(calendarObject.image);
+        const finalPrimaryKey = SharedCore.getImageMediaKey(mergedObject.image);
+        if (savedPrimaryKey && finalPrimaryKey && savedPrimaryKey !== finalPrimaryKey) {
+            for (const slot of ['imageVertical', 'imageHorizontal']) {
+                if (SharedCore.getImageMediaKey(mergedObject[slot]) !== savedPrimaryKey) continue;
+                if (!this.isEmptyArbitrationValue(scraperObject[slot])) continue;
+                const staleValue = mergedObject[slot];
+                mergedObject[slot] = '';
+                const keptIndex = calendarKeptFields.indexOf(slot);
+                if (keptIndex >= 0) calendarKeptFields.splice(keptIndex, 1);
+                if (!clobberedFields.includes(slot)) clobberedFields.push(slot);
+                aiDecisionRecords.push({
+                    field: slot,
+                    existingValue: staleValue,
+                    newValue: scraperObject[slot],
+                    chosenValue: '',
+                    reason: 'a crop of the replaced primary picture — the live page no longer shows that file',
+                    source: 'deterministic'
+                });
+                console.log(`🖼️ MERGE: "${mergeTitle}" dropped ${slot} — a crop of the replaced primary picture, which the live page no longer shows`);
             }
         }
 
@@ -18443,8 +19633,16 @@ class SharedCore {
         const venue = text(obj.venue) || text(obj.location) || text(obj.place);
         // A "venue" that is a street line ("232 W 37th St, 2nd Fl. b/w 7th &
         // 8th Avenues") is the address of a place the list does not name.
-        if (venue && /^\d{1,5}\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.' ]{2,40}\b(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pl|place|way|ln|lane|hwy|highway|pkwy|ct|court|sq|square)\b/i.test(venue)) row.address = venue;
-        else if (venue && !/^(tba|tbd|various\b.*|location shared.*)$/i.test(venue)) row.venue = venue;
+        // The same slot also carries a name AND its street in one string —
+        // "Boatslip Resort 161 Commercial St." or "9 Carver St (Purgatory)"
+        // (gathrparty.com, recheck 2026-10-17: 9 kept records lost their bar
+        // because the whole string read as an address) — so the two halves
+        // are split: the name is the venue, the street line the address.
+        const streetLine = /\d{1,5}\s+(?:[NSEW]\.?\s+)?[A-Za-z0-9.' ]{2,40}\b(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|pl|place|way|ln|lane|hwy|highway|pkwy|ct|court|sq|square)\b\.?/i;
+        const placeholderVenue = /^(tba|tbd|various\b.*|location shared.*)$/i;
+        const split = SharedCore.splitVenueNameAndStreet(venue, streetLine);
+        if (split.address) row.address = split.address;
+        if (split.venue && !placeholderVenue.test(split.venue)) row.venue = split.venue;
         const description = text(obj.about) || text(obj.description) || text(obj.details);
         if (description) row.description = description;
         const image = text(obj.image) || text(obj.flyer) || text(obj.poster);
@@ -18456,7 +19654,12 @@ class SharedCore {
         else if (/^https?:\/\//i.test(ticket)) row.ticket_url = ticket;
         const price = text(obj.price) || text(obj.cover);
         if (price) row.price_text = price;
-        if (text(obj.region)) row.region = text(obj.region);
+        // The list's own grouping code ("PT", "FL") travels under `group`,
+        // never `region`: the JSON-API reader reads `region` as the address
+        // region (schema.org addressRegion), and gathrparty.com's codes shipped
+        // as the address "PT" on 83 of its rows (recheck 2026-10-17). The
+        // spelled-out label (group_label) is what names the city.
+        if (text(obj.region)) row.group = text(obj.region);
         // A weekday list is a weekly repeat; with an ordinal it is monthly.
         const weekdays = Array.isArray(obj.recurringDays) ? obj.recurringDays.filter(day => Number.isInteger(day) && day >= 0 && day <= 6) : [];
         if (weekdays.length > 0) {
@@ -18467,6 +19670,33 @@ class SharedCore {
             else if (!text(obj.recurringType) || text(obj.recurringType).toLowerCase() === 'weekly') row.rrule = `FREQ=WEEKLY;BYDAY=${weekdays.map(day => codes[day]).join(',')}`;
         }
         return row;
+    }
+
+    // One "venue" string → { venue, address }. Three shapes a list types into
+    // its venue slot, told apart by where the street line sits:
+    //   "232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues" → address only;
+    //   "Boatslip Resort 161 Commercial St."           → venue + address;
+    //   "9 Carver St (Purgatory)"                      → address + venue.
+    // Anything the street-line pattern does not match is a venue name.
+    static splitVenueNameAndStreet(value, streetLine) {
+        const venue = String(value || '').trim();
+        if (!venue) return { venue: '', address: '' };
+        const match = streetLine.exec(venue);
+        if (!match) return { venue, address: '' };
+        const before = venue.slice(0, match.index).replace(/[\s,–—-]+$/, '').trim();
+        const after = venue.slice(match.index + match[0].length).trim();
+        const street = match[0].trim();
+        if (match.index === 0) {
+            // A trailing "(Name)" names the place; anything else after the
+            // street line (floor, cross streets, city) is part of the address.
+            const named = /^\(([^()]{2,60})\)\s*$/.exec(after);
+            if (named) return { venue: named[1].trim(), address: street };
+            return { venue: '', address: venue };
+        }
+        // A name before the street line: the name must read as words (a
+        // sentence-free label), or the whole string stays an address.
+        if (!/^[\p{L}\p{N}][\p{L}\p{N}'’&.\- ]{1,59}$/u.test(before)) return { venue: '', address: venue };
+        return { venue: before, address: after ? `${street}${/^[,;]/.test(after) ? '' : ' '}${after}`.trim() : street };
     }
 
     // One object → its rows. A repeat that keeps a different clock on
@@ -18529,7 +19759,7 @@ class SharedCore {
             for (const obj of objects) rows.push(...SharedCore.inlineEventObjectToFeedRows(obj, now, { anchorMs }));
             // A short code the rows carry (region:"PT") is spelled out
             // somewhere in the same bundle (PT:"Provincetown Bear Week").
-            const usedCodes = new Set(rows.map(row => row.region).filter(Boolean));
+            const usedCodes = new Set(rows.map(row => row.group).filter(Boolean));
             for (const code of usedCodes) {
                 if (labels[code] || !/^[A-Za-z0-9_-]{1,12}$/.test(code)) continue;
                 const label = new RegExp(`[{,]\\s*["']?${code}["']?\\s*:\\s*"([^"]{3,80})"`).exec(bundle);
@@ -18551,8 +19781,8 @@ class SharedCore {
         }
         if (rows.length < 3) return htmlData;
         for (const row of rows) {
-            if (row.region && labels[row.region]) row.region_label = labels[row.region];
-            else if (!row.region && defaultLabel) row.region_label = defaultLabel;
+            if (row.group && labels[row.group]) row.group_label = labels[row.group];
+            else if (!row.group && defaultLabel) row.group_label = defaultLabel;
         }
         await log(`SYSTEM: 🚪 SPA DOOR: ${pageUrl} ships its events inside its own bundle — ${rows.length} inline event object(s) read (${rows.filter(row => row.rrule).length} repeating)`);
         return {
@@ -20699,6 +21929,11 @@ class SharedCore {
             // the deck's approval (_ownerReviewApproved, stamped by
             // applyOwnerDecisions on the reviewed-run path) lets it write.
             (offeringToOwner || !SharedCore.isBigDriftWithheld(event)) &&
+            // An aggregator's copy that the site it points at does not list
+            // (reconcileAggregatorPointers, after the cross-parser fold):
+            // withheld from every automatic write; the deck shows it and
+            // its approval lets it through, like a big drift.
+            (offeringToOwner || !SharedCore.isAggregatorUnbackedWithheld(event)) &&
             // Fully-past spans are display-only: nothing left to attend, so
             // the write is withheld at analysis (buildAnalyzedCalendarEvent
             // stamps _pastSpanWithheld + the span-fully-past review flag)
@@ -20879,6 +22114,10 @@ class SharedCore {
                 return `WITHHELD (rejected by owner${reason ? ` — ${reason}` : ''})`;
             }
             return 'WITHHELD (awaiting owner review)';
+        }
+        if (SharedCore.isAggregatorUnbackedWithheld(event)) {
+            const reason = String(event._aggregatorUnbackedWithheld.reason || '').trim();
+            return `WITHHELD (aggregator's copy — ${reason || 'the site it points at does not list this night'}; decide on the deck)`;
         }
         if (SharedCore.isBigDriftWithheld(event)) {
             const reason = String(event._bigDriftWithheld.reason || '').trim();
@@ -22678,7 +23917,35 @@ class SharedCore {
 
         this.logCalendarStickinessSummary();
 
-        return analyzedEvents;
+        // ONE SAVED EVENT TAKES ONE PROPOSAL. Two analyzed records that both
+        // merge into the same saved event on the same local night are one
+        // event the fold left in two pieces (SPOOKY PLAYGROUND's page record
+        // and its listing card, BEARS PANAME's two hub rows — replay
+        // 2026-10-14): written as two merges, the second overwrites the
+        // first and the deck shows one night twice. The fuller proposal
+        // (more non-notes changes) stands; different nights of a saved
+        // series stay apart.
+        const proposalsByTarget = new Map();
+        const foldedAnalyzed = [];
+        const changeCount = (entry) => (Array.isArray(entry._changes) ? entry._changes.filter(field => field !== 'notes').length : 0);
+        for (const entry of analyzedEvents) {
+            const targetId = entry && entry._action === 'merge' && entry._existingEvent && entry._existingEvent.identifier
+                ? String(entry._existingEvent.identifier) : '';
+            const night = targetId ? this.normalizeEventDateLocal(entry.startDate, entry.timezone || this.getCityTimezone(entry.city) || null) : '';
+            const targetKey = targetId && night ? `${targetId}|${night}` : '';
+            const prior = targetKey ? proposalsByTarget.get(targetKey) : null;
+            if (!prior) {
+                if (targetKey) proposalsByTarget.set(targetKey, entry);
+                foldedAnalyzed.push(entry);
+                continue;
+            }
+            console.log(`🪞 ANALYSIS: "${entry.title || 'event'}" is a second proposal for the saved event "${prior.title || 'event'}" (${targetId}, ${night}) — one saved event takes one proposal; the fuller one stands`);
+            if (changeCount(entry) > changeCount(prior)) {
+                foldedAnalyzed[foldedAnalyzed.indexOf(prior)] = entry;
+                proposalsByTarget.set(targetKey, entry);
+            }
+        }
+        return foldedAnalyzed;
     }
 
     // SERIES-LEVEL FILLS NEVER DETACH A NIGHT.
@@ -22960,6 +24227,18 @@ class SharedCore {
         {
             // Create a new object with all properties to avoid readonly errors
             let analyzedEvent = { ...event };
+            // Parse-time withhold stamps travel as the analyzed record's OWN
+            // copy. The run file writes parserResults[].events before
+            // analyzedEvents through a circular-safe stringify that counts a
+            // second reference as a cycle, so a stamp object shared with the
+            // parsed record came out as "[Circular]" on the analyzed one
+            // (replay 2026-10-11: every aggregator-pointer card lost its
+            // facts). Cloned here, each copy is written in full.
+            for (const stampKey of ['_aggregatorUnbackedWithheld', '_imageReusedFrom', '_chimeraWithheld']) {
+                if (event[stampKey] && typeof event[stampKey] === 'object') {
+                    analyzedEvent[stampKey] = JSON.parse(JSON.stringify(event[stampKey]));
+                }
+            }
             
             // Add analysis to the new event object
             analyzedEvent._analysis = {
@@ -24357,8 +25636,26 @@ class SharedCore {
         }
         
         // Check for key-based merging first (exact or wildcard)
-        const keyMatch = this.findEventByKey(existingEventsData, event);
-        
+        let keyMatch = this.findEventByKey(existingEventsData, event);
+
+        // A key the SCRAPER wrote (`key:` in the notes, or the computed key)
+        // names a slot, not an event — the dedup pass already treats a key
+        // collision as a hint and lets a hard-fact contradiction veto it,
+        // and the calendar match now does the same. Eagle LA, run
+        // 20261011-154844: an earlier mis-merge had stored CALF B&B's key on
+        // the saved BLUF LA record, and every run since matched the real
+        // CALF record to BLUF by that key and proposed a rename — while the
+        // two records sat on two sibling event pages. A curated matchKey or a
+        // hand-written wildcard key is the owner's instruction and stays
+        // ungated.
+        if (keyMatch && keyMatch.via === 'key') {
+            const keyContradiction = this.getIdentityContradiction(event, keyMatch.event);
+            if (keyContradiction) {
+                console.log(`🛑 IDENTITY: "${event.title || 'event'}" would match "${keyMatch.event.title || keyMatch.event.name || 'event'}" by the stored key "${keyMatch.matchedKey}", but their ${keyContradiction} contradict — two events, not folded`);
+                keyMatch = null;
+            }
+        }
+
         if (keyMatch) {
             const existingEvent = keyMatch.event;
             const matchedKey = keyMatch.matchedKey || null;
@@ -24851,17 +26148,17 @@ class SharedCore {
             const eventKey = fields.key || null;
             const matchKey = fields.matchKey || null;
             if (targetKey && eventKey === targetKey) {
-                return { event, matchedKey: eventKey, matchType: 'exact' };
+                return { event, matchedKey: eventKey, matchType: 'exact', via: 'key' };
             }
             if (targetKey && matchKey === targetKey) {
-                return { event, matchedKey: matchKey, matchType: 'exact' };
+                return { event, matchedKey: matchKey, matchType: 'exact', via: 'matchKey' };
             }
         }
         
         // Second pass: exact match using computed key
         for (const { event, computedKey } of parsedEvents) {
             if (targetKey && computedKey && computedKey === targetKey) {
-                return { event, matchedKey: computedKey, matchType: 'exact' };
+                return { event, matchedKey: computedKey, matchType: 'exact', via: 'key' };
             }
         }
         
@@ -24996,7 +26293,7 @@ class SharedCore {
     }
 
     normalizeTicketUrlForIdentity(url) {
-        const text = String(url || '').trim().toLowerCase();
+        const text = String(this.resolveUrlAlias(url) || '').trim().toLowerCase();
         if (!text) return '';
         const withoutProtocol = text.replace(/^https?:\/\//, '').replace(/^www\./, '');
         const withoutHash = withoutProtocol.split('#')[0];
@@ -25060,6 +26357,10 @@ class SharedCore {
                 || event.calendarTimezone
                 || this.getCityTimezone(event.city)
                 || null,
+            // The record still carries wall-clock components labeled UTC
+            // (no timezone resolved at parse time): its local day is read
+            // straight off those components, never through another zone.
+            timezoneUnresolved: Boolean(event._timezoneUnresolved),
             ticketUrl: this.normalizeTicketUrlForIdentity(event.ticketUrl || fields.ticketUrl),
             names: [...new Set(names)],
             // The event's own shortName values, kept apart so the name rung
@@ -25089,8 +26390,17 @@ class SharedCore {
     areIdentityDatesOnSameLocalDay(shapeA, shapeB) {
         if (!shapeA.startDate || !shapeB.startDate) return false;
         const timezone = shapeA.timezone || shapeB.timezone || null;
-        const dayA = this.normalizeEventDateLocal(shapeA.startDate, timezone);
-        const dayB = this.normalizeEventDateLocal(shapeB.startDate, timezone);
+        // A wall-clock side (components labeled UTC, zone unresolved) names
+        // its own day; converting it through the other side's zone moved
+        // Bear it MTL's date-only "SPOOKY PLAYGROUND" card (2026-10-30T00:00
+        // wall clock) to Oct 29 in America/Toronto, so the midnight copy and
+        // the 22:00 page record never met, and both reached the calendar
+        // (run 20261012-214806).
+        const dayOf = (shape) => shape.timezoneUnresolved
+            ? this.normalizeEventDate(shape.startDate)
+            : this.normalizeEventDateLocal(shape.startDate, timezone);
+        const dayA = dayOf(shapeA);
+        const dayB = dayOf(shapeB);
         return Boolean(dayA) && dayA === dayB;
     }
 
@@ -25806,7 +27116,8 @@ class SharedCore {
         // Bear Calendar's BEEFMINCE x RVT vs the calendar's
         // dice.fm/event/yoepxa-…, same bar, same 10pm, run 20260913-154402).
         const ticketKey = (url) => {
-            const match = String(url || '').split('?')[0].match(/^https?:\/\/([^/]+)(\/.+)$/i);
+            // One page under two spellings (noteUrlAlias) is one path.
+            const match = String(this.resolveUrlAlias(url) || '').split('?')[0].match(/^https?:\/\/([^/]+)(\/.+)$/i);
             if (!match) return '';
             const shortToken = match[2].replace(/\/+$/, '').match(/^\/([A-Za-z0-9]{6,16})$/);
             if (shortToken && /\d/.test(shortToken[1]) && /[a-z]/i.test(shortToken[1])) return '';
@@ -25897,6 +27208,23 @@ class SharedCore {
         // both carry …/rsvp/2026/9/12/bear-tea). A record that carries a
         // neighbour's page is a chimera, withheld before it gets here.
         const sharedPage = Boolean(this.getSharedEventLinkSlug(eventA, eventB));
+        // …and two records on two DIFFERENT pages of one section of one
+        // site are two events (Eagle LA, run 20261011-154844: CALF B&B at
+        // /events/calf-bb-event/ reached the saved BLUF LA at
+        // /events/bluf/?occurrence=… through a stored key an earlier
+        // mis-merge had written, same night, same bar, and proposed a
+        // rename). Sibling pages — same host, same path root, another slug
+        // (isSiblingEventPage) — are as hard a fact as a shared one.
+        // …unless the two pages name ONE party: a venue site that mints a
+        // page per occurrence (Eagle LA's CUBSCOUT at /events/cub-scout-3/
+        // and /events/cubscout-51/) puts one event on two sibling slugs,
+        // and either slug spells the other record's title.
+        if (!sharedPage) {
+            const siblings = this.getSiblingEventPages(eventA, eventB, options);
+            if (siblings && !this.siblingPagesNameOneEvent(eventA, eventB, siblings)) {
+                return `event pages (${siblings.a} vs ${siblings.b})`;
+            }
+        }
         // Free-text bar names are never a hard fact here: a flyer word in
         // the venue slot ("NERD SWEAT" for Dungeons & Doms at the Dallas
         // Eagle, "Looking" for Looking at Massive — run 20260925-110542
@@ -25925,6 +27253,65 @@ class SharedCore {
 
     haveContradictingIdentityEvidence(eventA, eventB, options = {}) {
         return this.getIdentityContradiction(eventA, eventB, options) !== null;
+    }
+
+    // The event pages a record carries as ITS OWN: `url` and `website` (one
+    // field; the notes copies too, for a calendar record), each parsed by
+    // eventPageParts (host, path root, slug — a bare root or a one-segment
+    // path is no page). Not pages: a statically stamped website (parser
+    // branding), a listing named in the site's own words (/events/calendar,
+    // /whats-on/upcoming-events — LISTING_LINK_VOCABULARY), a date-shaped
+    // slug (a month view), the batch's hub pages (3+ records on one path),
+    // and anything an AGGREGATOR record links. ticketUrl is deliberately
+    // left out: a pass page names a festival, not a night.
+    getOwnEventPageLinks(event, options = {}) {
+        if (!event || typeof event !== 'object' || this.isAggregatorRecord(event)) return [];
+        const fields = typeof event.notes === 'string' && event.notes ? this.parseNotesIntoFields(event.notes) : {};
+        const staticFields = event._staticFields && typeof event._staticFields === 'object' ? event._staticFields : {};
+        const websiteIsBranding = Object.prototype.hasOwnProperty.call(staticFields, 'website');
+        const excludedHostPaths = options.excludedUrlIdentityHostPaths instanceof Set ? options.excludedUrlIdentityHostPaths : null;
+        const isListingSlug = (slug) => LISTING_LINK_VOCABULARY.some(term => slug === term || slug.endsWith(`-${term}`))
+            || /^\d{4}(?:-\d{1,2})?$/.test(slug) || /^\d{1,2}$/.test(slug);
+        const pages = [];
+        for (const candidate of [event.url, fields.url, websiteIsBranding ? '' : event.website, websiteIsBranding ? '' : fields.website]) {
+            const parts = SharedCore.eventPageParts(String(candidate || '').trim());
+            if (!parts || isListingSlug(parts.slug)) continue;
+            const hostPath = `${parts.host}/${parts.root}/${parts.slug}`;
+            if (excludedHostPaths && (excludedHostPaths.has(hostPath) || excludedHostPaths.has(`${hostPath}/`))) continue;
+            if (!pages.some(page => page.host === parts.host && page.root === parts.root && page.slug === parts.slug)) pages.push(parts);
+        }
+        return pages;
+    }
+
+    // Two sibling pages carry one event when the records' titles are
+    // similar, or when either page's slug spells the OTHER record's title
+    // (eventSlugNamesTitle: a title word of four letters or more).
+    siblingPagesNameOneEvent(eventA, eventB, siblings) {
+        const titleA = String((eventA && (eventA.title || eventA.name)) || '').trim();
+        const titleB = String((eventB && (eventB.title || eventB.name)) || '').trim();
+        if (titleA && titleB && this.areTitlesSimilar(titleA, titleB)) return true;
+        const slugOf = (hostPath) => String(hostPath || '').split('/').pop();
+        return this.eventSlugNamesTitle(slugOf(siblings.a), titleB) || this.eventSlugNamesTitle(slugOf(siblings.b), titleA);
+    }
+
+    // The first pair of sibling event pages the two records carry (same
+    // host, same path root, different slug), or null — including when any
+    // pair is the SAME page (then they share it and getIdentityContradiction
+    // has already settled identity the other way).
+    getSiblingEventPages(eventA, eventB, options = {}) {
+        const pagesA = this.getOwnEventPageLinks(eventA, options);
+        if (pagesA.length === 0) return null;
+        const pagesB = this.getOwnEventPageLinks(eventB, options);
+        if (pagesB.length === 0) return null;
+        let sibling = null;
+        for (const a of pagesA) {
+            for (const b of pagesB) {
+                if (a.host !== b.host || a.root !== b.root) continue;
+                if (a.slug === b.slug) return null;
+                if (!sibling) sibling = { a: `${a.host}/${a.root}/${a.slug}`, b: `${b.host}/${b.root}/${b.slug}` };
+            }
+        }
+        return sibling;
     }
 
     // The curated bar a record's place evidence names — its bar name
@@ -26029,7 +27416,70 @@ class SharedCore {
         return destinations;
     }
 
+    // ONE PAGE, TWO SPELLINGS. A document fetched at one address that
+    // declares another address on the same host as itself (rel=canonical,
+    // og:url) is one page. DICE serves every event as dice.fm/event/<24-hex>
+    // (what a listing's href carries) and dice.fm/event/<id>-<words>-tickets
+    // (what the page's canonical, og:url, JSON-LD url and x-default declare);
+    // the slug carries no trace of the hex id, so the destination veto read
+    // a listing stub beside its own page as "two events, not folded" —
+    // BEEFMINCE: SPOOKMINCE, TURKEYMINCE, New Year's Eve and New Year's Day
+    // each saved twice (run 20261012-214806). The parser reports what each
+    // page declares; this map fails closed: same registrable domain, a
+    // SIBLING leaf under the same parent directory, never an ancestor or
+    // another directory (a listing's canonical pasted onto every event page
+    // would otherwise fold the whole site into one event).
+    noteUrlAlias(fetchedUrl, declaredUrl) {
+        const fetched = this.parseIdentityDestinationRaw(fetchedUrl);
+        const declared = this.parseIdentityDestinationRaw(declaredUrl);
+        if (!fetched || !declared || fetched.key === declared.key) return false;
+        const domainFetched = this.getRegistrableDomainFromUrl(fetchedUrl);
+        if (!domainFetched || domainFetched !== this.getRegistrableDomainFromUrl(declaredUrl)) return false;
+        if (fetched.segments.length < 2 || fetched.segments.length !== declared.segments.length) return false;
+        if (!fetched.segments.slice(0, -1).every((segment, index) => segment === declared.segments[index])) return false;
+        if (!(this._urlAliases instanceof Map)) this._urlAliases = new Map();
+        if (this._urlAliases.get(fetched.key) === String(declaredUrl).trim()) return true;
+        this._urlAliases.set(fetched.key, String(declaredUrl).trim());
+        // The declaration also teaches how this directory names its pages:
+        // an opaque fetched leaf (no hyphen) declared as "<token>-<words>"
+        // says the token IS the id and the words are decoration. DICE's
+        // ids are six base-36 characters and often letters only ("xednya",
+        // "yoqorx"), which parseIdentityDestination could not tell from a
+        // word until the site itself showed the shape.
+        const fetchedLeaf = fetched.segments[fetched.segments.length - 1];
+        const declaredToken = declared.segments[declared.segments.length - 1].match(/^([a-z0-9]{5,16})-[a-z0-9]/i);
+        if (declaredToken && !fetchedLeaf.includes('-')) {
+            if (!(this._leadingIdShapes instanceof Map)) this._leadingIdShapes = new Map();
+            this._leadingIdShapes.set(`${declared.host}/${declared.segments.slice(0, -1).join('/')}`, declaredToken[1].length);
+        }
+        console.log(`🔗 ALIAS: ${fetchedUrl} is ${declaredUrl} — the page declares that address as its own`);
+        return true;
+    }
+
+    resolveUrlAlias(url) {
+        if (!(this._urlAliases instanceof Map) || this._urlAliases.size === 0) return url;
+        const raw = this.parseIdentityDestinationRaw(url);
+        if (!raw) return url;
+        const declared = this._urlAliases.get(raw.key);
+        return declared || url;
+    }
+
     parseIdentityDestination(value) {
+        return this.parseIdentityDestinationRaw(this.resolveUrlAlias(value));
+    }
+
+    // Do two records point at ONE destination on some host — the same page,
+    // or the same platform id under a rewritten slug? A hub above a leaf
+    // does not count here (that is lineage, not the same page).
+    destinationsAgree(eventA, eventB) {
+        const destinationsA = this.getIdentityDestinations(eventA, {});
+        if (destinationsA.length === 0) return false;
+        const destinationsB = this.getIdentityDestinations(eventB, {});
+        return destinationsA.some(a => destinationsB.some(b => a.host === b.host
+            && (a.key === b.key || (a.id && a.id === b.id))));
+    }
+
+    parseIdentityDestinationRaw(value) {
         const raw = typeof value === 'string' ? value.trim() : '';
         const match = raw.split('#')[0].split('?')[0].match(/^https?:\/\/([^/]+)(\/.*)?$/i);
         if (!match) return null;
@@ -26050,7 +27500,14 @@ class SharedCore {
         // token carries BOTH letters and digits, which is what separates an
         // id from a date ("2026-09-12-bear-tea") or a word ("treasure-trail").
         const leadingIdMatch = idMatch ? null : leaf.match(/^([a-z0-9]{5,16})-[a-z0-9]/i);
-        const leadingId = leadingIdMatch && /\d/.test(leadingIdMatch[1]) && /[a-z]/i.test(leadingIdMatch[1])
+        // …or a token of exactly the length this directory's own pages
+        // declared for their ids (noteUrlAlias), letters-only or not.
+        const learnedIdLength = leadingIdMatch && this._leadingIdShapes instanceof Map
+            ? this._leadingIdShapes.get(`${host}/${segments.slice(0, -1).join('/').toLowerCase()}`)
+            : undefined;
+        const leadingId = leadingIdMatch
+            && ((/\d/.test(leadingIdMatch[1]) && /[a-z]/i.test(leadingIdMatch[1]))
+                || (Number.isFinite(learnedIdLength) && leadingIdMatch[1].length === learnedIdLength))
             ? leadingIdMatch[1].toLowerCase()
             : '';
         return {
@@ -27930,7 +29387,10 @@ SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
     pinSource: Object.freeze({ 'curated': 4, 'curated-geocoded': 3, 'geocoded-exact': 3, 'geocoded-approx': 2, 'page': 1 }),
     addressSource: Object.freeze({ 'curated': 3, 'geo-poi': 2, 'page': 2, 'venue-site': 2, 'inferred': 1 }),
     barSource: Object.freeze({ 'curated': 3, 'venue-site': 2, 'venue-site-identity': 2, 'page-adjacent': 2, 'geo-poi': 2, 'uncorroborated': 1 }),
-    imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'page': 1 }),
+    // One publisher-supplied class (see isPublisherSuppliedImageSource): the
+    // parser spells structured-data artwork 'jsonld', 'json-ld' or
+    // 'json-api' depending on the route it came by.
+    imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'json-ld': 2, 'json-api': 2, 'page': 1 }),
     bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'keyword': 1, 'ai': 1, 'config': 1 })
 });
 
@@ -28254,12 +29714,24 @@ class FetchPoliteness {
         // The core registers its configured-root test at run start
         // (setConfiguredRootTest) — the adapters need not know the core.
         this.isConfiguredRoot = typeof options.isConfiguredRoot === 'function' ? options.isConfiguredRoot : (() => false);
+        this.isConfiguredSite = typeof options.isConfiguredSite === 'function' ? options.isConfiguredSite : null;
         this.openingRoot = '';
     }
 
     // The crawl calls this around a configured root's door chain (fetch,
     // gate, SPA door, machine door): requests inside it are first-party.
     setConfiguredRootTest(test) { if (typeof test === 'function') this.isConfiguredRoot = test; }
+    // A SITE WE READ: any page on the registrable domain of a configured
+    // URL. The real browser and the phone's inbox are for those sites
+    // only — an aggregator's outbound sponsor link (jlab.com,
+    // thezeroproof.com, denloungewear.com on 2026-10-09) answered 403 to
+    // a plain request and took a Chrome launch each, five of the run's
+    // twenty. Without a test (no run started), every request passes.
+    setConfiguredSiteTest(test) { if (typeof test === 'function') this.isConfiguredSite = test; }
+    isConfiguredSiteRequest(url) {
+        if (typeof this.isConfiguredSite !== 'function') return true;
+        try { return Boolean(this.isConfiguredSite(url)); } catch (_) { return false; }
+    }
     beginOpeningRoot(url) { this.openingRoot = String(url || ''); }
     endOpeningRoot() { this.openingRoot = ''; }
 

@@ -246,7 +246,15 @@ function buildQualityTrendData(records) {
 // independent: a row wears the worse one as its verdict and the other as a
 // flag chip. 'vanished' is the one-run blip (seen last run, gone now) and
 // ranks below empty: it is a detail, not trouble.
-const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok'];
+// 'drift' = the host still yields rows but a signal it used to give (its
+// structured door, its pages) collapsed to nothing (SharedCore.assessHostDrift):
+// the read is thinner than its count says.
+// 'sparse' = the host delivers events but not usable ones: a core field
+// (time, place, url) on under half of the kept events, over the window and
+// on the latest line (calendar.google.com kept 87 events with a place on
+// 10% of them for weeks under an 'ok' verdict). Ranks under shrunk (volume
+// first) and above drift. An aggregator wears it as a flag chip, like lost.
+const SOURCE_VERDICT_ORDER = ['dead', 'stopped', 'shrunk', 'sparse', 'drift', 'lost', 'empty', 'vanished', 'quiet', 'companion', 'ok'];
 // Slow-decline clause for 'shrunk': the latest SLOW_DECLINE_RUNS ok runs all
 // below SLOW_DECLINE_RATIO × the peak of the last SLOW_DECLINE_WINDOW ok runs
 // (precinctdtla.com 160 → 98 for three runs never crossed the ½-median line).
@@ -255,6 +263,23 @@ const SLOW_DECLINE_RUNS = 3;
 const SLOW_DECLINE_WINDOW = 14;
 const SLOW_DECLINE_MIN_PEAK = 10;
 const SOURCE_UNTROUBLED_VERDICTS = ['ok', 'companion'];
+// 'sparse': a core field under SPARSE_SHARE % of kept events, judged over
+// the ok lines of the baseline window (weighted by kept count) AND on the
+// latest line, so a fixed parser clears it the next run. The latest line
+// needs SPARSE_MIN_KEPT kept events: a host keeping one or two is judged by
+// nothing.
+const SPARSE_FIELDS = ['time', 'place', 'url'];
+const SPARSE_SHARE = 50;
+const SPARSE_MIN_KEPT = 5;
+// 'flagged' chip: one sanity flag code on ≥ FLAGGED_SHARE % of kept events in
+// ≥ FLAGGED_RUNS of the last FLAGGED_WINDOW ok runs — a standing habit of the
+// read (eagle-ny.com: cover-self-contradictory on 14 of 21 events, run after
+// run). A chip, not a verdict: the events are kept and usable, and a verdict
+// would push a steady host above the ok rows for a defect the owner cannot
+// clear from the dashboard.
+const FLAGGED_SHARE = 50;
+const FLAGGED_RUNS = 3;
+const FLAGGED_WINDOW = 7;
 
 function parseSourceLedger(text) {
     const records = [];
@@ -392,6 +417,68 @@ function summarizeOwnerDecisions(store, rows) {
     return out;
 }
 
+function qualityLinesOf(lines) {
+    return (Array.isArray(lines) ? lines : []).filter((line) => line && line.status === 'ok'
+        && line.quality && typeof line.quality === 'object' && (Number(line.quality.n) || 0) > 0);
+}
+
+// The worst sparse core field over the window, or null. `lines` = the
+// baseline window's ok lines then the latest line (which must be ok).
+function assessSparseFields(lines) {
+    const all = Array.isArray(lines) ? lines : [];
+    const latestLine = all[all.length - 1];
+    if (!latestLine || latestLine.status !== 'ok') return null;
+    const okLines = qualityLinesOf(all);
+    if (!okLines.length || okLines[okLines.length - 1] !== latestLine) return null;
+    const latestN = Number(latestLine.quality.n) || 0;
+    if (latestN < SPARSE_MIN_KEPT) return null;
+    let worst = null;
+    SPARSE_FIELDS.forEach((field) => {
+        const latestPct = Number(latestLine.quality[field]);
+        if (!Number.isFinite(latestPct) || latestPct >= SPARSE_SHARE) return;
+        let kept = 0;
+        let withField = 0;
+        okLines.forEach((line) => {
+            const n = Number(line.quality.n) || 0;
+            const pct = Number(line.quality[field]);
+            if (!Number.isFinite(pct)) return;
+            kept += n;
+            withField += Math.round((n * pct) / 100);
+        });
+        const pct = kept > 0 ? Math.round((100 * withField) / kept) : latestPct;
+        if (pct >= SPARSE_SHARE) return;
+        if (!worst || pct < worst.pct) worst = { field, pct, latest: latestPct, kept, runs: okLines.length };
+    });
+    return worst;
+}
+
+// The flag code that fires on ≥ half the kept events in ≥ FLAGGED_RUNS of the
+// last FLAGGED_WINDOW ok runs: { code, share (median of the firing runs),
+// runs, window }, or null. Ties: more runs, then the higher share.
+function assessFlaggedCode(lines) {
+    const okLines = qualityLinesOf(lines).slice(-FLAGGED_WINDOW);
+    const sharesByCode = new Map();
+    okLines.forEach((line) => {
+        const n = Number(line.quality.n) || 0;
+        const flags = line.quality.flags && typeof line.quality.flags === 'object' ? line.quality.flags : {};
+        Object.keys(flags).forEach((code) => {
+            const share = Math.min(100, Math.round((100 * (Number(flags[code]) || 0)) / n));
+            if (share < FLAGGED_SHARE) return;
+            if (!sharesByCode.has(code)) sharesByCode.set(code, []);
+            sharesByCode.get(code).push(share);
+        });
+    });
+    let best = null;
+    sharesByCode.forEach((shares, code) => {
+        if (shares.length < FLAGGED_RUNS) return;
+        const share = medianOf(shares);
+        if (!best || shares.length > best.runs || (shares.length === best.runs && share > best.share)) {
+            best = { code, share, runs: shares.length, window: okLines.length };
+        }
+    });
+    return best;
+}
+
 function assessSourceHealth(records, options = {}) {
     const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
     const staleAfterDays = Number.isFinite(options.staleAfterDays) ? options.staleAfterDays : 3;
@@ -427,8 +514,12 @@ function assessSourceHealth(records, options = {}) {
             const stillAt = fromAudit && fromAudit.checked_at ? fromAudit.checked_at : (entry.still_at || '');
             return Object.assign({}, entry, still ? { still, still_at: stillAt } : {});
         });
-        const openLost = lost.filter((entry) => entry.still !== 'site-removed');
-        const lostRemoved = lost.length - openLost.length;
+        // Not our miss: the site removed it, or the run holds it under the
+        // bear check's verdict or another title ("set-aside" — the audit
+        // found its twin in the run). Neither counts toward the lost numbers.
+        const openLost = lost.filter((entry) => entry.still !== 'site-removed' && entry.still !== 'set-aside');
+        const lostRemoved = lost.filter((entry) => entry.still === 'site-removed').length;
+        const lostSetAside = lost.filter((entry) => entry.still === 'set-aside').length;
         const lostStillListed = lost.filter((entry) => entry.still === 'still-listed').length;
         const lostDays = openLost.reduce((sum, entry) => sum + entry.days.length, 0);
         const lostBear = openLost.filter((entry) => entry.bear === true).reduce((sum, entry) => sum + entry.days.length, 0);
@@ -444,6 +535,8 @@ function assessSourceHealth(records, options = {}) {
         const slowDecline = latest.status === 'ok' && recentOk.length === SLOW_DECLINE_RUNS && peak >= SLOW_DECLINE_MIN_PEAK
             && recentOk.every((line) => (Number(line.extracted) || 0) < peak * SLOW_DECLINE_RATIO);
         const underHalf = (line) => baseline !== null && baseline >= 4 && (Number(line.extracted) || 0) < baseline / 2;
+        const sparse = assessSparseFields([...earlier, latest]);
+        const flagged = assessFlaggedCode(lines);
         let verdict = 'ok';
         let since = null;
         if (latest.status === 'dead') {
@@ -452,6 +545,10 @@ function assessSourceHealth(records, options = {}) {
             verdict = 'stopped';
         } else if (underHalf(latest) || slowDecline) {
             verdict = 'shrunk';
+        } else if (sparse && !aggregator) {
+            verdict = 'sparse';
+        } else if (Array.isArray(latest.drift) && latest.drift.length > 0) {
+            verdict = 'drift';
         } else if (hasLoss && !aggregator) {
             verdict = 'lost';
         } else if (latestExtracted === 0 && latest.status === 'empty') {
@@ -471,11 +568,20 @@ function assessSourceHealth(records, options = {}) {
             }
         } else if (verdict === 'lost') {
             since = openLost.map((entry) => entry.since).filter(Boolean).sort()[0] || latest.run_id || null;
+        } else if (verdict === 'sparse') {
+            // Walk back over the ok lines whose field was already under the line.
+            for (let index = lines.length - 1; index >= 0; index -= 1) {
+                const line = lines[index];
+                const pct = line.quality && typeof line.quality === 'object' ? Number(line.quality[sparse.field]) : NaN;
+                if (line.status !== 'ok' || !Number.isFinite(pct) || pct >= SPARSE_SHARE) break;
+                since = line.run_id || line.finished_at || since;
+            }
         }
         // The other axis as a flag chip: a shrunk/dead host that also lost
         // expected events, or an aggregator whose losses are recorded only.
         const flags = [];
         if (hasLoss && verdict !== 'lost') flags.push('lost');
+        if (sparse && verdict !== 'sparse') flags.push('sparse');
         const parsers = Array.isArray(latest.parsers) ? latest.parsers : [];
         rows.push({
             host,
@@ -484,14 +590,17 @@ function assessSourceHealth(records, options = {}) {
             flags,
             since,
             baseline,
+            sparse,
+            flagged,
             latest,
             vanished,
             lost,
             lostDays,
             lostBear,
             lostRemoved,
+            lostSetAside,
             lostStillListed,
-            audit: audit ? { date: audit.date || '', run_id: audit.run_id || '', missing: Array.isArray(audit.missing) ? audit.missing : [], fake: Array.isArray(audit.fake) ? audit.fake : [], wrong: Array.isArray(audit.wrong) ? audit.wrong : [], still: Array.isArray(audit.still) ? audit.still : [], note: audit.note || '', ai: audit.ai || '', page: audit.page || null } : null,
+            audit: audit ? { date: audit.date || '', run_id: audit.run_id || '', missing: Array.isArray(audit.missing) ? audit.missing : [], fake: Array.isArray(audit.fake) ? audit.fake : [], wrong: Array.isArray(audit.wrong) ? audit.wrong : [], still: Array.isArray(audit.still) ? audit.still : [], note: audit.note || '', ai: audit.ai || '', reason: audit.reason || '', page: audit.page || null } : null,
             auditOpen: !!audit && ((Array.isArray(audit.missing) && audit.missing.length > 0) || (Array.isArray(audit.fake) && audit.fake.length > 0) || (Array.isArray(audit.wrong) && audit.wrong.length > 0) || lostStillListed > 0),
             suspected,
             listingGone,
@@ -591,6 +700,8 @@ const SOURCE_VERDICT_LABELS = {
     dead: 'Dead',
     stopped: 'Stopped',
     shrunk: 'Shrunk',
+    sparse: 'Sparse',
+    drift: 'Drift',
     lost: 'Lost',
     empty: 'Empty',
     vanished: 'Vanished',
@@ -697,6 +808,19 @@ function sortSourceRows(rows, sortState) {
     return list;
 }
 
+// "Sparse · place 10%": the verdict chip names the field it is about.
+function formatSparseLabel(row) {
+    const sparse = row && row.sparse ? row.sparse : null;
+    if (!sparse) return sourceVerdictLabel('sparse');
+    return `${sourceVerdictLabel('sparse')} · ${sparse.field} ${sparse.latest}%`;
+}
+
+// "cover-self-contradictory on 67%": the standing flag of a host, or ''.
+function formatFlaggedLabel(row) {
+    const flagged = row && row.flagged ? row.flagged : null;
+    return flagged ? `${flagged.code} on ${flagged.share}%` : '';
+}
+
 function buildVerdictChipHtml(verdict, options = {}) {
     const label = options.label || sourceVerdictLabel(verdict);
     const safeVerdict = String(verdict || 'unknown').replace(/[^a-z]/g, '');
@@ -762,11 +886,12 @@ function formatLostNote(row) {
     const parts = [];
     if (row.listingGone) parts.push('listing gone');
     if (row.lostDays > 0) {
-        const first = (Array.isArray(row.lost) ? row.lost : []).find((entry) => entry.still !== 'site-removed') || null;
+        const first = (Array.isArray(row.lost) ? row.lost : []).find((entry) => entry.still !== 'site-removed' && entry.still !== 'set-aside') || null;
         const headline = `${row.lostDays} gone${row.lostBear ? ` (${row.lostBear} bear)` : ''}${row.lostStillListed ? ` · ${row.lostStillListed} still listed — our miss` : ''}`;
         parts.push(first ? `${headline} · ${String(first.title || '').slice(0, 40)}${first.days.length > 1 ? ` ×${first.days.length}` : ''}` : headline);
     }
     if (row.lostRemoved > 0) parts.push(`${row.lostRemoved} series removed by the site`);
+    if (row.lostSetAside > 0) parts.push(`${row.lostSetAside} held by the run (bear check or renamed)`);
     return parts.join(' · ');
 }
 
@@ -800,7 +925,7 @@ function buildSourcesTableHtml(health, options = {}) {
             ? [lostLabel, sinceLabel].filter(Boolean).join(' · ')
             : [sinceLabel || vanishedLabel || companionLabel, lostLabel].filter(Boolean).join(' · ');
         const flagChips = (Array.isArray(row.flags) ? row.flags : [])
-            .map((flag) => buildVerdictChipHtml(flag, { label: flag === 'lost' && row.aggregator ? 'Lost · aggregator' : sourceVerdictLabel(flag) }))
+            .map((flag) => buildVerdictChipHtml(flag, { label: flag === 'lost' && row.aggregator ? 'Lost · aggregator' : (flag === 'sparse' ? formatSparseLabel(row) : sourceVerdictLabel(flag)) }))
             .join('');
         const series = Array.isArray(row.series) ? row.series.map((line) => line.extracted) : [];
         const rowAttrs = [
@@ -823,7 +948,7 @@ function buildSourcesTableHtml(health, options = {}) {
               ${parserLabel ? `<div class="cell-subtitle">${escapeHtml(parserLabel)}</div>` : ''}
             </td>
             <td class="verdict-cell">
-              ${buildVerdictChipHtml(row.verdict)}${flagChips}
+              ${buildVerdictChipHtml(row.verdict, row.verdict === 'sparse' ? { label: formatSparseLabel(row) } : {})}${flagChips}
               ${verdictNote ? `<div class="cell-subtitle">${escapeHtml(verdictNote)}</div>` : ''}
             </td>
             <td class="num trio-cell"><div class="cell-title">${extracted} · ${bear} · ${upcoming}</div></td>
@@ -1016,6 +1141,7 @@ function buildLostListHtml(row) {
     if (row && row.suspected > 0) notes.push(`${row.suspected} expected event${row.suspected === 1 ? '' : 's'} missing for the first time — waiting for the next ok run before calling ${row.suspected === 1 ? 'it' : 'them'} lost.`);
     if (row && row.aggregator && lost.length) notes.push('Aggregator: losses are recorded for the record and never raise the verdict.');
     if (row && row.lostRemoved > 0) notes.push(`${row.lostRemoved} series the site itself no longer lists (the audit looked): not our miss, kept here for the record.`);
+    if (row && row.lostSetAside > 0) notes.push(`${row.lostSetAside} series the run still holds — set aside by the bear check, or under a new title: not an extraction miss.`);
     if (row && row.lostStillListed > 0) notes.push(`${row.lostStillListed} series the site STILL lists: our extraction misses them.`);
     const noteHtml = notes.length ? `<div class="muted lost-notes">${notes.map((note) => escapeHtml(note)).join('<br>')}</div>` : '';
     if (!lost.length) {
@@ -1025,7 +1151,7 @@ function buildLostListHtml(row) {
         const days = Array.isArray(item.days) ? item.days : [];
         const shownDays = days.slice(0, 4).join(', ') + (days.length > 4 ? ` +${days.length - 4}` : '');
         return `
-          <tr class="${item.still === 'site-removed' ? 'lost-removed' : ''}">
+          <tr class="${item.still === 'site-removed' || item.still === 'set-aside' ? 'lost-removed' : ''}">
             <td><div class="cell-title">${escapeHtml(item.title || 'Untitled')}${days.length > 1 ? ` <span class="cell-subtitle">×${days.length}</span>` : ''}</div></td>
             <td><div class="cell-subtitle">${escapeHtml(shownDays || '—')}</div></td>
             <td class="status-cell">${item.bear ? '🐻' : ''}</td>
@@ -1061,11 +1187,14 @@ function buildQualityChipsHtml(row, options = {}) {
     const auditChip = row && row.auditOpen
         ? `<span class="quality-chip quality-audit" title="${escapeHtml(formatAuditSummary(row.audit, row))}">audit ${(row.audit.missing || []).length + (row.audit.fake || []).length + (row.audit.wrong || []).length + (Number(row.lostStillListed) || 0)}</span>`
         : '';
-    if (!quality || !quality.available) return auditChip ? `<div class="quality-chips">${auditChip}</div>` : '<span class="cell-subtitle">—</span>';
-    if (!badges.length && !auditChip) return '<span class="quality-chip quality-ok">clean</span>';
+    const flaggedChip = row && row.flagged
+        ? `<span class="quality-chip quality-flagged" title="${escapeHtml(`${row.flagged.code} on ≥${FLAGGED_SHARE}% of kept events in ${row.flagged.runs} of the last ${row.flagged.window} runs`)}">${escapeHtml(formatFlaggedLabel(row))}</span>`
+        : '';
+    if (!quality || !quality.available) return auditChip || flaggedChip ? `<div class="quality-chips">${auditChip}${flaggedChip}</div>` : '<span class="cell-subtitle">—</span>';
+    if (!badges.length && !auditChip && !flaggedChip) return '<span class="quality-chip quality-ok">clean</span>';
     const shown = badges.slice(0, limit).map((badge) => `<span class="quality-chip" title="${escapeHtml(badge.detail || '')}">${escapeHtml(badge.chip || badge.label)}</span>`).join('');
     const more = badges.length > limit ? `<span class="quality-chip quality-more">+${badges.length - limit}</span>` : '';
-    return `<div class="quality-chips">${auditChip}${shown}${more}</div>`;
+    return `<div class="quality-chips">${auditChip}${flaggedChip}${shown}${more}</div>`;
 }
 
 // Quality tiles for the host page: every signal with its value, the ones
@@ -1084,8 +1213,14 @@ function buildHostQualityHtml(row) {
     const summary = quality.offCount
         ? `${quality.offCount} signal${quality.offCount === 1 ? '' : 's'} over a threshold: ${quality.badges.map((badge) => badge.chip || badge.label).join(', ')}`
         : 'Every signal inside its threshold.';
+    const standing = row.flagged
+        ? `<div class="quality-summary"><span class="quality-chip quality-flagged">${escapeHtml(formatFlaggedLabel(row))}</span> <span class="muted">standing flag: on ≥${FLAGGED_SHARE}% of kept events in ${row.flagged.runs} of the last ${row.flagged.window} ok runs</span></div>`
+        : '';
+    const thin = row.sparse
+        ? `<div class="quality-summary"><span class="verdict-chip verdict-sparse">${escapeHtml(formatSparseLabel(row))}</span> <span class="muted">${escapeHtml(`${row.sparse.field} on ${row.sparse.pct}% of ${row.sparse.kept} kept events over ${row.sparse.runs} ok runs (under ${SPARSE_SHARE}% on the latest too)`)}</span></div>`
+        : '';
     return `
-        <div class="muted quality-summary">${escapeHtml(summary)}</div>
+        <div class="muted quality-summary">${escapeHtml(summary)}</div>${thin}${standing}
         <div class="metrics-grid quality-grid">${tiles}
         </div>`;
 }
@@ -1094,6 +1229,7 @@ function buildHostQualityHtml(row) {
 function formatStillHtml(still) {
     if (still === 'still-listed') return '<span class="still-chip still-listed">still listed — our miss</span>';
     if (still === 'site-removed') return '<span class="still-chip still-removed">site removed</span>';
+    if (still === 'set-aside') return '<span class="still-chip still-removed">held by the run</span>';
     if (still === 'unknown') return '<span class="still-chip still-unknown">unknown</span>';
     return '<span class="cell-subtitle">not checked</span>';
 }
@@ -1119,7 +1255,10 @@ function buildHostAuditHtml(row) {
     const fake = list(Array.isArray(audit.fake) ? audit.fake : [], (item) => `<li><b>${escapeHtml(item.title)}</b>${item.reason ? ` <span class="cell-subtitle">— ${escapeHtml(item.reason)}</span>` : ''}</li>`);
     const wrong = list(Array.isArray(audit.wrong) ? audit.wrong : [], (item) => `<li><b>${escapeHtml(item.title)}</b>${item.issue ? ` <span class="cell-subtitle">— ${escapeHtml(item.issue)}</span>` : ''}</li>`);
     const still = list(Array.isArray(audit.still) ? audit.still : [], (item) => `<li>${formatStillHtml(item.verdict)} <b>${escapeHtml(item.title)}</b>${item.line && item.verdict === 'still-listed' ? ` <span class="cell-subtitle">“${escapeHtml(String(item.line).slice(0, 80))}”</span>` : ''}</li>`);
-    const aiNote = audit.ai === 'ok' ? '' : (audit.ai === 'no-page' ? 'The listing page could not be fetched; nothing to compare.' : (audit.ai === 'failed' ? 'The model gave no usable answer; the still-on-site checks above did not need it.' : 'Only the lost series were checked (loss confirmed outside the rotation).'));
+    const aiNote = audit.ai === 'ok' ? '' : (audit.ai === 'no-page'
+        ? (audit.reason === 'door-is-feed' ? 'The parser reads a feed (JSON or ICS), not a page: the lost series were looked for in the feed, the model was not asked.'
+            : (audit.reason === 'page-names-no-events' ? 'The pages\u2019 readable text names none of the extracted events (a JS-rendered calendar or a door found from the page): the model was not asked about text the events are not in.' : 'The listing page could not be fetched; nothing to compare.'))
+        : (audit.ai === 'failed' ? 'The model gave no usable answer; the still-on-site checks above did not need it.' : 'Only the lost series were checked (loss confirmed outside the rotation).'));
     return `
         <div class="muted audit-meta">Audit ${escapeHtml(audit.date || '—')}${audit.run_id ? ` · run ${escapeHtml(formatSourceRun(audit.run_id))}` : ''}${audit.page && audit.page.url ? ` · <a href="${escapeHtml(audit.page.url)}" target="_blank" rel="noopener">the page</a>${audit.page.fetchedAt ? ` fetched ${escapeHtml(String(audit.page.fetchedAt).slice(0, 10))}` : ''}` : ''}</div>
         <div class="audit-grid">
@@ -1160,6 +1299,7 @@ function buildSourceWidgetSummary(health, options = {}) {
         else if (row.since) detail = `${sourceVerdictLabel(row.verdict).toLowerCase()} · ${formatSourceRun(row.since)}`;
         else if (row.verdict === 'companion') detail = 'companion';
         else detail = sourceVerdictLabel(row.verdict).toLowerCase();
+        if (row.verdict === 'sparse' && row.sparse) detail = `${row.sparse.field} ${row.sparse.latest}%${row.since ? ` · ${formatSourceRun(row.since)}` : ''}`;
         return {
             host: row.host,
             parsers: Array.isArray(row.parsers) ? row.parsers : [],
@@ -1202,6 +1342,192 @@ function buildSourceWidgetSummary(health, options = {}) {
         lostItems,
         worst: worstLost ? describe(worstLost) : null
     };
+}
+
+// ============================================================================
+// YIELD — bear kept / extracted per host, with field completeness
+// ============================================================================
+// The same numbers the per-host report reads off the ledger by hand: over
+// the last N runs of the ledger, what each host extracted, what it kept as
+// bear (the yield), and on what share of the kept events each field was
+// present. Computed from the raw records (not the health rows) so a host
+// with no line in a run shows the gap. Pure; the display and the Mac server
+// both render it through buildSourceYieldTableHtml.
+const YIELD_FIELDS = [['time', 't', 'time'], ['place', 'p', 'place'], ['coords', 'c', 'coordinates'], ['url', 'u', 'link'], ['image', 'i', 'image'], ['desc', 'd', 'description']];
+const YIELD_SORT_KEYS = ['host', 'extracted', 'bear', 'yield', 'lowest'];
+const YIELD_DEFAULT_SORT = { key: 'yield', direction: 'asc' };
+const YIELD_RUNS = 7;
+
+function buildSourceYieldRows(records, options = {}) {
+    const runLimit = Number.isFinite(options.runs) && options.runs > 0 ? Math.floor(options.runs) : YIELD_RUNS;
+    const all = (Array.isArray(records) ? records : []).filter((record) => record && record.host && record.run_id);
+    const runIds = [...new Set(all.map((record) => String(record.run_id)))].sort().slice(-runLimit);
+    const runSet = new Set(runIds);
+    const byHost = new Map();
+    all.forEach((record) => {
+        if (!runSet.has(String(record.run_id))) return;
+        if (!byHost.has(record.host)) byHost.set(record.host, new Map());
+        byHost.get(record.host).set(String(record.run_id), record);
+    });
+    const rows = [];
+    byHost.forEach((byRun, host) => {
+        const lines = runIds.map((runId) => byRun.get(runId) || null);
+        const present = lines.filter(Boolean);
+        const latest = present[present.length - 1];
+        const okLines = present.filter((line) => line.status === 'ok');
+        const series = lines.map((line, index) => ({
+            run_id: runIds[index],
+            extracted: line ? Number(line.extracted) || 0 : null,
+            bear: line ? Number(line.bear) || 0 : null,
+            status: line ? (line.status || 'ok') : 'missing'
+        }));
+        const sumExtracted = okLines.reduce((sum, line) => sum + (Number(line.extracted) || 0), 0);
+        const sumBear = okLines.reduce((sum, line) => sum + (Number(line.bear) || 0), 0);
+        const yieldPct = sumExtracted > 0 ? Math.round((100 * sumBear) / sumExtracted) : null;
+        const qualityLines = qualityLinesOf(okLines);
+        const kept = qualityLines.reduce((sum, line) => sum + (Number(line.quality.n) || 0), 0);
+        const fields = {};
+        YIELD_FIELDS.forEach(([key]) => {
+            let withField = 0;
+            let judged = 0;
+            qualityLines.forEach((line) => {
+                const pct = Number(line.quality[key]);
+                if (!Number.isFinite(pct)) return;
+                const n = Number(line.quality.n) || 0;
+                judged += n;
+                withField += Math.round((n * pct) / 100);
+            });
+            fields[key] = judged > 0 ? Math.round((100 * withField) / judged) : null;
+        });
+        let lowest = null;
+        YIELD_FIELDS.forEach(([key]) => {
+            if (fields[key] === null) return;
+            if (!lowest || fields[key] < lowest.pct) lowest = { key, pct: fields[key] };
+        });
+        rows.push({
+            host,
+            parsers: Array.isArray(latest.parsers) ? latest.parsers : [],
+            aggregator: latest.aggregator === true,
+            url: latest.url || '',
+            runs: present.length,
+            okRuns: okLines.length,
+            latestStatus: latest.status || 'ok',
+            extracted: medianOf(okLines.map((line) => Number(line.extracted) || 0)),
+            bear: medianOf(okLines.map((line) => Number(line.bear) || 0)),
+            yield: yieldPct,
+            kept,
+            fields,
+            lowest,
+            flagged: assessFlaggedCode(present),
+            series
+        });
+    });
+    return { runs: runIds, rows: sortSourceYieldRows(rows, YIELD_DEFAULT_SORT) };
+}
+
+// Yield asc by default: the hosts that keep the least of what they extract
+// first (0% — thedallaseagle.com, hereticatlanta.com — ahead of a host with
+// a weak field); then the lowest field (nothing kept last), then the host.
+function sortSourceYieldRows(rows, sortState) {
+    const list = Array.isArray(rows) ? rows.slice() : [];
+    const key = sortState && YIELD_SORT_KEYS.includes(sortState.key) ? sortState.key : YIELD_DEFAULT_SORT.key;
+    const direction = sortState && sortState.direction === 'desc' ? -1 : 1;
+    const num = (value, missing) => (Number.isFinite(Number(value)) && value !== null ? Number(value) : missing);
+    const lowestOf = (row) => (row.lowest ? row.lowest.pct : 101);
+    const baseOrder = (a, b) => num(a.yield, 101) - num(b.yield, 101) || lowestOf(a) - lowestOf(b) || String(a.host).localeCompare(String(b.host));
+    list.sort((a, b) => {
+        let diff = 0;
+        if (key === 'host') diff = String(a.host).localeCompare(String(b.host));
+        else if (key === 'extracted') diff = num(a.extracted, -1) - num(b.extracted, -1);
+        else if (key === 'bear') diff = num(a.bear, -1) - num(b.bear, -1);
+        else if (key === 'yield') diff = num(a.yield, 101) - num(b.yield, 101);
+        else if (key === 'lowest') diff = lowestOf(a) - lowestOf(b);
+        return diff !== 0 ? diff * direction : baseOrder(a, b);
+    });
+    return list;
+}
+
+// Six narrow bars, one per field, the share of kept events that carry it;
+// a bar under 50% is marked low. The letter under each bar is its key.
+function buildFieldBarsHtml(fields) {
+    const values = fields && typeof fields === 'object' ? fields : {};
+    return `<span class="field-bars">${YIELD_FIELDS.map(([key, letter, label]) => {
+        const pct = Number.isFinite(Number(values[key])) && values[key] !== null ? Number(values[key]) : null;
+        const title = pct === null ? `${label}: not judged` : `${label} ${pct}%`;
+        const low = pct !== null && pct < 50 ? ' low' : '';
+        return `<span class="field-bar${low}${pct === null ? ' none' : ''}" title="${escapeHtml(title)}" data-field="${key}" data-pct="${pct === null ? '' : pct}"><span class="field-bar-fill" style="height:${pct === null ? 0 : Math.max(2, pct)}%"></span><span class="field-bar-key">${letter}</span></span>`;
+    }).join('')}</span>`;
+}
+
+function buildYieldSortHeader(label, key, sortState, defaultDirection, extraClass = '') {
+    const state = sortState && YIELD_SORT_KEYS.includes(sortState.key) ? sortState : YIELD_DEFAULT_SORT;
+    const isActive = state.key === key;
+    const direction = isActive ? (state.direction === 'desc' ? 'desc' : 'asc') : defaultDirection;
+    const nextDirection = isActive ? (direction === 'asc' ? 'desc' : 'asc') : defaultDirection;
+    const arrow = isActive ? (direction === 'asc' ? '▲' : '▼') : '';
+    return `
+                <th class="${['sortable', extraClass].filter(Boolean).join(' ')}">
+                  <button class="sort-button${isActive ? ' active' : ''}" type="button" data-sort-view="yield" data-sort-key="${key}" data-sort-dir="${nextDirection}" data-sort-default-dir="${defaultDirection}" data-sort-label="${escapeHtml(label)}">
+                    <span class="sort-label">${escapeHtml(label)}</span>
+                    <span class="sort-arrow">${arrow}</span>
+                  </button>
+                </th>`;
+}
+
+// One table: site · bear/extracted (medians, yield %) · 7-run bear sparkline ·
+// field bars · lowest field. options.sortState / hostUrl / faviconUrl as the
+// Sources table takes them.
+function buildSourceYieldTableHtml(yieldData, options = {}) {
+    const rows = sortSourceYieldRows(yieldData && yieldData.rows, options.sortState);
+    if (!rows.length) return `<div class="muted">${escapeHtml(SOURCE_LEDGER_EMPTY_MESSAGE)}</div>`;
+    const hostUrl = typeof options.hostUrl === 'function' ? options.hostUrl : () => '#';
+    const faviconUrl = typeof options.faviconUrl === 'function' ? options.faviconUrl : () => null;
+    const runCount = Array.isArray(yieldData.runs) ? yieldData.runs.length : 0;
+    const body = rows.map((row) => {
+        const parserLabel = parserLabelFor(row);
+        const bearSeries = row.series.map((point) => (point.bear === null ? 0 : point.bear));
+        const sparkTitle = row.series.map((point) => `${formatSourceRun(point.run_id)}: ${point.bear === null ? 'no line' : `${point.bear} of ${point.extracted}`}`).join(' · ');
+        const yieldLabel = row.yield === null ? '—' : `${row.yield}%`;
+        const lowestLabel = row.lowest ? `${row.lowest.key} ${row.lowest.pct}%` : (row.kept ? '—' : 'nothing kept');
+        const flaggedChip = row.flagged ? `<span class="quality-chip quality-flagged" title="${escapeHtml(`${row.flagged.code} on ≥50% of kept events in ${row.flagged.runs} of the last ${row.flagged.window} runs`)}">${escapeHtml(`${row.flagged.code} on ${row.flagged.share}%`)}</span>` : '';
+        const attrs = [
+            `data-yield-host="${escapeHtml(row.host)}"`,
+            `data-yield-extracted="${row.extracted === null ? '' : row.extracted}"`,
+            `data-yield-bear="${row.bear === null ? '' : row.bear}"`,
+            `data-yield-yield="${row.yield === null ? '' : row.yield}"`,
+            `data-yield-lowest="${row.lowest ? row.lowest.pct : ''}"`
+        ].join(' ');
+        return `
+          <tr data-row="yield" ${attrs}>
+            <td>
+              <div class="cell-title source-site">
+                ${buildFaviconHtml(faviconUrl(row))}
+                <a class="row-link" href="${escapeHtml(hostUrl(row))}" data-nav-view="host" data-nav-key="${escapeHtml(row.host)}">${escapeHtml(row.host)}</a>
+              </div>
+              ${parserLabel || row.aggregator ? `<div class="cell-subtitle">${escapeHtml([parserLabel, row.aggregator ? 'aggregator' : ''].filter(Boolean).join(' · '))}</div>` : ''}
+            </td>
+            <td class="num yield-cell"><div class="cell-title">${row.bear === null ? '—' : row.bear} / ${row.extracted === null ? '—' : row.extracted}</div><div class="cell-subtitle">${escapeHtml(yieldLabel)}${row.okRuns < runCount ? ` · ${row.okRuns}/${runCount} ok` : ''}</div></td>
+            <td class="trend-cell">${buildSparklineSvg(bearSeries, { title: sparkTitle })}</td>
+            <td class="fields-cell">${buildFieldBarsHtml(row.fields)}</td>
+            <td class="lowest-cell"><div class="cell-title${row.lowest && row.lowest.pct < 50 ? ' lowest-low' : ''}">${escapeHtml(lowestLabel)}</div>${flaggedChip ? `<div class="quality-chips">${flaggedChip}</div>` : ''}</td>
+          </tr>`;
+    }).join('');
+    return `
+        <div class="table-wrapper">
+          <table class="metrics-table list-table yield-table">
+            <thead>
+              <tr>
+                ${buildYieldSortHeader('Site', 'host', options.sortState, 'asc')}
+                ${buildYieldSortHeader('Bear / Extr', 'yield', options.sortState, 'asc', 'num yield-cell')}
+                <th class="trend-cell">Bear ${runCount}r</th>
+                <th class="fields-cell">t p c u i d</th>
+                ${buildYieldSortHeader('Lowest', 'lowest', options.sortState, 'asc', 'lowest-cell')}
+              </tr>
+            </thead>
+            <tbody data-list="yield">${body}
+            </tbody>
+          </table>
+        </div>`;
 }
 
 // ============================================================================
@@ -2154,6 +2480,17 @@ const MetricsSections = {
     buildQualityTrendData,
     SOURCE_VERDICT_LABELS,
     SOURCE_LEDGER_EMPTY_MESSAGE,
+    assessSparseFields,
+    assessFlaggedCode,
+    formatSparseLabel,
+    formatFlaggedLabel,
+    YIELD_FIELDS,
+    YIELD_SORT_KEYS,
+    YIELD_DEFAULT_SORT,
+    buildSourceYieldRows,
+    sortSourceYieldRows,
+    buildFieldBarsHtml,
+    buildSourceYieldTableHtml,
     SOURCE_SORT_KEYS,
     sourceVerdictLabel,
     sourceVerdictRank,
@@ -2214,6 +2551,17 @@ if (typeof module !== 'undefined' && module.exports) {
         buildQualityTrendData,
         SOURCE_VERDICT_LABELS,
         SOURCE_LEDGER_EMPTY_MESSAGE,
+        assessSparseFields,
+        assessFlaggedCode,
+        formatSparseLabel,
+        formatFlaggedLabel,
+        YIELD_FIELDS,
+        YIELD_SORT_KEYS,
+        YIELD_DEFAULT_SORT,
+        buildSourceYieldRows,
+        sortSourceYieldRows,
+        buildFieldBarsHtml,
+        buildSourceYieldTableHtml,
         SOURCE_SORT_KEYS,
         sourceVerdictLabel,
         sourceVerdictRank,

@@ -1178,18 +1178,20 @@ test('pickAuditHosts: troubled/lost first, then two-plus quality badges, then th
     ledgerLineForAudit('b.example'),
     ledgerLineForAudit('lost.example', { lost: [{ title: 'Bear Night', bear: true, since: '20261007-052319', seen: 5, days: ['2026-10-18'], new: 0 }] }),
     ledgerLineForAudit('dead.example', { status: 'dead', extracted: 0, events: 0, bear: 0, upcoming: 0, page_errors: 1, errors: ['HTTP 403'] }),
-    ledgerLineForAudit('messy.example', { quality: Object.assign(ledgerLineForAudit('x').quality, { time: 10, desc: 0 }) }),
+    ledgerLineForAudit('messy.example', { quality: Object.assign(ledgerLineForAudit('x').quality, { image: 10, desc: 0 }) }),
+    ledgerLineForAudit('thin.example', { quality: Object.assign(ledgerLineForAudit('x').quality, { time: 10 }) }),
     ledgerLineForAudit('feed.example', { parsers: ['Club'] }),
     ledgerLineForAudit('site.example', { parsers: ['Club'], extracted: 0, events: 0, bear: 0, upcoming: 0, status: 'empty' })
   ]);
   const empty = sourceAudit.emptySourceAuditStore();
   const picks = sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 3 });
-  assert.deepEqual(picks.map(pick => pick.host), ['dead.example', 'lost.example', 'messy.example']);
+  assert.deepEqual(picks.map(pick => pick.host), ['dead.example', 'lost.example', 'thin.example'], 'a sparse host (time on 10% of its kept events) is trouble: front of the line with the dead and the lost');
   assert.match(picks[0].reason, /^dead since/);
-  assert.equal(picks[2].reason, '2 quality signals off');
-  const audited = { ...empty, hosts: { 'dead.example': { date: '2026-10-08' }, 'lost.example': { date: '2026-10-07' }, 'messy.example': { date: '2026-10-01' }, 'a.example': { date: '2026-10-02' } } };
+  assert.match(picks[2].reason, /^sparse since/);
+  assert.equal(sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 4 })[3].reason, '2 quality signals off', 'soft fields off (image, description) are the second band');
+  const audited = { ...empty, hosts: { 'dead.example': { date: '2026-10-08' }, 'thin.example': { date: '2026-10-08' }, 'lost.example': { date: '2026-10-07' }, 'messy.example': { date: '2026-10-01' }, 'a.example': { date: '2026-10-02' } } };
   const next = sourceAudit.pickAuditHosts(health, audited, { today: '2026-10-08', cap: 3 });
-  assert.deepEqual(next.map(pick => pick.host), ['lost.example', 'messy.example', 'b.example'], 'today’s host waits; within the rest, never audited beats audited a week ago');
+  assert.deepEqual(next.map(pick => pick.host), ['lost.example', 'messy.example', 'b.example'], 'today’s hosts wait; within the rest, never audited beats audited a week ago');
   assert.equal(next[2].reason, 'never audited');
   assert.ok(!sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 10 }).some(pick => pick.host === 'site.example'), 'a companion is never picked');
   assert.equal(sourceAudit.pickAuditHosts(health, empty, { today: '2026-10-08', cap: 1 }).length, 1);
@@ -1212,16 +1214,135 @@ test('stillOnSite: the series title against the page text line by line — found
 
 test('parseAuditAnswer: JSON inside chatter, strings as items, junk dropped, caps; buildAuditPrompt names the host, the page and every extracted event', () => {
   const parsed = sourceAudit.parseAuditAnswer('Here you go:\n{"missing":[{"title":"Sunday Beer Bust","date":"Sun Oct 11"},"Pup Night", {"nope": 1}],"fake":[{"title":"View Event →","reason":"a button"}],"note":"Mostly matches."} thanks');
-  assert.deepEqual(parsed, { missing: [{ title: 'Sunday Beer Bust', date: 'Sun Oct 11' }, { title: 'Pup Night', date: '' }], fake: [{ title: 'View Event →', reason: 'a button' }], wrong: [], note: 'Mostly matches.' });
-  assert.deepEqual(sourceAudit.parseAuditAnswer('{"missing":[],"fake":[],"wrong":[{"title":"The Hunt","issue":"page says Bar Le Diamant"}],"note":""}').wrong, [{ title: 'The Hunt', issue: 'page says Bar Le Diamant' }]);
+  assert.deepEqual(parsed, { missing: [{ title: 'Sunday Beer Bust', date: 'Sun Oct 11' }, { title: 'Pup Night', date: '' }], fake: [{ title: 'View Event →', kind: 'button', reason: 'a button' }], wrong: [], unverified: 0, note: 'Mostly matches.' });
+  const kinds = sourceAudit.parseAuditAnswer('{"missing":[],"fake":[{"title":"Book →","kind":"button","reason":"link label"},{"title":"Happening Now","kind":"label","reason":"status"},{"title":"Final Girl","kind":"other","reason":"generic title"},{"title":"Dark Matter","reason":"not an event title — promotional phrasing, not a named event"},{"title":"Select a reservation slot above","reason":"UI prompt/instruction"},{"title":"FALLEN ANGELS: A NIGHT OF PLEASURE, DANCE & VENGEANCE","kind":"heading","reason":"generic"},{"title":"Réserver mon hotel (Disponible BIENTÔT)","kind":"booking","reason":"hotel link"}],"wrong":[],"note":""}');
+  assert.deepEqual(kinds.fake.map(item => [item.title, item.kind]), [['Book →', 'button'], ['Happening Now', 'label'], ['Select a reservation slot above', 'prompt'], ['Réserver mon hotel (Disponible BIENTÔT)', 'booking']], 'opinions about naming are not findings; a long title is a heading only in the model\u2019s eyes');
+  const narrated = sourceAudit.parseAuditAnswer('{"missing":[],"fake":[],"wrong":[{"title":"The Hunt","issue":"page says Bar Le Diamant"}],"note":""}');
+  assert.deepEqual([narrated.wrong, narrated.unverified], [[], 1], 'a narrated issue names no field: counted, never a finding');
+  // Checked against what we extracted: a "missing" we have is not missing, a "fake"/"wrong" we never extracted is about nothing, an empty issue is nothing, duplicates collapse.
+  const checked = sourceAudit.parseAuditAnswer('{"missing":[{"title":"KYLE HOUSE – Atlanta Pride 2026: Louder & Prouder","date":"Oct 10"},{"title":"Decade Dance","date":"Oct 24"},{"title":"Decade Dance","date":"Oct 24"}],"fake":[{"title":"Book →","kind":"button","reason":"link"},{"title":"Pride Friday","kind":"label","reason":"a day label"},{"title":"Book →","kind":"button","reason":"again"}],"wrong":[{"title":"Latin Night","issue":"page says 9 pm – 3 am"},{"title":"Pride Saturday","issue":""},{"title":"Nowhere Night","issue":"page says 8 pm"}],"note":"n"}', { extracted: ['Decade Dance', 'Book →', 'Latin Night', 'Beer Bust'] });
+  assert.deepEqual(checked.missing, [{ title: 'KYLE HOUSE – Atlanta Pride 2026: Louder & Prouder', date: 'Oct 10' }], 'Decade Dance was extracted: not missing');
+  assert.deepEqual(checked.fake.map(item => item.title), ['Book →'], 'a label we never extracted is not our fake; once only');
+  const dated = sourceAudit.parseAuditAnswer('{"missing":[{"title":"Pride Passes","date":"Oct 08"},{"title":"Show Tables","date":"October 8, 2026"},{"title":"Latin Night","date":"2026-10-17"},{"title":"Trivia","date":"every Thursday"}],"fake":[{"title":"Pride Saturday","kind":"label","reason":"a day label"}],"wrong":[],"note":""}', { extracted: ['Pride 2026 Saturday Afternoon Show'], today: '2026-10-10' });
+  assert.deepEqual(dated.missing.map(item => item.title), ['Latin Night', 'Trivia'], 'a printed date before today is not a miss; no date stays');
+  assert.deepEqual(dated.fake, [], 'a fake must name an extracted title, not overlap one');
+  assert.equal(sourceAudit.auditDateKey('Sat, Oct 11 · 9PM', '2026'), '2026-10-11');
+  assert.equal(sourceAudit.auditDateKey('Vendredi 10 Avril 2026', '2026'), '', 'unknown wording is no date');
+  assert.deepEqual(checked.wrong, [], 'without the record to compare against, nothing is "wrong"');
   assert.equal(sourceAudit.parseAuditAnswer('no json here'), null);
   assert.equal(sourceAudit.parseAuditAnswer('[1,2]'), null);
-  const prompt = sourceAudit.buildAuditPrompt('eaglela.com', 'PAGE TEXT HERE', [{ title: 'Beer Bust', day: '2026-10-11', time: '3:00 PM', place: 'Eagle LA' }], { today: '2026-10-09' });
+  const prompt = sourceAudit.buildAuditPrompt('eaglela.com', 'PAGE TEXT HERE', [{ title: 'Beer Bust', day: '2026-10-11', time: '3:00 PM', place: 'Eagle LA' }, { title: 'Drag Night', day: '2026-10-12', time: '', place: 'Eagle LA', dropped: true }], { today: '2026-10-09' });
+  assert.match(prompt, /2\. 2026-10-12 — Drag Night @ Eagle LA\n/, 'a dropped event is listed like any other — the bear verdict is not the audit\u2019s business');
   assert.match(prompt, /events from eaglela\.com for a gay bear community calendar\. Today is 2026-10-09\./);
   assert.match(prompt, /anything dated before 2026-10-09/);
   assert.match(prompt, /PAGE TEXT HERE/);
   assert.match(prompt, /1\. 2026-10-11 3:00 PM — Beer Bust @ Eagle LA/);
-  assert.match(prompt, /"missing":\[\{"title":"","date":""\}\].*"wrong":\[\{"title":"","issue":""\}\]/);
+  assert.match(prompt, /"missing":\[\{"title":"","date":""\}\].*"wrong":\[\{"title":"","field":"","page":"","extracted":""\}\]/);
+});
+
+test('audit "wrong" is decided by the record: the model names the field and quotes the page, clocks compare in minutes, dates by month and day unless the page prints a year, places by shared words; agreement is dropped, the incomparable is only counted', () => {
+  // BeefDip's first audit: 15 "wrong" rows, most of them the model talking
+  // itself into "so this is not an error".
+  const events = [
+    { title: 'PRE WELCOME PARTY', day: '2027-01-23', time: '9:00 PM', place: 'The Tryst Hotel RoofTop' },
+    { title: 'APÉRO OURS', day: '2026-10-15', time: '6:00 PM', place: 'Bar Le Diamant Rouge' },
+    { title: 'NOCTURNA "Pirates" Circuit Party', day: '2026-10-12', time: '11:00 PM', place: '3 Dollar Bill' },
+    { title: 'TIDAL WAVE', day: '2027-01-28', time: '12:00 PM', place: 'Delfin Beach Resort' },
+    { title: 'TIDAL WAVE', day: '2027-01-31', time: '12:00 PM', place: 'Delfin Beach Resort' },
+    { title: 'Welcome T-Dance', day: '2027-01-23', time: '', place: '' }
+  ];
+  const answer = JSON.stringify({ missing: [], fake: [], note: '', wrong: [
+    { title: 'PRE WELCOME PARTY', field: 'time', page: 'Saturday, Jan 23 • 9PM – Midnight', extracted: '9:00 PM' },
+    { title: 'APÉRO OURS', field: 'time', page: '18:00–21:00', extracted: '6:00 PM' },
+    { title: 'APÉRO OURS', field: 'place', page: 'Diamant Rouge', extracted: 'Bar Le Diamant Rouge' },
+    { title: 'NOCTURNA "Pirates" Circuit Party', field: 'date', page: 'Sun, Oct 11 · 10:30 PM', extracted: '2026-10-12' },
+    { title: 'NOCTURNA "Pirates" Circuit Party', field: 'time', page: 'Sun, Oct 11 · 10:30 PM', extracted: '11:00 PM' },
+    { title: 'NOCTURNA "Pirates" Circuit Party', field: 'time', page: '10:30 PM', extracted: '11:00 PM' },
+    { title: 'TIDAL WAVE', field: 'date', page: 'Sun Jan 31', extracted: '2027-01-28' },
+    { title: 'TIDAL WAVE', field: 'place', page: 'Mantamar Beach Club', extracted: 'Delfin Beach Resort' },
+    { title: 'Welcome T-Dance', field: 'time', page: '3PM', extracted: '' },
+    { title: 'PRE WELCOME PARTY', field: 'vibe', page: 'sneak preview', extracted: '' },
+    { title: 'Never Extracted', field: 'date', page: 'Oct 20', extracted: '' },
+    { title: 'PRE WELCOME PARTY', issue: 'time is acceptable as shorthand, but date is correct; however…' }
+  ] });
+  const parsed = sourceAudit.parseAuditAnswer(answer, { extracted: events.map(e => e.title), events, today: '2026-10-10' });
+  assert.deepEqual(parsed.wrong.map(item => [item.title, item.field, item.page, item.extracted]), [
+    ['NOCTURNA "Pirates" Circuit Party', 'date', 'Sun, Oct 11 · 10:30 PM', '2026-10-12'],
+    ['NOCTURNA "Pirates" Circuit Party', 'time', 'Sun, Oct 11 · 10:30 PM', '11:00 PM'],
+    ['TIDAL WAVE', 'place', 'Mantamar Beach Club', 'Delfin Beach Resort']
+  ], '9PM is 9:00 PM, 18:00 is 6:00 PM, "Diamant Rouge" is the bar, Jan 31 is one of the two Tidal Waves; one row per title and field');
+  assert.match(parsed.wrong[0].issue, /^date: the page says “Sun, Oct 11 · 10:30 PM”, the record has “2026-10-12”$/);
+  assert.equal(parsed.unverified, 4, 'no clock on the record, an unknown field, a title we never extracted, a narrated issue');
+  assert.equal(sourceAudit.auditClockMinutes('Noon–6PM'), 720);
+  assert.equal(sourceAudit.auditClockMinutes('doors 21:30'), 1290);
+  assert.equal(sourceAudit.auditClockMinutes('midnight'), 0);
+  assert.equal(sourceAudit.auditClockMinutes('tonight'), null);
+  assert.equal(sourceAudit.auditFieldDiffers('date', 'Thursday January 28, 2027', { day: '2026-01-28' }, '2026'), true, 'a printed year is compared');
+  assert.equal(sourceAudit.auditFieldDiffers('date', 'Thu Jan 28', { day: '2027-01-28' }, '2026'), false, 'no printed year: month and day decide');
+  // The store keeps only rows that name their field: the first audits' narrated rows fall out on load.
+  const store = sourceAudit.normalizeSourceAuditStore({ hosts: { 'a.example': { date: '2026-10-10', wrong: [{ title: 'Old', issue: 'narrated' }, { title: 'New', field: 'time', page: '9PM', extracted: '10:00 PM', issue: 'time: …' }], unverified: 3, still: [{ title: 'NEON', verdict: 'set-aside', how: 'bear-dropped', twin: 'NEON – TEA DANCE' }] } } });
+  assert.deepEqual(store.hosts['a.example'].wrong.map(item => item.title), ['New']);
+  assert.equal(store.hosts['a.example'].unverified, 3);
+  assert.deepEqual(store.hosts['a.example'].still[0], { title: 'NEON', verdict: 'set-aside', checked_at: '', line: '', how: 'bear-dropped', twin: 'NEON – TEA DANCE' });
+  assert.equal(sourceAudit.hostHasOpenFindings({ still: [{ title: 'NEON', verdict: 'set-aside' }] }), false, 'held by the run is not an open finding');
+  // Day-first dates, and a year is never read as a day.
+  assert.equal(sourceAudit.auditDateKey('10 October 2026', '2026'), '2026-10-10');
+  assert.equal(sourceAudit.auditDateKey('30 octobre', '2026'), '2026-10-30');
+  assert.equal(sourceAudit.auditDateKey('October 2026', '2026'), '', 'a month and a year name no day');
+  assert.equal(sourceAudit.auditDateKey('Thursday January 28, 2027', '2026'), '2027-01-28');
+  assert.equal(sourceAudit.auditFieldDiffers('date', '10 October 2026', { day: '2026-10-10' }, '2026'), false, 'Eagle LA MEAT RACK: the first smoke called this wrong');
+});
+
+test('with the page in hand a "fake" has to be shown: page furniture repeats on the page, a duplicate is two records of one title on one day; "no such event on the page" proves nothing', () => {
+  const pageText = ['FULL SCHEDULE', 'PRE WELCOME PARTY', 'En vedette Récurrent', 'Get Your Dog Tag', 'APÉRO OURS', 'En vedette Récurrent', 'Get Your Dog Tag', 'Final Girl', 'X'].join('\n');
+  const events = [
+    { title: 'Final Girl', day: '2026-10-17' }, { title: 'FUTCH', day: '2026-10-18' }, { title: 'En vedette Récurrent', day: '2026-10-15' },
+    { title: 'Get Your Dog Tag', day: '2027-01-23' }, { title: 'View Event →', day: '2026-10-20' }, { title: 'X', day: '2026-10-21' },
+    { title: 'URGE Miami Festival', day: '2026-11-27' }, { title: 'URGE Miami Festival', day: '2026-11-27' }, { title: '2025 Parade of Titleholders', day: '2026-11-01' },
+    { title: 'Réserver mon hotel (Disponible BIENTÔT)', day: '2026-09-20' }
+  ];
+  const answer = JSON.stringify({ missing: [], wrong: [], note: '', fake: [
+    { title: 'Final Girl', kind: 'heading', reason: 'no such event appears on the provided page text' },
+    { title: 'FUTCH', kind: 'heading', reason: 'no such event appears on the provided page text' },
+    { title: 'En vedette Récurrent', kind: 'heading', reason: 'a generic heading' },
+    { title: 'Get Your Dog Tag', kind: 'button', reason: 'a call to action' },
+    { title: 'View Event →', kind: 'button', reason: 'a link label' },
+    { title: 'X', kind: 'button', reason: 'social icon label' },
+    { title: 'URGE Miami Festival', kind: 'duplicate', reason: 'listed twice' },
+    { title: '2025 Parade of Titleholders', kind: 'duplicate', reason: 'only in a photo caption' },
+    { title: 'Réserver mon hotel (Disponible BIENTÔT)', kind: 'booking', reason: 'a hotel booking link' }
+  ] });
+  const parsed = sourceAudit.parseAuditAnswer(answer, { extracted: events.map(e => e.title), events, today: '2026-10-10', pageText });
+  assert.deepEqual(parsed.fake.map(item => item.title), ['En vedette Récurrent', 'Get Your Dog Tag', 'View Event →', 'URGE Miami Festival', 'Réserver mon hotel (Disponible BIENTÔT)'],
+    'two real parties, a one-off line and a caption opinion are not findings; repeated furniture, the junk rule, a true duplicate and a booking link are');
+});
+
+test('"still listed" is our miss only when the run does not hold the event: a twin on the lost day (same title, or a word distinctive on this host) is set aside or renamed; the same title on another day stays a miss and says which day', () => {
+  const found = { verdict: 'still-listed', line: 'neon the glowgobear atlanta pride 2026 louder prouder' };
+  // Atlanta Eagle, run 20261010-171250: the lost series, and what the run held that day.
+  const atlanta = [
+    { title: 'NEON – TEA DANCE', day: '2026-10-11', dropped: true },
+    { title: 'Pride Day Play – Atlanta Pride 2026: Louder & Prouder', day: '2026-10-10', dropped: true },
+    { title: 'BRADY PRINCE – Atlanta Pride 2026: Louder & Prouder', day: '2026-10-11', dropped: true },
+    { title: 'JAMES ANTHONY – Atlanta Pride 2026: Louder & Prouder', day: '2026-10-12', dropped: true },
+    { title: 'Gaymer Night', day: '2026-10-12', dropped: false }
+  ];
+  const neon = { title: 'NEON THE GLOWGOBEAR – Atlanta Pride 2026: Louder & Prouder', days: ['2026-10-11'] };
+  // "atlanta/pride/2026/louder/prouder" sit in three titles: not distinctive, so BRADY PRINCE the same
+  // night is not its twin. "neon" is in one title: NEON – TEA DANCE is.
+  assert.deepEqual(sourceAudit.refineStillVerdict(neon, found, atlanta), { verdict: 'set-aside', line: found.line, how: 'bear-dropped', twin: 'NEON – TEA DANCE' });
+  // A shared festival suffix pairs nothing: KYLE HOUSE is absent from the run, and stays our miss.
+  assert.deepEqual(sourceAudit.refineStillVerdict({ title: 'KYLE HOUSE – Atlanta Pride 2026: Louder & Prouder', days: ['2026-10-11'] }, { verdict: 'still-listed', line: 'kyle house' }, atlanta),
+    { verdict: 'still-listed', line: 'kyle house' });
+  assert.equal(sourceAudit.refineStillVerdict({ title: 'NEON THE GLOWGOBEAR', days: ['2026-10-11'] }, found, [{ title: 'NEON – TEA DANCE', day: '2026-10-11', dropped: false }]).how, 'renamed');
+  // BeefDip: the run held the title a year off — a real miss, and the day is the lead.
+  const beefdip = [{ title: 'BEEFDIP ON ALL 4’s – ATV ADVENTURE', day: '2026-01-26', dropped: false }, { title: 'WHITE PARTY', day: '2027-01-28', dropped: false }];
+  assert.deepEqual(sourceAudit.refineStillVerdict({ title: 'BEEFDIP ON ALL 4’s – ATV ADVENTURE', days: ['2027-01-28'] }, { verdict: 'still-listed', line: 'x' }, beefdip),
+    { verdict: 'still-listed', line: 'x', extracted_on: '2026-01-26' });
+  // Nothing of it in the run: plainly our miss. Other verdicts pass through untouched.
+  assert.deepEqual(sourceAudit.refineStillVerdict({ title: 'ONYX', days: ['2026-10-17'] }, { verdict: 'still-listed', line: 'onyx' }, beefdip), { verdict: 'still-listed', line: 'onyx' });
+  assert.deepEqual(sourceAudit.refineStillVerdict(neon, { verdict: 'site-removed', line: '' }, atlanta), { verdict: 'site-removed', line: '' });
+  assert.deepEqual(sourceAudit.refineStillVerdict(neon, found, []), found);
 });
 
 test('source-audit store: normalize, save atomically, load; the queue is every host with open findings, newest first', () => {
@@ -1293,9 +1414,103 @@ test('runSourceAudit: fetches each host’s listing page through the adapter, ch
   const quiet = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: payloadAt('20261004-050000', '2026-10-04', []), runId: '20261004-050000', adapter, ai, today: '2026-10-04', hosts: ['quiet.example'], log: () => {} });
   assert.deepEqual(quiet.audited, ['quiet.example']);
   assert.equal(sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(dir)).hosts['quiet.example'].ai, 'no-page');
+  // As the runner calls it: in-memory results carry no run id (it is
+  // minted at save). The ledger's newest run id is this run's — every
+  // production audit until 2026-10-10 stored run_id "" and so never
+  // re-audited an open finding nor recorded a run.
+  const auditFile = sourceAudit.getSourceAuditPath(dir);
+  const seeded = sourceAudit.loadSourceAudit(auditFile);
+  seeded.hosts['eaglela.com'].run_id = '20261003-050000';
+  seeded.hosts['eaglela.com'].date = '2026-10-04';
+  seeded.runs = [];
+  sourceAudit.saveSourceAudit(auditFile, seeded);
+  const bare = payloadAt('20261004-050000', '2026-10-04', ['JUNGLE']);
+  delete bare.summary;
+  const runnerLogs = [];
+  const asRunner = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: bare, adapter, ai, today: '2026-10-04', log: line => runnerLogs.push(line) });
+  assert.ok(asRunner.audited.includes('eaglela.com'), 'audited again although the rotation had it today: its findings were open');
+  assert.ok(runnerLogs.some(line => /1 with open findings re-audited \(eaglela\.com\)/.test(line)), runnerLogs.join('\n'));
+  const after = sourceAudit.loadSourceAudit(auditFile);
+  assert.equal(after.hosts['eaglela.com'].run_id, '20261004-050000', 'the ledger named the run');
+  assert.deepEqual(after.runs.map(run => run.run_id), ['20261004-050000'], 'and the audit run is on record');
+  const sameRun = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: bare, adapter, ai, today: '2026-10-04', log: () => {} });
+  assert.ok(!sameRun.audited.includes('eaglela.com'), 'not twice for one run');
   const off = await sourceAudit.runSourceAudit({ sharedRoot: dir, env: { CHUNKY_SOURCE_AUDIT: '0' }, log: () => {} });
   assert.equal(off.enabled, false);
   const none = await sourceAudit.runSourceAudit({ sharedRoot: fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-none-')), log: () => {} });
   assert.deepEqual(none.skipped, ['no source ledger']);
   fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test('buildDeck: an aggregator\'s copy the pointed-at site does not list is a card carrying both sides\' facts (withheld from every automatic write until decided)', () => {
+  const copy = newEvent({
+    title: 'CHUNK',
+    bar: "C'mon Everybody",
+    url: 'https://www.chunk-party.com/',
+    image: '',
+    _aggregatorUnbackedWithheld: {
+      aggregator: 'Gathr', site: 'chunk-party.com', source: 'CHUNK', link: 'https://www.chunk-party.com/', siteEvents: 13, day: '2030-10-03',
+      claim: { title: 'CHUNK', startDate: iso(FUTURE), bar: "C'mon Everybody" },
+      nearest: { title: 'CHUNK Brooklyn', startDate: iso(FUTURE + 10 * 86400000), day: '2030-10-13', bar: "C'mon Everybody", url: 'https://www.chunk-party.com/event-details/chunk-brooklyn' },
+      reason: 'Gathr points at chunk-party.com, which CHUNK read this run (13 events) and lists no event that night'
+    },
+    _imageReusedFrom: { image: 'https://static.wixstatic.com/media/x~mv2.jpg', title: 'CHUNK Brooklyn 7/4', startDate: '2026-07-05T02:00:00.000Z', day: '2026-07-04', source: 'CHUNK', url: 'https://www.chunk-party.com/event-details/chunk-brooklyn-7-4' }
+  });
+  const deck = deckOf(runPayload({ analyzedEvents: [copy, newEvent()] }));
+  assert.deepEqual(deck.cards.map((card) => [card.kind, card.proposal.title]), [['new', 'CHUNK'], ['new', 'FURBALL NYC']]);
+  assert.deepEqual(deck.cards[0].display.aggregatorUnbacked, {
+    aggregator: 'Gathr', site: 'chunk-party.com', source: 'CHUNK', link: 'https://www.chunk-party.com/', siteEvents: 13, day: '2030-10-03',
+    reason: 'Gathr points at chunk-party.com, which CHUNK read this run (13 events) and lists no event that night',
+    sameNight: [],
+    nearest: { title: 'CHUNK Brooklyn', day: '2030-10-13', bar: "C'mon Everybody", url: 'https://www.chunk-party.com/event-details/chunk-brooklyn' }
+  });
+  assert.deepEqual(deck.cards[0].display.imageReusedFrom, { image: 'https://static.wixstatic.com/media/x~mv2.jpg', title: 'CHUNK Brooklyn 7/4', day: '2026-07-04', source: 'CHUNK', url: 'https://www.chunk-party.com/event-details/chunk-brooklyn-7-4' });
+  assert.equal(deck.cards[1].display.aggregatorUnbacked, null);
+  assert.equal(deck.cards[1].display.imageReusedFrom, null);
+});
+
+// ---------------------------------------------------------------------------
+// "Gone from its source" cards (SharedCore.buildGoneFromSourceCandidates):
+// kind 'gone', exact key, a right swipe the phone executes as a removal, a
+// left swipe that keeps the saved event (mode 'keep', never a fix note).
+// ---------------------------------------------------------------------------
+
+test('buildDeck: a gone-from-source candidate is a card of kind gone under its own key; an approval waits for the phone until the ledger says deleted; a keep is a decided card, not a fix note', () => {
+  const candidate = {
+    key: 'gone|nyc|UID1', kind: 'gone', city: 'nyc', uid: 'UID1', identifier: 'UID1', title: 'Gone Party',
+    startDate: iso(FUTURE), endDate: iso(FUTURE + 3 * 3600 * 1000), timezone: 'America/New_York', bar: 'Rockbar',
+    host: 'furball.nyc', source: 'Furball', siteEvents: 7, horizonDay: '2030-12-01', reason: 'gone', misses: 2,
+    instead: { sameNight: [{ title: 'Other Night', startDate: iso(FUTURE), day: '2030-10-03', bar: 'Rockbar', samePlace: true, similar: false, titleOverlap: 0 }], sameTitle: [] }
+  };
+  const past = { ...candidate, key: 'gone|nyc|OLD', uid: 'OLD', startDate: '2020-01-01T02:00:00.000Z', endDate: '2020-01-01T05:00:00.000Z' };
+  const payload = runPayload({ goneFromSource: { candidates: [candidate, past], state: {}, summary: {} } });
+  const deck = deckOf(payload);
+  assert.equal(deck.counts.gone, 1);
+  assert.equal(deck.counts.pastSkipped, 1, 'a night that has passed is no longer a card');
+  assert.equal(deck.cards.length, 1);
+  assert.equal(deck.cards[0].kind, 'gone');
+  assert.equal(deck.cards[0].key, 'gone|nyc|UID1');
+  assert.equal(deck.cards[0].proposal.reason, 'gone');
+  assert.equal(deck.cards[0].proposal.misses, 2);
+
+  const now = new Date(Date.UTC(2030, 0, 2));
+  const approved = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'gone|nyc|UID1', kind: 'gone', verdict: 'approve', snapshot: candidate }, { now }));
+  assert.equal(approved.decisions[0].kind, 'gone', 'the kind survives the store');
+  const pending = deckOf(payload, approved);
+  assert.equal(pending.cards.length, 0);
+  assert.equal(pending.decided[0].kind, 'gone');
+  assert.equal(pending.decided[0].pendingExecute, true, 'handed to the phone on the next execute');
+  assert.equal(pending.decided[0].executed, null);
+  const done = deckOf(payload, approved, { writtenLedger: { 'gone|nyc|UID1': { executedAt: '2030-01-03T00:00:00.000Z', action: 'deleted', title: 'Gone Party' } } });
+  assert.deepEqual(done.decided[0].executed, { at: '2030-01-03T00:00:00.000Z', as: 'deleted' });
+  assert.equal(done.decided[0].pendingExecute, false);
+
+  const kept = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'gone|nyc|UID1', kind: 'gone', verdict: 'reject', snapshot: candidate, reason: { tags: ['still happening'], text: 'saw the flyer', mode: 'keep' } }, { now }));
+  const keptDeck = deckOf(payload, kept);
+  assert.equal(keptDeck.cards.length, 0);
+  assert.equal(keptDeck.decided[0].decision.reason.mode, 'keep');
+  assert.equal(keptDeck.counts.waiting, 0, 'a keep is not a "needs a fix" note');
+  assert.ok(rq.GONE_REASON_TAGS.includes('still happening'));
+  const text = rq.formatRejectionsText(kept);
+  assert.ok(text.includes('[KEPT] GONE Gone Party — 2030-10-04 @ Rockbar [Furball] kept on the calendar (furball.nyc has not listed it for 2 runs) {still happening} — saw the flyer'), text);
 });

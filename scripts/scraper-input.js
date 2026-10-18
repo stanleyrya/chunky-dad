@@ -798,6 +798,20 @@ const scraperConfig = {
       alwaysBear: true,
     },
     {
+      name: "Bearhood Berlin",
+      // Berlin bear party brand (Monster Bash, PLAY, Naughty!). Its own site
+      // bearhood.de is a JavaScript app: the events listing arrives empty
+      // and is filled in the browser from the site's database, so a plain
+      // read of /events finds nothing (proven 2026-10-10: 0 rows from /de/events
+      // and /en/events, and a crawl from the root wandered into its venues'
+      // sites). The door that can be read is its Eventbrite organizer page —
+      // the same door as Megawoof America and Bears of London — which carries
+      // every ticketed night with its ticket page (that day: Bearhood Monster
+      // Bash, Oct 31, Mikropol). Nights sold only on bearhood.de itself are
+      // not reached by this door.
+      urls: ["https://www.eventbrite.de/o/bearhood-berlin-46125221123"],
+    },
+    {
       name: "Bears of London",
       // Bears of London Network — a London social group (meet-ups, meals,
       // trips) that announces on Instagram and in a Facebook group, both

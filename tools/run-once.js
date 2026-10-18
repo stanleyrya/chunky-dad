@@ -358,10 +358,19 @@ async function sweepSharedStorageBeforeRun(sharedRoot, options = {}) {
 }
 
 // Tee console output into a buffer (still printed) so shared-storage runs can
-// persist a per-run log file the way the phone's FileLogger does.
+// persist a per-run log file the way the phone's FileLogger does. Every line
+// printed gets a clock prefix (the launchd log had none, and a stalled run
+// could not be timed) and bumps the stall guard's heartbeat.
+const runPulse = { lastOutputAt: Date.now(), lastLine: '' };
+function clockPrefix(now = new Date()) {
+    const two = (n) => String(n).padStart(2, '0');
+    return `${two(now.getHours())}:${two(now.getMinutes())}:${two(now.getSeconds())}`;
+}
 function installConsoleTee(lines) {
     const wrap = (level, original) => (...args) => {
         try {
+            runPulse.lastOutputAt = Date.now();
+            runPulse.lastLine = typeof args[0] === 'string' ? args[0].slice(0, 200) : '';
             lines.push(args.map((arg) => {
                 if (typeof arg === 'string') return arg;
                 try {
@@ -371,11 +380,49 @@ function installConsoleTee(lines) {
                 }
             }).join(' '));
         } catch (_) { /* the tee must never break the run */ }
-        original.apply(console, args);
+        original.apply(console, typeof args[0] === 'string' ? [`${clockPrefix()} ${args[0]}`, ...args.slice(1)] : args);
     };
     console.log = wrap('log', console.log);
     console.warn = wrap('warn', console.warn);
     console.error = wrap('error', console.error);
+}
+
+// THE STALL GUARD. A run that goes quiet is a run that is stuck: on
+// 2026-10-09 the daily run sat 9½ hours after "Sending AI request
+// (ocr-all pass)" — 0% CPU, no sockets, no page fetched, no AI answer, no
+// log line — and nothing ended it. Every request in the run already has
+// its own timeout, so silence this long is a wait on something that will
+// never answer. After STALL_AFTER_MS without a printed line the run is
+// failed loudly (its log is saved like any failed run, with the last line
+// and what the process was waiting on) and the process exits; the daily
+// job then reports a failed run instead of a silence, and the owner re-runs
+// (see memory: no partial runs). CHUNKY_RUN_STALL_MINUTES overrides.
+const STALL_AFTER_MS = Math.max(5, Number(process.env.CHUNKY_RUN_STALL_MINUTES) || 20) * 60 * 1000;
+function describeActiveResources() {
+    try {
+        const counts = {};
+        for (const kind of process.getActiveResourcesInfo()) counts[kind] = (counts[kind] || 0) + 1;
+        return Object.entries(counts).map(([kind, n]) => `${kind}×${n}`).join(', ') || 'none';
+    } catch (_) {
+        return 'unknown';
+    }
+}
+function stallGuard(work, options = {}) {
+    const afterMs = Number.isFinite(options.afterMs) ? options.afterMs : STALL_AFTER_MS;
+    const everyMs = Number.isFinite(options.everyMs) ? options.everyMs : Math.min(60000, afterMs);
+    const pulse = options.pulse || runPulse;
+    let timer = null;
+    const stalled = new Promise((_, reject) => {
+        timer = setInterval(() => {
+            const quietMs = Date.now() - pulse.lastOutputAt;
+            if (quietMs < afterMs) return;
+            const error = new Error(`STALL: no output for ${Math.round(quietMs / 60000)} min — last line: ${pulse.lastLine || '(none)'} — waiting on: ${describeActiveResources()}`);
+            error.stall = true;
+            reject(error);
+        }, everyMs);
+        if (timer && typeof timer.unref === 'function') timer.unref();
+    });
+    return Promise.race([work, stalled]).finally(() => clearInterval(timer));
 }
 
 // ---------------------------------------------------------------------------
@@ -729,11 +776,14 @@ async function main() {
 
     const orchestrator = new BearEventScraperOrchestrator();
     let results;
+    let stalled = false;
     try {
-        results = await orchestrator.run();
+        results = await stallGuard(orchestrator.run());
         const { SharedCore } = require(path.join(repoRoot, 'scripts', 'shared-core'));
         assertCalendarsWereRead(results, SharedCore);
     } catch (error) {
+        stalled = Boolean(error && error.stall);
+        if (stalled) console.error(`⛔ ${error.message}`);
         // A failed shared-storage run still writes its log — that log is the
         // only evidence of what went wrong (mirrors the phone's pre-UI log
         // persistence). The run JSON is deliberately NOT written.
@@ -745,6 +795,12 @@ async function main() {
                     failure: error && error.message ? error.message : String(error)
                 });
             } catch (_) { /* the failure below is the primary signal */ }
+        }
+        // A stalled run still holds whatever it was waiting on; the process
+        // would never exit on its own. The failure is written above.
+        if (stalled) {
+            console.error('run-once: exiting after the stall — the failed run is saved, re-run when ready');
+            process.exit(3);
         }
         throw error;
     }
@@ -793,6 +849,10 @@ if (require.main === module) {
 }
 
 module.exports = {
+    stallGuard,
+    runPulse,
+    clockPrefix,
+    describeActiveResources,
     waitForNetwork,
     assertCalendarsWereRead,
     deepMergeInto,

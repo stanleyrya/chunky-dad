@@ -438,6 +438,17 @@ class BearEventScraperOrchestrator {
                 // Perform cross-parser deduplication to merge events from different parsers
                 const deduplicatedEvents = await sharedCore.deduplicateEvents(results.allProcessedEvents, finalAdapter, config.config);
 
+                // An aggregator's record is a pointer (shared-core
+                // reconcileAggregatorPointers): a copy still standing after
+                // the fold while pointing into a site a first-party source
+                // read this run is withheld to the deck with both sides'
+                // facts; a picture it borrowed from another night's event
+                // on that source is cleared.
+                const pointerSummary = sharedCore.reconcileAggregatorPointers(deduplicatedEvents, results);
+                if (pointerSummary.withheld > 0 || pointerSummary.imagesCleared > 0 || pointerSummary.backedByDropped > 0 || pointerSummary.pageUnread > 0) {
+                    console.log(`🧭 Orchestrator: aggregator pointers — ${pointerSummary.withheld} cop${pointerSummary.withheld === 1 ? 'y' : 'ies'} withheld (the site pointed at lists no such night), ${pointerSummary.backedByDropped} backed by a bear-dropped night, ${pointerSummary.imagesCleared} reused picture${pointerSummary.imagesCleared === 1 ? '' : 's'} cleared${pointerSummary.pageUnread > 0 ? `, ${pointerSummary.pageUnread} pointing at a page the source did not read (left as found)` : ''}`);
+                }
+
                 // Manual bear/not-bear overrides stored on calendar records win
                 // over this run's automatic verdicts, in both directions.
                 const bearOverrideContext = {
@@ -474,7 +485,53 @@ class BearEventScraperOrchestrator {
                 } catch (error) {
                     results.calendarHygiene = [];
                 }
-                
+
+                // REPORT-ONLY "gone from its source": saved upcoming events
+                // whose own links point into a site a first-party source
+                // read in full this run, that nothing in the run matched,
+                // two runs in a row (SharedCore.buildGoneFromSourceCandidates).
+                // Rides with the run for the deck; the phone deletes only
+                // what the owner approves there. Adapters without a saved-
+                // events reader (the phone's own run) skip it.
+                try {
+                    if (typeof finalAdapter.listSavedUpcomingEvents === 'function'
+                        && typeof sharedCore.buildGoneFromSourceCandidates === 'function') {
+                        const cityKeys = new Set();
+                        for (const event of analyzedEvents) {
+                            const city = event && typeof event.city === 'string' ? event.city.trim() : '';
+                            if (city && city !== 'unknown') cityKeys.add(city);
+                        }
+                        const savedByCity = await finalAdapter.listSavedUpcomingEvents([...cityKeys]);
+                        const previousUpcoming = typeof finalAdapter.loadSourceUpcoming === 'function'
+                            ? await finalAdapter.loadSourceUpcoming()
+                            : null;
+                        const gone = sharedCore.buildGoneFromSourceCandidates(results, savedByCity, { previousUpcoming, cities: config.cities });
+                        results.goneFromSource = gone;
+                        const s = gone.summary;
+                        console.log(`🕳️ Orchestrator: gone from source — ${s.saved} saved upcoming event(s) in ${s.cities} city calendar(s), ${s.attributed} pointing into ${s.sites} site(s) read this run: ${s.seen} matched, ${s.firstMisses} first miss(es), ${s.candidates} on the deck (missing 2+ runs)${s.beyondHorizon ? `, ${s.beyondHorizon} beyond the source's horizon` : ''}${s.series ? `, ${s.series} series occurrence(s) left alone` : ''}${s.suppressedThin ? `, ${s.suppressedThin} frozen (thin read)` : ''}${s.suppressedDrift ? `, ${s.suppressedDrift} frozen (host in drift)` : ''}${s.identityMisses ? `, ${s.identityMisses} listed by the site but not folded by the run (identity miss — logged, no card)` : ''}`);
+                        for (const miss of Array.isArray(gone.identityMisses) ? gone.identityMisses : []) {
+                            if (miss.proposal === 'still-listed' || miss.proposal === 'set-aside') {
+                                console.log(`🕳️ IDENTITY: saved "${miss.title}" (${miss.city}, ${miss.day}${miss.bar ? `, ${miss.bar}` : ''}) is missing from ${miss.host}'s read, but the audit's deep check says ${miss.proposal === 'still-listed' ? 'its words are still on the site' : 'the run holds it under another title'} — a read problem, not a gone event; no card.`);
+                                continue;
+                            }
+                            console.log(`🕳️ IDENTITY: saved "${miss.title}" (${miss.city}, ${miss.day}${miss.bar ? `, ${miss.bar}` : ''}) is listed by ${miss.host} that night at the same place as "${miss.listed}", but the run ${miss.proposal === 'new' ? 'proposes it as a NEW event' : miss.proposal === 'dropped' ? 'dropped it as not bear' : 'did not fold them'} — an identity gap, not a gone event; no card.`);
+                        }
+                        for (const card of gone.candidates) {
+                            const instead = card.reason === 'duplicate'
+                                ? ` — the site lists it and the run matched that to the saved "${card.duplicateOf.title}" (${card.duplicateOf.uid}): this copy is the extra`
+                                : card.instead.sameNight.length > 0
+                                ? ` — that night it lists: ${card.instead.sameNight.slice(0, 3).map((row) => `"${row.title}"${row.bar ? ` at ${row.bar}` : ''}${row.similar ? ' (similar name, other place — moved?)' : ''}`).join(', ')}`
+                                : ' — nothing that night';
+                            const moved = card.instead.sameTitle.length > 0 ? `; same name on ${card.instead.sameTitle.map((row) => row.day).join(', ')}` : '';
+                            const deep = card.deepCheck ? `; deep check: ${card.deepCheck.verdict}` : '';
+                            console.log(`🕳️ GONE: "${card.title}" (${card.city}, ${card.startDate ? card.startDate.slice(0, 10) : '?'}) — ${card.source} read ${card.host} this run (${card.siteEvents} events, through ${card.horizonDay}) and has not listed it for ${card.misses} runs${instead}${moved}${deep}. On the deck.`);
+                        }
+                    }
+                } catch (error) {
+                    results.goneFromSource = null;
+                    console.log(`🕳️ Orchestrator: gone-from-source check skipped — ${error && error.message ? error.message : error}`);
+                }
+
                 // Update totals to reflect cross-parser deduplication
                 results.deduplicatedEvents = deduplicatedEvents.length;
 

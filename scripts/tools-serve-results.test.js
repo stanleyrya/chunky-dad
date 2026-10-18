@@ -47,6 +47,7 @@ const {
   tailLines,
   renderRunFormPage,
   renderSourceAuditPage,
+  renderMetricsPage,
   parsePortFromArgv,
   lookupIcsEvent,
   BRIDGE_SHIM_MARKER,
@@ -1998,4 +1999,137 @@ test('review date line: a whole-day event names its day (or days), says which ki
   assert.match(timed, /6:00 PM/);
   assert.match(timed, /the page says: late$/);
   assert.ok(!/all day/.test(formatReviewDateLine('2037-10-02T04:00:00.000Z', '2037-10-02T09:00:00.000Z', 'America/Los_Angeles')));
+});
+
+test('run-once stall guard: a run that prints nothing for the quiet window is failed loudly with the last line and what the process waits on; a run that keeps talking is left alone', async () => {
+  const runOnce = require('../tools/run-once');
+  const pulse = { lastOutputAt: Date.now(), lastLine: '🤖 AI Web: Sending AI request (ocr-all pass)' };
+  // Stuck forever (the 2026-10-09 daily run: 9½ h after an OCR request).
+  const stuck = new Promise(() => {});
+  await assert.rejects(
+    () => runOnce.stallGuard(stuck, { afterMs: 60, everyMs: 10, pulse }),
+    (error) => error.stall === true && /STALL: no output for 0 min/.test(error.message) && /ocr-all pass/.test(error.message) && /waiting on: /.test(error.message)
+  );
+  // Talking (the pulse keeps moving): the work's own result comes back.
+  const talking = { lastOutputAt: Date.now(), lastLine: '' };
+  const ticker = setInterval(() => { talking.lastOutputAt = Date.now(); }, 5);
+  try {
+    const result = await runOnce.stallGuard(new Promise((resolve) => setTimeout(() => resolve('done'), 120)), { afterMs: 60, everyMs: 10, pulse: talking });
+    assert.equal(result, 'done');
+  } finally { clearInterval(ticker); }
+  // A failing run fails as itself, not as a stall.
+  await assert.rejects(() => runOnce.stallGuard(Promise.reject(new Error('boom')), { afterMs: 60, everyMs: 10, pulse }), (error) => error.message === 'boom' && !error.stall);
+  assert.match(runOnce.clockPrefix(new Date(2026, 9, 9, 5, 7, 9)), /^05:07:09$/);
+  assert.ok(typeof runOnce.describeActiveResources() === 'string');
+});
+
+test('review routes: a gone-from-source card renders with its reason and the Gone pill; a left swipe stores a keep; the rejections text labels it KEPT', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-gone-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  const fixture = reviewRunFixture('20300101-051500');
+  fixture.goneFromSource = {
+    candidates: [{
+      key: 'gone|nyc|UID9', kind: 'gone', city: 'nyc', uid: 'UID9', identifier: 'UID9', title: 'BLUF NYC HARD',
+      startDate: '2030-10-11T02:00:00.000Z', endDate: '2030-10-11T06:00:00.000Z', timezone: 'America/New_York', bar: 'Eagle NYC', address: '554 W 28th St',
+      host: 'eagle-ny.com', site: 'eagle-ny.com', source: 'Eagle NYC', siteEvents: 21, horizonDay: '2031-01-03', misses: 2, reason: 'gone',
+      deepCheck: { verdict: 'site-removed', at: '2030-01-01T00:00:00.000Z' },
+      instead: { sameNight: [{ title: 'Bad Boy', startDate: '2030-10-11T02:00:00.000Z', day: '2030-10-10', bar: 'Eagle NYC', samePlace: true, similar: false, titleOverlap: 0 }], sameTitle: [] }
+    }],
+    state: {}, summary: { candidates: 1 }
+  };
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(fixture));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const page = await request(state, 'GET', '/review');
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes('Gone from its source'), 'the gone card renders');
+    assert.ok(page.body.includes('has not listed this one for'), 'the streak is on the card');
+    assert.ok(page.body.includes('the site removed it'), 'the deep check is on the card');
+    assert.ok(page.body.includes('Bad Boy') && page.body.includes('same place'), 'what the site lists instead that night');
+    assert.ok(page.body.includes("['gone', 'Gone']"), 'the Gone pill');
+    assert.ok(page.body.includes('"goneTags"') || page.body.includes('goneTags:'), 'keep-sheet chips shipped');
+    const deck = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(deck.counts.gone, 1);
+    const card = deck.cards.find((entry) => entry.kind === 'gone');
+    assert.equal(card.key, 'gone|nyc|UID9');
+    const kept = await request(state, 'POST', '/review/decide', JSON.stringify({
+      key: card.key, kind: 'gone', verdict: 'reject', runId: deck.runId, snapshot: card.proposal,
+      reason: { tags: ['still happening'], text: 'they posted the flyer', mode: 'keep' }
+    }));
+    assert.equal(kept.status, 200, kept.body);
+    const stored = JSON.parse(fs.readFileSync(reviewQueue.getDecisionsPath(dir), 'utf8'));
+    assert.equal(stored.decisions[0].kind, 'gone');
+    assert.equal(stored.decisions[0].reason.mode, 'keep');
+    const after = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(after.counts.gone, 0, 'kept cards leave the stack');
+    assert.equal(after.counts.waiting, 0, 'a keep is not a fix note');
+    const rejections = await request(state, 'GET', '/review/rejections');
+    assert.ok(rejections.body.includes('[KEPT] GONE BLUF NYC HARD — 2030-10-11 @ Eagle NYC [Eagle NYC] kept on the calendar (eagle-ny.com has not listed it for 2 runs) {still happening} — they posted the flyer'), rejections.body);
+    const cleared = await request(state, 'POST', '/review/decide', JSON.stringify({ key: card.key, verdict: 'clear' }));
+    assert.equal(JSON.parse(cleared.body).removed, true);
+    const approved = await request(state, 'POST', '/review/decide', JSON.stringify({ key: card.key, kind: 'gone', verdict: 'approve', runId: deck.runId, snapshot: card.proposal }));
+    assert.equal(approved.status, 200, approved.body);
+    const pending = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(pending.decided[0].pendingExecute, true, 'an approved removal waits for the phone');
+    const executePage = await request(state, 'GET', '/review');
+    assert.ok(executePage.body.includes('removes only the approved gone cards it can still verify'), 'the execute footer says what a removal does');
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('metrics routes: GET /metrics renders the ledger\'s Sources and Yield tables from the shared builders (sort via query), /metrics.json carries the rows and the yield, the deck header links it', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-metrics-route-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.mkdirSync(path.join(dir, 'metrics'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  const quality = (overrides) => Object.assign({ n: 20, time: 100, place: 100, coords: 90, url: 100, image: 50, desc: 60, flags: {}, bear: { extracted: 40, kept: 20, ai_dropped: 0, manual_dropped: 0, top_reason: '' }, dedup: { removed: 0, pct: 0 }, stability: 90, horizon_days: 30, runs_since_new: 1, errors: {}, churn: { merges: 0, changed: 0, fields: {} } }, overrides);
+  const lines = [];
+  for (let index = 1; index <= 8; index += 1) {
+    const base = { v: 1, run_id: `2030010${index}-051500`, finished_at: `2030-01-0${index}T05:15:00.000Z`, environment: 'node', trigger: 'scheduled', pages: 1, outbound_pages: 0, page_errors: 0, errors: [], upcoming: 5, proposals: { new: 0, merge: 1 }, duration_ms: 100, status: 'ok', vanished: [], aggregator: false, lost: [], suspected: 0, listing_gone: false };
+    lines.push(Object.assign({}, base, { host: 'lodge.example', parsers: ['Lodge'], url: 'https://lodge.example/basic.ics', extracted: 300, events: 87, bear: 74, quality: quality({ n: 87, place: 10 }) }));
+    lines.push(Object.assign({}, base, { host: 'steady.example', parsers: ['Steady'], url: 'https://steady.example/events/', extracted: 40, events: 20, bear: 20, quality: quality({}) }));
+  }
+  fs.writeFileSync(path.join(dir, 'metrics', 'sources.ndjson'), lines.map(line => JSON.stringify(line)).join('\n') + '\n');
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const page = await request(state, 'GET', '/metrics');
+    assert.equal(page.status, 200, page.body);
+    assert.ok(page.body.includes('1 of 2 sites need a look'), 'the health headline');
+    assert.ok(page.body.includes('verdict-chip verdict-sparse">Sparse · place 10%</span>'), 'the sparse verdict with its field');
+    assert.ok(page.body.includes('data-list="sources"') && page.body.includes('data-list="yield"'), 'both tables');
+    assert.ok(page.body.includes('74 / 300') && page.body.includes('class="field-bar low" title="place 10%"'), 'the yield row with its field bars');
+    assert.ok(page.body.indexOf('data-source-host="lodge.example"') < page.body.indexOf('data-source-host="steady.example"'), 'trouble first');
+    assert.ok(!page.body.includes('<button class="decide') && !/stanley/i.test(page.body), 'read only, no name');
+    const byHost = await request(state, 'GET', '/metrics?sort=host&dir=desc&ysort=yield&ydir=desc');
+    assert.ok(byHost.body.indexOf('data-source-host="steady.example"') < byHost.body.indexOf('data-source-host="lodge.example"'), 'the Sources sort follows the query');
+    assert.ok(byHost.body.indexOf('data-yield-host="steady.example"') < byHost.body.indexOf('data-yield-host="lodge.example"'), 'the Yield sort follows its own query');
+    const json = JSON.parse((await request(state, 'GET', '/metrics.json')).body);
+    assert.equal(json.ok, true);
+    assert.equal(json.hosts, 2);
+    assert.equal(json.troubled, 1);
+    assert.equal(json.rows[0].host, 'lodge.example');
+    assert.equal(json.rows[0].verdict, 'sparse');
+    assert.deepEqual(json.rows[0].sparse, { field: 'place', pct: 10, latest: 10, kept: 87 * 8, runs: 8 });
+    assert.equal(json.yield.runs.length, 7);
+    assert.equal(json.yield.rows.find(row => row.host === 'lodge.example').yield, 25);
+    const deck = await request(state, 'GET', '/review');
+    assert.ok(deck.body.includes('href="/metrics"'), 'the deck header links the metrics page');
+    assert.ok((await request(state, 'GET', '/nowhere')).body.includes('/metrics'), 'the 404 lists it');
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('metrics page without a ledger says so', () => {
+  const html = renderMetricsPage({ health: null, records: [] });
+  assert.ok(html.includes('no source ledger yet') && html.includes('No source ledger yet'));
 });
