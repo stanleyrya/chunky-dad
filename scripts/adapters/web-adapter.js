@@ -977,6 +977,7 @@ class WebAdapter {
             statusCode: responseData.statusCode || 200,
             headers: responseData.headers || {},
             fetchState: 'downloaded',
+            ...(responseData.finalUrl ? { finalUrl: responseData.finalUrl } : {}),
             html: responseData.html
         };
 
@@ -1714,6 +1715,9 @@ class WebAdapter {
                     statusCode: response.status,
                     headers: Object.fromEntries(response.headers.entries())
                 };
+                // Where a followed redirect landed, when it went somewhere
+                // else (a platform's tracking hop to the organiser's page).
+                if (response.url && response.url !== url && response.url !== fetchUrl) responseData.finalUrl = response.url;
 
                 if (canUseCache && isCacheableResponse(responseData)) {
                     await this.writeCachedPage(url, responseData, pageCacheConfig);

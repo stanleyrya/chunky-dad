@@ -23024,7 +23024,7 @@ test('Switched programme door: every day tab is read first-party, cards become t
     }
   };
   const programme = await parser.collectSwitchedProgramme({ url, html: landing }, { name: 'Folsom Europe' }, httpAdapter);
-  assert.deepEqual(fetched.map(f => f.requestUrl), [
+  assert.deepEqual(fetched.map(f => f.requestUrl).filter(u => /day=/.test(u)), [
     'https://ems.switchedapp.com/Programme/folsomeurope?day=a36674e3-dac5-4298-bb57-08dd6eac4b22',
     'https://ems.switchedapp.com/Programme/folsomeurope?day=c3e8a255-5894-4d73-bb58-08dd6eac4b22',
     'https://ems.switchedapp.com/Programme/folsomeurope?day=80fd8a2a-174f-479c-bb59-08dd6eac4b22'
@@ -23067,4 +23067,52 @@ test('Switched programme door: every day tab is read first-party, cards become t
   assert.equal(AiWebParser.shouldReadStructuredEvents({ pageClassification: 'link-aggregator', structuredSource: 'programme', structuredCount: 5 }), true, 'a programme the page itself opened is read whatever the shell around it reads as');
   assert.equal(parser.buildSwitchedProgrammeJsonLd([]), '');
   assert.ok(parser.buildSwitchedProgrammeJsonLd([{ title: 'A</script><b>', startLocal: '2026-09-09T10:00:00' }]).split('</script>').length === 2, 'a closing tag inside a card never ends the script block');
+});
+
+test('Switched programme door: the organiser page behind a Web redirect lends its own address and its structured place; a page that cannot be read leaves the card as printed', async () => {
+  const fs = require('fs');
+  const path = require('path');
+  const parser = createParser();
+  const cities = require('../scraper-cities');
+  parser.core.festivals = [{ name: 'Folsom Europe', cityKey: 'berlin', start: '2026-09-10', end: '2026-09-13' }];
+  const dir = path.join(__dirname, '..', 'fixtures', 'switched-programme-2026-10-18');
+  const url = 'https://ems.switchedapp.com/programme/folsomeurope';
+  const organiserPage = (ticketUrl) => `<!doctype html><html><head><link rel="canonical" href="${ticketUrl}"><meta property="og:url" content="${ticketUrl}?utm_source=ems"></head><body>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"BearDance Folsom Berlin 2026","startDate":"2026-09-11T22:00:00+02:00","endDate":"2026-09-12T06:00:00+02:00","url":"${ticketUrl}","location":{"@type":"Place","name":"SO36","address":{"@type":"PostalAddress","streetAddress":"Oranienstraße 190","addressLocality":"Berlin","postalCode":"10999","addressCountry":"DE"}},"offers":{"@type":"Offer","price":"25","priceCurrency":"EUR","url":"${ticketUrl}"}}</script></body></html>`;
+  const fetched = [];
+  const httpAdapter = {
+    fetchData: async (requestUrl, options) => {
+      fetched.push(requestUrl);
+      if (/day=/.test(requestUrl)) return { html: fs.readFileSync(path.join(dir, 'day-fri.html'), 'utf8'), url: requestUrl };
+      if (/\/url\/07505fc9/.test(requestUrl)) return { html: organiserPage('https://www.eventbrite.de/e/beardance-folsom-berlin-2026-tickets-1234567890'), url: requestUrl, finalUrl: 'https://www.eventbrite.de/e/beardance-folsom-berlin-2026-tickets-1234567890?aff=ems&utm_campaign=x' };
+      if (/\/url\//.test(requestUrl)) { const error = new Error('robots.txt of other.example disallows /'); error.politeness = { reason: 'robots' }; throw error; }
+      throw new Error('HTTP 500');
+    }
+  };
+  const landing = fs.readFileSync(path.join(dir, 'landing-wed.html'), 'utf8').replace(/>\s*Web\s*<\/a>/, '>Web</a> <a href="https://ems.switchedapp.com/url/1nstagram-0000?isource=WebProgramme" target="_blank">Instagram</a>').replace(/<ul class="days">[\s\S]*?<\/ul>/, '<ul class="days"><li class="day"><a class="p2 text-uppercase selected" href="/Programme/folsomeurope?day=69ae6314-69ca-4a79-bb56-08dd6eac4b22">Wed 9</a></li><li class="day"><a class="p2 text-uppercase" href="/Programme/folsomeurope?day=c3e8a255-5894-4d73-bb58-08dd6eac4b22">Fri 11</a></li></ul>');
+  const programme = await parser.collectSwitchedProgramme({ url, html: landing }, { name: 'Folsom Europe' }, httpAdapter);
+  const webLinks = programme.cards.filter(card => card.webUrl).map(card => card.webUrl);
+  assert.ok(webLinks.length >= 2, 'the fixture days carry Web links');
+  assert.deepEqual(fetched.filter(u => /\/url\//.test(u)), [...new Set(webLinks)], 'each distinct Web link is opened once, through the ordinary fetch');
+  const events = parser.buildSwitchedProgrammeEvents(programme, url, cities);
+  const bearDance = events.find(e => e.title === 'BEAR DANCE FOLSOM');
+  assert.ok(bearDance);
+  assert.equal(bearDance.ticketUrl, 'https://www.eventbrite.de/e/beardance-folsom-berlin-2026-tickets-1234567890', 'the organiser page\'s own address, tracking parameters dropped, replaces the platform redirect');
+  assert.equal(bearDance.bar, 'SO36', 'the organiser page\'s structured place names the venue');
+  assert.match(bearDance.address, /Oranienstraße 190/);
+  assert.equal(bearDance.endDate, null, 'the programme\'s "FROM 22:00" stands: the organiser page never re-dates a card');
+  assert.equal(bearDance.cover, '25 EUR', 'the ticket price comes along');
+  assert.ok(!fetched.some(u => /1nstagram/.test(u)), 'a card\'s Instagram link is never opened');
+  // The same programme read through a gate whose robots reading refuses the landing page.
+  const gated = { ...httpAdapter, getFetchPoliteness: () => ({ robotsAllowsLanding: async (landing) => !/eventbrite\.de/.test(landing) }) };
+  const parser2 = createParser();
+  parser2.core.festivals = parser.core.festivals;
+  const programme2 = await parser2.collectSwitchedProgramme({ url, html: landing }, { name: 'Folsom Europe' }, gated);
+  const bearDance2 = parser2.buildSwitchedProgrammeEvents(programme2, url, cities).find(e => e.title === 'BEAR DANCE FOLSOM');
+  assert.match(bearDance2.ticketUrl, /^https:\/\/ems\.switchedapp\.com\/url\//, 'a landing page the destination\'s robots.txt refuses is discarded: the card keeps the redirect');
+  assert.equal(bearDance2.bar, '', 'and lends no venue');
+  const refused = events.find(e => e.title === 'Böse Buben' || e.title === 'Woof Berlin');
+  assert.ok(refused, 'the other cards are still built');
+  assert.match(refused.ticketUrl, /^https:\/\/ems\.switchedapp\.com\/url\//, 'a page that refused leaves the redirect as the card\'s link');
+  assert.equal(refused.bar, '', 'and invents no venue');
 });

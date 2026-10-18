@@ -30112,6 +30112,20 @@ class FetchPoliteness {
         }
     }
 
+    // A followed redirect lands where the gate never looked (fetch walks
+    // the hop itself). Whether the landing host's robots.txt admits that
+    // path, under the same reading the gate applies before a request —
+    // the caller discards what it fetched when the answer is no. Read-only
+    // apart from the robots.txt read; nothing is counted against the host.
+    async robotsAllowsLanding(url) {
+        const hostKey = FetchPoliteness.hostKeyOf(url);
+        if (!hostKey || this.isExempt(hostKey) || this.robotsMode !== 'enforce') return true;
+        let robots = null;
+        try { robots = await this.loadRobots(hostKey, url, this.getHostState(hostKey)); } catch (_) { return true; }
+        if (!robots) return true;
+        return FetchPoliteness.robotsVerdict(robots, FetchPoliteness.pathOf(url)).allowed !== false;
+    }
+
     // '' when a request for this URL would be attempted; otherwise why not
     // (parked host / budget spent). Read-only — nothing is counted.
     refusalReasonFor(url) {

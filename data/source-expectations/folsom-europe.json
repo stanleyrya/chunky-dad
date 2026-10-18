@@ -54,7 +54,7 @@
         "note": "The WordPress site's Tribe calendar is the volunteer-shift roster (\"Take Down Flags\" and the like), not the public programme. Not configured; the 2026-10-18 solo run of a Tribe stanza on it produced exactly one 2025 shift as an event, which is why that stanza was dropped the same day."
       }
     ],
-    "notes": "Added 2026-10-18 at the owner's request (\"Build a reader for the schedule frame\"). The programme door (AiWebParser.collectSwitchedProgramme) reads the landing day and every tab, turns the cards into JSON-LD Event nodes (local wall-clock times; an end before its start is the next morning; FROM = no end) and places cards without a place of their own in the city the heading names — \"Folsom Europe 2026\" names the curated festival (data/festivals.json key folsom-europe, cityKey berlin). Venues are in the title line for bar programmes (\"Woof Berlin\", \"Prinzknecht\", \"Böse Buben\") and in the blurb for parties, so data/bars/berlin.json (Woof Berlin, SO36) is what pins them; the Map link carries no address. The Web link is the platform's redirect to the real page (302 with utm parameters), kept as the ticket link as published. Bear relevance is the verdict's job: the 2026 programme is leather/fetish-wide with a bear core (BEAR DANCE FOLSOM at SO36, every Woof Berlin night). On 2026-10-18 the page still shows the 2026 edition (2026-09-09 … 2026-09-13), all past, so nothing is upcoming until the 2027 programme is published (~July/August 2027); the day guids will be new then."
+    "notes": "Added 2026-10-18 at the owner's request (\"Build a reader for the schedule frame\"). The programme door (AiWebParser.collectSwitchedProgramme) reads the landing day and every tab, turns the cards into JSON-LD Event nodes (local wall-clock times; an end before its start is the next morning; FROM = no end) and places cards without a place of their own in the city the heading names — \"Folsom Europe 2026\" names the curated festival (data/festivals.json key folsom-europe, cityKey berlin). Venues are in the title line for bar programmes (\"Woof Berlin\", \"Prinzknecht\", \"Böse Buben\") and in the blurb for parties, so data/bars/berlin.json (Woof Berlin, SO36) is what pins them; the Map link carries no address. The Web link is the platform's redirect to the real page (302 with utm parameters), kept as the ticket link as published. Bear relevance is the verdict's job: the 2026 programme is leather/fetish-wide with a bear core (BEAR DANCE FOLSOM at SO36, every Woof Berlin night). On 2026-10-18 the page still shows the 2026 edition (2026-09-09 … 2026-09-13), all past, so nothing is upcoming until the 2027 programme is published (~July/August 2027); the day guids will be new then. Follow-up the same day (owner: \"page loads and AI calls are free\"): the door opens each card's Web and Tickets redirects (never its Instagram/Facebook links) and reads the organiser page once — its canonical/og:url, tracking parameters dropped, becomes the card's link, and its JSON-LD Place the venue; a landing page whose own robots.txt refuses the path is discarded after the fact. Live 2026-10-18: 93 pages behind 88 links, 75 cards now link the organiser's page, 8 gained a venue from structured data (SO36 for BearDance, Alte Münze for PiG), 13 links could not be fetched (the Jimdo/Cloudflare venue sites, left as printed). ~96 requests to the programme host per run, within its 120 budget; the page cache makes later runs cheap."
   },
   "coverage": {
     "confidence": "high",
@@ -102,11 +102,5 @@
       }
     }
   ],
-  "openQuestions": [
-    {
-      "q": "Should the platform's /url/<guid> redirect be resolved once per card to the organiser's real page (one extra request each, ~65 per edition) so the link survives the platform?",
-      "raisedOn": "2026-10-18",
-      "blocking": false
-    }
-  ]
+  "openQuestions": []
 }
