@@ -34,18 +34,21 @@ a { color:var(--accent); }
 .primary-button { color:#1b1308; background:linear-gradient(135deg, var(--accent-soft), var(--accent)); box-shadow:0 10px 24px rgba(0,0,0,.35); }
 .secondary-button { color:#c4c8e4; background:rgba(15,20,34,.9); border:1px solid rgba(255,162,74,.25); }
 .top select.action-button { font-size:14px; appearance:none; -webkit-appearance:none; padding-right:28px; max-width:min(60vw, 320px); background:rgba(15,20,34,.9) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c4c8e4'/%3E%3C/svg%3E") no-repeat right 10px center; color:#c4c8e4; border:1px solid rgba(255,162,74,.25); }
-@media (max-width: 560px) { .top .tool-buttons { width:100%; margin-left:0; } .top .tool-buttons > * { flex:1 1 0; min-width:0; } }
+@media (max-width: 560px) { .top .tool-buttons { width:100%; margin-left:0; } .top .tool-buttons > button { flex:1 1 0; min-width:0; } .top select.action-button { flex:1 1 100%; max-width:none; } }
 
 .wrap { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; max-width:1280px; margin:14px auto 40px; padding:0 max(14px, env(safe-area-inset-left)) 0 max(14px, env(safe-area-inset-right)); }
 @media (min-width: 960px) { .wrap { grid-template-columns:minmax(0,1.7fr) minmax(320px,1fr); align-items:start; } }
 .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:var(--shadow); min-width:0; }
 .card h2 { margin:0 0 10px; font:600 12px/1 Poppins, -apple-system, system-ui, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
 .stage { overflow:auto; max-height:76vh; border-radius:10px; background:#fff; border:1px solid var(--line); -webkit-overflow-scrolling:touch; }
-svg { display:block; touch-action:none; user-select:none; -webkit-user-select:none; }
+/* A finger on the plan pans it (the stage scrolls natively) and pinches the page; only a piece captures the touch. */
+svg { display:block; touch-action:pan-x pan-y pinch-zoom; user-select:none; -webkit-user-select:none; }
+.item { touch-action:none; }
 .item rect { fill:var(--brand); fill-opacity:.32; stroke:#4a5fd6; stroke-width:2; cursor:grab; vector-effect:non-scaling-stroke; }
 .item.sel rect { stroke-width:3.5; fill-opacity:.5; stroke:#ff7b2f; }
 .item.bad rect { fill:var(--no); stroke:var(--no); }
-.item text { font-family:ui-monospace, Menlo, monospace; fill:#0b0d13; pointer-events:none; text-anchor:middle; font-weight:600; }
+.item text { font-family:-apple-system, system-ui, sans-serif; fill:#0b0d13; pointer-events:none; text-anchor:middle; font-weight:600; paint-order:stroke; stroke:rgba(255,255,255,.85); stroke-width:3px; stroke-linejoin:round; }
+.item text.dim { font-weight:500; fill:#2a2f3a; }
 .cal line { stroke:var(--no); stroke-width:2; vector-effect:non-scaling-stroke; }
 .cal circle { fill:var(--no); }
 .empty { padding:40px 16px; text-align:center; color:var(--muted); }
@@ -69,17 +72,25 @@ form label.full, form .full { grid-column:1 / -1; }
 input { font:inherit; font-size:16px; padding:8px 10px; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:10px; min-width:0; width:100%; }
 input[type=file] { padding:6px; }
 .hint { color:var(--muted); font-size:12px; margin:8px 0 0; }
+@media (hover:none) { .keys { display:none; } }
+.selbar { display:none; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; padding:8px 10px; border-radius:12px; background:rgba(102,126,234,.14); border:1px solid rgba(102,126,234,.35); }
+.selbar.show { display:flex; }
+.selbar .who { flex:1 1 140px; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.selbar .who small { font-weight:500; color:var(--muted); font-family:ui-monospace, Menlo, monospace; margin-left:6px; }
+.selbar button { padding:7px 10px; min-height:32px; }
 .status { font-family:ui-monospace, Menlo, monospace; font-size:12px; margin-top:6px; min-height:1.2em; }
 .status.ok { color:#6fcf97; } .status.bad { color:#f08575; } .status.warn { color:var(--warn); }
 .presets { display:flex; flex-wrap:wrap; gap:6px; }
 .presets button { font-size:12px; padding:6px 9px; min-height:30px; }
 .zoom { display:flex; align-items:center; gap:6px; font-family:ui-monospace, Menlo, monospace; font-size:12px; color:var(--muted); }
-.zoom input { width:120px; padding:0; }
+.zoom input { width:110px; padding:0; }
+.zoom button { padding:5px 9px; min-height:28px; font-size:12px; }
 .calbox { display:none; gap:8px; align-items:end; flex-wrap:wrap; margin-top:8px; padding:10px; border:1px dashed var(--no); border-radius:10px; }
 .calbox.show { display:flex; }
 .calbox label { font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:3px; }
 .calbox input { width:76px; }
 .save { font-family:ui-monospace, Menlo, monospace; font-size:11px; color:rgba(255,255,255,.8); }
+.banner[hidden] { display:none; }
 .banner { background:rgba(255,123,47,.12); border:1px solid rgba(255,162,74,.35); border-radius:12px; padding:10px 12px; font-size:13px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
 .banner b { color:var(--accent-soft); }
 .toast { position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px); background:#1c2235; color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:10px 14px; font-size:13px; opacity:0; pointer-events:none; transition:.2s; z-index:9; max-width:92vw; }
@@ -102,7 +113,7 @@ input[type=file] { padding:6px; }
     <div id="shareBanner" class="banner" hidden></div>
     <div id="stageWrap"></div>
     <div class="toolbar">
-      <span class="zoom">Zoom <input id="zoom" type="range" min="0.4" max="3" step="0.05" value="1" aria-label="Zoom"></span>
+      <span class="zoom">Zoom <input id="zoom" type="range" min="0.5" max="4" step="0.05" value="1" aria-label="Zoom"> <button id="fit" type="button" title="Fit the whole plan in view">Fit</button></span>
       <button id="calBtn" type="button" title="Tap two points on the plan with a known distance between them">📏 Set scale</button>
       <span id="scaleInfo" class="save"></span>
       <span id="saveState" class="save" style="margin-left:auto"></span>
@@ -114,7 +125,8 @@ input[type=file] { padding:6px; }
       <button id="calApply" class="go" type="button" disabled>Apply scale</button>
       <button id="calCancel" type="button">Cancel</button>
     </div>
-    <p class="hint">Drag a piece to move it. Double-tap to rotate. Edges snap together when close. Red means it overlaps another piece. Arrow keys nudge 1", Shift+arrow 1', R rotates. Check the plan's walls by eye: the tool knows the scale, not where the walls are.</p>
+    <div id="selbar" class="selbar"><span class="who" id="selWho"></span><button id="rotate" type="button">⟳ Rotate</button><button id="dup" type="button">⧉ Duplicate</button><button id="remove" type="button">✕ Delete</button></div>
+    <p class="hint">Drag a piece to move it; double-tap it to rotate. Drag the plan itself to pan. Edges snap together when close; red means two pieces overlap. <span class="keys">Arrow keys nudge 1", Shift+arrow 1', R rotates, Delete removes.</span> The tool knows the scale, not the walls, so check those by eye.</p>
     <div id="status" class="status"></div>
   </div>
 
@@ -123,12 +135,10 @@ input[type=file] { padding:6px; }
       <h2>Furniture in this apartment</h2>
       <div id="list"></div>
       <div class="toolbar">
-        <button id="rotate" type="button">⟳ Rotate</button>
-        <button id="remove" type="button">✕ Delete</button>
-        <button id="dup" type="button">⧉ Duplicate</button>
         <button id="reset" type="button">↺ Reset layout</button>
         <button id="clear" type="button">Clear all</button>
       </div>
+      <p class="hint">Tap a piece here or on the plan to select it; its name and size then show in the form below, where you can change them.</p>
     </div>
 
     <div class="card">
@@ -137,7 +147,7 @@ input[type=file] { padding:6px; }
         <label class="full">Name <input id="fName" placeholder="e.g. Dresser" required></label>
         <label>Width (in) <input id="fW" type="number" min="1" max="400" step="0.5" required></label>
         <label>Depth (in) <input id="fD" type="number" min="1" max="400" step="0.5" required></label>
-        <div class="full"><button class="go" type="submit">Add to plan</button></div>
+        <div class="full toolbar" style="margin-top:0"><button class="go" type="submit">Add to plan</button><button type="button" id="updatePiece" hidden>Update selected</button></div>
       </form>
       <p class="hint">Quick picks:</p>
       <div class="presets" id="presets"></div>
@@ -193,6 +203,7 @@ const PRESETS = [
 let apts = {};        // id -> {id, name, img:{src|data, w, h}, ppi, furniture:[{id,name,w,d,x,y,r}], builtIn?, shared?}
 let activeId = null, selected = null, uid = Date.now();
 let zoom = 1, cal = null, drag = null;
+let fitScale = 0.5; // SVG px → CSS px that shows the whole plan in the stage; the slider multiplies it
 
 const $ = id => document.getElementById(id);
 const NS = 'http://www.w3.org/2000/svg';
@@ -298,21 +309,32 @@ function renderStage() {
   if (!a) { W.innerHTML = '<div class="empty"><b>No apartment loaded.</b><br>Tap “New”, give it a name and upload the floor plan image.</div>'; $('scaleInfo').textContent = ''; $('status').textContent = ''; return; }
   if (!a.img) { W.innerHTML = '<div class="empty"><b>New apartment.</b><br>Name it and upload the floor plan image below, then Save.</div>'; $('scaleInfo').textContent = ''; $('status').textContent = ''; return; }
   const stage = document.createElement('div'); stage.className = 'stage'; W.appendChild(stage);
+  const avail = Math.max(240, stage.clientWidth - 2);
+  fitScale = Math.min(avail / a.img.w, (window.innerHeight * 0.76) / a.img.h);
   const svg = el('svg', { id: 'plan', viewBox: `0 0 ${a.img.w} ${a.img.h}`, xmlns: NS }, stage);
-  svg.style.width = (a.img.w * zoom * 0.5) + 'px'; svg.style.height = (a.img.h * zoom * 0.5) + 'px';
+  sizeSvg(svg, a);
   el('image', { href: imgSrc(a), x: 0, y: 0, width: a.img.w, height: a.img.h }, svg);
   const ppi = a.ppi;
   if (ppi) {
     const layer = el('g', {}, svg);
-    const fs = Math.max(9, ppi * 3.2);
+    // Labels are sized for the screen (11 CSS px), not the plan: a piece
+    // too small to hold its name on screen shows nothing, and the size
+    // line only when there is room for both.
+    const screen = fitScale * zoom;
+    const fs = 11 / screen;
     for (const it of a.furniture) {
       const D = dims(it), bad = problems(it).length > 0;
       const g = el('g', { class: 'item' + (bad ? ' bad' : '') + (it === selected ? ' sel' : ''), transform: `translate(${it.x * ppi} ${it.y * ppi})` }, layer);
       g._item = it;
       el('rect', { x: 0, y: 0, width: D.w * ppi, height: D.h * ppi }, g);
-      const cx = D.w / 2 * ppi, cy = D.h / 2 * ppi;
-      const t = el('text', { x: cx, y: cy, 'font-size': fs }, g); t.textContent = it.name;
-      const s = el('text', { x: cx, y: cy + fs * 1.1, 'font-size': fs * 0.8 }, g); s.textContent = `${D.w}×${D.h}`;
+      const cx = D.w / 2 * ppi, cy = D.h / 2 * ppi, wPx = D.w * ppi, hPx = D.h * ppi;
+      const nameFits = wPx >= fs * 0.6 * Math.min(it.name.length, 12) + fs * 0.4 && hPx >= fs * 1.2;
+      const bothFit = nameFits && hPx >= fs * 2.6 && wPx >= fs * 3.2;
+      if (nameFits) {
+        const t = el('text', { x: cx, y: bothFit ? cy - fs * 0.15 : cy + fs * 0.35, 'font-size': fs }, g);
+        t.textContent = it.name.length > 14 && wPx < fs * 0.55 * it.name.length ? it.name.slice(0, 12) + '…' : it.name;
+      }
+      if (bothFit) { const s = el('text', { class: 'dim', x: cx, y: cy + fs * 1.05, 'font-size': fs * 0.85 }, g); s.textContent = `${fmt(D.w)} × ${fmt(D.h)}`; }
       g.addEventListener('pointerdown', e => startDrag(e, it, svg, g));
     }
   }
@@ -338,6 +360,7 @@ function renderStage() {
     svg.querySelectorAll('.item').forEach(g => g.classList.toggle('bad', problems(g._item).length > 0));
   });
   svg.addEventListener('pointerup', () => { if (drag) { drag = null; persist(a); renderStage(); renderPanel(); } });
+  if (selected && !cal) { requestAnimationFrame(() => { const g = [...svg.querySelectorAll('.item')].find(x => x._item === selected); if (g && typeof g.scrollIntoView === 'function' && !isVisibleIn(g, stage)) g.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }); }
   svg.addEventListener('pointercancel', () => { if (drag) { drag = null; renderStage(); } });
   $('scaleInfo').textContent = ppi ? `${ppi.toFixed(2)} px per inch` : 'Scale not set';
   const n = a.furniture.filter(i => problems(i).length).length;
@@ -345,7 +368,19 @@ function renderStage() {
   if (!ppi) { st.className = 'status warn'; st.textContent = 'Set the scale before placing furniture.'; }
   else { st.className = 'status ' + (n ? 'bad' : 'ok'); st.textContent = a.furniture.length ? (n ? `${n} piece${n > 1 ? 's' : ''} overlapping` : 'No overlaps') : 'No furniture on the plan'; }
 }
+function sizeSvg(svg, a) { svg.style.width = (a.img.w * fitScale * zoom) + 'px'; svg.style.height = (a.img.h * fitScale * zoom) + 'px'; }
+function isVisibleIn(node, box) { const r = node.getBoundingClientRect(), b = box.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right && r.top >= b.top && r.bottom <= b.bottom; }
+function renderSelection() {
+  const a = apt(), bar = $('selbar'), it = selected && a && a.furniture.includes(selected) ? selected : null;
+  bar.classList.toggle('show', !!it);
+  if (it) $('selWho').innerHTML = `${escapeHtml(it.name)}<small>${fmt(it.w)} × ${fmt(it.d)}${it.r ? ` · ${it.r}°` : ''}</small>`;
+  // The add form edits the selected piece too.
+  $('updatePiece').hidden = !it;
+  if (it) { $('fName').value = it.name; $('fW').value = it.w; $('fD').value = it.d; }
+}
+function escapeHtml(text) { return String(text).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function renderPanel() {
+  renderSelection();
   const a = apt(), L = $('list'); L.innerHTML = '';
   $('aptName').value = a ? a.name : '';
   $('aptHint').textContent = !a ? 'Upload a plan (a screenshot or a PDF page), then use Set scale on a labelled room dimension.'
@@ -396,15 +431,23 @@ function snap(it, x, y) {
 
 // ---------- Controls ----------
 $('aptSel').onchange = e => { activeId = e.target.value; selected = null; if (activeId !== 'shared') ls('fitcheck-active', activeId); renderAll(); };
-$('zoom').oninput = e => { zoom = +e.target.value; const s = $('plan'); if (s) { const a = apt(); s.style.width = (a.img.w * zoom * 0.5) + 'px'; s.style.height = (a.img.h * zoom * 0.5) + 'px'; } };
+$('zoom').oninput = e => { zoom = +e.target.value; renderStage(); };
+$('fit').onclick = () => { zoom = 1; $('zoom').value = '1'; renderStage(); };
+let resizeTimer = null;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!drag) renderStage(); }, 150); });
 $('rotate').onclick = () => { if (!selected) return; selected.r = (selected.r + 90) % 360; persist(apt()); renderStage(); };
 $('remove').onclick = () => { if (!selected) return; const a = apt(); a.furniture = a.furniture.filter(o => o !== selected); selected = null; persist(a); renderStage(); renderPanel(); };
 $('dup').onclick = () => { if (!selected) return; const a = apt(); const c = { ...selected, id: String(uid++), x: selected.x + 6, y: selected.y + 6 }; a.furniture.push(c); selected = c; persist(a); renderStage(); renderPanel(); };
 $('addForm').addEventListener('submit', e => {
   e.preventDefault(); const a = apt(); if (!a || !a.img) return;
   const name = $('fName').value.trim(), w = +$('fW').value, d = +$('fD').value; if (!name || !w || !d) return;
-  const it = { id: String(uid++), name, w, d, x: 12, y: 12, r: 0 }; a.furniture.push(it); selected = it; persist(a); renderStage(); renderPanel(); e.target.reset();
+  const it = { id: String(uid++), name, w, d, x: 12, y: 12, r: 0 }; a.furniture.push(it); selected = it; persist(a); renderStage(); renderPanel(); toast(`${name} added at the top-left corner — drag it into place`);
 });
+$('updatePiece').onclick = () => {
+  const a = apt(); if (!a || !selected) return;
+  const name = $('fName').value.trim(), w = +$('fW').value, d = +$('fD').value; if (!name || !w || !d) return;
+  selected.name = name; selected.w = w; selected.d = d; persist(a); renderStage(); renderPanel(); toast('Piece updated');
+};
 for (const [n, w, d] of PRESETS) { const b = document.createElement('button'); b.type = 'button'; b.textContent = `${n} ${w}×${d}`; b.onclick = () => { $('fName').value = n; $('fW').value = w; $('fD').value = d; }; $('presets').appendChild(b); }
 $('reset').onclick = () => {
   const a = apt(); if (!a) return;
