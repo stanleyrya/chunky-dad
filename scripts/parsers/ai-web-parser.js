@@ -10391,8 +10391,25 @@ class AiWebParser {
             if (!titleParagraph) continue;
             const descriptionParagraph = after.find(p => p !== titleParagraph && p.text && !/<(?:a|img)\b/i.test(p.inner));
             const imageMatch = block.match(/<img\b[^>]*src="(https?:\/\/[^"]+)"/i);
-            const webMatch = block.match(/<a\b[^>]*href="([^"]+)"[^>]*>\s*Web\s*<\/a>/i);
-            const mapMatch = block.match(/<a\b[^>]*href="([^"]*\/location\?[^"]*)"/i);
+            // A card's outbound links are labelled by the platform — "Web"
+            // (the organiser's page), "Tickets" (the shop), "Map" (the
+            // location shell). Web and Tickets both go through the
+            // platform's redirect; a card may carry either or both.
+            const links = [];
+            const linkPattern = /<a\b[^>]*href="([^"]+)"[^>]*>\s*([^<]*?)\s*<\/a>/gi;
+            let link;
+            while ((link = linkPattern.exec(block)) !== null) {
+                const href = this.decodeEntitiesFully(link[1]);
+                const label = this.normalizeWhitespace(link[2]).toLowerCase();
+                if (/\/location\?/.test(href)) { if (!links.some(l => l.kind === 'map')) links.push({ kind: 'map', href }); continue; }
+                if (!/^https?:\/\//i.test(href)) continue;
+                // Only the organiser's page and the shop are opened. A
+                // card's Instagram / Facebook links are never followed
+                // (no social fetching in the pipeline — owner policy).
+                const kind = /ticket|registration|locker|buchen/.test(label) ? 'tickets' : (/^(?:web|website)$/.test(label) ? 'web' : '');
+                if (kind && !links.some(l => l.kind === kind)) links.push({ kind, href });
+            }
+            const linkOf = (kind) => { const found = links.find(l => l.kind === kind); return found ? found.href : ''; };
             cards.push({
                 title: titleParagraph.text,
                 description: descriptionParagraph
@@ -10401,11 +10418,107 @@ class AiWebParser {
                 startLocal,
                 endLocal,
                 image: imageMatch ? this.decodeEntitiesFully(imageMatch[1]) : '',
-                webUrl: webMatch ? this.decodeEntitiesFully(webMatch[1]) : '',
-                mapUrl: mapMatch ? this.decodeEntitiesFully(mapMatch[1]) : ''
+                webUrl: linkOf('web') || linkOf('tickets'),
+                ticketsUrl: linkOf('tickets'),
+                mapUrl: linkOf('map')
             });
         }
         return cards;
+    }
+
+    // A card's "Web" link is the platform's tracking redirect to the
+    // organiser's own page (Eventbrite, DICE, the promoter's site). That
+    // page is opened once per card — through the ordinary fetch, so the
+    // organiser host's own robots.txt, pacing and budget apply, and the
+    // page cache makes the second run free — and read for two things the
+    // programme never states: the page's own address (<link rel=canonical>
+    // / og:url, the JSON-LD Event's url; tracking parameters dropped), which
+    // replaces the redirect as the card's link and is what identity
+    // matching needs when the same party arrives from the platform itself;
+    // and the JSON-LD Event's place (name + street address), which the Map
+    // link cannot give. Nothing else is taken: dates and artwork are the
+    // programme's statement. A page that cannot be read (refused, no
+    // structured data) leaves the card as the programme printed it.
+    // Owner ruling 2026-10-18 ("page loads and AI calls are free").
+    async enrichSwitchedProgrammeCards(cards, sourceUrl, httpAdapter) {
+        if (!Array.isArray(cards) || cards.length === 0 || !httpAdapter || typeof httpAdapter.fetchData !== 'function') return;
+        const stripTracking = (url) => String(url || '').replace(/([?&])(?:utm_[a-z]+|fbclid|gclid|mc_[a-z]+|isource)=[^&#]*(&|#|$)/gi, (m, lead, tail) => (tail === '&' ? lead : tail)).replace(/[?&]$/, '');
+        const pageAddress = (html, fallbackUrl) => {
+            const source = String(html || '');
+            const canonical = source.match(/<link\b[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i) || source.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*rel=["']canonical["']/i);
+            const og = source.match(/<meta\b[^>]*property=["']og:url["'][^>]*content=["']([^"']+)["']/i) || source.match(/<meta\b[^>]*content=["']([^"']+)["'][^>]*property=["']og:url["']/i);
+            const candidate = this.normalizeHttpUrlValue(this.decodeEntitiesFully((canonical && canonical[1]) || (og && og[1]) || ''));
+            return candidate || fallbackUrl;
+        };
+        const answers = new Map();
+        const failures = new Map();
+        let resolved = 0;
+        let placed = 0;
+        const openPage = async (card, link) => {
+            if (answers.has(link)) return answers.get(link);
+            let answer = null;
+            {
+                try {
+                    const response = await httpAdapter.fetchData(link, { headers: { Referer: sourceUrl } });
+                    const html = response && typeof response.html === 'string' ? response.html : '';
+                    if (!html) throw new Error('empty answer');
+                    const finalUrl = this.normalizeHttpUrlValue(response.finalUrl || '') || '';
+                    // The hop was walked by the fetch itself; the landing
+                    // host's robots.txt is honoured after the fact by
+                    // discarding what it would have refused.
+                    const gate = typeof httpAdapter.getFetchPoliteness === 'function' ? httpAdapter.getFetchPoliteness() : null;
+                    if (finalUrl && gate && typeof gate.robotsAllowsLanding === 'function' && !(await gate.robotsAllowsLanding(finalUrl))) {
+                        throw new Error(`robots.txt of ${(finalUrl.match(/^https?:\/\/([^/?#]+)/i) || [])[1]} disallows the page the redirect lands on`);
+                    }
+                    const address = stripTracking(pageAddress(html, finalUrl));
+                    const events = this.extractEventsFromJsonLd(html, address || card.webUrl, null);
+                    const sameDay = events.filter(event => event._startDateRawText && event._startDateRawText.slice(0, 10) === card.startLocal.slice(0, 10));
+                    const match = sameDay.length === 1 ? sameDay[0] : (events.length === 1 ? events[0] : null);
+                    answer = {
+                        url: address && this.getRegistrableDomainFromUrl(address) !== this.getRegistrableDomainFromUrl(link) ? address : (match && match.ticketUrl ? stripTracking(match.ticketUrl) : ''),
+                        bar: match ? match.bar : '',
+                        address: match ? match.address : '',
+                        cover: match && match.cover ? match.cover : ''
+                    };
+                } catch (error) {
+                    const host = (String(link).match(/^https?:\/\/([^/?#]+)/i) || [])[1] || link;
+                    const why = String((error && error.message) || error).replace(/\s+/g, ' ').slice(0, 120);
+                    const seen = failures.get(host) || { count: 0, why };
+                    failures.set(host, { count: seen.count + 1, why: seen.why });
+                    answer = { url: '', bar: '', address: '', cover: '', failed: why };
+                }
+            }
+            answers.set(link, answer);
+            return answer;
+        };
+        for (const card of cards) {
+            const links = [card.webUrl, card.ticketsUrl].filter((link, index, all) => link && all.indexOf(link) === index);
+            if (links.length === 0) continue;
+            const read = [];
+            for (const link of links) {
+                const answer = await openPage(card, link);
+                if (answer && !answer.failed) read.push(answer);
+            }
+            if (read.length === 0) continue;
+            // The ticket shop's address is the card's link when it has one
+            // (that is where a reader goes); the venue comes from whichever
+            // page states one, the organiser's page first.
+            const withUrl = read.slice().reverse().find(answer => answer.url);
+            if (withUrl) { card.resolvedUrl = withUrl.url; resolved += 1; }
+            const withPlace = read.find(answer => answer.bar || answer.address);
+            if (withPlace) {
+                card.bar = withPlace.bar || '';
+                card.address = withPlace.address || '';
+                placed += 1;
+            }
+            const withCover = read.find(answer => answer.cover);
+            if (withCover) card.cover = withCover.cover;
+        }
+        const linked = cards.filter(card => card.webUrl || card.ticketsUrl).length;
+        if (linked > 0) {
+            const failedText = failures.size > 0 ? ` — could not be read, left as printed: ${[...failures.entries()].map(([host, seen]) => `${host} ×${seen.count} (${seen.why})`).join('; ')}` : '';
+            console.log(`🗓️ PROGRAMME: ${answers.size} organiser page(s) behind ${linked} Web link(s) read — ${resolved} card(s) now link the organiser's own page, ${placed} gained a venue from its structured data${failedText}`);
+        }
     }
 
     // The cards as JSON-LD Event nodes, so the ordinary structured-data
@@ -10417,7 +10530,12 @@ class AiWebParser {
             if (card.endLocal) node.endDate = card.endLocal;
             if (card.description) node.description = card.description;
             if (card.image) node.image = card.image;
-            if (card.webUrl) node.url = card.webUrl;
+            if (card.resolvedUrl || card.webUrl) node.url = card.resolvedUrl || card.webUrl;
+            if (card.bar || card.address) {
+                node.location = { '@type': 'Place' };
+                if (card.bar) node.location.name = card.bar;
+                if (card.address) node.location.address = card.address;
+            }
             return node;
         });
         if (nodes.length === 0) return '';
@@ -10452,6 +10570,7 @@ class AiWebParser {
             console.log(`🗓️ PROGRAMME: ${programme.heading || sourceUrl} — day "${part.label}": ${read.length} card(s)`);
             cards.push(...read);
         }
+        await this.enrichSwitchedProgrammeCards(cards, sourceUrl, httpAdapter);
         return {
             heading: programme.heading,
             days: parts.length,
@@ -10469,6 +10588,11 @@ class AiWebParser {
     buildSwitchedProgrammeEvents(programme, sourceUrl, cityConfig = null) {
         if (!programme || !programme.jsonLd) return [];
         const events = this.extractEventsFromJsonLd(programme.jsonLd, sourceUrl, cityConfig);
+        const coverByCard = new Map((programme.cards || []).filter(card => card.cover).map(card => [`${card.title}|${card.startLocal}`, card.cover]));
+        for (const event of events) {
+            const cover = coverByCard.get(`${event.title}|${event._startDateRawText || ''}`);
+            if (cover && !event.cover) event.cover = cover;
+        }
         const heading = String(programme.heading || '');
         const headingCity = heading && cityConfig
             ? (this.findCityKeyInText(heading, cityConfig) || this.findCityKeyForFestivalLabel(heading, cityConfig))
