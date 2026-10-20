@@ -72,6 +72,12 @@
       "city": "bangkok",
       "address": "71-73 ซอยสีลม 4, กรุงเทพมหานคร",
       "coordinates": "13.7284617, 100.5329437"
+    },
+    {
+      "name": "Amnesia",
+      "city": "bangkok",
+      "address": "ถนนอาร์ซีเอ, กรุงเทพมหานคร",
+      "coordinates": "13.7512670, 100.5758142"
     }
   ],
   "berlin": [
@@ -88,6 +94,12 @@
       "address": "Oranienstraße 190, 10999 Berlin",
       "coordinates": "52.5003921, 13.4221017",
       "website": "https://so36.com"
+    },
+    {
+      "name": "Mikropol",
+      "city": "berlin",
+      "address": "Nollendorfplatz 5, 10777 Berlin, BE",
+      "coordinates": "52.4989787, 13.3529770"
     }
   ],
   "birmingham": [
@@ -630,6 +642,12 @@
       "city": "montreal",
       "address": "2915 Rue Ontario E, Montréal, QC H2K 1X7",
       "coordinates": "45.5374686, -73.5499132"
+    },
+    {
+      "name": "District Video Lounge",
+      "city": "montreal",
+      "address": "1365 Rue Sainte-Catherine E, Montréal, QC H2L 2H7",
+      "coordinates": "45.5202030, -73.5547522"
     }
   ],
   "nola": [
@@ -841,6 +859,12 @@
       "city": "nyc",
       "address": "55 Little West 12th Street, New York, New York",
       "coordinates": "40.7406797, -74.0084922"
+    },
+    {
+      "name": "H0l0",
+      "city": "nyc",
+      "address": "1090 Wyckoff Avenue, Ridgewood, Queens, NY 11385",
+      "coordinates": "40.6942754, -73.9021778"
     }
   ],
   "orlando": [
@@ -933,6 +957,20 @@
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJsYcLoB5u5kcRvlZDfSyg7w4",
       "gayCities": "https://paris.gaycities.com/bars/307921-el-hombre",
       "gayCitiesLastScrapedAt": "2026-06-13T16:37:24.689Z"
+    },
+    {
+      "name": "AU WORKSHOP",
+      "city": "paris",
+      "address": "173 Rue Saint-Martin, 75003 Paris",
+      "coordinates": "48.862621, 2.3520602"
+    }
+  ],
+  "philly": [
+    {
+      "name": "Congregation Rodeph Shalom",
+      "city": "philly",
+      "address": "615 North Broad Street, Philadelphia, Pennsylvania",
+      "coordinates": "39.9637089, -75.1604908"
     }
   ],
   "phoenix": [
@@ -1025,11 +1063,11 @@
       "city": "ptown",
       "address": "161 Commercial St, Provincetown, MA 02657",
       "coordinates": "42.0470329, -70.1901852",
+      "website": "https://theboatslip.com",
       "instagram": "https://www.instagram.com/boatslipresort",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
       "gayCities": "https://ptown.gaycities.com/hotels/10272-boatslip-resort-beach-club",
-      "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z",
-      "website": "https://theboatslip.com"
+      "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z"
     },
     {
       "name": "Crown & Anchor",
@@ -1056,11 +1094,11 @@
       "city": "ptown",
       "address": "258 Commercial St, Provincetown, MA 02657",
       "coordinates": "42.0510476, -70.1876737",
+      "website": "https://redroom.club",
       "instagram": "https://www.instagram.com/redroomptown",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
       "gayCities": "https://ptown.gaycities.com/bars/309562-red-room",
-      "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z",
-      "website": "https://redroom.club"
+      "gayCitiesLastScrapedAt": "2026-06-26T15:16:45.767Z"
     },
     {
       "name": "Provincetown Inn",
@@ -1408,6 +1446,12 @@
       "city": "toronto",
       "address": "464 Spadina Avenue, Toronto, Ontario",
       "coordinates": "43.6575313, -79.4001677"
+    },
+    {
+      "name": "Buddies in Bad Times Theatre",
+      "city": "toronto",
+      "address": "12 Alexander Street, Toronto M4Y1B4",
+      "coordinates": "43.6632092, -79.3829940"
     }
   ],
   "torremolinos": [

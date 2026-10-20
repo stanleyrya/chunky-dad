@@ -23,5 +23,11 @@
     "city": "toronto",
     "address": "464 Spadina Avenue, Toronto, Ontario",
     "coordinates": "43.6575313, -79.4001677"
+  },
+  {
+    "name": "Buddies in Bad Times Theatre",
+    "city": "toronto",
+    "address": "12 Alexander Street, Toronto M4Y1B4",
+    "coordinates": "43.6632092, -79.3829940"
   }
 ]

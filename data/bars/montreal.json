@@ -24,5 +24,11 @@
     "city": "montreal",
     "address": "2915 Rue Ontario E, Montréal, QC H2K 1X7",
     "coordinates": "45.5374686, -73.5499132"
+  },
+  {
+    "name": "District Video Lounge",
+    "city": "montreal",
+    "address": "1365 Rue Sainte-Catherine E, Montréal, QC H2L 2H7",
+    "coordinates": "45.5202030, -73.5547522"
   }
 ]

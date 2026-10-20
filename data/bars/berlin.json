@@ -12,5 +12,11 @@
     "address": "Oranienstraße 190, 10999 Berlin",
     "coordinates": "52.5003921, 13.4221017",
     "website": "https://so36.com"
+  },
+  {
+    "name": "Mikropol",
+    "city": "berlin",
+    "address": "Nollendorfplatz 5, 10777 Berlin, BE",
+    "coordinates": "52.4989787, 13.3529770"
   }
 ]
