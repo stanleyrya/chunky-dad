@@ -8494,8 +8494,10 @@ test('validateEventUrl rejects calendar-export URLs (literal run URLs) but keeps
   assert.equal(
     parser.validateEventUrl('https://bear-it.example/events/export.ics', sourceUrl, {}).reason,
     'calendar-export-url');
-  // Normal event URLs with dates in the path stay valid
-  assert.equal(parser.validateEventUrl('https://bear-it.example/events/2026-07-27/', sourceUrl, {}).valid, true);
+  // A bare day under the listing is The Events Calendar's DAY VIEW, not an
+  // event (bearsevents.com/events/2026-07-27/ read as "Events for July 27,
+  // 2026", run 20261018-161635); dated slugs and query variants stay valid.
+  assert.equal(parser.validateEventUrl('https://bear-it.example/events/2026-07-27/', sourceUrl, {}).reason, 'calendar-view-route');
   assert.equal(parser.validateEventUrl('https://bear-it.example/events/bear-night-2026-07-27', sourceUrl, {}).valid, true);
   // "ical" inside a slug or query VALUE is not an export flag
   assert.equal(parser.validateEventUrl('https://bear-it.example/events/musical-bears?musical=1', sourceUrl, {}).valid, true);
@@ -23115,6 +23117,96 @@ test('Switched programme door: the organiser page behind a Web redirect lends it
   assert.ok(refused, 'the other cards are still built');
   assert.match(refused.ticketUrl, /^https:\/\/ems\.switchedapp\.com\/url\//, 'a page that refused leaves the redirect as the card\'s link');
   assert.equal(refused.bar, '', 'and invents no venue');
+});
+
+test('a calendar plugin\'s other views, its feed and the shop are never discovery targets; event pages and dated slugs still are', () => {
+  const parser = createParser();
+  const source = 'https://www.bearsevents.com/events/';
+  const reason = (url) => parser.validateEventUrl(url, source, { urls: [source] }).reason || 'valid';
+  // Verbatim from run 20261018-161635.
+  assert.equal(reason('https://www.bearsevents.com/events/today/'), 'calendar-view-route');
+  assert.equal(reason('https://www.bearsevents.com/events/2026-07-27/'), 'calendar-view-route');
+  assert.equal(reason('https://www.bearsevents.com/events/month/2026-07/'), 'calendar-view-route');
+  assert.equal(reason('https://www.bearsevents.com/events/list/'), 'calendar-view-route');
+  assert.equal(reason('https://www.bearsevents.com/events/category/bears/'), 'calendar-view-route');
+  assert.equal(reason('https://www.bearsevents.com/events/?ical=1'), 'calendar-export-url', 'the export rule that already existed');
+  assert.equal(reason('https://www.bearsevents.com/events/?tribe-bar-date=2026-09-03'), 'calendar-export-url');
+  assert.equal(reason('https://sitgesbearcave.com/calendar/?mec_start_date=2026-10'), 'calendar-view-route');
+  assert.equal(reason('https://www.bearsevents.com/events/feed/'), 'wordpress-infrastructure');
+  assert.equal(reason('https://www.bearsevents.com/product/sitges-bears-week-vip-pass-2026/'), 'shop-route');
+  assert.match(reason('https://www.bearsevents.com/shop/'), /^blocked-pattern:/, 'the shop itself was already blocked; only its product pages were not');
+  // Still followed: the event pages, a dated slug, an article.
+  assert.equal(reason('https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition-2026/'), 'valid');
+  assert.equal(reason('https://sitgesbearcave.com/event/friday-4th-september-megawoof-shiny-disco-balls'), 'valid');
+  assert.equal(reason('https://www.bearsevents.com/events/2026-10-30-halloween-bear-party/'), 'valid');
+  assert.equal(reason('https://www.bearsevents.com/bears-sunset-tea-dance-info/'), 'valid');
+  assert.equal(reason('https://www.bearsevents.com/events/2026-09/'), 'calendar-view-route', 'a month view');
+});
+
+test('the only model-read event of a crawled page is withheld for the owner when no date is stated beside its name; a listing, a second event, or a date beside the name leaves it alone', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const parser = createParser();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const parserConfig = { urls: ['https://www.bearsevents.com/events/'] };
+    // The contact page, verbatim (run 20261018-161635): the model named an event after the day-view heading and dated it from the sidebar.
+    const contact = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'crawl-views-2026-10-18', 'bearsevents-contact-us-2.html'), 'utf8');
+    const lone = { title: 'Events for September 25, 2026', startDate: new Date('2026-09-03T20:00:00.000Z'), timezone: 'Europe/Madrid', source: 'ai-web' };
+    parser.markLoneCrawlEvent([lone], { html: contact, url: 'https://www.bearsevents.com/contact-us-2/' }, parserConfig, 'https://www.bearsevents.com/contact-us-2/', 'multi-event-page');
+    assert.ok(lone._loneCrawlWithheld, 'withheld');
+    assert.equal(lone._loneCrawlWithheld.page, 'https://www.bearsevents.com/contact-us-2/');
+    assert.equal(lone._loneCrawlWithheld.day, '2026-09-03');
+    assert.ok(logs.some((line) => line.includes('🧭 LONE EVENT: "Events for September 25, 2026"')), logs.join('\n'));
+
+    // The configured listing with one event: a quiet night, never this.
+    const onListing = { title: 'Bear Tea', startDate: new Date('2026-09-03T20:00:00.000Z'), timezone: 'Europe/Madrid' };
+    parser.markLoneCrawlEvent([onListing], { html: '<html><body><h2>Bear Tea</h2><p>Rooftop drinks.</p></body></html>', url: 'https://www.bearsevents.com/events/' }, parserConfig, 'https://www.bearsevents.com/events/');
+    assert.equal(onListing._loneCrawlWithheld, undefined);
+    // Two events on a crawled page: rows, not a lone guess.
+    const a = { title: 'Bear Tea', startDate: new Date('2026-09-03T20:00:00.000Z') }, b = { title: 'Bear Brunch', startDate: new Date('2026-09-06T11:00:00.000Z') };
+    parser.markLoneCrawlEvent([a, b], { html: '<html><body><p>Bear Tea</p><p>Bear Brunch</p></body></html>', url: 'https://www.bearsevents.com/x/' }, parserConfig, 'https://www.bearsevents.com/x/');
+    assert.equal(a._loneCrawlWithheld, undefined);
+    // One event on a crawled page WITH its date beside its name, in Spanish, English, German and numeric forms.
+    for (const line of ['3 de septiembre de 2026 · 22:00', 'September 3rd, 2026 at 10pm', '3. September 2026', '03/09/2026', '2026-09-03']) {
+      const dated = { title: 'LUCHA BEAR', startDate: new Date('2026-09-03T20:00:00.000Z'), timezone: 'Europe/Madrid' };
+      parser.markLoneCrawlEvent([dated], { html: `<html><body><h1>LUCHA BEAR</h1><p>${line}</p><p>SAFARI Sitges</p></body></html>`, url: 'https://popairparty.com/' }, parserConfig, 'https://popairparty.com/');
+      assert.equal(dated._loneCrawlWithheld, undefined, `"${line}" states the date`);
+    }
+    // A weekday and a time are not a date; a different day's date is not this date.
+    for (const line of ['Thursday 10pm', 'Doors 22:00', 'September 25, 2026']) {
+      const undated = { title: 'LUCHA BEAR', startDate: new Date('2026-09-03T20:00:00.000Z'), timezone: 'Europe/Madrid' };
+      parser.markLoneCrawlEvent([undated], { html: `<html><body><h1>LUCHA BEAR</h1><p>${line}</p></body></html>`, url: 'https://popairparty.com/' }, parserConfig, 'https://popairparty.com/');
+      assert.ok(undated._loneCrawlWithheld, `"${line}" does not state 2026-09-03`);
+      assert.deepEqual(undated._loneCrawlWithheld.near.slice(0, 2), ['LUCHA BEAR', line].map(s => parser.foldDayPhraseText(s).trim()), 'the lines around the name travel to the deck');
+    }
+    // A flyer on the page that names the event and states the day is the page dating it, wherever its OCR text sits.
+    const flyered = { title: 'LUCHA BEAR', startDate: new Date('2026-11-13T22:00:00.000Z'), timezone: 'Europe/Madrid' };
+    const flyerPage = '<html><body><h1>LUCHA BEAR</h1><p>Tickets</p>' + '<p>filler</p>'.repeat(30) + '\nOCR_IMAGE_URL: https://popairparty.com/flyer.jpg\nLUCHA BEAR\nSAFARI SITGES\n13 NOVIEMBRE 2026\n</body></html>';
+    parser.markLoneCrawlEvent([flyered], { html: flyerPage, url: 'https://popairparty.com/' }, parserConfig, 'https://popairparty.com/');
+    assert.equal(flyered._loneCrawlWithheld, undefined, 'the flyer names the party and states the day');
+    const otherFlyer = { title: 'LUCHA BEAR', startDate: new Date('2026-11-13T22:00:00.000Z'), timezone: 'Europe/Madrid' };
+    parser.markLoneCrawlEvent([otherFlyer], { html: flyerPage.replace('LUCHA BEAR\nSAFARI', 'POP AIR XXL\nSAFARI'), url: 'https://popairparty.com/' }, parserConfig, 'https://popairparty.com/');
+    assert.ok(otherFlyer._loneCrawlWithheld, 'another party\'s flyer dates nothing for this one');
+    // A page about ONE event states its date past the navigation, ~100 lines below the name (every real
+    // event page of run 20261018-161635): classified event-page, the whole page counts; as a mixed page it does not.
+    const farPage = '<html><body><h1>Bear Week Drag Brunch</h1>' + '<p>nav</p>'.repeat(100) + '<p>September 14, 2025 @ 1:30 pm - 4:00 pm</p><p>Le Patio Sitges</p></body></html>';
+    const onEventPage = { title: 'Bear Week Drag Brunch', startDate: new Date('2025-09-14T11:30:00.000Z'), timezone: 'Europe/Madrid' };
+    parser.markLoneCrawlEvent([onEventPage], { html: farPage, url: 'https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition/' }, parserConfig, 'https://www.bearsevents.com/event/sitges-drag-brunch-bear-edition/', 'event-page');
+    assert.equal(onEventPage._loneCrawlWithheld, undefined, 'an event page dates its one event anywhere on it');
+    const onMixedPage = { title: 'Bear Week Drag Brunch', startDate: new Date('2025-09-14T11:30:00.000Z'), timezone: 'Europe/Madrid' };
+    parser.markLoneCrawlEvent([onMixedPage], { html: farPage, url: 'https://www.bearsevents.com/x/' }, parserConfig, 'https://www.bearsevents.com/x/', 'multi-event-page');
+    assert.ok(onMixedPage._loneCrawlWithheld, 'a mixed page does not: a date 100 lines away could be anything\'s');
+    const undatedEventPage = { title: 'Bears Week Sitges 2027 - SEPTEMBER EDITION', startDate: new Date('2026-09-03T20:00:00.000Z'), timezone: 'Europe/Madrid' };
+    parser.markLoneCrawlEvent([undatedEventPage], { html: '<html><body><h1>Bears Week Sitges 2027 - SEPTEMBER EDITION</h1><p>See you in September 2027!</p></body></html>', url: 'https://www.bearsevents.com/' }, parserConfig, 'https://www.bearsevents.com/', 'event-page');
+    assert.ok(undatedEventPage._loneCrawlWithheld, 'an event page that never states the model\'s day is still held');
+    assert.match(undatedEventPage._loneCrawlWithheld.reason, /stated nowhere on that page/);
+    // Structured data dated it: not the model's guess.
+    const structured = { title: 'LUCHA BEAR', startDate: new Date('2026-09-03T20:00:00.000Z'), _startDateRawText: '2026-09-03T22:00:00+02:00' };
+    parser.markLoneCrawlEvent([structured], { html: '<html><body><h1>LUCHA BEAR</h1></body></html>', url: 'https://popairparty.com/' }, parserConfig, 'https://popairparty.com/');
+    assert.equal(structured._loneCrawlWithheld, undefined);
+  } finally { console.log = quiet; }
 });
 
 test('furniture by shape: a buy button in any language, a calendar view heading, a numbered instruction, a bare street line and a locale tag are not event names; real names with numbers pass', () => {

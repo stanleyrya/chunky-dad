@@ -783,6 +783,7 @@ function renderReviewBadges(display = {}) {
     const badges = [];
     if (display.bigDrift) badges.push(`<span class="badge warn drift">🧭 big drift — ${escapeHtmlText(display.bigDrift.reason || 'identity changed')} · withheld until you decide</span>`);
     if (display.aggregatorUnbacked) badges.push(`<span class="badge warn drift">🧭 ${escapeHtmlText(display.aggregatorUnbacked.aggregator || 'aggregator')}'s copy — ${escapeHtmlText(display.aggregatorUnbacked.site || 'the site it points at')} lists no such night · withheld until you decide</span>`);
+    if (display.loneCrawl) badges.push(`<span class="badge warn drift">🧭 the only event read off a crawled page — no date beside its name · withheld until you decide</span>`);
     if (display.imageReusedFrom) badges.push(`<span class="badge warn">🖼️ picture cleared — it is the flyer of “${escapeHtmlText(display.imageReusedFrom.title || 'another event')}” (${escapeHtmlText(display.imageReusedFrom.day || 'another night')})</span>`);
     if (display.recurring) badges.push(display.seriesWrite ? '<span class="badge">🔁 recurring — the phone writes it once approved</span>' : '<span class="badge">🔁 recurring — ICS only</span>');
     if (display.seriesMatchTitle) badges.push(`<span class="badge">🔁 matches saved series “${escapeHtmlText(display.seriesMatchTitle)}”</span>`);
@@ -822,8 +823,17 @@ function renderReviewDriftFacts(display = {}) {
 function renderReviewPointerFacts(display = {}) {
     const unbacked = display && display.aggregatorUnbacked && typeof display.aggregatorUnbacked === 'object' ? display.aggregatorUnbacked : null;
     const reused = display && display.imageReusedFrom && typeof display.imageReusedFrom === 'object' ? display.imageReusedFrom : null;
-    if (!unbacked && !reused) return '';
+    const lone = display && display.loneCrawl && typeof display.loneCrawl === 'object' ? display.loneCrawl : null;
+    if (!unbacked && !reused && !lone) return '';
     const rows = [];
+    if (lone) {
+        // The page the crawl reached and the lines around the name, as the
+        // model saw them: the owner judges whether a night is really there.
+        rows.push(`<div class="fact"><span class="fact-k">read from</span><span class="fact-v">${lone.page ? reviewAnchor(lone.page, reviewUrlLabel(lone.page, 60)) : '<span class="none">∅</span>'}</span></div>`);
+        rows.push(`<div class="fact"><span class="fact-k">dated</span><span class="fact-v warn">${escapeHtmlText(lone.day || 'undated')} — ${escapeHtmlText(lone.reason || 'no date is stated beside its name')}</span></div>`);
+        const near = Array.isArray(lone.near) ? lone.near.filter(Boolean) : [];
+        rows.push(`<div class="fact"><span class="fact-k">around the name</span><span class="fact-v">${near.length > 0 ? `<ul class="evidence">${near.map((line) => `<li>${escapeHtmlText(line)}</li>`).join('')}</ul>` : '<span class="none">the name is not in the page\'s text</span>'}</span></div>`);
+    }
     if (unbacked) {
         rows.push(`<div class="fact"><span class="fact-k">${escapeHtmlText(unbacked.aggregator || 'aggregator')} says</span><span class="fact-v">${escapeHtmlText(unbacked.day || 'undated')}</span></div>`);
         rows.push(`<div class="fact"><span class="fact-k">points at</span><span class="fact-v">${unbacked.link ? reviewAnchor(unbacked.link, reviewUrlLabel(unbacked.link, 60)) : escapeHtmlText(unbacked.site || '∅')}</span></div>`);
@@ -839,7 +849,8 @@ function renderReviewPointerFacts(display = {}) {
     if (reused) {
         rows.push(`<div class="fact"><span class="fact-k">its picture</span><span class="fact-v warn">${reused.image ? reviewAnchor(reused.image, 'the flyer') : 'the flyer'} of ${reused.url ? reviewAnchor(reused.url, escapeHtmlText(reused.title || 'another event')) : escapeHtmlText(reused.title || 'another event')} (${escapeHtmlText(reused.day || 'another night')}, ${escapeHtmlText(reused.source || 'its source')}) — cleared</span></div>`);
     }
-    return `<div class="drift"><div class="drift-head">🧭 An aggregator's copy — nothing is written until you decide</div>${rows.join('')}</div>`;
+    const head = lone && !unbacked ? '🧭 The only event read off a crawled page — nothing is written until you decide' : '🧭 An aggregator\'s copy — nothing is written until you decide';
+    return `<div class="drift"><div class="drift-head">${head}</div>${rows.join('')}</div>`;
 }
 
 function renderReviewEvidence(lines) {

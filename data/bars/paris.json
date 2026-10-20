@@ -17,5 +17,11 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJsYcLoB5u5kcRvlZDfSyg7w4",
     "gayCities": "https://paris.gaycities.com/bars/307921-el-hombre",
     "gayCitiesLastScrapedAt": "2026-06-13T16:37:24.689Z"
+  },
+  {
+    "name": "AU WORKSHOP",
+    "city": "paris",
+    "address": "173 Rue Saint-Martin, 75003 Paris",
+    "coordinates": "48.862621, 2.3520602"
   }
 ]

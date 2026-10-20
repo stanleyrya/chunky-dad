@@ -1613,3 +1613,18 @@ test('buildDeck: a party the store holds both ways is ONE verdict-conflict card 
   assert.equal(unrelated.cards.filter((entry) => entry.kind === 'verdict-conflict').length, 0);
   assert.equal(unrelated.counts.verdictConflictsInStore, 1);
 });
+
+test('buildDeck: the only event read off a crawled page is a card carrying the page and the lines around its name (withheld from every automatic write until decided)', () => {
+  const lone = newEvent({
+    title: 'Events for September 25, 2026',
+    _loneCrawlWithheld: { page: 'https://www.bearsevents.com/contact-us-2/', day: '2030-10-03', reason: 'the only event read from a page the crawl reached, and no date is stated within six lines of its name', near: ['Contact Us', 'Events for September 25, 2026', 'Bear Village'] }
+  });
+  const deck = deckOf(runPayload({ analyzedEvents: [lone, newEvent()] }));
+  assert.deepEqual(deck.cards.map((card) => [card.kind, card.proposal.title]), [['new', 'Events for September 25, 2026'], ['new', 'FURBALL NYC']]);
+  assert.deepEqual(deck.cards[0].display.loneCrawl, {
+    page: 'https://www.bearsevents.com/contact-us-2/', day: '2030-10-03',
+    reason: 'the only event read from a page the crawl reached, and no date is stated within six lines of its name',
+    near: ['Contact Us', 'Events for September 25, 2026', 'Bear Village']
+  });
+  assert.equal(deck.cards[1].display.loneCrawl, null);
+});
