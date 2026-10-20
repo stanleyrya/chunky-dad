@@ -23126,11 +23126,14 @@ test('furniture by shape: a buy button in any language, a calendar view heading,
       { title: 'comprar entradas' }, { title: 'Buy Tickets' }, { title: 'Get your tickets!' }, { title: 'Tickets kaufen' }, { title: 'Learn more' }, { title: 'RSVP' }, { title: 'More info' },
       { title: 'Events for July 27, 2026' }, { title: 'Events for' }, { title: 'Events in October' },
       { title: '2. To apply' }, { title: '3) Bring ID' },
-      { title: 'Little West 12th St.' }, { title: 'W 14th Street' }, { title: 'Fuggerstraße 37' },
+      { title: 'Little West 12th St.' }, { title: 'W 14th Street' }, { title: 'Fuggerstraße 37' }, { title: 'Hauptstr. 12' }, { title: 'Calle Bonaire 16' }, { title: 'Rue Sainte-Catherine 1234' },
       { title: 'en-US' }, { title: 'de_DE' },
-      { title: 'LUCHA BEAR' }, { title: '2 Bears 1 Cave' }, { title: '12 Step Bears' }, { title: 'Bears Night Out' }, { title: 'Events for Bears' }, { title: 'Tickets to Paradise' }, { title: 'Street Fair on 14th St' }, { title: 'URBAN BEAR NYC STREET FEST' }
+      { title: 'LUCHA BEAR' }, { title: '2 Bears 1 Cave' }, { title: '12 Step Bears' }, { title: 'Bears Night Out' }, { title: 'Events for Bears' }, { title: 'Tickets to Paradise' }, { title: 'Street Fair on 14th St' }, { title: 'URBAN BEAR NYC STREET FEST' },
+      // Real names that end in "…st <number>" or "…st <year>" (read off 12 saved runs) are not German street lines.
+      { title: 'Midwest Bearfest 2026' }, { title: 'DOGFEST 5' }, { title: 'Mx. Fist 2026' }, { title: 'Bearracuda Blast 2' }, { title: 'Hangar 2026' }
     ], 'https://x.example/');
-    assert.deepEqual(kept.map((event) => event.title), ['LUCHA BEAR', '2 Bears 1 Cave', '12 Step Bears', 'Bears Night Out', 'Events for Bears', 'Tickets to Paradise', 'Street Fair on 14th St', 'URBAN BEAR NYC STREET FEST']);
+    assert.deepEqual(kept.map((event) => event.title), ['LUCHA BEAR', '2 Bears 1 Cave', '12 Step Bears', 'Bears Night Out', 'Events for Bears', 'Tickets to Paradise', 'Street Fair on 14th St', 'URBAN BEAR NYC STREET FEST', 'Midwest Bearfest 2026', 'DOGFEST 5', 'Mx. Fist 2026', 'Bearracuda Blast 2', 'Hangar 2026']);
+    assert.ok(logs.some((line) => line.includes('"Calle Bonaire 16" is a street line')));
     assert.ok(logs.some((line) => line.includes('"comprar entradas" is a call to action')), logs.join('\n'));
     assert.ok(logs.some((line) => line.includes('"Events for July 27, 2026" is a calendar view heading')));
     assert.ok(logs.some((line) => line.includes('"2. To apply" is a numbered line')));

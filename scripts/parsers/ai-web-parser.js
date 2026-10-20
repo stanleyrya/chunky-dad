@@ -3406,11 +3406,21 @@ class AiWebParser {
         if (/^events?\s+(?:for|in|on|from|this|next)\b/i.test(line) && !/\b(?:bears?|cubs?|club|bar|party|fest)\b/i.test(line)) return 'a calendar view heading';
         // A numbered line of instructions ("2. To apply", "3) Bring ID").
         if (/^\d{1,2}[.)]\s+\S/.test(line) && words <= 6) return 'a numbered line';
-        // A street line on its own ("Little West 12th St.", "W 14th Street").
-        const STREET = '(?:st|street|ave|avenue|rd|road|blvd|boulevard|pl|place|ln|lane|dr|drive|way|straße|strasse|str|calle|rue|platz|weg|gasse)';
-        if (words <= 6 && !/\b(?:bears?|party|night|fest|fair|club)\b/i.test(line)
-            && (/\b\d+(?:st|nd|rd|th)?\b/.test(line) && new RegExp(`\\b${STREET}\\.?$`, 'i').test(line)     // "Little West 12th St.", "W 14th Street"
-                || new RegExp(`^(?:[\\p{L}.'-]+\\s){0,4}[\\p{L}'-]*${STREET}\\.?\\s+\\d{1,5}[a-z]?$`, 'iu').test(line))) return 'a street line'; // "Fuggerstraße 37", "Calle Bonaire 16"
+        // A street line on its own, in the three orders streets are written:
+        //   "Little West 12th St.", "W 14th Street"   — number first, street word last (US/UK)
+        //   "Fuggerstraße 37", "Hauptstr. 12"         — German compound: the street word is glued to the name
+        //   "Calle Bonaire 16", "Rue Sainte-Catherine 1234" — Romance/Dutch: the street word first
+        // The short English words (st, dr, pl, way…) only count as whole words at the END of the line;
+        // glued to a name they are just letters ("Midwest Bearfest 2026", "DOGFEST 5", "Mx. Fist 2026"
+        // were dropped by an earlier shape that let "…st 2026" pass as "…straße 37"). A trailing year
+        // is an edition, never a house number.
+        const STREET_LAST = '(?:st|street|ave|avenue|rd|road|blvd|boulevard|pl|place|ln|lane|dr|drive|way)';
+        const STREET_GLUED = '(?:straße|strasse|str|gasse|weg|platz|allee)';
+        const STREET_FIRST = '(?:calle|carrer|rue|via|avenida|av|plaza|plein|laan|straat|rua|piazza|strada)';
+        if (words <= 6 && !/\b(?:bears?|party|night|fest|fair|club)\b/i.test(line) && !/\b(?:19|20)\d{2}$/.test(line)
+            && (/\b\d+(?:st|nd|rd|th)?\b/.test(line) && new RegExp(`\\b${STREET_LAST}\\.?$`, 'i').test(line)
+                || new RegExp(`^(?:[\\p{L}.'-]+\\s){0,4}\\p{L}{3,}${STREET_GLUED}\\.?\\s+\\d{1,4}[a-z]?$`, 'iu').test(line)
+                || new RegExp(`^${STREET_FIRST}\\.?\\s+(?:[\\p{L}.'-]+\\s){1,4}\\d{1,4}[a-z]?$`, 'iu').test(line))) return 'a street line';
         // A locale tag or a bare language name from a feed.
         if (/^[a-z]{2}(?:[-_][A-Z]{2})?$/.test(line)) return 'a locale tag';
         return '';
