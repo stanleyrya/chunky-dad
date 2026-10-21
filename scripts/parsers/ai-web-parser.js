@@ -13602,6 +13602,19 @@ class AiWebParser {
         if (startDateRawText) {
             event._startDateRawText = startDateRawText;
         }
+        // The Place's own pin (schema.org GeoCoordinates). Never read before
+        // 2026-10-20: a node with a full street and a geocoder that answered
+        // nothing shipped unpinned (OutSavvy's Two Tons of Fun page, "12 Old
+        // Quebec Street … no usable geocoordinate — left unpinned"; Bear
+        // Brum's Dandy page in the 2026-10-17 report). A 0,0 pair is a
+        // platform's blank, not a place.
+        const geo = place && place.geo && typeof place.geo === 'object' ? place.geo : null;
+        const geoLat = geo ? Number(geo.latitude) : NaN;
+        const geoLng = geo ? Number(geo.longitude) : NaN;
+        if (Number.isFinite(geoLat) && Number.isFinite(geoLng) && (geoLat !== 0 || geoLng !== 0)
+            && Math.abs(geoLat) <= 90 && Math.abs(geoLng) <= 180) {
+            event.location = `${geoLat}, ${geoLng}`;
+        }
         // The other aspect ratios this node published stay reachable for the
         // orientation slots (off-event WeakMap — the event object is untouched).
         this.rememberImageSlotCandidates(event, jsonLdImageCandidates);

@@ -411,6 +411,18 @@ const scraperPromoters = [
       "instagram.com/bearjamboree"
     ],
     "bearAffinity": "always"
+  },
+  {
+    "name": "Two Tons of Fun",
+    "aliases": [
+      "TTOF",
+      "Two Tons of HalloKWEEN",
+      "Two Tons of Christmas"
+    ],
+    "shortName": "TWO TONS",
+    "instagram": "https://www.instagram.com/two_tons_of_fun",
+    "website": "https://twotonsoffun.co.uk",
+    "bearAffinity": "always"
   }
 ];
 

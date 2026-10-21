@@ -22854,6 +22854,11 @@ test('buildEventFromJsonLdNode keeps a venue name the publisher also prefixes on
   const event = parser.buildEventFromJsonLdNode(node, node.url);
   assert.equal(event.bar, 'The Hub @ Eden');
   assert.match(event.address, /138 Gooch Street/);
+  // The Place's own GeoCoordinates are the pin (never read before 2026-10-20:
+  // this record shipped unpinned after the geocoder failed on the street).
+  assert.equal(event.location, '52.46975, -1.895193');
+  const blankPin = parser.buildEventFromJsonLdNode({ ...node, location: { ...node.location, geo: { '@type': 'GeoCoordinates', latitude: '0', longitude: '0' } } }, node.url);
+  assert.equal(blankPin.location, undefined, 'a 0,0 pair is a platform blank, not a place');
   // The twin rule still drops a name that IS the numbered street line.
   assert.equal(parser.venueNameLooksLikeStreetAddress('10-90 Wyckoff', '10-90 Wyckoff, Queens, NY'), true);
   assert.equal(parser.venueNameLooksLikeStreetAddress('The Hub @ Eden', 'The Hub @ Eden, 138 Gooch Street, Birmingham'), false);

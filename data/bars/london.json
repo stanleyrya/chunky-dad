@@ -67,5 +67,11 @@
     "city": "london",
     "address": "13-16 Allhallows Ln, London EC4R 3UL",
     "coordinates": "51.5101240, -0.0903711"
+  },
+  {
+    "name": "City of Quebec (Officers Club)",
+    "city": "london",
+    "address": "12 Old Quebec Street, London, United Kingdom W1H 7AF",
+    "coordinates": "51.51386, -0.1580566"
   }
 ]
