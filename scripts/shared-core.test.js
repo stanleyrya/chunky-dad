@@ -29003,3 +29003,70 @@ test('a lone crawled-page event is withheld from every automatic write, offered 
   assert.match(SharedCore.describeExecutionDisposition(event), /^WITHHELD \(lone event from a crawled page — the only event read from a page the crawl reached/);
   assert.equal(SharedCore.filterEventsForExecution([{ ...event, _ownerReviewApproved: true }]).length, 1, 'approved on the deck, it is written');
 });
+
+// ---------------------------------------------------------------------------
+// Calendar twins (SharedCore.buildCalendarTwinCandidates): one night saved
+// twice in a city calendar, as gone-shaped cards the deck and the phone
+// already know how to handle. Shapes are the owner's hand-kept scan of
+// 2026-10-15 and its two deliberate exclusions.
+test('calendar twins: contained names at one bar, one name at two places, a placeholder venue, and one ticket page pair up; a pass link, a festival name inside a night, a series and an unrelated night do not; the copy with fewer facts is the extra and its twin rides as a hidden mirror', () => {
+  const core = new SharedCore({ london: { timezone: 'Europe/London' }, pv: { timezone: 'America/Mexico_City' } }, { eventSchema: EventSchema });
+  const night = (day, hour) => new Date(`${day}T${String(hour).padStart(2, '0')}:00:00.000Z`);
+  const rec = (uid, title, startDate, notes, extra = {}) => ({ identifier: uid, uid, title, startDate, endDate: null, location: '', notes, url: '', isAllDay: false, series: false, ...extra });
+  const saved = {
+    london: { source: 'published', events: [
+      // contained name, same bar (written two ways), the shorter copy has one flyer size
+      rec('RVT1', 'BEEFMINCE: TURKEYMINCE', night('2030-12-19', 22), 'bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London SE11 5HY\nimage: https://x/a.jpg\nimageVertical: https://x/v.jpg', { location: '51.4863, -0.1217' }),
+      rec('RVT2', 'TURKEYMINCE', night('2030-12-19', 22), 'bar: Royal Vauxhall Tavern\naddress: 372 Kennington Ln, London SE11 5HY, UK\nimage: https://x/a.jpg', { location: '51.4863, -0.1217' }),
+      // contained name, the shorter copy's venue a placeholder
+      rec('NYE1', "BEEFMINCE New Year's Eve - London", night('2030-12-31', 22), 'bar: The Steel Yard\naddress: 13-16 Allhallows Ln, London EC4R 3UL', { location: '51.5096, -0.0897' }),
+      rec('NYE2', "BEEFMINCE New Year's Eve", night('2030-12-31', 22), 'address: Venue TBA, London', { location: '51.5074, -0.1278' }),
+      // the same name, the same night, one ticket page; a tie on facts picks by uid
+      rec('BOAT1', 'BEEFMINCE: BOATMINCE', night('2031-08-29', 11), 'bar: Westminster Pier\naddress: Victoria Embankment, London SW1A 2JH\nticketUrl: https://dice.fm/event/eonqnd-boatmince'),
+      rec('BOAT2', 'BEEFMINCE: BOATMINCE', night('2031-08-29', 11), 'bar: Westminster Pier\naddress: Victoria Embankment, London SW1A 2JH\nticketUrl: https://dice.fm/event/eonqnd-boatmince'),
+      // a festival name inside a night's name, no place on the short side: two events
+      rec('FEST1', 'Bearadise Love Boat - Bearsgiving 2030', night('2030-11-27', 18), 'bar: Majahuitas Beach Club'),
+      rec('FEST2', 'Bearsgiving 2030', night('2030-11-27', 18), 'address: Puerto Vallarta, Jalisco'),
+      // a series occurrence beside a one-off at the same bar: left alone
+      rec('SER1', 'Bear Night', night('2030-12-05', 21), 'bar: The Eagle', { series: true }),
+      rec('ONE1', 'Bear Night', night('2030-12-05', 21), 'bar: The Eagle'),
+      // same bar, same minute, unrelated names: two rooms, not a twin
+      rec('ROOM1', 'BLUF London', night('2030-12-06', 21), 'bar: The Eagle'),
+      rec('ROOM2', 'Bad Boy', night('2030-12-06', 21), 'bar: The Eagle')
+    ] },
+    pv: { source: 'published', events: [
+      // one name, two places (one has no pin): a twin, the pinless copy is the extra
+      rec('POOL1', 'FURBALL POOL PARTY', night('2031-01-27', 18), 'bar: CC Slaughters\naddress: Lázaro Cárdenas 254\nticketUrl: https://beefdip.com/tags/', { location: '20.6, -105.2' }),
+      rec('POOL2', 'FURBALL POOL PARTY', night('2031-01-27', 18), 'bar: Delfin Beach Resort\naddress: Calle Rodolfo Gomez 111\nticketUrl: https://beefdip.com/tags/'),
+      // the festival pass link every night carries is no identity
+      rec('PASS1', 'WHITE PARTY', night('2031-01-28', 20), 'bar: CC Slaughters\nticketUrl: https://beefdip.com/tags/'),
+      rec('PASS2', 'BEARAOKE', night('2031-01-28', 20), 'bar: Blue Chairs\nticketUrl: https://beefdip.com/tags/')
+    ] }
+  };
+  const out = core.buildCalendarTwinCandidates(saved, { now: new Date('2030-10-20T12:00:00.000Z') });
+  const cards = out.candidates.filter((c) => !c.twinMirror);
+  const mirrors = out.candidates.filter((c) => c.twinMirror);
+  assert.deepEqual(cards.map((c) => `${c.uid}<${c.twinOf.uid}`).sort(), ['BOAT2<BOAT1', 'NYE2<NYE1', 'POOL2<POOL1', 'RVT2<RVT1'].sort(), JSON.stringify(cards.map((c) => [c.uid, c.twinOf.uid, c.why])));
+  assert.equal(out.summary.pairs, 4);
+  assert.equal(mirrors.length, 4, 'every pair carries its kept copy as a hidden mirror');
+  const byUid = Object.fromEntries(out.candidates.map((c) => [c.uid, c]));
+  assert.equal(byUid.RVT2.key, 'gone|london|RVT2');
+  assert.equal(byUid.RVT2.kind, 'gone');
+  assert.equal(byUid.RVT2.reason, 'twin');
+  assert.deepEqual(byUid.RVT2.why, ['one name inside the other, same bar']);
+  assert.deepEqual(byUid.RVT2.extraWhy, ['no pin', 'fewer flyer sizes', 'the shorter name'].filter((w) => byUid.RVT2.extraWhy.includes(w)));
+  assert.ok(byUid.RVT2.extraWhy.includes('fewer flyer sizes') && byUid.RVT2.extraWhy.includes('the shorter name'));
+  assert.deepEqual(byUid.NYE2.why, ['one name inside the other, the venue a placeholder']);
+  assert.ok(byUid.NYE2.extraWhy.includes('no bar') && byUid.NYE2.extraWhy.includes('address "Venue TBA, London"'));
+  assert.deepEqual(byUid.BOAT2.why, ['the same ticket page', 'the same name']);
+  assert.equal(byUid.BOAT2.tie, true, 'a tie on facts is said so');
+  assert.deepEqual(byUid.POOL2.why, ['the same name'], 'the shared pass link is not a reason');
+  assert.deepEqual(byUid.POOL2.extraWhy, ['no pin']);
+  assert.equal(byUid.RVT1.twinMirror, true);
+  assert.equal(byUid.RVT1.twinOf.uid, 'RVT2', 'the mirror points back at the card');
+  assert.equal(byUid.RVT1.key, 'gone|london|RVT1');
+  assert.equal(byUid.FEST2, undefined, 'the festival name inside a night is two events');
+  assert.equal(byUid.PASS1, undefined, 'a pass link three nights share pairs nothing');
+  assert.equal(byUid.ONE1, undefined, 'a series occurrence is never paired');
+  assert.equal(byUid.ROOM1, undefined, 'two rooms in one slot are two events');
+});
