@@ -1105,6 +1105,56 @@ function renderReviewVerdictConflictCard(entry, ctx = {}) {
 </div>`;
 }
 
+// A MANUAL card (tools/review-queue.js loadManualCards): a one-off the
+// assistant wrote by hand — "set this end time", "remove this stale record",
+// "which of these two is the real night?". Teal, with its own band, so the
+// owner knows at a glance it came from the assistant and not from a run.
+// remove → the phone deletes through the gone path and its guards; edit →
+// the phone applies the before→after changes once the before still matches;
+// choose → right is the first option, left the second, nothing executes.
+function renderReviewManualCard(entry, ctx = {}) {
+    const p = entry && entry.proposal ? entry.proposal : {};
+    const adapter = ctx.adapter;
+    const tz = p.timezone || null;
+    const cityConfig = adapter && adapter.cities && p.city ? adapter.cities[p.city] : null;
+    const calendarName = cityConfig && typeof cityConfig.calendar === 'string' ? cityConfig.calendar : '';
+    const dateLine = p.startDate ? formatReviewDateLine(p.startDate, p.endDate, tz, {}) : '';
+    const action = p.action === 'remove' ? 'Remove this saved event' : p.action === 'edit' ? 'Edit this saved event' : 'Your call';
+    const hint = p.action === 'choose' && Array.isArray(p.options)
+        ? `→ ${escapeHtmlText(p.options[0])} · ← ${escapeHtmlText(p.options[1])}`
+        : p.action === 'remove' ? '→ remove it · ← not now' : '→ apply the change · ← not now';
+    const fieldLabel = { title: 'title', startDate: 'start', endDate: 'end', location: 'location', url: 'link', notes: 'notes' };
+    const showValue = (field, value) => {
+        if (!value) return '<span class="muted">(blank)</span>';
+        if (field === 'startDate' || field === 'endDate') {
+            const parts = reviewDateParts(value, tz);
+            return parts ? escapeHtmlText(`${parts.day} ${parts.time}`) : escapeHtmlText(String(value));
+        }
+        const text = String(value);
+        return escapeHtmlText(text.length > 160 ? `${text.slice(0, 160)}…` : text);
+    };
+    const changes = p.action === 'edit' && p.changes && typeof p.changes === 'object'
+        ? `<table class="manual-changes"><tbody>${Object.keys(p.changes).map((field) => `<tr><th>${escapeHtmlText(fieldLabel[field] || field)}</th><td class="from">${showValue(field, p.changes[field].from)}</td><td class="arrow">→</td><td class="to">${showValue(field, p.changes[field].to)}</td></tr>`).join('')}</tbody></table>`
+        : '';
+    const options = p.action === 'choose' && Array.isArray(p.options)
+        ? `<div class="manual-options"><div class="opt a"><span class="twin-tag">→ swipe right</span>${escapeHtmlText(p.options[0])}</div><div class="opt b"><span class="twin-tag">← swipe left</span>${escapeHtmlText(p.options[1])}</div></div>`
+        : '';
+    const record = p.uid || p.bar || p.address
+        ? `<div class="line muted">${calendarName ? `📱 ${escapeHtmlText(calendarName)} · ` : ''}${p.uid ? `saved event ${escapeHtmlText(String(p.uid).slice(0, 8))}… · ` : ''}${escapeHtmlText(p.city || '')}</div>`
+        : '';
+    return `<div class="card-body manual">
+  <div class="manual-band">✍️ Manual card · a one-off from the assistant${p.createdAt ? ` · ${escapeHtmlText(String(p.createdAt).slice(0, 10))}` : ''}</div>
+  <div class="kind-row"><span class="kind kind-manual">✍️ ${action}</span><span class="muted reason">${hint}</span></div>
+  <h2>${escapeHtmlText(p.title)}</h2>
+  ${dateLine ? `<div class="line">📅 ${escapeHtmlText(dateLine)}</div>` : ''}
+  ${p.bar || p.address ? renderReviewRouteLine(ctx, { bar: p.bar, address: p.address, city: p.city, coordinates: '' }) : ''}
+  ${record}
+  <div class="line manual-why">${escapeHtmlText(p.why || '')}</div>
+  ${changes}
+  ${options}
+</div>`;
+}
+
 // A calendar twin (SharedCore.buildCalendarTwinCandidates): one night the
 // calendar holds twice. Not a source proposal — a hand-made or past-run
 // record the owner is asked to clear — so it wears its own colour (the
@@ -1156,6 +1206,7 @@ function renderReviewTwinCard(entry, ctx = {}) {
 }
 
 function renderReviewCard(entry, ctx = {}) {
+    if (entry && entry.kind === 'manual') return renderReviewManualCard(entry, ctx);
     if (entry && entry.kind === 'bar') return renderReviewBarCard(entry, ctx);
     if (entry && entry.kind === 'gone' && entry.proposal && entry.proposal.reason === 'twin') return renderReviewTwinCard(entry, ctx);
     if (entry && entry.kind === 'gone') return renderReviewGoneCard(entry, ctx);
@@ -1555,6 +1606,7 @@ function renderReviewPage(deck, options = {}) {
         lastExecution: deck.lastExecution || null,
         tags: reviewQueue.REVIEW_REASON_TAGS,
         goneTags: reviewQueue.GONE_REASON_TAGS,
+        manualTags: reviewQueue.MANUAL_REASON_TAGS,
         twinTags: reviewQueue.TWIN_REASON_TAGS,
         executeLink: scriptLink,
         friends: Array.isArray(deck.friends) ? deck.friends : [],
@@ -1718,6 +1770,22 @@ body { overscroll-behavior-y:none; }
 .kind-bar { background:rgba(80,120,255,.14); color:#4a6cf7; }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
 .kind-gone { background:rgba(122,92,199,.16); color:#7a5cc7; }
+/* Manual cards: the assistant's one-offs — teal, a band across the top, a tinted body. */
+.kind-manual { background:rgba(0,140,140,.18); color:#0a7f7f; }
+.card-body.manual { background:linear-gradient(180deg, rgba(0,140,140,.12), rgba(0,140,140,.04) 120px, transparent 200px); }
+.card:has(> .card-body.manual) { box-shadow:0 0 0 2px rgba(0,140,140,.6), var(--shadow); }
+.manual-band { margin:-14px -16px 10px; padding:7px 16px; background:#0a7f7f; color:#fff; font-size:12px; font-weight:700; letter-spacing:.03em; }
+.manual-why { font-size:15px; margin:8px 0; }
+.manual-changes { border-collapse:collapse; width:100%; margin:8px 0; font-size:13px; }
+.manual-changes th { text-align:left; font-weight:600; padding:4px 6px 4px 0; white-space:nowrap; vertical-align:top; }
+.manual-changes td { padding:4px 4px; vertical-align:top; overflow-wrap:anywhere; }
+.manual-changes td.from { color:#b3261e; text-decoration:line-through; }
+.manual-changes td.to { color:#1f6f43; font-weight:600; }
+.manual-changes td.arrow { color:var(--muted); white-space:nowrap; }
+.manual-options { display:grid; grid-template-columns:1fr; gap:8px; margin:8px 0; }
+.manual-options .opt { border-radius:10px; padding:10px 12px; border:1px solid rgba(0,140,140,.45); font-weight:600; }
+.manual-options .opt .twin-tag { display:block; color:#0a7f7f; margin-bottom:4px; }
+.manual-options .opt.b { border-style:dashed; }
 /* Calendar twins: a hand-kept record to clear, never a source proposal — its own colour family (amber), a band across the top and a tinted body. */
 .kind-twin { background:rgba(214,122,0,.18); color:#b35c00; }
 .card-body.twin { background:linear-gradient(180deg, rgba(214,122,0,.10), rgba(214,122,0,.03) 120px, transparent 200px); }
@@ -2192,6 +2260,8 @@ window.__startDeck = function () {
   // A verdict-conflict card is a bear verdict either way (see saveOne):
   // right = bear, left = not bear, no sheet, no "later".
   function isConflict(c) { return Boolean(c) && c.kind === 'verdict-conflict'; }
+  function isManual(c) { return c && c.kind === 'manual'; }
+  function isChoose(c) { return isManual(c) && c.proposal && c.proposal.action === 'choose' && Array.isArray(c.proposal.options) && c.proposal.options.length === 2; }
   function renderFilters() {
     var c = counts();
     var html = '';
@@ -2222,6 +2292,8 @@ window.__startDeck = function () {
         el.setAttribute('data-key', item.key);
         el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + (isConflict(item.cards[0])
           ? '<div class="stamp ok">🐻 BEAR</div><div class="stamp no">NOT BEAR</div>'
+          : isChoose(item.cards[0])
+          ? '<div class="stamp ok">' + escapeHtml(item.cards[0].proposal.options[0]) + '</div><div class="stamp no">' + escapeHtml(item.cards[0].proposal.options[1]) + '</div>'
           : '<div class="stamp ok">APPROVE</div><div class="stamp no">NOT YET</div><div class="stamp ask">🙋 ASK A FRIEND</div>');
         el.className = 'card behind2';
         stage.appendChild(el);
@@ -2270,7 +2342,7 @@ window.__startDeck = function () {
   function renderExecute() {
     var approved = decided.filter(function (d) { return d.verdict === 'approve' && d.kind !== 'bar' && d.kind !== 'dropped' && !isConflict(d) && d.pendingExecute; }).length;
     var bars = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'bar'; }).length;
-    var removals = decided.filter(function (d) { return d.verdict === 'approve' && d.kind === 'gone' && d.pendingExecute; }).length;
+    var removals = decided.filter(function (d) { return d.verdict === 'approve' && (d.kind === 'gone' || d.kind === 'manual') && d.pendingExecute; }).length;
     var el = document.getElementById('execute');
     var last = deck.lastExecution;
     // The phone's own tally of the approvals it was handed (the run file's
@@ -2532,7 +2604,7 @@ window.__startDeck = function () {
     var html = order.length === 0 ? '<div class="empty">Nothing here. 🐻</div>' : '';
     order.forEach(function (name) {
       var g = groups[name];
-      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'series' ? 'series' : k === 'gone' ? 'gone' : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
+      var kinds = Object.keys(g.kinds).map(function (k) { return g.kinds[k] + ' ' + (k === 'merge' ? 'update' + (g.kinds[k] === 1 ? '' : 's') : k === 'bar' ? 'bar' + (g.kinds[k] === 1 ? '' : 's') : k === 'series' ? 'series' : k === 'gone' ? 'gone' : k === 'manual' ? 'manual' : k === 'dropped' ? 'not bear' : 'new'); }).join(', ');
       html += '<div class="src" data-s="' + escapeHtml(name) + '"><h4>' + escapeHtml(name) + ' <small>' + g.cards.length + ' card' + (g.cards.length === 1 ? '' : 's') + ' · ' + escapeHtml(kinds) + '</small></h4>'
         + '<div class="facts">' + (Object.keys(g.hosts).length ? 'links: ' + top(g.hosts, 4) + '<br>' : 'links: none<br>') + (Object.keys(g.places).length ? 'where: ' + top(g.places, 4) : 'where: nothing placed') + '</div>'
         + '<div class="sacts"><button type="button" data-act="list">List these</button><button type="button" data-act="stack">Review these</button><button type="button" class="ok" data-act="approve">Approve all ' + g.cards.length + '</button><button type="button" class="no" data-act="reject">Not yet, all ' + g.cards.length + '…</button></div></div>';
@@ -2588,8 +2660,8 @@ window.__startDeck = function () {
   }
   function notBearItem(item, quiet) {
     var c = item.cards[0];
-    if (c.kind === 'dropped' || isConflict(c)) { decide(item, 'reject', null, 'gone-left'); return; }
-    if (c.kind === 'bar' || c.kind === 'gone') { if (!quiet) { pending = item; openSheet(item); } return; }
+    if (c.kind === 'dropped' || isConflict(c) || isChoose(c)) { decide(item, 'reject', null, 'gone-left'); return; }
+    if (c.kind === 'bar' || c.kind === 'gone' || isManual(c)) { if (!quiet) { pending = item; openSheet(item); } return; }
     decide(item, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     if (!quiet) toast('Not bear — final');
   }
@@ -2735,7 +2807,7 @@ window.__startDeck = function () {
       var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
       if (friendMode) { toast(verdict === 'approve' ? 'Looks right — got it' : 'Noted'); return; }
-      toast((isConflict(card) ? (verdict === 'approve' ? 'Settled: bear — one verdict now, the next run keeps it' : 'Settled: not bear — one verdict now, the next run drops it') : card.kind === 'gone' ? (verdict === 'approve' ? (card.proposal && card.proposal.reason === 'twin' ? 'Removal approved — this copy comes off on the next execute, its twin stays' : 'Removal approved — the phone takes it off the calendar on the next execute') : (card.proposal && card.proposal.reason === 'twin' && reason && (reason.tags || []).indexOf('keep the other one instead') !== -1 ? 'Keeping this copy — the other one comes off on the next execute' : card.proposal && card.proposal.reason === 'twin' ? 'Both stay on the calendar' : 'Kept on the calendar')) : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      toast((isConflict(card) ? (verdict === 'approve' ? 'Settled: bear — one verdict now, the next run keeps it' : 'Settled: not bear — one verdict now, the next run drops it') : isChoose(card) ? ('Noted: ' + card.proposal.options[verdict === 'approve' ? 0 : 1]) : isManual(card) ? (verdict === 'approve' ? (card.proposal.action === 'edit' ? 'Edit approved — the phone applies it on the next execute' : 'Removal approved — the phone takes it off the calendar on the next execute') : 'Not now') : card.kind === 'gone' ? (verdict === 'approve' ? (card.proposal && card.proposal.reason === 'twin' ? 'Removal approved — this copy comes off on the next execute, its twin stays' : 'Removal approved — the phone takes it off the calendar on the next execute') : (card.proposal && card.proposal.reason === 'twin' && reason && (reason.tags || []).indexOf('keep the other one instead') !== -1 ? 'Keeping this copy — the other one comes off on the next execute' : card.proposal && card.proposal.reason === 'twin' ? 'Both stay on the calendar' : 'Kept on the calendar')) : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
       renderDecided(); renderExecute(); renderWaiting();
     }).catch(function (error) {
       toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' ' + unitOf(item.series, left.length) + ' back on the stack)' : ''));
@@ -2748,7 +2820,8 @@ window.__startDeck = function () {
   function rejectTop(fixFirst) {
     var c = topItem(); if (!c) return;
     // A "you said both" card has no "not yet": left is not bear, settled.
-    if (isConflict(c.cards[0])) { decide(c, 'reject', null, 'gone-left'); return; }
+    // A "your call" manual card: left IS the second option.
+    if (isConflict(c.cards[0]) || isChoose(c.cards[0])) { decide(c, 'reject', null, 'gone-left'); return; }
     // Reached by a down-left swipe: the sheet opens on "needs a fix".
     sheet.classList.toggle('fix-first', fixFirst === true);
     // A not-bear card gets the same three answers: some of them ARE bear
@@ -2797,9 +2870,12 @@ window.__startDeck = function () {
     var card = item.bulk ? item.bulk[0].cards[0] : item.cards[0];
     var isDropped = !item.bulk && card.kind === 'dropped';
     var isGone = !item.bulk && card.kind === 'gone';
-    sheet.classList.toggle('gone', isGone);
-    document.getElementById('sheet-fix').querySelector('b').textContent = isGone ? '✅ Keep it on the calendar' : isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
-    document.getElementById('sheet-fix').querySelector('span').textContent = isGone
+    var isManualCard = !item.bulk && isManual(card);
+    sheet.classList.toggle('gone', isGone || isManualCard);
+    document.getElementById('sheet-fix').querySelector('b').textContent = isManualCard ? '⏸ Not now' : isGone ? '✅ Keep it on the calendar' : isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
+    document.getElementById('sheet-fix').querySelector('span').textContent = isManualCard
+      ? 'Nothing changes on the calendar. Say why, so the card can be fixed or dropped.'
+      : isGone
       ? 'The saved event stays as it is. Say why, so the read can be fixed if the source is the problem.'
       : isDropped
       ? 'It IS ours, and the card is wrong. The next run keeps it; it waits, and comes back by itself once the card changes.'
@@ -2809,11 +2885,11 @@ window.__startDeck = function () {
       ? item.label + ' — the same answer for every one'
       : (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '');
     var isTwin = isGone && card.proposal && card.proposal.reason === 'twin';
-    sheetTags.innerHTML = (isTwin ? (deck.twinTags || []) : isGone ? (deck.goneTags || []) : deck.tags.filter(function (t) { return t !== 'not bear'; })).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
+    sheetTags.innerHTML = (isManualCard ? (deck.manualTags || []) : isTwin ? (deck.twinTags || []) : isGone ? (deck.goneTags || []) : deck.tags.filter(function (t) { return t !== 'not bear'; })).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
     document.getElementById('sheet-text').placeholder = 'Anything else (optional)';
-    document.getElementById('sheet-heading').textContent = isGone ? 'Keep it — why?' : friendMode ? 'What’s not right?' : 'Not yet — why?';
+    document.getElementById('sheet-heading').textContent = isManualCard ? 'Not now — why?' : isGone ? 'Keep it — why?' : friendMode ? 'What’s not right?' : 'Not yet — why?';
     if (friendMode) {
       document.getElementById('sheet-fix').querySelector('span').textContent = 'A real bear event, but something on the card is wrong. Tap what, add a note.';
       document.getElementById('sheet-notbear').querySelector('span').textContent = 'Not a bear crowd.';
@@ -2984,7 +3060,7 @@ window.__startDeck = function () {
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
     // A gone card's only answer is "keep" (its left swipe is not a rejection).
-    if (!card.bulk && card.cards[0].kind === 'gone') mode = 'keep';
+    if (!card.bulk && (card.cards[0].kind === 'gone' || isManual(card.cards[0]))) mode = 'keep';
     var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
     // A bulk answer: every item of the set gets this reason.
     if (card.bulk) {
@@ -3007,8 +3083,8 @@ window.__startDeck = function () {
   document.getElementById('sheet-never').onclick = function () { answerSheet('never'); };
   function notBearTop() {
     var c = topItem(); if (!c) return;
-    if (c.cards[0].kind === 'dropped' || isConflict(c.cards[0])) { decide(c, 'reject', null, 'gone-left'); return; }
-    if (c.cards[0].kind === 'bar' || c.cards[0].kind === 'gone') { pending = c; openSheet(c); return; }
+    if (c.cards[0].kind === 'dropped' || isConflict(c.cards[0]) || isChoose(c.cards[0])) { decide(c, 'reject', null, 'gone-left'); return; }
+    if (c.cards[0].kind === 'bar' || c.cards[0].kind === 'gone' || isManual(c.cards[0])) { pending = c; openSheet(c); return; }
     decide(c, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     toast('Not bear — final');
   }
@@ -3363,7 +3439,8 @@ function buildReviewDeckForRun(sharedRoot, run) {
     const writtenLedger = reviewQueue.loadWrittenLedger(sharedRoot);
     const friendAdvice = reviewQueue.loadFriendAdvice(reviewQueue.getFriendAdvicePath(sharedRoot));
     const publishedPictures = reviewQueue.loadPublishedPictures(sharedRoot).pictures;
-    const deckOptions = { runId: run.runId, core, bearVerdicts, executions, writtenLedger, friendAdvice, publishedPictures, ...(phoneCalendars ? { phoneCalendars } : {}) };
+    const manualCards = reviewQueue.loadManualCards(reviewQueue.getManualCardsPath(sharedRoot)).cards;
+    const deckOptions = { runId: run.runId, core, bearVerdicts, executions, writtenLedger, friendAdvice, publishedPictures, manualCards, ...(phoneCalendars ? { phoneCalendars } : {}) };
     let deck = reviewQueue.buildDeck(run.payload, store, deckOptions);
     // The deck closes its own loops (audit 2026-09-22): notes whose fix is
     // saved or whose night has passed are dropped from the store, and a

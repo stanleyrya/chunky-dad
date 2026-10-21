@@ -2248,3 +2248,41 @@ test('a calendar twin card wears its own colour and shows both copies; a keep wi
     process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
   }
 });
+
+test('manual cards: teal card with band, an edit shows before → after, a choose shows both options as the swipes; the deck loads them from the shared dir; the decide route stores kind manual', async () => {
+  const edit = { kind: 'manual', key: 'manual|edit-sydney-furry-friday', action: 'edit', title: 'Furry Friday', why: 'End runs to Sunday; a three-hour night like 9 Oct', city: 'sydney', uid: 'U1', identifier: 'U1', startDate: '2030-10-16T08:00:00.000Z', endDate: '2030-10-18T05:00:00.000Z', timezone: 'Australia/Sydney', bar: 'Kings Cross Hotel', changes: { endDate: { from: '2030-10-18T05:00:00.000Z', to: '2030-10-16T11:00:00.000Z' } }, createdAt: '2030-10-01T00:00:00.000Z' };
+  const html = renderReviewCard({ kind: 'manual', key: edit.key, proposal: edit }, buildReviewCtx());
+  assert.ok(html.includes('card-body manual') && html.includes('kind-manual') && html.includes('Manual card'), 'its own body class, pill and band');
+  assert.ok(html.includes('Edit this saved event'));
+  assert.ok(html.includes('class="from"') && html.includes('class="to"'), 'before and after');
+  assert.ok(html.includes('End runs to Sunday'));
+  assert.ok(!html.includes('Gone from its source') && !html.includes('kind-gone'));
+  const choose = { kind: 'manual', key: 'manual|choose-sf', action: 'choose', title: 'BLUF SF HARD or Bad Boy?', why: 'both saved for Oct 24', city: 'sf', options: ['Keep BLUF SF HARD', 'Keep Bad Boy'] };
+  const chooseHtml = renderReviewCard({ kind: 'manual', key: choose.key, proposal: choose }, buildReviewCtx());
+  assert.ok(chooseHtml.includes('Your call') && chooseHtml.includes('Keep BLUF SF HARD') && chooseHtml.includes('Keep Bad Boy'));
+  assert.ok(chooseHtml.includes('swipe right') && chooseHtml.includes('swipe left'));
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-manual-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  fs.writeFileSync(path.join(dir, 'manual-cards.json'), JSON.stringify({ version: 1, cards: [edit, choose] }));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const deck = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    const manual = deck.cards.filter((c) => c.kind === 'manual');
+    assert.equal(manual.length, 2, 'both cards on the deck');
+    const page = await request(state, 'GET', '/review');
+    assert.ok(page.body.includes('"already done by hand"'), 'the manual keep tags ship with the page');
+    assert.ok(page.body.includes('function isChoose('), 'the deck knows a choose card');
+    const decided = await request(state, 'POST', '/review/decide', JSON.stringify({ key: edit.key, kind: 'manual', verdict: 'approve', snapshot: edit }));
+    assert.equal(decided.status, 200);
+    assert.equal(JSON.parse(decided.body).decision.kind, 'manual');
+    const after = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    const row = after.decided.find((d) => d.key === edit.key);
+    assert.ok(row && row.pendingExecute === true, 'the approved edit waits for the phone');
+  } finally {
+    process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+  }
+});

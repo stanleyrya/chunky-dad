@@ -74,6 +74,130 @@ const TWIN_REASON_TAGS = [
     'both are real events', 'keep the other one instead', 'not the same night', 'not sure'
 ];
 
+// A manual card's "not now" sheet.
+const MANUAL_REASON_TAGS = [
+    'not right', 'later', 'already done by hand', 'not sure'
+];
+const MANUAL_ACTIONS = ['remove', 'edit', 'choose'];
+const MANUAL_EDIT_FIELDS = ['title', 'startDate', 'endDate', 'location', 'url', 'notes'];
+
+// MANUAL CARDS: one-offs the assistant writes by hand for the owner to
+// swipe — "this saved event's end runs to Sunday, set it to 22:00", "remove
+// this stale record", "which of these two is the real night?". They live in
+// <sharedRoot>/manual-cards.json (the Mac writes it with
+// tools/add-deck-card.js; the phone never reads the file — an approval's
+// snapshot carries the whole card). Three actions: `remove` (the phone
+// deletes through the gone path and its guards), `edit` (the phone applies
+// the card's before→after changes once the before still matches), `choose`
+// (two options; the swipe is the answer, nothing executes). A card expires
+// the day after its night. Teal on the deck: never a run's proposal.
+function getManualCardsPath(sharedRoot) {
+    return path.join(sharedRoot, 'manual-cards.json');
+}
+
+function emptyManualCardStore() {
+    return { version: 1, cards: [] };
+}
+
+function slugForManualCard(text) {
+    return String(text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+}
+
+function normalizeManualCard(input, options = {}) {
+    if (!input || typeof input !== 'object') throw new Error('a manual card must be an object');
+    const action = MANUAL_ACTIONS.includes(input.action) ? input.action : null;
+    if (!action) throw new Error(`action must be one of ${MANUAL_ACTIONS.join(', ')}`);
+    const title = String(input.title || '').trim();
+    if (!title) throw new Error('a manual card needs a title');
+    const why = String(input.why || '').trim();
+    if (!why) throw new Error('a manual card needs a why — the owner reads it on the card');
+    const city = String(input.city || '').trim();
+    const now = options.now instanceof Date ? options.now : new Date();
+    const key = typeof input.key === 'string' && input.key.trim() ? input.key.trim() : `manual|${slugForManualCard(`${action}-${city}-${title}-${String(input.startDate || '').slice(0, 10)}`)}`;
+    const card = {
+        key,
+        kind: 'manual',
+        action,
+        title,
+        why,
+        city,
+        uid: String(input.uid || '').trim(),
+        identifier: String(input.identifier || input.uid || '').trim(),
+        startDate: input.startDate ? String(input.startDate) : null,
+        endDate: input.endDate ? String(input.endDate) : null,
+        timezone: input.timezone ? String(input.timezone) : null,
+        bar: String(input.bar || '').trim(),
+        address: String(input.address || '').trim(),
+        createdAt: typeof input.createdAt === 'string' ? input.createdAt : now.toISOString(),
+        createdBy: String(input.createdBy || 'claude'),
+        expiresAt: typeof input.expiresAt === 'string' ? input.expiresAt : null
+    };
+    if (action === 'remove' || action === 'edit') {
+        if (!card.city) throw new Error(`a ${action} card needs the city`);
+        if (!card.uid) throw new Error(`a ${action} card needs the saved event's uid`);
+        if (!card.startDate) throw new Error(`a ${action} card needs the saved event's start`);
+    }
+    if (action === 'edit') {
+        const changes = input.changes && typeof input.changes === 'object' ? input.changes : {};
+        const clean = {};
+        Object.keys(changes).forEach((field) => {
+            if (!MANUAL_EDIT_FIELDS.includes(field)) throw new Error(`cannot edit "${field}" — one of ${MANUAL_EDIT_FIELDS.join(', ')}`);
+            const change = changes[field] && typeof changes[field] === 'object' ? changes[field] : {};
+            clean[field] = { from: change.from === undefined || change.from === null ? '' : String(change.from), to: change.to === undefined || change.to === null ? '' : String(change.to) };
+        });
+        if (Object.keys(clean).length === 0) throw new Error('an edit card needs at least one change (--set field=value)');
+        card.changes = clean;
+    }
+    if (action === 'choose') {
+        const options2 = Array.isArray(input.options) ? input.options.map((o) => String(o || '').trim()).filter(Boolean) : [];
+        if (options2.length !== 2) throw new Error('a choose card needs exactly two options');
+        card.options = options2;
+    }
+    return card;
+}
+
+function loadManualCards(cardsPath) {
+    try {
+        const parsed = JSON.parse(fs.readFileSync(cardsPath, 'utf8'));
+        const cards = parsed && Array.isArray(parsed.cards) ? parsed.cards : [];
+        return { version: 1, cards: cards.filter((card) => card && typeof card === 'object' && typeof card.key === 'string') };
+    } catch (_) {
+        return emptyManualCardStore();
+    }
+}
+
+function saveManualCards(cardsPath, store) {
+    const clean = { version: 1, cards: Array.isArray(store && store.cards) ? store.cards : [] };
+    fs.mkdirSync(path.dirname(cardsPath), { recursive: true });
+    const tmpPath = `${cardsPath}.tmp-${process.pid}`;
+    fs.writeFileSync(tmpPath, JSON.stringify(clean, null, 2));
+    fs.renameSync(tmpPath, cardsPath);
+    return clean;
+}
+
+function upsertManualCard(store, card) {
+    const cards = (store && Array.isArray(store.cards) ? store.cards : []).filter((entry) => entry.key !== card.key);
+    cards.push(card);
+    return { version: 1, cards };
+}
+
+function dropManualCard(store, key) {
+    const cards = store && Array.isArray(store.cards) ? store.cards : [];
+    const kept = cards.filter((entry) => entry.key !== key);
+    return { store: { version: 1, cards: kept }, removed: kept.length !== cards.length };
+}
+
+// Past its night (the day after, in UTC — a card is a day's business, not an
+// instant's) or past its own expiry: no longer a card.
+function manualCardExpired(card, now) {
+    const expires = card && card.expiresAt ? Date.parse(card.expiresAt) : NaN;
+    if (Number.isFinite(expires)) return expires < now;
+    const start = card && card.startDate ? Date.parse(card.startDate) : NaN;
+    const end = card && card.endDate ? Date.parse(card.endDate) : NaN;
+    const last = Number.isFinite(end) ? Math.max(start || 0, end) : start;
+    return Number.isFinite(last) && last + 24 * 60 * 60 * 1000 < now;
+}
+
 function resolveSharedRoot(env = process.env) {
     const raw = env && env.CHUNKY_SHARED_STORAGE_DIR;
     return raw && String(raw).trim() ? path.resolve(String(raw).trim()) : DEFAULT_SHARED_ROOT;
@@ -369,7 +493,7 @@ function buildDecision(input, options = {}) {
     if (!key) throw new Error('decision needs a key');
     const verdict = input.verdict === 'approve' || input.verdict === 'reject' ? input.verdict : null;
     if (!verdict) throw new Error('verdict must be approve or reject');
-    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' || input.kind === 'series' || input.kind === 'gone' ? input.kind : 'new';
+    const kind = input.kind === 'merge' || input.kind === 'override' || input.kind === 'bar' || input.kind === 'series' || input.kind === 'gone' || input.kind === 'manual' ? input.kind : 'new';
     const snapshot = input.snapshot && typeof input.snapshot === 'object' ? input.snapshot : null;
     const now = options.now instanceof Date ? options.now : new Date();
     return {
@@ -1670,7 +1794,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0, 'verdict-conflict': 0, verdictConflictsInStore: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, manual: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0, 'verdict-conflict': 0, verdictConflictsInStore: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
     // its fresh action; the run file's executions[] dates it. Executions
@@ -1708,11 +1832,14 @@ function buildDeck(runPayload, store, options = {}) {
     };
     const file = (entry, decision) => {
         if (decision) {
+            // A manual remove/edit is executed by the phone too (ledger
+            // action deleted/edited); a manual choose is answered by the swipe.
+            const manualExecutes = entry.kind === 'manual' && entry.proposal && (entry.proposal.action === 'remove' || entry.proposal.action === 'edit');
             const isEventKind = entry.kind === 'new' || entry.kind === 'merge' || entry.kind === 'override' || entry.kind === 'series'
                 // A gone card's approval is a removal the phone executes; the
                 // ledger (action 'deleted') is the only mark of it.
-                || entry.kind === 'gone';
-            const executed = entry.kind === 'gone' ? ledgerMark(entry, decision) : isEventKind ? executedMark(entry, decision) : null;
+                || entry.kind === 'gone' || manualExecutes;
+            const executed = entry.kind === 'gone' || manualExecutes ? ledgerMark(entry, decision) : isEventKind ? executedMark(entry, decision) : null;
             // Still waiting for "Execute on phone": an approval the phone has
             // not written, and that is newer than the run's last execution
             // (an older one was already handed to the phone — written or
@@ -1833,6 +1960,18 @@ function buildDeck(runPayload, store, options = {}) {
         // the decided list shows what the phone will remove.
         if (candidate.twinMirror && !decision) return;
         file({ id: `g${index}`, kind: 'gone', key: candidate.key, sourceIndex: index, proposal: { ...candidate, kind: 'gone' } }, decision);
+    });
+
+    // MANUAL CARDS (options.manualCards, from <sharedRoot>/manual-cards.json):
+    // the assistant's one-offs. Exact key; a remove/edit approval waits for
+    // the phone like a gone card (the ledger marks it done); a choose card's
+    // swipe is the answer itself.
+    const manual = Array.isArray(options.manualCards) ? options.manualCards : [];
+    manual.forEach((card, index) => {
+        if (!card || typeof card !== 'object' || typeof card.key !== 'string' || !card.key) return;
+        if (manualCardExpired(card, now)) { counts.pastSkipped++; return; }
+        const decision = decisions.find((entry) => entry && entry.key === card.key && (entry.verdict === 'approve' || entry.verdict === 'reject')) || null;
+        file({ id: `m${index}`, kind: 'manual', key: card.key, sourceIndex: index, proposal: { ...card, kind: 'manual' } }, decision);
     });
 
     // Events the bear check DROPPED (flag, don't drop — they are in the run
@@ -2328,6 +2467,8 @@ function formatRejectionsText(store) {
             ? `BAR ${snap.name || ''} (${snap.city || ''})`
             : snap.kind === 'gone'
             ? `GONE ${snap.title || ''} — ${when} @ ${snap.bar || snap.city || ''} [${snap.source || ''}] kept on the calendar (${snap.host || 'its source'} has not listed it for ${snap.misses || '?'} runs)`
+            : snap.kind === 'manual'
+            ? `MANUAL ${String(snap.action || '').toUpperCase()} ${snap.title || ''} — ${when} @ ${snap.bar || snap.city || ''} (${snap.why || ''})${snap.action === 'choose' && Array.isArray(snap.options) ? ` chose: ${snap.options[1]}` : ''}`
             : `${(snap.kind || decision.kind || 'new').toUpperCase()} ${snap.title || ''} — ${when} @ ${snap.bar || snap.city || ''} [${snap.source || ''}]`;
         const tags = decision.reason && decision.reason.tags && decision.reason.tags.length > 0
             ? ` {${decision.reason.tags.join(', ')}}`
@@ -2336,7 +2477,7 @@ function formatRejectionsText(store) {
         const changes = snap.changes && typeof snap.changes === 'object'
             ? Object.keys(snap.changes).map((field) => `${field}: ${snap.changes[field].from || '∅'} → ${snap.changes[field].to || '∅'}`).join('; ')
             : '';
-        const modeLabel = snap.kind === 'gone' ? 'KEPT' : mode === 'fix' ? 'NEEDS FIX' : mode === 'never' ? 'NOT AN EVENT' : mode === 'not-bear' ? 'NOT BEAR' : 'REJECTED';
+        const modeLabel = snap.kind === 'gone' ? 'KEPT' : snap.kind === 'manual' ? (snap.action === 'choose' ? 'CHOSE B' : 'NOT NOW') : mode === 'fix' ? 'NEEDS FIX' : mode === 'never' ? 'NOT AN EVENT' : mode === 'not-bear' ? 'NOT BEAR' : 'REJECTED';
         lines.push({ rank: mode === 'fix' ? 0 : mode === '' ? 1 : 2, line: `- [${modeLabel}] ${label}${tags}${text}${changes ? ` (${changes})` : ''}` });
     }
     // What needs fixing first; final answers last.
@@ -2377,6 +2518,17 @@ module.exports = {
     DECISIONS_FILE_NAME,
     REVIEW_REASON_TAGS,
     GONE_REASON_TAGS,
+    MANUAL_REASON_TAGS,
+    MANUAL_ACTIONS,
+    MANUAL_EDIT_FIELDS,
+    getManualCardsPath,
+    emptyManualCardStore,
+    normalizeManualCard,
+    loadManualCards,
+    saveManualCards,
+    upsertManualCard,
+    dropManualCard,
+    manualCardExpired,
     TWIN_REASON_TAGS,
     RUN_ID_PATTERN,
     resolveSharedRoot,
