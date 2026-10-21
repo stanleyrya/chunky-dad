@@ -2210,3 +2210,41 @@ test('metrics page without a ledger says so', () => {
   const html = renderMetricsPage({ health: null, records: [] });
   assert.ok(html.includes('no source ledger yet') && html.includes('No source ledger yet'));
 });
+
+test('a calendar twin card wears its own colour and shows both copies; a keep with "keep the other one instead" approves the mirror for removal', async () => {
+  const twin = { kind: 'gone', reason: 'twin', key: 'gone|london|RVT2', city: 'london', uid: 'RVT2', identifier: 'RVT2', title: 'TURKEYMINCE', timezone: 'Europe/London', startDate: '2030-12-19T22:00:00.000Z', endDate: '2030-12-20T02:00:00.000Z', bar: 'Royal Vauxhall Tavern', address: '372 Kennington Ln', why: ['one name inside the other, same bar'], extraWhy: ['the shorter name'], twinOf: { uid: 'RVT1', identifier: 'RVT1', title: 'BEEFMINCE: TURKEYMINCE', startDate: '2030-12-19T22:00:00.000Z', endDate: '2030-12-20T02:00:00.000Z', bar: 'Royal Vauxhall Tavern', address: '372 Kennington Ln', image: 'https://x/v.jpg' } };
+  const html = renderReviewCard({ kind: 'gone', key: twin.key, proposal: twin }, { adapter: { cities: {} } });
+  assert.ok(html.includes('card-body twin'), 'its own body class (tint + outline)');
+  assert.ok(html.includes('kind-twin'), 'its own kind colour, not the gone purple');
+  assert.ok(html.includes('Calendar twin'), 'the band names what it is');
+  assert.ok(html.includes('BEEFMINCE: TURKEYMINCE') && html.includes('>TURKEYMINCE<'), 'both copies on the card');
+  assert.ok(html.includes('twin-extra') && html.includes('twin-keep'), 'remove side and keep side');
+  assert.ok(html.includes('the shorter name'), 'why this copy is the extra');
+  assert.ok(!html.includes('Gone from its source'));
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-twin-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  try {
+    const keep = await request(state, 'POST', '/review/decide', JSON.stringify({
+      key: twin.key, kind: 'gone', verdict: 'reject', snapshot: twin, reason: { tags: ['keep the other one instead'], text: '' },
+      mirror: { key: 'gone|london|RVT1', snapshot: { ...twin.twinOf, kind: 'gone', reason: 'twin', twinMirror: true, city: 'london', key: 'gone|london|RVT1' } }
+    }));
+    assert.equal(keep.status, 200);
+    const body = JSON.parse(keep.body);
+    assert.equal(body.mirror.key, 'gone|london|RVT1');
+    assert.equal(body.mirror.verdict, 'approve');
+    const decisions = JSON.parse((await request(state, 'GET', '/review/decisions.json')).body);
+    const byKey = Object.fromEntries((decisions.decisions || []).map((d) => [d.key, d.verdict]));
+    assert.equal(byKey['gone|london|RVT2'], 'reject', 'this copy stays');
+    assert.equal(byKey['gone|london|RVT1'], 'approve', 'the other copy is the removal');
+    // A plain keep carries no mirror, whatever the body says.
+    const plain = await request(state, 'POST', '/review/decide', JSON.stringify({ key: twin.key, kind: 'gone', verdict: 'reject', snapshot: twin, reason: { tags: ['both are real events'], text: '' }, mirror: { key: 'gone|london/RVT1', snapshot: {} } }));
+    assert.equal(JSON.parse(plain.body).mirror, undefined);
+  } finally {
+    process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+  }
+});

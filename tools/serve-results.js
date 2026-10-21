@@ -1105,8 +1105,59 @@ function renderReviewVerdictConflictCard(entry, ctx = {}) {
 </div>`;
 }
 
+// A calendar twin (SharedCore.buildCalendarTwinCandidates): one night the
+// calendar holds twice. Not a source proposal — a hand-made or past-run
+// record the owner is asked to clear — so it wears its own colour (the
+// twin band and tint, kind-twin) and never passes for a new event. The
+// copy on the card is the EXTRA one (fewer facts); the twin it keeps is
+// shown beside it, fact by fact, so the choice is visible. A right swipe
+// removes this copy on the next phone execute; a left swipe keeps both
+// (the sheet asks why — "keep the other one instead" is a note for the
+// next pass, not a delete).
+function renderReviewTwinCard(entry, ctx = {}) {
+    const p = entry && entry.proposal ? entry.proposal : {};
+    const adapter = ctx.adapter;
+    const tz = p.timezone || null;
+    const twin = p.twinOf && typeof p.twinOf === 'object' ? p.twinOf : {};
+    const cityConfig = adapter && adapter.cities && p.city ? adapter.cities[p.city] : null;
+    const calendarName = cityConfig && typeof cityConfig.calendar === 'string' ? cityConfig.calendar : '';
+    const dateOf = (row) => formatReviewDateLine(row.startDate, row.endDate, tz, { wholeDay: row.isAllDay ? 'all-day' : '' });
+    const why = Array.isArray(p.why) ? p.why : [];
+    const extraWhy = Array.isArray(p.extraWhy) ? p.extraWhy : [];
+    const facts = (row) => [
+        row.bar ? `🍺 ${escapeHtmlText(row.bar)}` : '<span class="muted">no bar</span>',
+        row.address ? `📍 ${escapeHtmlText(row.address)}` : '<span class="muted">no address</span>',
+        row.location ? '🗺 pin' : '<span class="muted">no pin</span>',
+        row.image ? '🖼 flyer' : '<span class="muted">no flyer</span>',
+        row.ticketUrl ? reviewChip(ctx, 'tickets', '🎟', row.ticketUrl) : '<span class="muted">no ticket link</span>',
+        row.cover ? `💵 ${escapeHtmlText(row.cover)}` : ''
+    ].filter(Boolean).map((item) => `<li>${item}</li>`).join('');
+    const side = (label, cls, row, note) => `<section class="twin-side ${cls}">
+    <div class="twin-tag">${label}</div>
+    <h3>${escapeHtmlText(row.title || '')}</h3>
+    <div class="line">📅 ${escapeHtmlText(dateOf(row))}</div>
+    <ul class="twin-facts">${facts(row)}</ul>
+    ${note ? `<div class="line muted">${note}</div>` : ''}
+    <div class="line muted">saved event ${escapeHtmlText(String(row.uid || '').slice(0, 8))}…</div>
+  </section>`;
+    const extraNote = extraWhy.length ? `why this one: ${escapeHtmlText(extraWhy.join(', '))}` : (p.tie ? 'a tie on facts — picked by id, so the same copy is on this card every run' : '');
+    return `<div class="card-body twin">
+  <div class="twin-band">👯 Calendar twin · one night saved twice · a hand-kept record, not a source proposal</div>
+  <div class="kind-row"><span class="kind kind-twin">👯 Remove the extra copy</span><span class="muted reason">→ remove this copy · ← keep both</span></div>
+  <h2>${escapeHtmlText(p.title)}</h2>
+  <div class="line">${why.length ? `One night because: ${escapeHtmlText(why.join('; '))}` : ''}</div>
+  <div class="line muted">${calendarName ? `📱 ${escapeHtmlText(calendarName)} · ` : ''}${escapeHtmlText(p.city || '')}</div>
+  <div class="twin-pair">
+    ${side('Remove', 'twin-extra', p, extraNote)}
+    ${side('Keep', 'twin-keep', twin, '')}
+  </div>
+  ${p.description ? `<div class="desc clamped">${escapeHtmlText(String(p.description))}</div>` : ''}
+</div>`;
+}
+
 function renderReviewCard(entry, ctx = {}) {
     if (entry && entry.kind === 'bar') return renderReviewBarCard(entry, ctx);
+    if (entry && entry.kind === 'gone' && entry.proposal && entry.proposal.reason === 'twin') return renderReviewTwinCard(entry, ctx);
     if (entry && entry.kind === 'gone') return renderReviewGoneCard(entry, ctx);
     if (entry && entry.kind === 'verdict-conflict') return renderReviewVerdictConflictCard(entry, ctx);
     const proposal = entry && entry.proposal ? entry.proposal : {};
@@ -1504,6 +1555,7 @@ function renderReviewPage(deck, options = {}) {
         lastExecution: deck.lastExecution || null,
         tags: reviewQueue.REVIEW_REASON_TAGS,
         goneTags: reviewQueue.GONE_REASON_TAGS,
+        twinTags: reviewQueue.TWIN_REASON_TAGS,
         executeLink: scriptLink,
         friends: Array.isArray(deck.friends) ? deck.friends : [],
         adviceBase: deck.adviceBase || reviewQueue.ADVICE_PAGE_DEFAULT_BASE,
@@ -1666,6 +1718,20 @@ body { overscroll-behavior-y:none; }
 .kind-bar { background:rgba(80,120,255,.14); color:#4a6cf7; }
 .kind-dropped { background:rgba(208,69,60,.14); color:var(--no); }
 .kind-gone { background:rgba(122,92,199,.16); color:#7a5cc7; }
+/* Calendar twins: a hand-kept record to clear, never a source proposal — its own colour family (amber), a band across the top and a tinted body. */
+.kind-twin { background:rgba(214,122,0,.18); color:#b35c00; }
+.card-body.twin { background:linear-gradient(180deg, rgba(214,122,0,.10), rgba(214,122,0,.03) 120px, transparent 200px); }
+.card:has(> .card-body.twin) { box-shadow:0 0 0 2px rgba(214,122,0,.55), var(--shadow); }
+.twin-band { margin:-14px -16px 10px; padding:7px 16px; background:#d67a00; color:#fff; font-size:12px; font-weight:700; letter-spacing:.03em; }
+.twin-pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0; }
+@media (max-width:420px) { .twin-pair { grid-template-columns:1fr; } }
+.twin-side { border-radius:10px; padding:10px 12px; border:1px solid rgba(214,122,0,.35); }
+.twin-side h3 { margin:2px 0 6px; font-size:15px; }
+.twin-side.twin-extra { background:rgba(179,38,30,.08); border-color:rgba(179,38,30,.45); }
+.twin-side.twin-keep { background:rgba(31,111,67,.08); border-color:rgba(31,111,67,.45); }
+.twin-tag { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.twin-extra .twin-tag { color:#b3261e; } .twin-keep .twin-tag { color:#1f6f43; }
+.twin-facts { list-style:none; margin:4px 0; padding:0; font-size:13px; line-height:1.5; }
 .kind-conflict { background:rgba(255,123,47,.16); color:var(--accent); }
 /* The stored verdicts side by side: one tile each, the bear side in the
    approve green, the not-bear side in the reject red, so the tiles read
@@ -2599,6 +2665,23 @@ window.__startDeck = function () {
   // "that IS bear" (rescued by the next run), left = "not bear, confirmed".
   // "Not bear" as a reject reason on a kept card records the verdict too,
   // so the next run drops the party without asking again.
+  // A calendar twin kept with "keep the other one instead": the keep
+  // travels with the mirror — the other copy's key and a snapshot built from
+  // the card's own twinOf — so the server approves THAT removal. The phone
+  // already holds the mirror as a candidate (twinMirror) and runs the same
+  // guards on it.
+  function withTwinMirror(card, verdict, reason, body) {
+    var p = card.proposal || {};
+    var tags = (reason && reason.tags) || [];
+    if (card.kind !== 'gone' || p.reason !== 'twin' || verdict !== 'reject' || tags.indexOf('keep the other one instead') === -1 || !p.twinOf || !p.twinOf.uid) return body;
+    var twin = p.twinOf;
+    body.mirror = {
+      key: 'gone|' + p.city + '|' + twin.uid,
+      snapshot: Object.assign({}, twin, { kind: 'gone', reason: 'twin', twinMirror: true, city: p.city, timezone: p.timezone, key: 'gone|' + p.city + '|' + twin.uid,
+        why: p.why || [], extraWhy: [], twinOf: { uid: p.uid, identifier: p.identifier, title: p.title, startDate: p.startDate, endDate: p.endDate, bar: p.bar, address: p.address } })
+    };
+    return body;
+  }
   function saveOne(card, verdict, reason) {
     var alsoNotBear = card.kind !== 'dropped' && verdict === 'reject' && reason && (reason.tags || []).indexOf('not bear') !== -1;
     // A not-bear card sent back with a note. "Needs a fix" says the party
@@ -2620,7 +2703,7 @@ window.__startDeck = function () {
         })
       : card.kind === 'dropped' || isConflict(card)
       ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear').then(keepBear)
-      : post({ key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null }).then(keepDecision)
+      : post(withTwinMirror(card, verdict, reason, { key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })).then(keepDecision)
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(keepBear).then(function () { return result; }) : result; });
     return request.then(function () {
       var record = { replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve' && !isConflict(card), html: card.html, series: card.series || null };
@@ -2651,7 +2734,7 @@ window.__startDeck = function () {
       var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
       if (friendMode) { toast(verdict === 'approve' ? 'Looks right — got it' : 'Noted'); return; }
-      toast((isConflict(card) ? (verdict === 'approve' ? 'Settled: bear — one verdict now, the next run keeps it' : 'Settled: not bear — one verdict now, the next run drops it') : card.kind === 'gone' ? (verdict === 'approve' ? 'Removal approved — the phone takes it off the calendar on the next execute' : 'Kept on the calendar') : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      toast((isConflict(card) ? (verdict === 'approve' ? 'Settled: bear — one verdict now, the next run keeps it' : 'Settled: not bear — one verdict now, the next run drops it') : card.kind === 'gone' ? (verdict === 'approve' ? (card.proposal && card.proposal.reason === 'twin' ? 'Removal approved — this copy comes off on the next execute, its twin stays' : 'Removal approved — the phone takes it off the calendar on the next execute') : (card.proposal && card.proposal.reason === 'twin' && reason && (reason.tags || []).indexOf('keep the other one instead') !== -1 ? 'Keeping this copy — the other one comes off on the next execute' : card.proposal && card.proposal.reason === 'twin' ? 'Both stay on the calendar' : 'Kept on the calendar')) : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
       renderDecided(); renderExecute(); renderWaiting();
     }).catch(function (error) {
       toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' ' + unitOf(item.series, left.length) + ' back on the stack)' : ''));
@@ -2724,7 +2807,8 @@ window.__startDeck = function () {
     document.getElementById('sheet-title').textContent = item.bulk
       ? item.label + ' — the same answer for every one'
       : (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '');
-    sheetTags.innerHTML = (isGone ? (deck.goneTags || []) : deck.tags.filter(function (t) { return t !== 'not bear'; })).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
+    var isTwin = isGone && card.proposal && card.proposal.reason === 'twin';
+    sheetTags.innerHTML = (isTwin ? (deck.twinTags || []) : isGone ? (deck.goneTags || []) : deck.tags.filter(function (t) { return t !== 'not bear'; })).map(function (t) { return '<span class="chip" data-tag="' + escapeHtml(t) + '">' + escapeHtml(t) + '</span>'; }).join('');
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
     document.getElementById('sheet-text').placeholder = 'Anything else (optional)';
@@ -3654,7 +3738,19 @@ async function handleRequest(state, req, res) {
             }
             const decision = reviewQueue.buildDecision(body);
             const replaced = store.decisions.find((entry) => entry.key === decision.key) || null;
-            store = reviewQueue.saveDecisions(decisionsPath, reviewQueue.upsertDecision(store, decision));
+            let withMirror = reviewQueue.upsertDecision(store, decision);
+            // A calendar twin kept with "keep the other one instead": the
+            // mirror (the copy the card would have kept) is approved for
+            // removal under its own key, so the phone removes THAT one. The
+            // deck sends the mirror's key and snapshot with the keep.
+            let mirror = null;
+            if (decision.kind === 'gone' && decision.verdict === 'reject' && body && body.mirror && typeof body.mirror === 'object'
+                && decision.reason && Array.isArray(decision.reason.tags) && decision.reason.tags.includes('keep the other one instead')) {
+                mirror = reviewQueue.buildDecision({ key: body.mirror.key, kind: 'gone', verdict: 'approve', snapshot: body.mirror.snapshot || null, reason: null });
+                withMirror = reviewQueue.upsertDecision(withMirror, mirror);
+                console.log(`Review: approve gone ${mirror.key} — the other copy of a calendar twin, removed instead of ${decision.key}`);
+            }
+            store = reviewQueue.saveDecisions(decisionsPath, withMirror);
             console.log(`Review: ${decision.verdict} ${decision.kind} ${decision.key}${decision.reason ? ` — ${[decision.reason.tags.join(', '), decision.reason.text].filter(Boolean).join(' / ')}` : ''}`);
             // An approved card whose picture lives in the inbox: push the
             // picture to the pictures PR now; once merged, the phone writes
@@ -3669,7 +3765,7 @@ async function handleRequest(state, req, res) {
                     console.log(`Review: inbox picture for ${decision.key} NOT published (${error.message}) — tried again at the next deck build`);
                 }
             }
-            return sendJson(res, 200, { ok: true, decision, replaced, decisions: store.decisions.length, ...(picture ? { picture } : {}) });
+            return sendJson(res, 200, { ok: true, decision, replaced, decisions: store.decisions.length, ...(mirror ? { mirror } : {}), ...(picture ? { picture } : {}) });
         } catch (error) {
             const status = /must be|needs a/.test(error.message) ? 400 : 500;
             return sendJson(res, status, { ok: false, error: error.message });
