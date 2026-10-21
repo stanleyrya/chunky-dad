@@ -1628,3 +1628,63 @@ test('buildDeck: the only event read off a crawled page is a card carrying the p
   });
   assert.equal(deck.cards[1].display.loneCrawl, null);
 });
+
+// ---------------------------------------------------------------------------
+// Manual cards: the assistant's one-offs (remove / edit / choose) in
+// <sharedRoot>/manual-cards.json, filed on the deck under their own key.
+test('manual cards: normalise (actions, required fields, edit changes, two options), store round-trip, expiry, deck filing, and a remove/edit approval that waits for the phone until the ledger says so', () => {
+  assert.throws(() => rq.normalizeManualCard({ action: 'nuke', title: 'x', why: 'y' }), /action must be one of/);
+  assert.throws(() => rq.normalizeManualCard({ action: 'remove', title: 'x', why: 'y', city: 'nyc' }), /needs the saved event's uid/);
+  assert.throws(() => rq.normalizeManualCard({ action: 'edit', title: 'x', why: 'y', city: 'nyc', uid: 'U', startDate: iso(FUTURE), changes: { cover: { from: '', to: '$5' } } }), /cannot edit "cover"/);
+  assert.throws(() => rq.normalizeManualCard({ action: 'choose', title: 'x', why: 'y', options: ['only one'] }), /exactly two options/);
+  assert.throws(() => rq.normalizeManualCard({ action: 'choose', title: 'x', why: '' }), /needs a why/);
+  const edit = rq.normalizeManualCard({ action: 'edit', title: 'Furry Friday', why: 'end runs to Sunday', city: 'sydney', uid: 'U1', startDate: iso(FUTURE), endDate: iso(FUTURE + 2 * 86400000), changes: { endDate: { from: iso(FUTURE + 2 * 86400000), to: iso(FUTURE + 3 * 3600000) } } }, { now: new Date(FUTURE - 86400000) });
+  assert.equal(edit.key, `manual|edit-sydney-furry-friday-${iso(FUTURE).slice(0, 10)}`);
+  assert.equal(edit.kind, 'manual');
+  assert.equal(edit.identifier, 'U1');
+  const choose = rq.normalizeManualCard({ action: 'choose', title: 'A or B?', why: 'both saved', options: ['Keep A', 'Keep B'] });
+  assert.deepEqual(choose.options, ['Keep A', 'Keep B']);
+  assert.equal(choose.startDate, null);
+
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-manual-'));
+  const cardsPath = rq.getManualCardsPath(dir);
+  assert.deepEqual(rq.loadManualCards(cardsPath), { version: 1, cards: [] }, 'no file yet is an empty store');
+  let store = rq.upsertManualCard(rq.emptyManualCardStore(), edit);
+  store = rq.upsertManualCard(store, choose);
+  store = rq.upsertManualCard(store, { ...edit, why: 'updated why' });
+  rq.saveManualCards(cardsPath, store);
+  const loaded = rq.loadManualCards(cardsPath);
+  assert.equal(loaded.cards.length, 2, 'an upsert by key replaces');
+  assert.equal(loaded.cards.find((c) => c.key === edit.key).why, 'updated why');
+  assert.equal(rq.dropManualCard(loaded, choose.key).store.cards.length, 1);
+  assert.equal(rq.dropManualCard(loaded, 'manual|nope').removed, false);
+
+  assert.equal(rq.manualCardExpired(edit, FUTURE + 5 * 86400000), true, 'a day after its night');
+  assert.equal(rq.manualCardExpired(edit, FUTURE), false);
+  assert.equal(rq.manualCardExpired(choose, FUTURE + 999 * 86400000), false, 'no night, no expiry');
+  assert.equal(rq.manualCardExpired({ ...choose, expiresAt: iso(FUTURE) }, FUTURE + 1), true);
+
+  const payload = runPayload({});
+  const deck = deckOf(payload, rq.emptyDecisionStore(), { manualCards: [edit, choose, { ...edit, key: 'manual|old', startDate: '2020-01-01T10:00:00.000Z', endDate: null }] });
+  assert.equal(deck.cards.filter((c) => c.kind === 'manual').length, 2, 'the past card is skipped');
+  const filed = deck.cards.find((c) => c.key === edit.key);
+  assert.equal(filed.proposal.action, 'edit');
+  assert.equal(filed.proposal.changes.endDate.to, iso(FUTURE + 3 * 3600000));
+
+  const now = new Date(Date.UTC(2030, 0, 2));
+  const approved = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: edit.key, kind: 'manual', verdict: 'approve', snapshot: edit }, { now }));
+  assert.equal(approved.decisions[0].kind, 'manual', 'the kind survives the store');
+  const pending = deckOf(payload, approved, { manualCards: [edit, choose] });
+  const row = pending.decided.find((d) => d.key === edit.key);
+  assert.equal(row.pendingExecute, true, 'handed to the phone on the next execute');
+  const done = deckOf(payload, approved, { manualCards: [edit, choose], writtenLedger: { [edit.key]: { executedAt: '2030-01-03T00:00:00.000Z', action: 'edited', title: 'Furry Friday' } } });
+  assert.deepEqual(done.decided.find((d) => d.key === edit.key).executed, { at: '2030-01-03T00:00:00.000Z', as: 'edited' });
+
+  const chosen = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: choose.key, kind: 'manual', verdict: 'reject', snapshot: choose, reason: { mode: 'keep', tags: [], text: '' } }, { now }));
+  const chosenDeck = deckOf(payload, chosen, { manualCards: [edit, choose] });
+  const chosenRow = chosenDeck.decided.find((d) => d.key === choose.key);
+  assert.equal(chosenRow.pendingExecute, false, 'a choice executes nothing');
+  assert.equal(chosenDeck.counts.waiting, 0, 'and is not a fix note');
+  assert.ok(rq.formatRejectionsText(chosen).includes('[CHOSE B] MANUAL CHOOSE A or B?'), rq.formatRejectionsText(chosen));
+  assert.ok(rq.MANUAL_REASON_TAGS.includes('already done by hand'));
+});

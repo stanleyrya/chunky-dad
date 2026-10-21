@@ -12333,3 +12333,43 @@ test('executeReviewedSavedRun: a removal the ledger already records since the ap
     global.Calendar = previous.Calendar;
   }
 });
+
+test('applyManualEdits: an approved edit is written when every "before" still holds; a moved end, a renamed record, a series or a missing record withholds it; the ledger records "edited"', async () => {
+  const adapter = buildAdapter();
+  adapter.cities = { sydney: { calendar: 'chunky-dad-sydney', timezone: 'Australia/Sydney', patterns: ['sydney'] } };
+  adapter.getOrCreateCalendar = async (name) => ({ title: name });
+  const ledgerRows = [];
+  adapter.recordWrittenLedger = async (ledger, rows) => { ledgerRows.push(...rows); return rows.length; };
+  const saved = [];
+  const mk = (identifier, title, start, end, extra = {}) => ({ identifier, title, startDate: new Date(start), endDate: new Date(end), location: '', url: '', notes: '', recurrenceRules: [], save: async function () { saved.push({ identifier: this.identifier, title: this.title, endDate: this.endDate.toISOString() }); }, ...extra });
+  const live = [
+    mk('cal:U1', 'Furry Friday', '2030-10-16T08:00:00.000Z', '2030-10-18T05:00:00.000Z'),
+    mk('cal:U2', 'Renamed Night', '2030-10-16T08:00:00.000Z', '2030-10-18T05:00:00.000Z'),
+    mk('cal:U3', 'Weekly', '2030-10-16T08:00:00.000Z', '2030-10-16T11:00:00.000Z', { recurrenceRules: [{}] })
+  ];
+  const previous = { CalendarEvent: global.CalendarEvent, Calendar: global.Calendar };
+  global.Calendar = {};
+  global.CalendarEvent = { between: async () => live };
+  adapter.parseScriptableIdentifier = (id) => ({ uid: String(id).replace(/^cal:/, '') });
+  try {
+    const card = (uid, title, changes) => ({ key: `manual|edit-${uid}`, action: 'edit', title, city: 'sydney', uid, identifier: `cal:${uid}`, startDate: '2030-10-16T08:00:00.000Z', endDate: '2030-10-18T05:00:00.000Z', changes });
+    const decision = { stampedAt: '2030-10-02T00:00:00.000Z' };
+    const out = await adapter.applyManualEdits({}, [
+      { card: card('U1', 'Furry Friday', { endDate: { from: '2030-10-18T05:00:00.000Z', to: '2030-10-16T11:00:00.000Z' } }), decision },
+      { card: card('U2', 'Old Name', { title: { from: 'Old Name', to: 'New Name' } }), decision },
+      { card: card('U3', 'Weekly', { endDate: { from: '2030-10-16T11:00:00.000Z', to: '2030-10-16T12:00:00.000Z' } }), decision },
+      { card: card('U9', 'Missing', { endDate: { from: '', to: '2030-10-16T12:00:00.000Z' } }), decision }
+    ], { version: 1, entries: { 'manual|edit-done': { executedAt: '2030-10-03T00:00:00.000Z', action: 'edited' } } });
+    assert.deepEqual({ attempted: out.attempted, edited: out.edited, withheld: out.withheld, failed: out.failed }, { attempted: 4, edited: 1, withheld: 3, failed: 0 });
+    assert.deepEqual(saved, [{ identifier: 'cal:U1', title: 'Furry Friday', endDate: '2030-10-16T11:00:00.000Z' }], 'only the matching record is written, with the after');
+    assert.ok(out.notes.some((n) => /its title is now "Renamed Night"/.test(n)), out.notes.join(' | '));
+    assert.ok(out.notes.some((n) => /recurring/.test(n)));
+    assert.ok(out.notes.some((n) => /no saved event with that identifier/.test(n)));
+    assert.deepEqual(ledgerRows, [{ key: 'manual|edit-U1', action: 'edited', title: 'Furry Friday' }]);
+    const again = await adapter.applyManualEdits({}, [{ card: card('U1', 'Furry Friday', { endDate: { from: 'x', to: 'y' } }), decision: { stampedAt: '2030-10-01T00:00:00.000Z' } }], { version: 1, entries: { 'manual|edit-U1': { executedAt: '2030-10-03T00:00:00.000Z', action: 'edited' } } });
+    assert.equal(again.alreadyDone, 1, 'the ledger since the approval means done');
+  } finally {
+    global.CalendarEvent = previous.CalendarEvent;
+    global.Calendar = previous.Calendar;
+  }
+});

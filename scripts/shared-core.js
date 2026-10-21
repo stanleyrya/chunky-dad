@@ -1609,7 +1609,7 @@ class SharedCore {
     rekeyOwnerDecisions(decisions) {
         if (!Array.isArray(decisions)) return [];
         return decisions.map(decision => {
-            if (!decision || typeof decision !== 'object' || decision.kind === 'bar' || decision.kind === 'dropped' || decision.kind === 'gone') return decision;
+            if (!decision || typeof decision !== 'object' || decision.kind === 'bar' || decision.kind === 'dropped' || decision.kind === 'gone' || decision.kind === 'manual') return decision;
             const snapshot = decision.snapshot && typeof decision.snapshot === 'object' ? decision.snapshot : null;
             if (!snapshot || !snapshot.title || !snapshot.startDate) return decision;
             const key = this.getOwnerReviewKey({

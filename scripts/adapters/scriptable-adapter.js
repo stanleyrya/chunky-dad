@@ -16517,7 +16517,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         out.deleted++;
         out.rows.push({ key: candidate.key, action: "deleted", title });
         if (!out.cities.includes(candidate.city)) out.cities.push(candidate.city);
-        console.log(`📱 Scriptable: 🗑️ Removed "${title}" (${candidate.city}, ${String(candidate.startDate || "").slice(0, 10)}) — gone from ${candidate.host || candidate.source || "its source"}, approved on the deck`);
+        console.log(`📱 Scriptable: 🗑️ Removed "${title}" (${candidate.city}, ${String(candidate.startDate || "").slice(0, 10)}) — ${candidate.reason === "manual" ? `a manual card (${candidate.why || "no reason given"})` : `gone from ${candidate.host || candidate.source || "its source"}`}, approved on the deck`);
       } catch (error) {
         out.failed++;
         out.notes.push(`"${title}": ${error.message}`);
@@ -16530,11 +16530,120 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
     return out;
   }
 
+  // MANUAL EDIT cards approved on the deck: the card names the saved event
+  // (identifier/uid, city, night) and a before→after per field (title,
+  // startDate, endDate, location, url, notes). The phone re-finds the record
+  // the way applyGoneDeletions does (one record by identifier around that
+  // night, not recurring), checks every "before" still holds — a title that
+  // changed, an end that moved, a note someone edited — and only then writes
+  // the "after". A mismatch is a withheld edit with its reason, never a best
+  // guess. Ledger action `edited` under the card's key.
+  async applyManualEdits(results, approved, ledger) {
+    const out = { attempted: 0, edited: 0, withheld: 0, failed: 0, alreadyDone: 0, cities: [], rows: [], notes: [] };
+    const list = Array.isArray(approved) ? approved : [];
+    if (list.length === 0) return out;
+    if (typeof CalendarEvent === "undefined" || typeof Calendar === "undefined") {
+      out.notes.push("no calendar API in this environment");
+      console.log("📱 Scriptable: ✏️ Approved edits skipped — no calendar API in this environment");
+      return out;
+    }
+    const entries = ledger && ledger.entries && typeof ledger.entries === "object" ? ledger.entries : {};
+    const foldText = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const same = (field, live, before) => {
+      if (field === "startDate" || field === "endDate") {
+        const liveMs = SharedCore.toEpochMillis(live);
+        const beforeMs = before ? SharedCore.toEpochMillis(before) : null;
+        if (!before) return liveMs === null;
+        return liveMs !== null && beforeMs !== null && Math.abs(liveMs - beforeMs) <= 60 * 1000;
+      }
+      return foldText(live) === foldText(before);
+    };
+    for (const { card, decision } of list) {
+      const title = String(card.title || "");
+      const written = entries[card.key];
+      if (written && String(written.executedAt || "") >= String((decision && decision.stampedAt) || "")) {
+        out.alreadyDone++;
+        continue;
+      }
+      out.attempted++;
+      try {
+        const changes = card.changes && typeof card.changes === "object" ? card.changes : {};
+        const fields = Object.keys(changes).filter((field) => ["title", "startDate", "endDate", "location", "url", "notes"].includes(field));
+        if (fields.length === 0) throw new Error("the card carries no change");
+        const calendarName = this.getCalendarName(card.city);
+        const calendar = await this.getOrCreateCalendar(calendarName);
+        const startMs = SharedCore.toEpochMillis(card.startDate);
+        if (startMs === null) throw new Error("the card has no start");
+        const endMsRaw = SharedCore.toEpochMillis(card.endDate);
+        const endMs = endMsRaw === null ? startMs : Math.max(startMs, endMsRaw);
+        const dayMs = 24 * 60 * 60 * 1000;
+        const live = await CalendarEvent.between(new Date(startMs - 1.5 * dayMs), new Date(endMs + 1.5 * dayMs), [calendar]);
+        const uid = String(card.uid || "");
+        const identifier = String(card.identifier || "");
+        const matches = (Array.isArray(live) ? live : []).filter((record) => {
+          const id = String((record && record.identifier) || "");
+          if (!id) return false;
+          if (identifier && id === identifier) return true;
+          return Boolean(uid) && this.parseScriptableIdentifier(id).uid === uid;
+        });
+        if (matches.length !== 1) {
+          out.withheld++;
+          const why = matches.length === 0 ? "no saved event with that identifier around that night any more" : `${matches.length} records share that identifier (a series)`;
+          out.notes.push(`"${title}": ${why}`);
+          console.log(`📱 Scriptable: ⏸️ Edit withheld for "${title}" (${card.city}) — ${why}`);
+          continue;
+        }
+        const target = matches[0];
+        const recurring = Array.isArray(target.recurrenceRules) && target.recurrenceRules.length > 0;
+        if (recurring) {
+          out.withheld++;
+          out.notes.push(`"${title}": the saved record is a recurring event`);
+          console.log(`📱 Scriptable: ⏸️ Edit withheld for "${title}" (${card.city}) — the saved record is a recurring event`);
+          continue;
+        }
+        const stale = fields.find((field) => !same(field, target[field], changes[field].from));
+        if (stale) {
+          out.withheld++;
+          const why = `its ${stale} is now "${target[stale] instanceof Date ? target[stale].toISOString() : String(target[stale] || "")}", not what the card expected`;
+          out.notes.push(`"${title}": ${why}`);
+          console.log(`📱 Scriptable: ⏸️ Edit withheld for "${title}" (${card.city}) — ${why}; the card no longer describes it`);
+          continue;
+        }
+        for (const field of fields) {
+          const to = changes[field].to;
+          if (field === "startDate" || field === "endDate") {
+            const ms = SharedCore.toEpochMillis(to);
+            if (ms === null) throw new Error(`"${to}" is not a date for ${field}`);
+            target[field] = new Date(ms);
+          } else {
+            target[field] = String(to || "");
+          }
+        }
+        await target.save();
+        out.edited++;
+        out.rows.push({ key: card.key, action: "edited", title });
+        if (!out.cities.includes(card.city)) out.cities.push(card.city);
+        console.log(`📱 Scriptable: ✏️ Edited "${title}" (${card.city}, ${String(card.startDate || "").slice(0, 10)}) — ${fields.map((field) => `${field}: ${changes[field].from || "∅"} → ${changes[field].to || "∅"}`).join("; ")}, a manual card approved on the deck`);
+      } catch (error) {
+        out.failed++;
+        out.notes.push(`"${title}": ${error.message}`);
+        console.log(`📱 Scriptable: ✗ Edit failed for "${title}" (${card.city}): ${error.message}`);
+      }
+    }
+    if (out.rows.length > 0) {
+      await this.recordWrittenLedger(ledger, out.rows, new Date().toISOString(), results.savedRunId || results.sourceRunId || null);
+    }
+    return out;
+  }
+
   describeGoneDeletionLines(deletions) {
     const d = deletions && typeof deletions === "object" ? deletions : {};
     return [
-      d.deleted > 0 ? `🗑️ Removed ${d.deleted} (gone from their source, approved on the deck)` : "",
+      d.deleted > 0 ? `🗑️ Removed ${d.deleted} (gone from their source or a manual card, approved on the deck)` : "",
+      d.edited > 0 ? `✏️ Edited ${d.edited} (manual cards approved on the deck)` : "",
       d.withheld > 0 ? `⏸️ ${d.withheld} removal(s) withheld — the saved event no longer matches the card` : "",
+      d.editWithheld > 0 ? `⏸️ ${d.editWithheld} edit(s) withheld — the saved event no longer matches the card` : "",
+      d.editFailed > 0 ? `⚠️ ${d.editFailed} edit(s) FAILED` : "",
       d.failed > 0 ? `⚠️ ${d.failed} removal(s) FAILED` : "",
       d.alreadyDone > 0 ? `✅ ${d.alreadyDone} removed by an earlier execution` : "",
     ].filter(Boolean);
@@ -16606,10 +16715,24 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       const goneApproved = goneCandidates
         .filter((candidate) => candidate && typeof candidate === "object" && goneApprovalByKey.has(candidate.key))
         .map((candidate) => ({ candidate, decision: goneApprovalByKey.get(candidate.key) }));
+      // MANUAL cards the owner approved (tools/review-queue.js manual cards):
+      // the decision's snapshot IS the card, so no file is read here. A
+      // remove rides the gone path with its guards; an edit goes through
+      // applyManualEdits; a choose executes nothing (the swipe was the answer).
+      const manualApproved = store
+        .filter((decision) => decision && decision.verdict === "approve" && decision.kind === "manual"
+          && decision.snapshot && typeof decision.snapshot === "object" && typeof decision.key === "string");
+      const manualRemovals = manualApproved
+        .filter((decision) => decision.snapshot.action === "remove")
+        .map((decision) => ({ candidate: { ...decision.snapshot, key: decision.key, reason: "manual" }, decision }));
+      const manualEdits = manualApproved
+        .filter((decision) => decision.snapshot.action === "edit")
+        .map((decision) => ({ card: { ...decision.snapshot, key: decision.key }, decision }));
+      goneApproved.push(...manualRemovals);
       console.log(
         `📱 Scriptable: 🃏 Reviewed-run execution starting — run is ${ageLabel}, ${savedEvents.length} saved event(s), ${store.length} owner decision(s)${goneApproved.length > 0 ? `, ${goneApproved.length} approved removal(s)` : ""}. Saved intents are NEVER written; a fresh live-calendar analysis decides everything below.`,
       );
-      if (savedEvents.length === 0 && goneApproved.length === 0) {
+      if (savedEvents.length === 0 && goneApproved.length === 0 && manualEdits.length === 0) {
         await this.presentSavedRunExecutionNotice(
           "Nothing to Execute",
           `This run (${ageLabel}) has no analyzable events, so there is nothing to write.`,
@@ -16711,6 +16834,19 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
       summary.deleted = deletions.deleted;
       summary.deleteWithheld = deletions.withheld;
       summary.deleteFailed = deletions.failed;
+      // Approved manual edits next; their tallies ride with the deletions
+      // object so the gone-only settle and every notice line carry them.
+      const edits = await this.applyManualEdits(results, manualEdits, ledger);
+      summary.edited = edits.edited;
+      summary.editWithheld = edits.withheld;
+      summary.editFailed = edits.failed;
+      deletions.attempted += edits.attempted;
+      deletions.alreadyDone += edits.alreadyDone;
+      deletions.edited = edits.edited;
+      deletions.editWithheld = edits.withheld;
+      deletions.editFailed = edits.failed;
+      deletions.notes.push(...edits.notes);
+      edits.cities.forEach((city) => { if (!deletions.cities.includes(city)) deletions.cities.push(city); });
       const approvedKeys = new Set(
         reviewStore
           .filter((decision) => decision && decision.verdict === "approve" && typeof decision.key === "string")
