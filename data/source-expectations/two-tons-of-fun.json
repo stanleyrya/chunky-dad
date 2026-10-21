@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "source": "Two Tons of Fun",
+  "slug": "two-tons-of-fun",
+  "status": "complete",
+  "recheckAfter": "2026-11-19",
+  "recon": {
+    "date": "2026-10-20",
+    "method": [
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://twotonsoffun.co.uk/"
+    ],
+    "doors": [
+      {
+        "url": "https://twotonsoffun.co.uk/",
+        "kind": "json-ld",
+        "role": "feed",
+        "rowsReturned": 1,
+        "truthFlag": "one @graph: an EventSeries (\"Two Tons of Fun\", London) and ONE Event, the next night, with a date-only startDate, the venue's name and city, the organizer and the OutSavvy short link as the offer",
+        "note": "Static one-page site (no CMS marker, cookiebot + onesignal + GTM). The Event node: name \"Two Tons of HalloKWEEN — London\", startDate \"2026-10-30\" (no clock, no endDate), location Place \"City of Quebec (Officers Club)\" with addressLocality London / addressCountry GB (no street, no geo), image = the TTOF logo, offers.url https://link.outsavvy.com/twotonsoffun. The page carries no Manchester date yet (\"Christmas announcement coming soon\"). The only image the site publishes is its logo (2160×2160); the vision pass reads it as a logo and it is kept as the publisher's image."
+      },
+      {
+        "url": "https://twotonsoffun.co.uk/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 1,
+        "truthFlag": "\"Next up · Two Tons of HalloKWEEN\" hero + a \"Tickets & Next Releases\" card, both \"Friday 30 October 2026 / City of Quebec (Officers Club), London\" with the OutSavvy link; a second card \"Two Tons of Christmas\" with no date",
+        "note": "The visible page states the day and the venue but never a clock. Six \"Get Tickets\" buttons, a merch strip (kween.shop), a newsletter form, an \"about\" section (\"Since its inception in 2021 … chubs, chasers and admirers\"), footer \"London & Manchester, UK\". Sitemap lists /, /merch.html, /privacy.html only."
+      },
+      {
+        "url": "https://link.outsavvy.com/twotonsoffun",
+        "kind": "html",
+        "role": "event",
+        "rowsReturned": 21,
+        "truthFlag": "302 → https://www.outsavvy.com/event/12116/two-tons-of-fun; JSON-LD: 21 DanceEvent nodes all named \"Two Tons of Fun (The BIGGEST Chub/Chaser Pop Night in London!)\" — every edition since 2023-03-31, the current night among them (startDate 2026-10-30T21:00:00+00:00, endDate 2026-10-31T03:00:00+00:00, Place \"City of Quebec (Officers Club)\", streetAddress \"City of Quebec (Officers Club), 12 Old Quebec Street\", W1H 7AF, geo 51.51386,-0.1580566, AggregateOffer 9–13 GBP, image cdn.outsavvy.com/events/9fca3315-….png); text \"Friday 30th October 2026 @ 9:00 PM - Saturday 31st October 2026 @ 3:00 AM\"",
+        "note": "OutSavvy keeps ONE page per recurring listing (id 12116) and marks up EVERY edition as its own DanceEvent node under the platform's name for the night, oldest first — a history, not a related-events rail. The enrich-only crawl (reached through the row's ticket link) read all 21 and, before the ticket-link-page rule, kept 0: no identity rung met the row (\"Two Tons of HalloKWEEN — London\", date-only start) and the current node (another name, the resolved OutSavvy page as its own link, the short link only in _sourcePageUrl). Solo runs 2026-10-20: before → the record shipped with the day, the venue name and the short link only; after → one record with the clock, the street, the price and the resolved ticket page, 20 past editions dropped as siblings."
+      }
+    ],
+    "notes": "Recon 2026-10-20 from the owner's request (site, linktr.ee/twotonsoffun, Instagram two_tons_of_fun): five reads (robots, /, sitemap.xml, OutSavvy robots, the ticket link). robots.txt allows everything. The linktr.ee hub is a link list (discovery only, not configured); Instagram is not read (owner policy). One upcoming night published: HalloKWEEN, Fri 30 Oct 2026, City of Quebec (Officers Club), London, 21:00–03:00, £13 on OutSavvy. Manchester nights exist (site title, footer) but none is dated anywhere yet."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "The site publishes exactly one dated night at a time (its JSON-LD Event and the hero agree); the Christmas card and the Manchester mentions carry no date. The clock, the street, the pin and the price are stated only on the OutSavvy page, whose current-night node the enrich-only crawl folds into the row through the ticket-link-page rule (solo run 2026-10-20: 1 record, 2026-10-30 21:00–03:00, 12 Old Quebec Street, 9–13 GBP).",
+    "publishedEventCount": 1,
+    "documentedEventCount": 1,
+    "occurrenceWindow": {
+      "start": "2026-10-20",
+      "end": "2027-01-18"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "london",
+    "timezone": "Europe/London",
+    "bar": null,
+    "address": null,
+    "location": null,
+    "website": "https://twotonsoffun.co.uk",
+    "instagram": "https://www.instagram.com/two_tons_of_fun"
+  },
+  "events": [
+    {
+      "id": "two-tons-of-hallokween-london-2026-10-30",
+      "kind": "single",
+      "title": "Two Tons of HalloKWEEN — London",
+      "description": "Two Tons of HalloKWEEN, the Halloween edition of London's body-positive chub/chaser pop night.",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": "2026-10-31",
+      "endTime": "03:00",
+      "website": "https://twotonsoffun.co.uk",
+      "ticketUrl": "https://www.outsavvy.com/event/12116/two-tons-of-fun",
+      "image": "https://twotonsoffun.co.uk/TTOF-main-logo.png",
+      "sourceRung": "static",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://twotonsoffun.co.uk/",
+        "quote": "\"name\": \"Two Tons of HalloKWEEN — London\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": {
+        "value": true,
+        "decidedBy": "owner brief 2026-10-20 (a chub/chaser night; the parser is alwaysBear)",
+        "decidedOn": "2026-10-20"
+      },
+      "note": "Day, venue name and city from the site's JSON-LD; the clock, the street, the 9–13 GBP cover and the resolved ticket page from the OutSavvy node for the night (folded by the ticket-link-page rule: the page the row's own ticket link opens). Chub/chaser night: bear by the owner's brief (alwaysBear)."
+    }
+  ],
+  "traps": [
+    {
+      "id": "outsavvy-every-edition-marked-up",
+      "kind": "past-event",
+      "label": "20 past editions (2023-03-31 … 2026-08-28) as DanceEvent nodes on the one OutSavvy page",
+      "why": "The platform marks up the listing's whole history under one name; each past node is dated to its own night, so the same-local-day guard keeps them off the row and the enrich-only crawl drops them as siblings. Only the node on the row's night is the row.",
+      "evidence": {
+        "url": "https://www.outsavvy.com/event/12116/two-tons-of-fun",
+        "quote": "\"startDate\": \"2023-03-31T20:00:00+01:00\""
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "two-names-one-night",
+      "kind": "duplicate-listing",
+      "label": "\"Two Tons of HalloKWEEN — London\" (the site) vs \"Two Tons of Fun (The BIGGEST Chub/Chaser Pop Night in London!)\" (OutSavvy)",
+      "why": "The site names the edition, the platform names the series; no name rung meets them and the row's start is the date-only midnight start, so the pair is folded only by the ticket-link-page rule (the page the row's own ticket link opens, on the row's night).",
+      "evidence": {
+        "url": "https://twotonsoffun.co.uk/",
+        "quote": "\"name\": \"Two Tons of HalloKWEEN — London\""
+      },
+      "expect": {
+        "extracted": true
+      },
+      "seenInRun": null
+    },
+    {
+      "id": "christmas-card-undated",
+      "kind": "announcement",
+      "label": "\"Two Tons of Christmas\" card (\"announcement coming soon\")",
+      "why": "A teaser with no date, venue or link; the JSON-LD carries no node for it.",
+      "evidence": {
+        "url": "https://twotonsoffun.co.uk/",
+        "quote": "Book your HalloKWEEN tickets now, and be first to hear about Two Tons of Christmas."
+      },
+      "expect": {
+        "extracted": false
+      },
+      "seenInRun": null
+    }
+  ],
+  "openQuestions": [
+    {
+      "q": "Manchester: the site names the city in its title and footer but dates no Manchester night; when one is announced, does it get its own JSON-LD Event node (city per event) or replace the London one?",
+      "raisedOn": "2026-10-20",
+      "blocking": false
+    }
+  ]
+}

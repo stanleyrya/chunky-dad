@@ -11589,7 +11589,8 @@ class SharedCore {
                         const droppedEvents = [];
                         for (const childEvent of parsedEvents) {
                             const matchesParent = enrichContext.parentEvents.some(parentEvent =>
-                                this.getSameEventIdentitySignal(childEvent, parentEvent, { requireCloseStartTimes: false }));
+                                this.getSameEventIdentitySignal(childEvent, parentEvent, { requireCloseStartTimes: false })
+                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url));
                             (matchesParent ? keptEvents : droppedEvents).push(childEvent);
                         }
                         if (droppedEvents.length > 0) {
@@ -15357,6 +15358,10 @@ class SharedCore {
     logUrlIdentityDedupSignal(signal, event, match) {
         if (signal === 'ticket-url') {
             console.log(`🎟️ DEDUP: "${event.title || 'event'}" matched "${match.title || 'event'}" by a shared ticket link (${event.ticketUrl || match.ticketUrl || ''})`);
+            return;
+        }
+        if (signal === 'ticket-link-page') {
+            console.log(`🎟️ DEDUP: "${event.title || 'event'}" matched "${match.title || 'event'}" — one is the page the other's ticket link opens (${event._ticketLinkPageOf || match._ticketLinkPageOf || ''})`);
             return;
         }
         if (signal !== 'event-page-url' && signal !== 'event-url-id') return;
@@ -26638,7 +26643,7 @@ class SharedCore {
     getSameEventIdentitySignal(newEvent, existingEvent, options = {}) {
         const signal = this.getUngatedSameEventIdentitySignal(newEvent, existingEvent, options);
         if (!signal) return null;
-        const softBarNames = signal === 'ticket-url' && !this.recordsShareSourcePage(newEvent, existingEvent);
+        const softBarNames = (signal === 'ticket-url' || signal === 'ticket-link-page') && !this.recordsShareSourcePage(newEvent, existingEvent);
         const contradiction = this.getIdentityContradiction(newEvent, existingEvent, { ...options, softBarNames });
         if (!contradiction) return signal;
         console.log(`🛑 IDENTITY: "${newEvent.title || newEvent.name || 'event'}" would match "${existingEvent.title || existingEvent.name || 'event'}" by ${signal}, but their ${contradiction} contradict — two events, not folded`);
@@ -26796,6 +26801,17 @@ class SharedCore {
             this.areIdentityNamesSimilar(incoming, existing) &&
             !this.titleAffinityIsCorpusGeneric(newEvent, existingEvent)) {
             return requireCloseStartTimes ? 'place-time-name' : 'place-day-name';
+        }
+
+        // The record the enrich-only crawl read off the page a row's own
+        // ticket link opens, on the row's night (isTicketLinkPageRecord
+        // stamped the row's ticket key on it): one event, whatever the two
+        // sites call it. Last in the ladder, and only a record that crawl
+        // stamped can meet it; the same-local-day guard above still holds.
+        const linkPageOf = (event) => String((event && event._ticketLinkPageOf) || '');
+        if ((linkPageOf(newEvent) && linkPageOf(newEvent) === existing.ticketUrl)
+            || (linkPageOf(existingEvent) && linkPageOf(existingEvent) === incoming.ticketUrl)) {
+            return 'ticket-link-page';
         }
 
         return null;
@@ -27002,6 +27018,49 @@ class SharedCore {
 
     // TRUE when both records were scraped off the same page (the listing
     // that presents them as two cards).
+    // The record read off the page a row's OWN ticket link opens, on the
+    // row's night, is that row: the row pointed here. Two Tons of Fun (solo
+    // run 2026-10-20): the site's JSON-LD names "Two Tons of HalloKWEEN —
+    // London" with the OutSavvy link as its offer and no clock; the OutSavvy
+    // page marks up every edition of "Two Tons of Fun (The BIGGEST
+    // Chub/Chaser Pop Night in London!)", the current night among them with
+    // its clock and street. No identity rung met the pair — different
+    // names, a placeholder start on the row, the row's ticket link is not
+    // the page record's own link (its offer is the resolved OutSavvy page)
+    // and the page is held only in _sourcePageUrl — so the enrich-only
+    // crawl dropped all 21 as siblings and the record shipped without time,
+    // street or pin. The pointer and the page are read with the ticket-url
+    // rung's own key (tracking params gone, host www-folded, a bare root is
+    // no page); the same-local-day guard keeps the past editions on that
+    // page apart; the fan-in guard keeps a pass page every row links from
+    // claiming the night; and the identity contradiction gate still refuses
+    // a pair whose hard facts disagree (bar names soft, as across any two
+    // sites). Only the enrich-only crawl asks this — the page WAS reached
+    // through that link — so no other dedup pass can fold a row into a
+    // listing it merely links.
+    isTicketLinkPageRecord(pageRecord, row, pageUrl = '') {
+        if (!pageRecord || typeof pageRecord !== 'object' || !row || typeof row !== 'object') return false;
+        const rowShape = this.buildIdentityComparisonShape(row);
+        if (!rowShape.ticketUrl) return false;
+        const pageKey = this.normalizeTicketUrlForIdentity(String(pageRecord._sourcePageUrl || pageUrl || '').trim());
+        if (!pageKey || pageKey !== rowShape.ticketUrl) return false;
+        const pageShape = this.buildIdentityComparisonShape(pageRecord);
+        if (!this.areIdentityDatesOnSameLocalDay(pageShape, rowShape)) return false;
+        if (this.isFanInTicketUrl(pageRecord, row)) return false;
+        const contradiction = this.getIdentityContradiction(pageRecord, row, { requireCloseStartTimes: false, softBarNames: true });
+        if (contradiction) {
+            console.log(`🛑 IDENTITY: "${pageRecord.title || 'event'}" is on the page "${row.title || 'event'}"'s ticket link opens, on the same night, but their ${contradiction} contradict — not folded`);
+            return false;
+        }
+        // The stamp carries the relation into the parser-level dedup, whose
+        // ladder reads it as its last rung (ticket-link-page); the row and
+        // the page record then fold the way a listing stub and its detail
+        // page do. Underscore field: never serialized, dies at the merge.
+        pageRecord._ticketLinkPageOf = rowShape.ticketUrl;
+        console.log(`🎟️ ENRICH: "${pageRecord.title || 'event'}" is the night on the page "${row.title || 'event'}"'s ticket link opens (${rowShape.ticketUrl}) — one event, kept`);
+        return true;
+    }
+
     recordsShareSourcePage(eventA, eventB) {
         const keyOf = (event) => this.getUrlDedupeKey(String((event && event._sourcePageUrl) || '').trim());
         const keyA = keyOf(eventA);

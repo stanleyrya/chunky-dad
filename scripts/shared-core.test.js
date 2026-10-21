@@ -52,6 +52,35 @@ function buildCalendarEvent(overrides = {}, notesOverride = null) {
   };
 }
 
+test('enrich-only crawl: the record on the page a row\'s own ticket link opens, on the row\'s night, is that row; past editions, a pass link every row shares, a bare root and contradicting hard facts are not', () => {
+  const core = createCore();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    // The site's JSON-LD row: date-only start (the midnight placeholder), the OutSavvy short link as its offer.
+    const row = { title: 'Two Tons of HalloKWEEN — London', startDate: new Date('2026-10-30T00:00:00.000Z'), timezone: 'Europe/London', bar: 'City of Quebec (Officers Club)', address: 'London', ticketUrl: 'https://link.outsavvy.com/twotonsoffun', website: 'https://twotonsoffun.co.uk', _sourcePageUrl: 'https://twotonsoffun.co.uk/' };
+    // The ticket page's own JSON-LD, read by the enrich-only crawl from that link (tracking params and all).
+    const page = { title: 'Two Tons of Fun (The BIGGEST Chub/Chaser Pop Night in London!)', startDate: new Date('2026-10-30T21:00:00.000Z'), endDate: new Date('2026-10-31T03:00:00.000Z'), timezone: 'Europe/London', bar: 'City of Quebec (Officers Club)', address: 'City of Quebec (Officers Club), 12 Old Quebec Street, London, England W1H 7AF', website: 'https://twotonsoffun.co.uk', ticketUrl: 'https://www.outsavvy.com/event/12116/two-tons-of-fun', _sourcePageUrl: 'https://link.outsavvy.com/twotonsoffun?utm_source=website&utm_medium=referral' };
+    assert.equal(core.getSameEventIdentitySignal(page, row, { requireCloseStartTimes: false }), null, 'no ordinary rung meets them');
+    assert.equal(core.isTicketLinkPageRecord(page, row), true);
+    assert.equal(page._ticketLinkPageOf, 'link.outsavvy.com/twotonsoffun', 'the row\'s ticket key is stamped on the page record');
+    assert.equal(core.getSameEventIdentitySignal(page, row, { requireCloseStartTimes: false }), 'ticket-link-page', 'the dedup ladder now folds them');
+    assert.equal(core.getSameEventIdentitySignal(row, page, { requireCloseStartTimes: false }), 'ticket-link-page', 'either way round');
+    assert.ok(logs.some((line) => line.includes('is the night on the page "Two Tons of HalloKWEEN — London"\'s ticket link opens')), logs.join('\n'));
+    // A past edition marked up on the same page is another night.
+    const pastEdition = { ...page, _ticketLinkPageOf: undefined, startDate: new Date('2026-08-28T20:00:00.000Z'), endDate: null };
+    assert.equal(core.isTicketLinkPageRecord(pastEdition, row), false);
+    // A pass page every row of a festival links is no identity.
+    assert.equal(core.isTicketLinkPageRecord({ ...page, _ticketLinkPageOf: undefined }, { ...row, _ticketUrlFanIn: 3 }), false);
+    // A bare root as the page is where events were found, not what they are.
+    assert.equal(core.isTicketLinkPageRecord({ ...page, _ticketLinkPageOf: undefined, _sourcePageUrl: 'https://link.outsavvy.com/' }, { ...row, ticketUrl: 'https://link.outsavvy.com/' }), false);
+    // Contradicting hard facts (another bar on another numbered street) are two events; a street alone under the same bar name is not.
+    const elsewhere = { ...page, _ticketLinkPageOf: undefined, bar: 'The Eagle London', address: '349 Kennington Lane, London' };
+    assert.equal(core.isTicketLinkPageRecord(elsewhere, { ...row, address: '12 Old Quebec Street, London' }), false);
+    assert.ok(logs.some((line) => line.includes('but their place contradict — not folded')), logs.join('\n'));
+  } finally { console.log = quiet; }
+});
+
 test('identity: shared ticketUrl on the same local day matches', () => {
   const core = createCore();
   const signal = core.getSameEventIdentitySignal(buildScrapedEvent(), buildCalendarEvent());
@@ -10341,6 +10370,49 @@ test('enrich-only crawl: ticket link to a venue calendar keeps the matching even
     display.logs.includes('SYSTEM: Enrich-only crawl: not following 1 link(s) from https://venue.example/calendar'),
     `expected enrich-only no-follow log, got: ${JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))}`
   );
+});
+
+test('enrich-only crawl: the night marked up on the page a row\'s own ticket link opens is that row, under another name and with the clock the row lacks; the page\'s past editions and other nights stay siblings', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: ENRICH_RULES
+  });
+  const display = createDisplayAdapterStub();
+  // The row: a date-only start (the midnight placeholder) and a short ticket link.
+  const night = new Date(Date.now() + 10 * 86400000);
+  night.setUTCHours(0, 0, 0, 0);
+  const at = (hours, dayOffset = 0) => new Date(night.getTime() + dayOffset * 86400000 + hours * 3600000);
+  const pages = {
+    'https://promoter.example/': {
+      events: [{ title: 'Two Tons of HalloKWEEN — London', bar: 'City of Quebec', timezone: 'Europe/London', startDate: night, ticketUrl: 'https://link.tickets.example/twotons' }]
+    },
+    // The ticket page marks up every edition under the platform's own name; the current night carries the clock.
+    'https://link.tickets.example/twotons': {
+      events: [
+        { title: 'Two Tons of Fun (The BIGGEST Pop Night in London!)', bar: 'City of Quebec', address: '12 Old Quebec Street, London', timezone: 'Europe/London', startDate: at(-24 * 60), endDate: at(-24 * 60 + 6), ticketUrl: 'https://www.tickets.example/event/12116/two-tons' },
+        { title: 'Two Tons of Fun (The BIGGEST Pop Night in London!)', bar: 'City of Quebec', address: '12 Old Quebec Street, London', timezone: 'Europe/London', startDate: at(21), endDate: at(27), ticketUrl: 'https://www.tickets.example/event/12116/two-tons' },
+        { title: 'Some Other Night', bar: 'City of Quebec', timezone: 'Europe/London', startDate: at(21, 1), ticketUrl: 'https://www.tickets.example/event/99999/other' }
+      ]
+    }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+
+  const result = await core.processParser(
+    { name: 'Two Tons Promoter', urls: ['https://promoter.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  assert.ok(fetched.some(url => url.startsWith('https://link.tickets.example/twotons')), 'the ticket link is followed');
+  assert.ok(
+    display.logs.includes('SYSTEM: Enrich-only crawl: kept 1 matching event(s), dropped 2 sibling event(s) from link.tickets.example (reached via ticket link from "Two Tons of HalloKWEEN — London")'),
+    `expected one kept, got: ${JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))}`
+  );
+  assert.equal(result.totalEvents, 2, 'row + the page record; the page\'s past edition and other night never ingested');
+  assert.equal(result.events.length, 1, 'the page record folds into the row (ticket-link-page in the dedup ladder)');
+  assert.deepEqual(result.enrichOnlyDrops[0].droppedEvents.map(e => e.title), ['Two Tons of Fun (The BIGGEST Pop Night in London!)', 'Some Other Night'], 'the past edition and the other night are siblings');
+  const folded = result.events[0];
+  assert.equal(folded.startDate.getTime(), at(21).getTime(), 'the row takes the clock the page states');
+  assert.equal(folded.endDate.getTime(), at(27).getTime());
 });
 
 test('enrich-only crawl: aggregator and multi-event-page crawls still ingest every event', async () => {

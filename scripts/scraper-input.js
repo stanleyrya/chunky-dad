@@ -847,6 +847,20 @@ const scraperConfig = {
       metadata: { website: { value: "https://redroom.club" } },
     },
     {
+      name: "Two Tons of Fun",
+      // London and Manchester body-positive pop night for chubs, chasers and
+      // admirers (since 2021). A static one-page site: its JSON-LD carries
+      // an EventSeries and the next night as an Event (date-only start, the
+      // venue's name and city, the OutSavvy ticket link as the offer), and
+      // the page text repeats the date and venue. Tickets sell on OutSavvy,
+      // whose event page carries the clock (21:00-03:00) and the full
+      // address but dates its JSON-LD to the night's FIRST edition (2023),
+      // a recurring-listing trap (data/source-expectations/two-tons-of-fun.json).
+      // Identity (website, Instagram, always-bear) comes from the promoter
+      // registry entry (data/promoters.json), as for every registered brand.
+      urls: ["https://twotonsoffun.co.uk/"],
+    },
+    {
       name: "Spa Excess",
       // Toronto bathhouse (105 Carlton St). WordPress home page with an
       // EventON calendar frame — Precinct DTLA's door (📅 EVENTON): the
