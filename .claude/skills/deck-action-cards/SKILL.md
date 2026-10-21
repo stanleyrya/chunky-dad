@@ -1,6 +1,6 @@
 ---
 name: deck-action-cards
-description: Turn anything that needs a change to the owner's calendar or data — a duplicate, a wrong end time, a stale record, a rename, a venue fix — into a card on the review deck that he swipes and the phone executes, instead of a page of links, a list of instructions, or a hand edit. Use this whenever you find yourself about to write "you could delete…", "edit this event…", or a to-do list of manual changes; whenever a scan, audit or run surfaces records to fix; and whenever he asks for "a card for this" or "put it on the deck".
+description: Turn anything that needs a change to the owner's calendar or data — a duplicate, a wrong end time, a stale record, a rename, a venue fix — into a card on the review deck that he swipes and the phone executes (a manual card via npm run deck-card for a one-off, a new card kind for a family), instead of a page of links, a list of instructions, or a hand edit. Use this whenever you find yourself about to write "you could delete…", "edit this event…", or a to-do list of manual changes; whenever a scan, audit or run surfaces records to fix; and whenever he asks for "a card for this" or "put it on the deck".
 ---
 
 # Make it a card, not a chore
@@ -21,8 +21,11 @@ A card is a proposal with: one exact **key** a decision can be stored under, the
 - **Reasons in words** on the card and in the run log, with the owner's own exclusions respected and named.
 - **Series are never touched** by a card; a series fix is a design question.
 
+## For a one-off: a manual card, in one command
+A single record to fix needs no new card kind. `npm run deck-card -- <remove|edit|choose> …` (tools/add-deck-card.js) writes a **manual card** into the iCloud data folder; it shows in teal on the deck with its own band, and the phone executes the approval: `remove` through the gone path, `edit` through `applyManualEdits` (every "before" must still hold), `choose` records the answer only. With `--city` and `--uid` the command reads the saved record from the published calendar, so an edit's before is the record's current value. A card expires the day after its night. Write the `--why` for him, not for you: it is the whole card.
+
 ## What the deck cannot do yet
-Edits (an end time, a title, a venue) have no executor on the phone. For those: build the report-only half (the scan, the card, the decision) and say plainly that the execute step is missing; propose its shape and wait for his yes. Auto mode blocks edits that add calendar-delete code or delete UI — the existing removal path is the one to reuse, and a new executor is a PR he reads with eyes on.
+Anything that is not a remove, a field edit on one single record, or a two-way choice — a series change, a venue merge, a bulk rename — has no executor. For those: build the report-only half (the scan, the card, the decision) and say plainly that the execute step is missing; propose its shape and wait for his yes. Auto mode blocks edits that add calendar-delete code or delete UI — the existing removal path is the one to reuse, and a new executor is a PR he reads with eyes on.
 
 ## Checklist before opening the PR
 Candidate builder with a test from real shapes · deck filing (`review-queue.test.js`) · renderer with its colour (`tools-serve-results.test.js`) · phone guard · `👯`-style log lines · a run of the offline scan over the published calendars with the numbers in the PR.
