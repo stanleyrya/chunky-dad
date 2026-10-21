@@ -1723,15 +1723,16 @@ body { overscroll-behavior-y:none; }
 .card-body.twin { background:linear-gradient(180deg, rgba(214,122,0,.10), rgba(214,122,0,.03) 120px, transparent 200px); }
 .card:has(> .card-body.twin) { box-shadow:0 0 0 2px rgba(214,122,0,.55), var(--shadow); }
 .twin-band { margin:-14px -16px 10px; padding:7px 16px; background:#d67a00; color:#fff; font-size:12px; font-weight:700; letter-spacing:.03em; }
-.twin-pair { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0; }
-@media (max-width:420px) { .twin-pair { grid-template-columns:1fr; } }
+.twin-pair { display:grid; grid-template-columns:1fr; gap:10px; margin:10px 0; }
+@media (min-width:700px) { .twin-pair { grid-template-columns:1fr 1fr; } }
 .twin-side { border-radius:10px; padding:10px 12px; border:1px solid rgba(214,122,0,.35); }
 .twin-side h3 { margin:2px 0 6px; font-size:15px; }
 .twin-side.twin-extra { background:rgba(179,38,30,.08); border-color:rgba(179,38,30,.45); }
 .twin-side.twin-keep { background:rgba(31,111,67,.08); border-color:rgba(31,111,67,.45); }
 .twin-tag { font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
 .twin-extra .twin-tag { color:#b3261e; } .twin-keep .twin-tag { color:#1f6f43; }
-.twin-facts { list-style:none; margin:4px 0; padding:0; font-size:13px; line-height:1.5; }
+.twin-facts { list-style:none; margin:4px 0; padding:0; font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
+.twin-facts .chip { display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; }
 .kind-conflict { background:rgba(255,123,47,.16); color:var(--accent); }
 /* The stored verdicts side by side: one tile each, the bear side in the
    approve green, the not-bear side in the reject red, so the tiles read
