@@ -16506,6 +16506,24 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         const liveStart = SharedCore.toEpochMillis(target.startDate);
         const sameNight = liveStart !== null && Math.abs(liveStart - startMs) <= dayMs;
         const recurring = Array.isArray(target.recurrenceRules) && target.recurrenceRules.length > 0;
+        // A calendar twin card removes the EXTRA copy of a night; the copy it
+        // keeps must still be on the calendar, or the night would vanish.
+        const twin = candidate.reason === "twin" && candidate.twinOf && typeof candidate.twinOf === "object" ? candidate.twinOf : null;
+        if (twin) {
+          const twinUid = String(twin.uid || "");
+          const twinIdentifier = String(twin.identifier || "");
+          const keptStillThere = (Array.isArray(live) ? live : []).some((record) => {
+            const id = String((record && record.identifier) || "");
+            return Boolean(id) && (id === twinIdentifier || (Boolean(twinUid) && this.parseScriptableIdentifier(id).uid === twinUid));
+          });
+          if (!keptStillThere) {
+            out.withheld++;
+            const why = `its twin "${twin.title || ""}" is no longer on the calendar — removing this copy would lose the night`;
+            out.notes.push(`"${title}": ${why}`);
+            console.log(`📱 Scriptable: ⏸️ Removal withheld for "${title}" (${candidate.city}) — ${why}`);
+            continue;
+          }
+        }
         if (!sameTitle || !sameNight || recurring) {
           out.withheld++;
           const why = recurring ? "the saved record is a recurring event" : !sameTitle ? `the saved record is now titled "${target.title}"` : "the saved record moved to another night";
@@ -16517,7 +16535,8 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         out.deleted++;
         out.rows.push({ key: candidate.key, action: "deleted", title });
         if (!out.cities.includes(candidate.city)) out.cities.push(candidate.city);
-        console.log(`📱 Scriptable: 🗑️ Removed "${title}" (${candidate.city}, ${String(candidate.startDate || "").slice(0, 10)}) — ${candidate.reason === "manual" ? `a manual card (${candidate.why || "no reason given"})` : `gone from ${candidate.host || candidate.source || "its source"}`}, approved on the deck`);
+        console.log(`📱 Scriptable: 🗑️ Removed "${title}" (${candidate.city}, ${String(candidate.startDate || "").slice(0, 10)}) — ${candidate.reason === "manual" ? `a manual card (${candidate.why || "no reason given"})` : twin ? `the extra copy of "${twin.title || ""}" (calendar twin)` : `gone from ${candidate.host || candidate.source || "its source"}`}, approved on the deck`);
+
       } catch (error) {
         out.failed++;
         out.notes.push(`"${title}": ${error.message}`);
@@ -16639,7 +16658,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
   describeGoneDeletionLines(deletions) {
     const d = deletions && typeof deletions === "object" ? deletions : {};
     return [
-      d.deleted > 0 ? `🗑️ Removed ${d.deleted} (gone from their source or a manual card, approved on the deck)` : "",
+      d.deleted > 0 ? `🗑️ Removed ${d.deleted} (gone from their source, an extra copy of a night, or a manual card — approved on the deck)` : "",
       d.edited > 0 ? `✏️ Edited ${d.edited} (manual cards approved on the deck)` : "",
       d.withheld > 0 ? `⏸️ ${d.withheld} removal(s) withheld — the saved event no longer matches the card` : "",
       d.editWithheld > 0 ? `⏸️ ${d.editWithheld} edit(s) withheld — the saved event no longer matches the card` : "",

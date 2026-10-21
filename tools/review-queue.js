@@ -69,6 +69,10 @@ const REVIEW_REASON_TAGS = [
 const GONE_REASON_TAGS = [
     'still happening', 'renamed on the site', 'moved venue', 'date moved', 'source is wrong', 'not sure'
 ];
+// A twin card's keep sheet: why both saved records stay.
+const TWIN_REASON_TAGS = [
+    'both are real events', 'keep the other one instead', 'not the same night', 'not sure'
+];
 
 // A manual card's "not now" sheet.
 const MANUAL_REASON_TAGS = [
@@ -1951,6 +1955,10 @@ function buildDeck(runPayload, store, options = {}) {
         const startMs = SharedCore.toEpochMillis(candidate.startDate);
         if (startMs !== null && startMs < now) { counts.pastSkipped++; return; }
         const decision = decisions.find((entry) => entry && entry.key === candidate.key && (entry.verdict === 'approve' || entry.verdict === 'reject')) || null;
+        // A calendar twin's mirror (the kept copy) is never a card to swipe;
+        // it surfaces only once "keep the other one instead" approved it, so
+        // the decided list shows what the phone will remove.
+        if (candidate.twinMirror && !decision) return;
         file({ id: `g${index}`, kind: 'gone', key: candidate.key, sourceIndex: index, proposal: { ...candidate, kind: 'gone' } }, decision);
     });
 
@@ -2521,6 +2529,7 @@ module.exports = {
     upsertManualCard,
     dropManualCard,
     manualCardExpired,
+    TWIN_REASON_TAGS,
     RUN_ID_PATTERN,
     resolveSharedRoot,
     getRunsDir,

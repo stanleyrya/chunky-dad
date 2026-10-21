@@ -1629,6 +1629,28 @@ test('buildDeck: the only event read off a crawled page is a card carrying the p
   assert.equal(deck.cards[1].display.loneCrawl, null);
 });
 
+test('buildDeck: a calendar twin is a gone card with reason twin under the extra copy\'s key; its mirror is no card until "keep the other one instead" approved it, then it is the removal the phone executes', () => {
+  const base = { kind: 'gone', reason: 'twin', city: 'london', timezone: 'Europe/London', startDate: iso(FUTURE), endDate: iso(FUTURE + 3 * 3600 * 1000), host: '', source: 'calendar twins', siteEvents: 0, horizonDay: '', misses: 0, deepCheck: null, instead: { sameNight: [], sameTitle: [] }, why: ['one name inside the other, same bar'] };
+  const card = { ...base, key: 'gone|london|RVT2', uid: 'RVT2', identifier: 'RVT2', title: 'TURKEYMINCE', bar: 'Royal Vauxhall Tavern', extraWhy: ['the shorter name'], twinOf: { uid: 'RVT1', identifier: 'RVT1', title: 'BEEFMINCE: TURKEYMINCE', bar: 'Royal Vauxhall Tavern' } };
+  const mirror = { ...base, key: 'gone|london|RVT1', uid: 'RVT1', identifier: 'RVT1', title: 'BEEFMINCE: TURKEYMINCE', bar: 'Royal Vauxhall Tavern', twinMirror: true, extraWhy: [], twinOf: { uid: 'RVT2', identifier: 'RVT2', title: 'TURKEYMINCE' } };
+  const payload = runPayload({ goneFromSource: { candidates: [card, mirror], state: {}, summary: {} } });
+  const deck = deckOf(payload);
+  assert.equal(deck.cards.length, 1, 'the mirror is not a card');
+  assert.equal(deck.cards[0].key, 'gone|london|RVT2');
+  assert.equal(deck.cards[0].proposal.reason, 'twin');
+  assert.equal(deck.cards[0].proposal.twinOf.uid, 'RVT1');
+  assert.ok(rq.TWIN_REASON_TAGS.includes('keep the other one instead'));
+
+  const now = new Date(Date.UTC(2030, 0, 2));
+  let store = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: 'gone|london|RVT2', kind: 'gone', verdict: 'reject', snapshot: card, reason: { tags: ['keep the other one instead'], text: '' } }, { now }));
+  store = rq.upsertDecision(store, rq.buildDecision({ key: 'gone|london|RVT1', kind: 'gone', verdict: 'approve', snapshot: mirror }, { now }));
+  const swapped = deckOf(payload, store);
+  assert.equal(swapped.cards.length, 0);
+  const pending = swapped.decided.find((d) => d.key === 'gone|london|RVT1');
+  assert.ok(pending, 'the approved mirror shows in the decided list');
+  assert.equal(pending.pendingExecute, true, 'and is what the phone removes next');
+});
+
 // ---------------------------------------------------------------------------
 // Manual cards: the assistant's one-offs (remove / edit / choose) in
 // <sharedRoot>/manual-cards.json, filed on the deck under their own key.

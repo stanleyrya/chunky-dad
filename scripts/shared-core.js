@@ -2392,6 +2392,322 @@ class SharedCore {
     // The ICS uid behind a calendar identifier: the text after the first
     // colon (EventKit's "<calendar>:<uid>"), cut at a recurrence suffix; a
     // bare uid (the published ICS) is itself.
+    // CALENDAR TWINS: two saved single events in one city calendar that are
+    // one night written twice. The owner's hand-kept scan of 2026-10-15
+    // found six: a title inside a longer one at the same bar ("TURKEYMINCE"
+    // / "BEEFMINCE: TURKEYMINCE" at the RVT), an all-day copy beside the
+    // timed one at the same bar, two records of one name on one night at
+    // two places (a pool party at a bar and at the resort), and one name
+    // with two ticket links to one page. He never cleared them: the page
+    // of links did not work on the phone, and a delete is a card's job
+    // ([[swipe-review-deck]]). One card per pair, in the gone-from-source
+    // shape (key `gone|city|uid`, kind gone, reason `twin`), so the deck,
+    // the decision store and the phone's applyGoneDeletions handle it with
+    // no new path: a right swipe removes the copy the card shows, a left
+    // swipe keeps both. The card names the twin it keeps (`twinOf`), why
+    // the pair is one night (`why`) and why this copy is the extra
+    // (`extraWhy`); the phone refuses the removal when the kept twin is no
+    // longer on the calendar (the night would vanish).
+    //
+    // A pair is one night when, on the same local day in one calendar:
+    //   · both link the same ticket page (an event-specific path), or
+    //   · the names fold to the same words, or
+    //   · one name sits inside the other (two or more words shared, at
+    //     least 60% of the shorter) AND the place agrees (bar, numbered
+    //     street, or pins within 150 m).
+    // Same bar at the same minute under two unrelated names is NOT a pair
+    // (a multi-room venue hosts two parties in one slot — see the identity
+    // ladder's place-exact-start notes); that is the gone-from-source
+    // rename card's business. Series occurrences are never paired: a
+    // recurring night beside a one-off at the same bar is the one-off's
+    // problem, and deleting a series occurrence is never done here.
+    //
+    // The extra copy is the record with FEWER facts: no bar, no numbered
+    // street, a placeholder address ("Venue TBA"), no pin, no flyer, a
+    // ticket link that is a bare id, all-day beside a timed one, the
+    // shorter name when the longer carries a brand prefix. A tie picks by
+    // uid so the same copy is on the card every run (the card says so).
+    buildCalendarTwinCandidates(savedByCity, options = {}) {
+        const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
+        const todayKey = now.toISOString().slice(0, 10);
+        const cityConfigs = options.cities && typeof options.cities === 'object' ? options.cities : (this.cities || {});
+        const cities = savedByCity && typeof savedByCity === 'object' ? savedByCity : {};
+        const summary = { cities: 0, saved: 0, singles: 0, pairs: 0, candidates: 0 };
+        const candidates = [];
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+        const tokensOf = (text) => fold(text).split(' ').filter((token) => token.length >= 2);
+        const iso = (value) => {
+            const ms = SharedCore.toEpochMillis(value);
+            return ms === null ? null : new Date(ms).toISOString();
+        };
+        const streetNumber = (address) => {
+            const match = String(address || '').match(/\b(\d{1,6})\b/);
+            return match ? match[1] : '';
+        };
+        const placeholderAddress = (address) => /\b(?:tba|tbd|tbc|to be announced|venue tba|location tba)\b/i.test(String(address || ''));
+        const coords = (record) => {
+            const text = String(record.location || '').trim();
+            const match = text.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+            return match ? { lat: Number(match[1]), lng: Number(match[2]) } : null;
+        };
+        const metres = (a, b) => {
+            if (!a || !b) return null;
+            const toRad = (deg) => deg * Math.PI / 180;
+            const dLat = toRad(b.lat - a.lat);
+            const dLng = toRad(b.lng - a.lng);
+            const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+            return 2 * 6371000 * Math.asin(Math.sqrt(h));
+        };
+        const bareIdLink = (url) => {
+            const path = String(url || '').replace(/^https?:\/\/[^/]+/, '').split('?')[0].replace(/\/+$/, '');
+            const last = path.split('/').filter(Boolean).pop() || '';
+            return Boolean(last) && /^[a-f0-9-]{8,}$/i.test(last) && !/[a-z]{3,}/i.test(last.replace(/[0-9-]/g, '')) ;
+        };
+        const shape = (record, city, timezone) => {
+            const fields = this.parseNotesIntoFields(String(record.notes || ''));
+            const title = String(record.title || '');
+            const bar = String(fields.bar || '').trim();
+            const address = String(fields.address || '').trim();
+            const ticketUrl = String(fields.ticketUrl || '').trim();
+            const url = String(fields.website || record.url || '').trim();
+            return {
+                record, city, timezone, fields, title,
+                titleFold: fold(title), tokens: tokensOf(title),
+                // An all-day record's start is a date, not an instant: its day
+                // is the date it carries, whatever zone the reader sits in.
+                day: record.isAllDay === true ? this.normalizeEventDate(record.startDate) : this.normalizeEventDateLocal(record.startDate, timezone),
+                bar, barFold: fold(bar), address, number: streetNumber(address),
+                pin: coords(record), ticketUrl, url,
+                ticketKey: this.normalizeTicketUrlForIdentity(ticketUrl) || this.normalizeTicketUrlForIdentity(url),
+                image: String(fields.image || fields.imageVertical || fields.imageHorizontal || '').trim(),
+                imageSlots: ['image', 'imageVertical', 'imageHorizontal'].filter((key) => String(fields[key] || '').trim()).length,
+                cover: String(fields.cover || '').trim(),
+                description: String(fields.description || '').trim(),
+                allDay: record.isAllDay === true,
+                uid: String(record.uid || ''), identifier: String(record.identifier || '')
+            };
+        };
+        // One name inside the other: "TURKEYMINCE" in "BEEFMINCE: TURKEYMINCE",
+        // "BEEFMINCE New Year's Eve" in "… - London". Two or more shared
+        // words (at least 60% of the shorter name), or a single distinctive
+        // word of six letters or more that IS the shorter name — a one-word
+        // name like "Growth" or "Players" is too common to vouch alone, so
+        // that shape also needs the place to agree.
+        const contained = (a, b) => {
+            const short = a.tokens.length <= b.tokens.length ? a : b;
+            const long = short === a ? b : a;
+            if (short.tokens.length === 0) return '';
+            if (short.tokens.length === 1) {
+                return short.tokens[0].length >= 6 && long.tokens.includes(short.tokens[0]) ? 'one-word' : '';
+            }
+            const shared = short.tokens.filter((token) => long.tokens.includes(token)).length;
+            return shared >= 2 && shared >= Math.ceil(short.tokens.length * 0.6) ? 'words' : '';
+        };
+        // A place CONTRADICTION is two bars that are not one bar, two
+        // numbered streets that differ, or pins over 500 m apart. A blank
+        // side or a placeholder address ("Venue TBA") contradicts nothing —
+        // that blank is what makes the copy the extra one.
+        // A pin on a record with no bar and no real street is a geocoder's
+        // guess at the city ("Venue TBA, London" pinned at the centre), so a
+        // pin contradicts only between two records that each name a place.
+        const placeContradicts = (a, b) => {
+            if (a.barFold && b.barFold && !sameBar(a, b)) return true;
+            // Two numbered streets contradict only when no bar vouches and
+            // neither number sits in the other's line ("214 King's Road" and
+            // "211-214 Kings Road Arches" are one door, Horizon in Brighton).
+            const aStreet = placeholderAddress(a.address) ? '' : a.number;
+            const bStreet = placeholderAddress(b.address) ? '' : b.number;
+            if (aStreet && bStreet && aStreet !== bStreet && !sameBar(a, b)
+                && !String(a.address).includes(bStreet) && !String(b.address).includes(aStreet)) return true;
+            const named = (x) => Boolean(x.barFold || (x.number && !placeholderAddress(x.address)));
+            const d = named(a) && named(b) ? metres(a.pin, b.pin) : null;
+            return d !== null && d > 500;
+        };
+        // One bar written two ways: "Horizon" / "Horizon Brighton and Hove",
+        // "Metro 3" / "Metropolitan Events" is NOT (the shorter must sit whole
+        // inside the longer, four letters or more).
+        const sameBar = (a, b) => {
+            if (!a.barFold || !b.barFold) return false;
+            if (a.barFold === b.barFold) return true;
+            const short = a.barFold.length <= b.barFold.length ? a.barFold : b.barFold;
+            const long = short === a.barFold ? b.barFold : a.barFold;
+            return short.length >= 4 && ` ${long} `.includes(` ${short} `);
+        };
+        const samePlace = (a, b) => {
+            if (sameBar(a, b)) return 'same bar';
+            if (a.number && b.number && a.number === b.number && fold(a.address) === fold(b.address)) return 'same street line';
+            const d = metres(a.pin, b.pin);
+            if (d !== null && d <= 150) return 'pins within 150 m';
+            return '';
+        };
+        // A ticket key three or more saved records of one calendar share is a
+        // festival pass or a hub ("Get Your Dog Tag" on every BeefDip night,
+        // run 20260916-053541), never one event's page — the same fan-in rule
+        // the identity ladder applies. Counted per calendar, any night.
+        let fanIn = new Map();
+        const pairWhy = (a, b) => {
+            const why = [];
+            if (a.ticketKey && b.ticketKey && a.ticketKey === b.ticketKey && (fanIn.get(a.ticketKey) || 0) < 3) why.push('the same ticket page');
+            if (a.titleFold && a.titleFold === b.titleFold) why.push('the same name');
+            else {
+                const inside = contained(a, b);
+                const place = samePlace(a, b);
+                // Without a place that agrees, one name inside the other vouches
+                // only when the shorter record's place is a PLACEHOLDER ("Venue
+                // TBA"): a blank side is just unknown — "Bearsgiving 2026" (no
+                // bar) beside "Bearadise Love Boat - Bearsgiving 2026" (the
+                // beach club) is the festival name inside a night's name, two
+                // events (the owner's own exclusion, 2026-10-15).
+                const stub = placeholderAddress(a.address) || placeholderAddress(b.address);
+                if (inside === 'words' && !placeContradicts(a, b) && (place || stub)) why.push(place ? `one name inside the other, ${place}` : 'one name inside the other, the venue a placeholder');
+                else if (inside === 'one-word' && place) why.push(`one name inside the other, ${place}`);
+            }
+            return why;
+        };
+        // Fewer facts = the extra copy. Each fact the record states is a point.
+        const facts = (x) => {
+            const points = [];
+            if (x.bar) points.push('bar');
+            if (x.number) points.push('numbered street');
+            if (x.pin) points.push('pin');
+            for (let slot = 0; slot < x.imageSlots; slot += 1) points.push('flyer');
+            const link = x.ticketUrl || x.url;
+            if (link && !bareIdLink(link)) points.push('a link with words in it');
+            if (!x.allDay) points.push('a clock');
+            if (x.description) points.push('a description');
+            return points;
+        };
+        const extraWhy = (extra, kept) => {
+            const why = [];
+            if (!extra.bar && kept.bar) why.push('no bar');
+            if (placeholderAddress(extra.address)) why.push(`address "${extra.address}"`);
+            else if (!extra.number && kept.number) why.push('no numbered street');
+            if (!extra.pin && kept.pin) why.push('no pin');
+            if (!extra.image && kept.image) why.push('no flyer');
+            if (extra.imageSlots < kept.imageSlots && extra.image) why.push('fewer flyer sizes');
+            const extraLink = extra.ticketUrl || extra.url;
+            const keptLink = kept.ticketUrl || kept.url;
+            if (extraLink && bareIdLink(extraLink) && keptLink && !bareIdLink(keptLink)) why.push('its link is a bare id');
+            if (extra.allDay && !kept.allDay) why.push('all-day beside a timed copy');
+            if (extra.tokens.length < kept.tokens.length && contained(extra, kept)) why.push('the shorter name');
+            if (!extra.description && kept.description) why.push('no description');
+            return why;
+        };
+        Object.keys(cities).forEach((city) => {
+            const entry = cities[city];
+            const records = entry && Array.isArray(entry.events) ? entry.events : [];
+            if (records.length === 0) return;
+            summary.cities += 1;
+            summary.saved += records.length;
+            const timezone = (cityConfigs[city] && cityConfigs[city].timezone) || this.getCityTimezone(city) || null;
+            const singles = records.filter((record) => record && !record.series && record.uid).map((record) => shape(record, city, timezone))
+                .filter((x) => x.day && x.day >= todayKey);
+            summary.singles += singles.length;
+            fanIn = new Map();
+            singles.forEach((x) => { if (x.ticketKey) fanIn.set(x.ticketKey, (fanIn.get(x.ticketKey) || 0) + 1); });
+            const byDay = new Map();
+            singles.forEach((x) => { if (!byDay.has(x.day)) byDay.set(x.day, []); byDay.get(x.day).push(x); });
+            const taken = new Set();
+            byDay.forEach((list) => {
+                for (let i = 0; i < list.length; i += 1) {
+                    for (let j = i + 1; j < list.length; j += 1) {
+                        const a = list[i];
+                        const b = list[j];
+                        if (taken.has(a.uid) || taken.has(b.uid)) continue;
+                        const why = pairWhy(a, b);
+                        if (why.length === 0) continue;
+                        summary.pairs += 1;
+                        const factsA = facts(a);
+                        const factsB = facts(b);
+                        let extra = a;
+                        let kept = b;
+                        let tie = false;
+                        if (factsA.length > factsB.length) { extra = b; kept = a; }
+                        else if (factsA.length === factsB.length) {
+                            tie = true;
+                            if (a.uid < b.uid) { extra = b; kept = a; }
+                        }
+                        taken.add(extra.uid);
+                        summary.candidates += 1;
+                        candidates.push({
+                            key: `gone|${city}|${extra.uid}`,
+                            kind: 'gone',
+                            reason: 'twin',
+                            city,
+                            uid: extra.uid,
+                            identifier: extra.identifier,
+                            title: extra.title,
+                            startDate: iso(extra.record.startDate),
+                            endDate: iso(extra.record.endDate),
+                            timezone,
+                            isAllDay: extra.allDay,
+                            bar: extra.bar,
+                            address: extra.address,
+                            location: String(extra.record.location || ''),
+                            url: extra.url,
+                            ticketUrl: extra.ticketUrl,
+                            image: extra.image,
+                            cover: extra.cover,
+                            description: extra.description.slice(0, 400),
+                            why,
+                            extraWhy: extraWhy(extra, kept),
+                            tie,
+                            facts: { extra: extra === a ? factsA : factsB, kept: kept === a ? factsA : factsB },
+                            twinOf: {
+                                uid: kept.uid, identifier: kept.identifier, title: kept.title,
+                                startDate: iso(kept.record.startDate), endDate: iso(kept.record.endDate), isAllDay: kept.allDay,
+                                bar: kept.bar, address: kept.address, location: String(kept.record.location || ''),
+                                url: kept.url, ticketUrl: kept.ticketUrl, image: kept.image, cover: kept.cover
+                            },
+                            // The gone card's fields, so one renderer and one phone path serve both.
+                            host: '', source: 'calendar twins', siteEvents: 0, horizonDay: '', misses: 0, deepCheck: null,
+                            instead: { sameNight: [], sameTitle: [] }
+                        });
+                        // The mirror: the kept copy as a candidate too, never a
+                        // card of its own (twinMirror) — it exists so "keep the
+                        // other one instead" on the deck becomes an approval the
+                        // phone can execute, with the same guards.
+                        candidates.push({
+                            key: `gone|${city}|${kept.uid}`,
+                            kind: 'gone',
+                            reason: 'twin',
+                            twinMirror: true,
+                            city,
+                            uid: kept.uid,
+                            identifier: kept.identifier,
+                            title: kept.title,
+                            startDate: iso(kept.record.startDate),
+                            endDate: iso(kept.record.endDate),
+                            timezone,
+                            isAllDay: kept.allDay,
+                            bar: kept.bar,
+                            address: kept.address,
+                            location: String(kept.record.location || ''),
+                            url: kept.url,
+                            ticketUrl: kept.ticketUrl,
+                            image: kept.image,
+                            cover: kept.cover,
+                            description: kept.description.slice(0, 400),
+                            why,
+                            extraWhy: [],
+                            tie,
+                            facts: { extra: kept === a ? factsA : factsB, kept: extra === a ? factsA : factsB },
+                            twinOf: {
+                                uid: extra.uid, identifier: extra.identifier, title: extra.title,
+                                startDate: iso(extra.record.startDate), endDate: iso(extra.record.endDate), isAllDay: extra.allDay,
+                                bar: extra.bar, address: extra.address, location: String(extra.record.location || ''),
+                                url: extra.url, ticketUrl: extra.ticketUrl, image: extra.image, cover: extra.cover
+                            },
+                            host: '', source: 'calendar twins', siteEvents: 0, horizonDay: '', misses: 0, deepCheck: null,
+                            instead: { sameNight: [], sameTitle: [] }
+                        });
+                    }
+                }
+            });
+        });
+        return { candidates, summary };
+    }
+
     static savedEventUid(identifier) {
         const text = String(identifier === null || identifier === undefined ? '' : identifier).trim();
         if (!text) return '';

@@ -507,6 +507,27 @@ class BearEventScraperOrchestrator {
                             : null;
                         const gone = sharedCore.buildGoneFromSourceCandidates(results, savedByCity, { previousUpcoming, cities: config.cities });
                         results.goneFromSource = gone;
+                        // CALENDAR TWINS (SharedCore.buildCalendarTwinCandidates):
+                        // one night saved twice in a city calendar. Every
+                        // configured city, not only the ones this run read —
+                        // a twin is the calendar's own state. Same card shape
+                        // and the same phone path as a gone card.
+                        try {
+                            if (typeof sharedCore.buildCalendarTwinCandidates === 'function') {
+                                const restCities = Object.keys(config.cities || {}).filter((city) => !cityKeys.has(city));
+                                const restSaved = restCities.length > 0 ? await finalAdapter.listSavedUpcomingEvents(restCities) : {};
+                                const twins = sharedCore.buildCalendarTwinCandidates({ ...savedByCity, ...restSaved }, { cities: config.cities });
+                                gone.twins = twins.summary;
+                                gone.candidates.push(...twins.candidates);
+                                const t = twins.summary;
+                                console.log(`👯 Orchestrator: calendar twins — ${t.singles} saved single(s) in ${t.cities} city calendar(s): ${t.pairs} pair(s) that are one night, ${t.candidates} on the deck`);
+                                for (const card of twins.candidates) {
+                                    console.log(`👯 TWIN: "${card.title}" (${card.city}, ${card.startDate ? card.startDate.slice(0, 10) : '?'}) is one night with the saved "${card.twinOf.title}" — ${card.why.join('; ')}; this copy is the extra (${card.extraWhy.length ? card.extraWhy.join(', ') : 'a tie, picked by uid'}). On the deck.`);
+                                }
+                            }
+                        } catch (twinError) {
+                            console.log(`👯 Orchestrator: calendar twins check skipped — ${twinError && twinError.message ? twinError.message : twinError}`);
+                        }
                         const s = gone.summary;
                         console.log(`🕳️ Orchestrator: gone from source — ${s.saved} saved upcoming event(s) in ${s.cities} city calendar(s), ${s.attributed} pointing into ${s.sites} site(s) read this run: ${s.seen} matched, ${s.firstMisses} first miss(es), ${s.candidates} on the deck (missing 2+ runs)${s.beyondHorizon ? `, ${s.beyondHorizon} beyond the source's horizon` : ''}${s.series ? `, ${s.series} series occurrence(s) left alone` : ''}${s.suppressedThin ? `, ${s.suppressedThin} frozen (thin read)` : ''}${s.suppressedDrift ? `, ${s.suppressedDrift} frozen (host in drift)` : ''}${s.identityMisses ? `, ${s.identityMisses} listed by the site but not folded by the run (identity miss — logged, no card)` : ''}`);
                         for (const miss of Array.isArray(gone.identityMisses) ? gone.identityMisses : []) {
