@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>No connection - chunky.dad</title>
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicons/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicons/apple-touch-icon.png">
+    <meta name="theme-color" content="#667eea">
+    <!-- Served by sw.js when a page was never saved and the network is gone.
+         Self-contained on purpose: it must paint with nothing else cached. -->
+    <style>
+        :root { color-scheme: light dark; --ink: #1d1d26; --muted: #5d5d6b; --paper: #f6f5fb; --accent: #667eea; }
+        @media (prefers-color-scheme: dark) { :root { --ink: #f2f2f7; --muted: #a9a9b8; --paper: #151420; } }
+        html, body { margin: 0; min-height: 100%; }
+        body { background: var(--paper); color: var(--ink); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: grid; place-items: center; padding: 24px 16px; box-sizing: border-box; min-height: 100vh; }
+        main { max-width: 420px; text-align: center; }
+        img { width: 96px; height: 96px; border-radius: 24px; }
+        h1 { font-size: 24px; margin: 20px 0 8px; text-wrap: balance; }
+        p { color: var(--muted); margin: 0 0 18px; }
+        a.button { display: inline-block; padding: 12px 22px; border-radius: 999px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 700; }
+        a.button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+        .saved { margin-top: 28px; font-size: 14px; }
+        .saved a { color: var(--accent); }
+    </style>
+</head>
+<body>
+    <main>
+        <img src="/Rising_Star_Ryan_Head_Compressed.png" alt="" onerror="this.style.display='none'">
+        <h1>No connection, and this page is not saved yet</h1>
+        <p>Pages you open get saved on this phone, so they open again with no signal. This one has not been opened here before.</p>
+        <a class="button" href="javascript:location.reload()">Try again</a>
+        <p class="saved">The <a href="/">home page</a> is always saved.</p>
+    </main>
+</body>
+</html>

@@ -1655,7 +1655,7 @@ ${options.friendMode === true ? '' : '<link rel="manifest" href="/review/manifes
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<style>
+${options.friendMode === true ? '<script src="/js/offline.js" defer></script>\n' : ''}<style>
 /* The tool pages' look (testing/event-builder.html): one dark scheme,
    the site's purple header, navy panels, an orange primary. */
 :root { color-scheme:dark; --bg:#0b0d13; --card:#1c2235; --panel:#141826; --ink:#f6f7ff; --muted:#8e94b6; --line:rgba(255,255,255,0.09); --accent:#ff7b2f; --accent-soft:#ffa24a; --brand:#667eea; --ok:#2f9e5f; --no:#d0453c; --skip:#8e94b6; --shadow:0 14px 32px rgba(0,0,0,0.45); }
