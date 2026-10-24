@@ -187,6 +187,32 @@ const BUILT_IN = [
       {name:'Ottoman',w:32,d:16,x:122,y:120,r:0},{name:'Desk Chair',w:25,d:27,x:297,y:30,r:0},{name:'Wood Chair',w:22,d:22,x:347,y:190,r:0},
       {name:'Side Table',w:14,d:18,x:341,y:277,r:90},{name:'Side Table',w:14,d:18,x:263,y:291,r:90},{name:'Couch A',w:40,d:40,x:122,y:36,r:0},
       {name:'Trash Can',w:12,d:16,x:74,y:33,r:90},{name:'Trash Can',w:12,d:16,x:56,y:33,r:90}
+    ] },
+  // The listing's plan (unit 404; the 403 listing shares the line). Drawn
+  // 10% taller here than the listing drew it, so one scale holds both ways
+  // (its rooms measured 2.1 px/in across and 1.9 px/in up and down).
+  { id:'ainslie-403', name:'80 Ainslie St · 403 (plan labelled 404)', img:{ src:'plans/80-ainslie-st-404.png', w:1328, h:1443 }, ppi:3.36,
+    furniture:[
+      {name:'Queen bed',w:60,d:80,x:185,y:125,r:0},{name:'Side Table',w:14,d:18,x:246,y:125,r:0},
+      {name:'Queen bed',w:60,d:80,x:275,y:65,r:0},{name:'Side Table',w:14,d:18,x:337,y:65,r:0},{name:'TV',w:60,d:16,x:275,y:150,r:0},{name:'Dresser',w:34,d:16,x:300,y:170,r:0},
+      {name:'Couch A',w:40,d:40,x:95,y:275,r:0},{name:'Couch B',w:40,d:40,x:135,y:275,r:0},{name:'Couch C',w:40,d:40,x:95,y:315,r:0},
+      {name:'Coffee table',w:40,d:18,x:140,y:320,r:0},{name:'Ottoman',w:32,d:16,x:140,y:344,r:0},{name:'TV',w:60,d:16,x:238,y:262,r:90},
+      {name:'Games',w:28,d:14,x:200,y:335,r:0},{name:'Wood Chair',w:22,d:22,x:190,y:258,r:0},
+      {name:'Desk',w:60,d:30,x:100,y:212,r:0},{name:'Desk Chair',w:25,d:27,x:118,y:244,r:0},{name:'Shoes',w:34,d:14,x:73,y:180,r:0},{name:'Hanger Rack',w:28,d:16,x:144,y:182,r:0},
+      {name:'Trash Can',w:12,d:16,x:161,y:230,r:0},{name:'Trash Can',w:12,d:16,x:161,y:248,r:0}
+    ] },
+  // The listing's plan (unit 2R; the 2B listing shares the line). The
+  // listing's image cuts off the left ~8 ft of the 20 ft living room, so
+  // that part is blank here, with a grey line where the plan ends — the
+  // real wall is 20 ft from the bedroom wall, at the left edge of the image.
+  { id:'montrose-2b', name:'27 Montrose Ave · 2B (plan labelled 2R)', img:{ src:'plans/27-montrose-ave-2r.png', w:1709, h:1160 }, ppi:3.56,
+    furniture:[
+      {name:'Queen bed',w:60,d:80,x:300,y:28,r:0},{name:'Side Table',w:14,d:18,x:284,y:28,r:0},{name:'Dresser',w:34,d:16,x:300,y:118,r:0},
+      {name:'Queen bed',w:60,d:80,x:255,y:215,r:0},{name:'Side Table',w:14,d:18,x:317,y:215,r:0},{name:'Desk',w:60,d:30,x:345,y:240,r:90},{name:'Desk Chair',w:25,d:27,x:318,y:262,r:0},{name:'TV',w:60,d:16,x:255,y:298,r:0},
+      {name:'Couch A',w:40,d:40,x:110,y:160,r:0},{name:'Couch B',w:40,d:40,x:150,y:160,r:0},{name:'Couch C',w:40,d:40,x:110,y:200,r:0},
+      {name:'Coffee table',w:40,d:18,x:155,y:205,r:0},{name:'Ottoman',w:32,d:16,x:155,y:227,r:0},{name:'TV',w:60,d:16,x:215,y:165,r:90},
+      {name:'Games',w:28,d:14,x:195,y:240,r:0},{name:'Wood Chair',w:22,d:22,x:60,y:165,r:0},
+      {name:'Shoes',w:34,d:14,x:20,y:290,r:0},{name:'Hanger Rack',w:28,d:16,x:60,y:290,r:0},{name:'Trash Can',w:12,d:16,x:210,y:290,r:0},{name:'Trash Can',w:12,d:16,x:225,y:290,r:0}
     ] }
 ];
 const STARTER = [
