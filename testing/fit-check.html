@@ -148,8 +148,8 @@ input[type=file] { padding:6px; }
       <h2>Add a piece</h2>
       <form id="addForm">
         <label class="full">Name <input id="fName" placeholder="e.g. Dresser" required></label>
-        <label>Width (in) <input id="fW" type="number" min="1" max="400" step="0.5" required></label>
-        <label>Depth (in) <input id="fD" type="number" min="1" max="400" step="0.5" required></label>
+        <label>Width (in) <input id="fW" type="number" min="0.5" max="400" step="any" inputmode="decimal" required></label>
+        <label>Depth (in) <input id="fD" type="number" min="0.5" max="400" step="any" inputmode="decimal" required></label>
         <div class="full toolbar" style="margin-top:0"><button class="go" type="submit">Add to plan</button><button type="button" id="updatePiece" hidden>Update selected</button></div>
       </form>
       <p class="hint">Quick picks:</p>
@@ -188,7 +188,8 @@ const BUILT_IN = [
       {name:'Dresser',w:34,d:16,x:369,y:252,r:90},{name:'Coffee table',w:40,d:18,x:180,y:87,r:90},{name:'Games',w:28,d:14,x:237,y:105,r:90},
       {name:'Ottoman',w:32,d:16,x:122,y:120,r:0},{name:'Desk Chair',w:25,d:27,x:297,y:30,r:0},{name:'Wood Chair',w:22,d:22,x:347,y:190,r:0},
       {name:'Side Table',w:14,d:18,x:341,y:277,r:90},{name:'Side Table',w:14,d:18,x:263,y:291,r:90},{name:'Couch A',w:40,d:40,x:122,y:36,r:0},
-      {name:'Trash Can',w:12,d:16,x:74,y:33,r:90},{name:'Trash Can',w:12,d:16,x:56,y:33,r:90}
+      {name:'Trash Can',w:12,d:16,x:74,y:33,r:90},{name:'Trash Can',w:12,d:16,x:56,y:33,r:90},
+      {name:'Mirror',w:31,d:2,x:12,y:12,r:0},{name:'Mirror',w:31,d:2,x:12,y:20,r:0}
     ] },
   // The listing's plan (unit 404; the 403 listing shares the line). Drawn
   // 10% taller here than the listing drew it, so one scale holds both ways
@@ -201,7 +202,8 @@ const BUILT_IN = [
       {name:'Coffee table',w:40,d:18,x:140,y:320,r:0},{name:'Ottoman',w:32,d:16,x:140,y:344,r:0},{name:'TV',w:60,d:16,x:238,y:262,r:90},
       {name:'Games',w:28,d:14,x:200,y:335,r:0},{name:'Wood Chair',w:22,d:22,x:190,y:258,r:0},
       {name:'Desk',w:60,d:30,x:100,y:212,r:0},{name:'Desk Chair',w:25,d:27,x:118,y:244,r:0},{name:'Shoes',w:34,d:14,x:73,y:180,r:0},{name:'Hanger Rack',w:28,d:16,x:144,y:182,r:0},
-      {name:'Trash Can',w:12,d:16,x:161,y:230,r:0},{name:'Trash Can',w:12,d:16,x:161,y:248,r:0}
+      {name:'Trash Can',w:12,d:16,x:161,y:230,r:0},{name:'Trash Can',w:12,d:16,x:161,y:248,r:0},
+      {name:'Mirror',w:31,d:2,x:190,y:243,r:0},{name:'Mirror',w:31,d:2,x:265,y:150,r:90}
     ] },
   // The listing's plan (unit 2R; the 2B listing shares the line). The
   // listing's image cuts off the left ~8 ft of the 20 ft living room, so
@@ -214,7 +216,8 @@ const BUILT_IN = [
       {name:'Couch A',w:40,d:40,x:110,y:160,r:0},{name:'Couch B',w:40,d:40,x:150,y:160,r:0},{name:'Couch C',w:40,d:40,x:110,y:200,r:0},
       {name:'Coffee table',w:40,d:18,x:155,y:205,r:0},{name:'Ottoman',w:32,d:16,x:155,y:227,r:0},{name:'TV',w:60,d:16,x:215,y:165,r:90},
       {name:'Games',w:28,d:14,x:195,y:240,r:0},{name:'Wood Chair',w:22,d:22,x:60,y:165,r:0},
-      {name:'Shoes',w:34,d:14,x:20,y:290,r:0},{name:'Hanger Rack',w:28,d:16,x:60,y:290,r:0},{name:'Trash Can',w:12,d:16,x:210,y:290,r:0},{name:'Trash Can',w:12,d:16,x:225,y:290,r:0}
+      {name:'Shoes',w:34,d:14,x:20,y:290,r:0},{name:'Hanger Rack',w:28,d:16,x:60,y:290,r:0},{name:'Trash Can',w:12,d:16,x:210,y:290,r:0},{name:'Trash Can',w:12,d:16,x:225,y:290,r:0},
+      {name:'Mirror',w:31,d:2,x:245,y:100,r:90},{name:'Mirror',w:31,d:2,x:245,y:230,r:90}
     ] }
 ];
 const STARTER = [
@@ -226,7 +229,7 @@ const STARTER = [
 ];
 const PRESETS = [
   ['Nightstand',20,20],['Dresser',60,18],['Dining table',60,36],['Dining chair',18,18],
-  ['TV stand',60,16],['Bookshelf',36,12],['Office chair',26,26],['Rug 8×10',96,120],['Rug 5×8',60,96],
+  ['TV stand',60,16],['Bookshelf',36,12],['Office chair',26,26],['Mirror',31,2],['Rug 8×10',96,120],['Rug 5×8',60,96],
 ];
 
 let apts = {};        // id -> {id, name, img:{src|data, w, h}, ppi, furniture:[{id,name,w,d,x,y,r}], builtIn?, shared?}
@@ -270,15 +273,29 @@ function persist(a, options) {
     lastState[a.id] = now;
     renderUndo();
   }
+  // A plan opened from a share link is kept in this browser the moment it
+  // is changed (2026-10-25: a friend's additions vanished on reload — the
+  // "Keep a copy" step was easy to miss). The link itself never changes.
+  if (a.shared && !(options && options.silent)) { adoptShared(a); return; }
   clearTimeout(pending[a.id]);
   pending[a.id] = setTimeout(() => {
     const saved = ls('fitcheck-apts') || {};
-    if (a.shared) { $('saveState').textContent = 'shared view — not saved'; return; }
+    if (a.shared) { $('saveState').textContent = 'shared view — change anything to keep it here'; return; }
     saved[a.id] = a;
     try { localStorage.setItem('fitcheck-apts', JSON.stringify(saved)); $('saveState').textContent = 'saved in this browser'; }
     catch (e) { $('saveState').textContent = 'could not save (storage full?)'; }
   }, 300);
   ls('fitcheck-active', a.id);
+}
+// The shared plan becomes an apartment of this browser's own, saved like
+// any other; the page's address drops the share hash so a reload keeps it.
+function adoptShared(a) {
+  const id = 'apt-' + (uid++).toString(36);
+  const copy = { ...a, id, shared: false, builtIn: false, furniture: a.furniture.map(f => ({ ...f })) };
+  apts[id] = copy; delete apts.shared; activeId = id; selected = null;
+  lastState[id] = lastState[a.id]; delete lastState[a.id]; history[id] = history[a.id] || []; delete history[a.id];
+  persist(copy);
+  window.history.replaceState(null, '', location.pathname); renderAll();
 }
 function removeApt(a) {
   delete apts[a.id];
@@ -337,13 +354,8 @@ function renderBanner() {
   const a = apt(), b = $('shareBanner');
   if (!a || !a.shared) { b.hidden = true; b.innerHTML = ''; return; }
   b.hidden = false;
-  b.innerHTML = `<span><b>Shared plan.</b> Changes here are not saved unless you keep a copy.</span><button class="small go" type="button" id="keepCopy">Keep a copy</button>`;
-  $('keepCopy').onclick = () => {
-    const id = 'apt-' + (uid++).toString(36);
-    const copy = { ...a, id, shared: false, builtIn: false, furniture: a.furniture.map(f => ({ ...f })) };
-    apts[id] = copy; delete apts.shared; activeId = id; persist(copy);
-    history.replaceState(null, '', location.pathname); renderAll(); toast('Kept in this browser');
-  };
+  b.innerHTML = `<span><b>Shared plan.</b> Any change you make is kept in this browser as your own copy.</span><button class="small go" type="button" id="keepCopy">Keep a copy now</button>`;
+  $('keepCopy').onclick = () => { adoptShared(a); toast('Kept in this browser'); };
 }
 function renderSelect() {
   const s = $('aptSel'); s.innerHTML = '';
@@ -434,7 +446,7 @@ function renderPanel() {
   $('aptName').value = a ? a.name : '';
   $('aptHint').textContent = !a ? 'Upload a plan (a screenshot or a PDF page), then use Set scale on a labelled room dimension.'
     : a.builtIn ? 'This plan is kept on the site, so its share link stays short. Your layout changes save in this browser.'
-    : a.shared ? 'Someone shared this plan with you. Keep a copy to edit it here.'
+    : a.shared ? 'Someone shared this plan with you. Change anything and it is kept here as your own copy.'
     : a.img && a.img.data ? 'This plan lives in this browser. A share link carries the image too, so it will be long.'
     : 'Upload a plan (a screenshot or a PDF page), then use Set scale on a labelled room dimension.';
   $('delApt').disabled = !a || !!a.builtIn;
@@ -564,7 +576,7 @@ $('newApt').onclick = () => {
 };
 $('aptForm').addEventListener('submit', async e => {
   e.preventDefault(); const a = apt(); if (!a) return;
-  if (a.shared) { toast('Keep a copy first'); return; }
+  if (a.shared) { adoptShared(a); return; }
   a.name = $('aptName').value.trim() || 'Untitled';
   const f = $('aptImg').files[0];
   if (f) {
@@ -580,7 +592,7 @@ $('delApt').onclick = () => {
   const a = apt(); if (!a || a.builtIn) return;
   if (!confirmDelete) { confirmDelete = true; $('delApt').textContent = 'Really delete? Tap again'; setTimeout(() => { confirmDelete = false; $('delApt').textContent = 'Delete apartment'; }, 3000); return; }
   confirmDelete = false; $('delApt').textContent = 'Delete apartment';
-  removeApt(a); activeId = Object.keys(apts)[0] || null; selected = null; if (a.shared) history.replaceState(null, '', location.pathname); renderAll();
+  removeApt(a); activeId = Object.keys(apts)[0] || null; selected = null; if (a.shared) window.history.replaceState(null, '', location.pathname); renderAll();
 };
 
 boot();
