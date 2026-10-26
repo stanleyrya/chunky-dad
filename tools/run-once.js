@@ -454,7 +454,11 @@ function patchLoadConfiguration(WebAdapter) {
         // The inbox's parser joins the list BEFORE the parser filter is applied,
         // so CHUNKY_RUN_PARSER="Shared pages" can run it alone.
         await addSharedPagesParser(config, this, process.env, fs, buildSharedPagesOptions(config));
-        return shapeRunOnceConfig(config, process.env);
+        const shaped = shapeRunOnceConfig(config, process.env);
+        // The first moment the run knows its AI servers, and still before any
+        // parser work: an unreachable model is a stall, not a run.
+        await waitForAiServers(shaped);
+        return shaped;
     };
 }
 
@@ -732,6 +736,60 @@ async function waitForNetwork(options = {}) {
     throw new Error(`run-once: no network after ${attempts} attempts (${lastError}) — ABORTING before any parser work (no partial runs)`);
 }
 
+// The AI servers the config names (text on :8000, vision on :8001 — see
+// scripts/scraper-input.js) must answer before any parser work. The 2026-10-26
+// run made 4,300 model calls to a tailnet name that no longer resolved; every
+// one failed in 2 ms, the run "succeeded", and the deck filled with 641 cards
+// read without a model (the same shape as 2026-09-06 → 09-09: four AI-blind
+// scheduled runs). A server that is still loading its model after a reboot
+// answers 503 or nothing for a minute or two, so this waits, then aborts
+// loudly (no partial runs). Skipped with CHUNKY_SKIP_NETWORK_PREFLIGHT=1
+// (offline replays) and when AI is disabled in the config.
+function aiHealthUrls(config) {
+    const top = config && config.config && typeof config.config === 'object' ? config.config : (config || {});
+    const urls = [];
+    for (const [label, block] of [['text', top.ai], ['vision', top.ocr]]) {
+        if (!block || block.enabled === false || !block.endpoint) continue;
+        try {
+            const origin = new URL(String(block.endpoint)).origin;
+            urls.push({ label, endpoint: String(block.endpoint), health: origin + (String(block.provider || '').toLowerCase() === 'ollama' ? '/api/tags' : '/health') });
+        } catch (_) { /* a malformed endpoint fails later with its own message */ }
+    }
+    return urls;
+}
+
+async function waitForAiServers(config, options = {}) {
+    const env = options.env || process.env;
+    if (String(env.CHUNKY_SKIP_NETWORK_PREFLIGHT || '').trim() === '1') return { skipped: true, servers: [] };
+    const servers = aiHealthUrls(config);
+    if (!servers.length) return { skipped: true, servers: [] };
+    const fetchImpl = options.fetch || globalThis.fetch;
+    const sleep = options.sleep || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+    const attempts = Number.isFinite(options.attempts) ? options.attempts : 12;
+    const gapMs = Number.isFinite(options.gapMs) ? options.gapMs : 15000;
+    const log = options.log || console.log;
+    const down = new Map(servers.map((s) => [s.label, 'not asked yet']));
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        for (const server of servers) {
+            if (!down.has(server.label)) continue;
+            try {
+                const response = await fetchImpl(server.health, { method: 'GET', signal: AbortSignal.timeout(10000) });
+                if (response && response.ok) { down.delete(server.label); continue; }
+                down.set(server.label, `HTTP ${response ? response.status : '?'} from ${server.health}`);
+            } catch (error) {
+                down.set(server.label, `${error && error.message ? error.message : String(error)} (${server.health})`);
+            }
+        }
+        if (!down.size) {
+            if (attempt > 1) log(`run-once: AI servers reached on attempt ${attempt}`);
+            return { skipped: false, attempts: attempt, servers: servers.map((s) => s.label) };
+        }
+        if (attempt === 1) log(`run-once: AI server(s) not answering yet — ${[...down].map(([label, why]) => `${label}: ${why}`).join('; ')} — waiting up to ${Math.round((attempts - 1) * gapMs / 60000)} min before starting`);
+        if (attempt < attempts) await sleep(gapMs);
+    }
+    throw new Error(`run-once: AI server(s) unreachable after ${attempts} attempts — ${[...down].map(([label, why]) => `${label}: ${why}`).join('; ')} — ABORTING before any parser work (no partial runs; every model call would fail and the run would still "succeed")`);
+}
+
 // A run that could not read the calendars it analyses against is not a run
 // (SharedCore.describeCalendarReadHealth): thrown after the pipeline so the
 // shared-storage failure path writes its LOG and no run JSON.
@@ -849,6 +907,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+    aiHealthUrls,
+    waitForAiServers,
     stallGuard,
     runPulse,
     clockPrefix,
