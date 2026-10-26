@@ -2286,3 +2286,23 @@ test('manual cards: teal card with band, an edit shows before → after, a choos
     process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
   }
 });
+
+test('out of reach: the deck page loads the outbox and registers its own worker, both served uncached; the friend page gets neither (chunky.dad has its own worker)', async () => {
+  const state = createServerState();
+  const sw = await request(state, 'GET', '/review-sw.js');
+  assert.equal(sw.status, 200);
+  assert.ok(sw.headers['Content-Type'].startsWith('text/javascript'));
+  assert.equal(sw.headers['Cache-Control'], 'no-cache');
+  assert.ok(sw.body.includes("addEventListener('fetch'") && sw.body.includes('deck-pages-'));
+  const outbox = await request(state, 'GET', '/review-outbox.js');
+  assert.equal(outbox.status, 200);
+  assert.ok(outbox.body.includes('chunky-deck-outbox'));
+  assert.doesNotThrow(() => new Function(outbox.body), 'the outbox script parses');
+  const deck = renderReviewPage({ runId: 'r', cards: [], decided: [], counts: {}, friends: [] }, { runs: [], scriptName: 'display-saved-run', ctx: {} });
+  assert.ok(deck.includes('<script src="/review-outbox.js"></script>'), 'the outbox loads before the deck script');
+  assert.ok(deck.includes("register('/review-sw.js', { scope: '/' })"), 'the worker is registered');
+  assert.ok(deck.includes('id="outbox"'), 'the amber line has its place');
+  assert.ok(deck.includes("window.ReviewOutbox.create(") && deck.includes('waiting to send to the Mac'), 'the deck script uses it');
+  const friend = require('../tools/serve-results').renderFriendPage();
+  assert.ok(!friend.includes("register('/review-sw.js'") && !friend.includes('<script src="/review-outbox.js">'), 'the friend page on chunky.dad has its own worker');
+});

@@ -1655,7 +1655,30 @@ ${options.friendMode === true ? '' : '<link rel="manifest" href="/review/manifes
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-${options.friendMode === true ? '<script src="/js/offline.js" defer></script>\n' : ''}<style>
+${options.friendMode === true ? '<script src="/js/offline.js" defer></script>\n' : `<script src="/review-outbox.js"></script>
+<script id="deck-worker">
+// The deck's own service worker (tools/review-sw.js): the last loaded deck
+// opens with no connection to the Mac. Only over HTTPS (the tailnet name)
+// or localhost — a worker needs a secure page; over the bare IP nothing
+// changes. The first page load is not seen by the worker, so it is sent.
+(function () {
+  if (typeof navigator === 'undefined' || typeof location === 'undefined' || !('serviceWorker' in navigator)) return;
+  if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
+  var had = !!navigator.serviceWorker.controller;
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/review-sw.js', { scope: '/' }).then(function (registration) {
+      if (had) return;
+      navigator.serviceWorker.ready.then(function (ready) {
+        var worker = navigator.serviceWorker.controller || (ready && ready.active) || registration.active;
+        var loaded = [];
+        try { performance.getEntriesByType('resource').forEach(function (e) { if (e.name && loaded.indexOf(e.name) === -1) loaded.push(e.name); }); } catch (e) {}
+        if (worker) { try { worker.postMessage({ type: 'save-page', url: location.href, resources: loaded }); } catch (e) {} }
+      }, function () {});
+    }).catch(function () {});
+  });
+})();
+</script>
+`}<style>
 /* The tool pages' look (testing/event-builder.html): one dark scheme,
    the site's purple header, navy panels, an orange primary. */
 :root { color-scheme:dark; --bg:#0b0d13; --card:#1c2235; --panel:#141826; --ink:#f6f7ff; --muted:#8e94b6; --line:rgba(255,255,255,0.09); --accent:#ff7b2f; --accent-soft:#ffa24a; --brand:#667eea; --ok:#2f9e5f; --no:#d0453c; --skip:#8e94b6; --shadow:0 14px 32px rgba(0,0,0,0.45); }
@@ -1885,6 +1908,10 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .meta { text-align:center; color:var(--muted); font-size:13px; padding:0 14px 8px; }
 @media (pointer: coarse) { .meta .keys { display:none; } }
 .meta button { font:inherit; background:none; border:none; color:var(--accent); cursor:pointer; padding:0 6px; }
+/* Out of reach: the deck served from its saved copy, swipes waiting in the
+   outbox (tools/review-outbox.js) — one amber line, never a modal. */
+.outbox { max-width:560px; margin:8px auto 0; padding:10px 14px; border-radius:12px; background:rgba(214,122,0,.14); border:1px solid rgba(214,122,0,.5); font-size:14px; line-height:1.4; }
+.outbox button { font:inherit; font-size:13px; font-weight:700; padding:4px 10px; border-radius:8px; border:1px solid rgba(214,122,0,.6); background:transparent; color:inherit; margin-left:6px; }
 .execute { display:block; max-width:560px; margin:8px auto 0; padding:0 14px; }
 .execute a, .execute span { display:block; text-align:center; padding:12px; border-radius:12px; font-weight:700; text-decoration:none; }
 .execute a { background:var(--accent); color:#fff; }
@@ -1978,6 +2005,7 @@ ${missingCalendarNotice}
   <button class="btn-ok" id="btn-approve" type="button"><span class="ic">✓</span><span class="lb">Approve</span></button>
 </div>
 <div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button><span class="keys"> · ← not yet · ↖ not bear · ↙ needs a fix · ↓ pull down: ask a friend · → approve · ␣ skip · n not bear · f ask a friend</span></div>
+<div class="outbox" id="outbox" hidden></div>
 <div class="execute" id="execute"></div>
 ${snapshotBlock}
 <details class="decided waiting" id="waiting-wrap" hidden>
@@ -2078,8 +2106,28 @@ window.__startDeck = function () {
   // Every card with an open ask is listed under Friends (the link is
   // built from them); only one with no answer at all leaves the stack.
   var friends = deck.cards.filter(function (c) { return (c.asked || []).length > 0; });
-  var queue = deck.cards.filter(function (c) { return !awaitingFriend(c); });
+  // Swipes that wait (tools/review-outbox.js): decisions the Mac has not
+  // received yet. Their cards are decided as far as this page is
+  // concerned, and the decided list shows them as waiting.
+  var outbox = !friendMode && window.ReviewOutbox ? window.ReviewOutbox.create({ send: function (p, b) { return sendTo(p, b); }, onRefused: function (entry, error) { toast('The Mac refused a waiting swipe: ' + error.message); } }) : null;
+  var waitingKeys = outbox ? outbox.keys() : {};
+  var offlineInfo = null; // { cachedAt } when the page or its data came from the worker's saved copy, {} when the browser says offline
+  var queue = deck.cards.filter(function (c) { return !awaitingFriend(c) && !waitingKeys[c.key]; });
   var decided = deck.decided.slice();
+  if (outbox) {
+    outbox.entries().forEach(function (entry) {
+      var body = entry.body || {};
+      if (!body.key || body.verdict === 'clear') return;
+      var card = deck.cards.filter(function (c) { return c.key === body.key; })[0];
+      var isBearPost = entry.path === '/review/bear';
+      if (decided.some(function (d) { return d.key === body.key; })) return;
+      decided.push({ id: card ? card.id : undefined, kind: body.kind || (card ? card.kind : 'new'), key: body.key, verdict: isBearPost ? (body.verdict === 'bear' ? 'approve' : 'reject') : body.verdict, title: (body.snapshot && (body.snapshot.title || body.snapshot.name)) || (card && card.proposal && (card.proposal.title || card.proposal.name)) || body.key, reason: body.reason || null, stampedAt: entry.at, replaced: null, queued: true });
+    });
+    outbox.onChange(function (n) {
+      if (n === 0) decided.forEach(function (d) { delete d.queued; });
+      renderOutbox(); renderDecided();
+    });
+  }
   var knownFriends = (deck.friends || []).slice();
   var history = [];
   var filter = 'all';
@@ -2380,6 +2428,7 @@ window.__startDeck = function () {
       var via = d.via ? '<div class="r">' + (String(d.via).indexOf('series|') === 0 ? '↪ with the series card — you decided the party there' : '↪ with the series — you decided its ' + escapeHtml(String(d.via).split('|')[3] || 'earlier') + ' night') + '</div>' : '';
       var night = d.key && d.key.split('|').length === 4 ? ' · ' + escapeHtml(d.key.split('|')[3]) : '';
       li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : d.rejectionMode === 'fix' ? '🔧' : d.rejectionMode === 'never' ? '🗑' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + via + executed + '</div>';
+      if (d.queued) { var waitingMark = document.createElement('div'); waitingMark.className = 'r'; waitingMark.textContent = '📡 waiting to send to the Mac'; (li.querySelector('.t') || li).appendChild(waitingMark); }
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = d.via ? 'Decide alone' : 'Undo';
@@ -2484,7 +2533,7 @@ window.__startDeck = function () {
   }
   window.addEventListener('resize', fitStage);
   window.addEventListener('orientationchange', fitStage);
-  function render() { renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderWaiting(); renderFriends(); renderDecided(); fitStage(); }
+  function render() { renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderOutbox(); renderWaiting(); renderFriends(); renderDecided(); fitStage(); }
 
   // ---- views: the stack, the same cards as a list, or the sources ----
   function renderViews() {
@@ -2699,10 +2748,37 @@ window.__startDeck = function () {
     document.getElementById('friend-send-label').textContent = 'Send back · ' + n + '/' + deck.cards.length;
     document.getElementById('friend-sms').href = 'sms:' + encodeURIComponent(deck.smsTo || '') + '&body=' + encodeURIComponent('My answers 🐻 ' + friendReplyLink());
   }
-  function postTo(path, body) {
-    if (friendMode) return Promise.resolve(friendRecord(path, body));
+  function sendTo(path, body) {
     return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status)); return j; }); });
+  }
+  function postTo(path, body) {
+    if (friendMode) return Promise.resolve(friendRecord(path, body));
+    return outbox ? outbox.post(path, body) : sendTo(path, body);
+  }
+  // The amber line: the Mac out of reach and/or swipes waiting to be sent.
+  function renderOutbox() {
+    var el = document.getElementById('outbox');
+    if (!el) return;
+    var n = outbox ? outbox.size() : 0;
+    if (!n && !offlineInfo) { el.hidden = true; el.innerHTML = ''; return; }
+    el.hidden = false;
+    var asOf = offlineInfo && offlineInfo.cachedAt ? ' This is the deck as of ' + escapeHtml(String(offlineInfo.cachedAt).replace('T', ' ').slice(0, 16)) + ' UTC.' : '';
+    el.innerHTML = (offlineInfo ? '<b>📡 The Mac is out of reach.</b>' + asOf + ' ' : '') +
+      (n ? '<b>' + n + ' swipe' + (n === 1 ? '' : 's') + ' waiting</b> — ' + (offlineInfo ? 'they send by themselves when the Mac is back.' : 'sending.') + '<button type="button" id="outbox-send">Send now</button>' : '');
+    var btn = document.getElementById('outbox-send');
+    if (btn) btn.onclick = function () { outbox.flush().then(function (r) { toast(r && r.blocked ? 'Still out of reach' : 'Sent'); }); };
+  }
+  if (outbox) {
+    window.addEventListener('offline', function () { offlineInfo = offlineInfo || {}; renderOutbox(); });
+    window.addEventListener('online', function () { offlineInfo = null; renderOutbox(); });
+    if (navigator.onLine === false) offlineInfo = {};
+    if (navigator.serviceWorker) navigator.serviceWorker.addEventListener('message', function (event) {
+      var data = event && event.data;
+      if (!data || data.type !== 'served-from-cache') return;
+      offlineInfo = { cachedAt: data.cachedAt || (offlineInfo && offlineInfo.cachedAt) || '' };
+      renderOutbox();
+    });
   }
   function post(body) { return postTo('/review/decide', body); }
   function postBear(card, verdict, restore) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key, restore: restore || undefined }); }
@@ -2778,8 +2854,8 @@ window.__startDeck = function () {
       ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear').then(keepBear)
       : post(withTwinMirror(card, verdict, reason, { key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })).then(keepDecision)
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(keepBear).then(function () { return result; }) : result; });
-    return request.then(function () {
-      var record = { replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve' && !isConflict(card), html: card.html, series: card.series || null };
+    return request.then(function (result) {
+      var record = { queued: !!(result && result.queued), replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve' && !isConflict(card), html: card.html, series: card.series || null };
       decided.push(record);
       return record;
     });
@@ -2806,8 +2882,9 @@ window.__startDeck = function () {
     chain.then(function () {
       var nights = item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '';
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
+      var queued = records.some(function (r) { return r.queued; });
       if (friendMode) { toast(verdict === 'approve' ? 'Looks right — got it' : 'Noted'); return; }
-      toast((isConflict(card) ? (verdict === 'approve' ? 'Settled: bear — one verdict now, the next run keeps it' : 'Settled: not bear — one verdict now, the next run drops it') : isChoose(card) ? ('Noted: ' + card.proposal.options[verdict === 'approve' ? 0 : 1]) : isManual(card) ? (verdict === 'approve' ? (card.proposal.action === 'edit' ? 'Edit approved — the phone applies it on the next execute' : 'Removal approved — the phone takes it off the calendar on the next execute') : 'Not now') : card.kind === 'gone' ? (verdict === 'approve' ? (card.proposal && card.proposal.reason === 'twin' ? 'Removal approved — this copy comes off on the next execute, its twin stays' : 'Removal approved — the phone takes it off the calendar on the next execute') : (card.proposal && card.proposal.reason === 'twin' && reason && (reason.tags || []).indexOf('keep the other one instead') !== -1 ? 'Keeping this copy — the other one comes off on the next execute' : card.proposal && card.proposal.reason === 'twin' ? 'Both stay on the calendar' : 'Kept on the calendar')) : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      toast((queued ? 'Kept on the phone — it sends when the Mac is back' : isConflict(card) ? (verdict === 'approve' ? 'Settled: bear — one verdict now, the next run keeps it' : 'Settled: not bear — one verdict now, the next run drops it') : isChoose(card) ? ('Noted: ' + card.proposal.options[verdict === 'approve' ? 0 : 1]) : isManual(card) ? (verdict === 'approve' ? (card.proposal.action === 'edit' ? 'Edit approved — the phone applies it on the next execute' : 'Removal approved — the phone takes it off the calendar on the next execute') : 'Not now') : card.kind === 'gone' ? (verdict === 'approve' ? (card.proposal && card.proposal.reason === 'twin' ? 'Removal approved — this copy comes off on the next execute, its twin stays' : 'Removal approved — the phone takes it off the calendar on the next execute') : (card.proposal && card.proposal.reason === 'twin' && reason && (reason.tags || []).indexOf('keep the other one instead') !== -1 ? 'Keeping this copy — the other one comes off on the next execute' : card.proposal && card.proposal.reason === 'twin' ? 'Both stay on the calendar' : 'Kept on the calendar')) : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
       renderDecided(); renderExecute(); renderWaiting();
     }).catch(function (error) {
       toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' ' + unitOf(item.series, left.length) + ' back on the stack)' : ''));
@@ -2842,6 +2919,13 @@ window.__startDeck = function () {
     history = history.filter(function (h) { return h.records.length > 0; });
   }
   function undoDecision(record) {
+    // Never sent: nothing to clear on the Mac — the waiting entry goes and the card comes back.
+    if (record.queued && outbox && outbox.keys()[record.key]) {
+      outbox.drop(record.key);
+      decided = decided.filter(function (d) { return d.key !== record.key; });
+      requeue(record); toast('Undone — it had not been sent'); render();
+      return Promise.resolve();
+    }
     // Covered by another night's decision: nothing stored under this key —
     // the card comes back to be decided alone (that decision then wins).
     if (record.via) { requeue(record); if (record.series) solo[record.series.key] = true; toast('Back on the stack — decide this night alone'); render(); return; }
@@ -3917,6 +4001,13 @@ async function handleRequest(state, req, res) {
     }
 
     // The site's own icons (and the deck's home-screen icon), read-only.
+    // The deck's worker and outbox (tools/review-sw.js, tools/review-outbox.js):
+    // never cached by the browser, so a change takes on the next load.
+    if ((pathname === '/review-sw.js' || pathname === '/review-outbox.js') && req.method === 'GET') {
+        const body = fs.readFileSync(path.join(__dirname, pathname.slice(1)));
+        res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Content-Length': body.length, 'Cache-Control': 'no-cache' });
+        return res.end(body);
+    }
     if (pathname.startsWith('/favicons/') && req.method === 'GET') {
         const name = pathname.slice('/favicons/'.length);
         if (!/^[A-Za-z0-9._-]+$/.test(name)) return sendText(res, 404, 'Not found');
