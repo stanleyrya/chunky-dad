@@ -33,8 +33,8 @@ const DEFAULT_STORAGE = path.join(
     'Library/Mobile Documents/iCloud~dk~simonbs~Scriptable/Documents/chunky-dad-scraper/storage'
 );
 
-const TEXT_ENDPOINT = 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions';
-const VISION_ENDPOINT = 'http://rybook.taila7523c.ts.net:8001/v1/chat/completions';
+const TEXT_ENDPOINT = 'http://rybook.pumpkinseed-rainbow.ts.net:8000/v1/chat/completions';
+const VISION_ENDPOINT = 'http://rybook.pumpkinseed-rainbow.ts.net:8001/v1/chat/completions';
 
 // The cache stores the vision pass under 'ocr-all'; everything else is 1:1.
 const CACHE_DIR_FOR_PASS = { 'ocr': 'ocr-all' };

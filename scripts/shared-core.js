@@ -29006,8 +29006,8 @@ class SharedCore {
         const aiConfig = rawAiConfig && typeof rawAiConfig === 'object' ? rawAiConfig : {};
         const provider = String(aiConfig.provider || 'openai');
         const defaultEndpoint = provider === 'openai'
-            ? 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions'
-            : 'http://desktop.taila7523c.ts.net:11434/api/generate';
+            ? 'http://rybook.pumpkinseed-rainbow.ts.net:8000/v1/chat/completions'
+            : 'http://desktop.pumpkinseed-rainbow.ts.net:11434/api/generate';
         const defaultModel = provider === 'openai'
             ? 'lmstudio-community/Qwen3-Coder-Next-MLX-6bit'
             : 'qwen3.5:4b';

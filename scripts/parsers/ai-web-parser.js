@@ -20199,12 +20199,12 @@ class AiWebParser {
         if (provider === 'openai') {
             // Port 8001 is the VISION (VLM) server; 8000 serves the text/coder
             // model and rejects image input.
-            defaultEndpoint = 'http://rybook.taila7523c.ts.net:8001/v1/chat/completions';
+            defaultEndpoint = 'http://rybook.pumpkinseed-rainbow.ts.net:8001/v1/chat/completions';
         } else {
             // If the base AI config is also ollama, inherit its endpoint so custom endpoints aren't lost
             defaultEndpoint = baseAiConfig.provider === 'ollama' && baseAiConfig.endpoint
                 ? baseAiConfig.endpoint
-                : 'http://desktop.taila7523c.ts.net:11434/api/generate';
+                : 'http://desktop.pumpkinseed-rainbow.ts.net:11434/api/generate';
         }
 
         // OCR requires a VISION model. OpenAI-compatible servers (rapid-mlx) reject image

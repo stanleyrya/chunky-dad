@@ -1075,12 +1075,12 @@ const scraperConfig = {
       // ai: {
       //   enabled: true,
       //   provider: "openai", // "openai" (OpenAI-compatible, e.g. rapid-mlx/LM Studio/hosted) or "ollama"
-      //   endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
+      //   endpoint: "http://rybook.pumpkinseed-rainbow.ts.net:8000/v1/chat/completions",
       //   model: "lmstudio-community/Qwen3-Coder-Next-MLX-6bit",
       //   // Hosted OpenAI variant:
       //   // provider: "openai", endpoint: "https://api.openai.com/v1/chat/completions", model: "gpt-4o", openai: { responseFormat: "json_object" },
       //   // Ollama variant:
-      //   // provider: "ollama", endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate", model: "qwen3.5:4b",
+      //   // provider: "ollama", endpoint: "http://desktop.pumpkinseed-rainbow.ts.net:11434/api/generate", model: "qwen3.5:4b",
       //   payloadMode: "best", // "best" | "html" | "text" — what gets sent to the model
       //   maxHtmlChars: 6000,
       //   numCtx: 2048,
@@ -1096,10 +1096,10 @@ const scraperConfig = {
       //   ocr: {
       //     enabled: true,
       //     provider: "openai",
-      //     endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
+      //     endpoint: "http://rybook.pumpkinseed-rainbow.ts.net:8001/v1/chat/completions",
       //     model: "mlx-community/Qwen3-VL-4B-Instruct-4bit", // OCR requires a VISION model
       //     // Ollama vision variant:
-      //     // provider: "ollama", endpoint: "http://desktop.taila7523c.ts.net:11434/api/generate", model: "qwen3-vl:4b-instruct",
+      //     // provider: "ollama", endpoint: "http://desktop.pumpkinseed-rainbow.ts.net:11434/api/generate", model: "qwen3-vl:4b-instruct",
       //     timeoutSeconds: 120,
       //     numCtx: 8192,
       //     numPredict: 2000,
@@ -1193,7 +1193,7 @@ const scraperConfig = {
     // Keys mirror what SharedCore.resolveAiConfig reads.
     ai: {
       enabled: true,
-      endpoint: "http://rybook.taila7523c.ts.net:8000/v1/chat/completions",
+      endpoint: "http://rybook.pumpkinseed-rainbow.ts.net:8000/v1/chat/completions",
       provider: "openai",
       openai: {
         responseFormat: "json_object",
@@ -1271,7 +1271,7 @@ const scraperConfig = {
     ocr: {
       enabled: true,
       provider: "openai",
-      endpoint: "http://rybook.taila7523c.ts.net:8001/v1/chat/completions",
+      endpoint: "http://rybook.pumpkinseed-rainbow.ts.net:8001/v1/chat/completions",
       model: "mlx-community/Qwen3-VL-4B-Instruct-4bit", // OCR requires a VISION model
       timeoutSeconds: 120,
       numCtx: 8192,
