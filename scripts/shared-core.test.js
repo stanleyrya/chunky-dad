@@ -3644,7 +3644,7 @@ test('resolveAiConfig defaults and the arbitrateMerges flag', () => {
   assert.equal(defaults.enabled, true);
   assert.equal(defaults.arbitrateMerges, true);
   assert.equal(defaults.provider, 'openai');
-  assert.equal(defaults.endpoint, 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions');
+  assert.equal(defaults.endpoint, 'http://rybook.pumpkinseed-rainbow.ts.net:8000/v1/chat/completions');
   assert.equal(core.resolveAiConfig({ arbitrateMerges: false }).arbitrateMerges, false);
 
   // getMergeArbitrationConfig: parser ai wins, global ai is the fallback
@@ -25621,7 +25621,7 @@ test('FetchPoliteness paces one host, one request at a time, and never paces ano
   assert.deepEqual(sleeps, [2000], 'only the second request to site.example waits, and for the full gap after the first ENDED');
   assert.ok(order.indexOf('end https://www.site.example/a') < order.indexOf('start https://site.example/b'), 'www and bare host are one site, served in turn');
   await hit('https://chunky.dad/data/calendars/nyc.ics'); await hit('https://chunky.dad/data/calendars/la.ics');
-  await hit('http://rybook.taila7523c.ts.net:8000/v1/models'); await hit('http://rybook.taila7523c.ts.net:8000/v1/models');
+  await hit('http://rybook.pumpkinseed-rainbow.ts.net:8000/v1/models'); await hit('http://rybook.pumpkinseed-rainbow.ts.net:8000/v1/models');
   assert.deepEqual(sleeps, [2000], 'chunky.dad and the tailnet are exempt');
   clock.now += 5000;
   await hit('https://site.example/c');

@@ -560,13 +560,13 @@ test('getOcrConfig defaults the openai provider to a vision model and accepts to
   const openaiOcr = parser.getOcrConfig({ ai: { ocr: { provider: 'openai' } } });
   assert.equal(openaiOcr.provider, 'openai');
   assert.match(openaiOcr.model, /VL/i, 'openai OCR default must be a vision model');
-  assert.equal(openaiOcr.endpoint, 'http://rybook.taila7523c.ts.net:8001/v1/chat/completions');
+  assert.equal(openaiOcr.endpoint, 'http://rybook.pumpkinseed-rainbow.ts.net:8001/v1/chat/completions');
 
   // With NO provider configured at all, OCR defaults to the rybook vision
   // server — desktop ollama is explicit opt-in only
   const bare = parser.getOcrConfig({});
   assert.equal(bare.provider, 'openai');
-  assert.equal(bare.endpoint, 'http://rybook.taila7523c.ts.net:8001/v1/chat/completions');
+  assert.equal(bare.endpoint, 'http://rybook.pumpkinseed-rainbow.ts.net:8001/v1/chat/completions');
   assert.match(bare.model, /VL/i);
 
   // A mis-nested top-level ocr block should still configure OCR (fallback)...

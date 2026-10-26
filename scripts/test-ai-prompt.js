@@ -5,12 +5,12 @@
 const aiConfig = {
     // OpenAI provider format (e.g. rybook, openai, etc.)
     provider: 'openai',
-    endpoint: 'http://rybook.taila7523c.ts.net:8000/v1/chat/completions',
+    endpoint: 'http://rybook.pumpkinseed-rainbow.ts.net:8000/v1/chat/completions',
     model: 'qwen2.5-coder:7b',
 
     // Ollama provider format example:
     // provider: 'ollama',
-    // endpoint: 'http://desktop.taila7523c.ts.net:11434/api/generate',
+    // endpoint: 'http://desktop.pumpkinseed-rainbow.ts.net:11434/api/generate',
     // model: 'qwen2.5-coder:7b',
 
     temperature: 0,
