@@ -69,6 +69,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline:2px so
 form { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
 form label { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--muted); }
 form label.full, form .full { grid-column:1 / -1; }
+form label[hidden] { display:none; }
 input { font:inherit; font-size:16px; padding:8px 10px; border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:10px; min-width:0; width:100%; }
 input[type=file] { padding:6px; }
 .hint { color:var(--muted); font-size:12px; margin:8px 0 0; }
@@ -91,6 +92,12 @@ input[type=file] { padding:6px; }
 .calbox input { width:76px; }
 .save { font-family:ui-monospace, Menlo, monospace; font-size:11px; color:rgba(255,255,255,.8); }
 .banner[hidden] { display:none; }
+.confirm[hidden] { display:none; }
+.confirm { margin-top:8px; padding:10px 12px; border-radius:12px; background:rgba(224,86,76,.12); border:1px solid rgba(224,86,76,.45); display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:13px; }
+.confirm b { color:#f08575; }
+.confirm button.danger { background:var(--no); color:#fff; border-color:var(--no); }
+.row .x { flex:0 0 auto; font:600 13px/1 -apple-system, system-ui, sans-serif; width:28px; height:28px; min-height:0; padding:0; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--muted); }
+.row .x:hover { color:#f08575; border-color:#f08575; }
 .banner { background:rgba(255,123,47,.12); border:1px solid rgba(255,162,74,.35); border-radius:12px; padding:10px 12px; font-size:13px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
 .banner b { color:var(--accent-soft); }
 .toast { position:fixed; left:50%; bottom:calc(18px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px); background:#1c2235; color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:10px 14px; font-size:13px; opacity:0; pointer-events:none; transition:.2s; z-index:9; max-width:92vw; }
@@ -135,16 +142,6 @@ input[type=file] { padding:6px; }
 
   <div class="panel" style="display:flex; flex-direction:column; gap:14px; min-width:0">
     <div class="card">
-      <h2>Furniture in this apartment</h2>
-      <div id="list"></div>
-      <div class="toolbar">
-        <button id="reset" type="button">↺ Reset layout</button>
-        <button id="clear" type="button">Clear all</button>
-      </div>
-      <p class="hint">Tap a piece here or on the plan to select it; its name and size then show in the form below, where you can change them.</p>
-    </div>
-
-    <div class="card">
       <h2>Add a piece</h2>
       <form id="addForm">
         <label class="full">Name <input id="fName" placeholder="e.g. Dresser" required></label>
@@ -157,16 +154,28 @@ input[type=file] { padding:6px; }
     </div>
 
     <div class="card">
-      <h2>This apartment</h2>
+      <h2>Furniture in this apartment</h2>
+      <div id="list"></div>
+      <div class="toolbar">
+        <button id="reset" type="button">↺ Reset layout</button>
+        <button id="clear" type="button">Clear all</button>
+      </div>
+      <p class="hint">Tap a piece here or on the plan to select it; its name and size then show in the form above, where you can change them. × removes it.</p>
+    </div>
+
+    <div class="card">
+      <h2>This plan</h2>
       <form id="aptForm">
         <label class="full">Name <input id="aptName" placeholder="Address or listing"></label>
-        <label class="full">Floor plan image <input id="aptImg" type="file" accept="image/*"></label>
+        <label class="full" id="aptImgLabel">Floor plan image <input id="aptImg" type="file" accept="image/*"></label>
         <div class="full toolbar" style="margin-top:0">
           <button class="go" type="submit">Save</button>
+          <button type="button" id="dupApt" title="A second layout of the same plan">⧉ Duplicate</button>
           <button type="button" id="copyFurn">Add the starter set</button>
-          <button type="button" id="delApt">Delete apartment</button>
+          <button type="button" id="delApt">🗑 Delete</button>
         </div>
       </form>
+      <div id="delConfirm" class="confirm" hidden></div>
       <p class="hint" id="aptHint"></p>
     </div>
   </div>
@@ -354,15 +363,21 @@ function renderBanner() {
   const a = apt(), b = $('shareBanner');
   if (!a || !a.shared) { b.hidden = true; b.innerHTML = ''; return; }
   b.hidden = false;
-  b.innerHTML = `<span><b>Shared plan.</b> Any change you make is kept in this browser as your own copy.</span><button class="small go" type="button" id="keepCopy">Keep a copy now</button>`;
-  $('keepCopy').onclick = () => { adoptShared(a); toast('Kept in this browser'); };
+  b.innerHTML = `<span><b>Shared plan.</b> Anything you change is kept in this browser, under <b>Yours</b>.</span>`;
 }
 function renderSelect() {
   const s = $('aptSel'); s.innerHTML = '';
   const ids = Object.keys(apts);
   if (!ids.length) { const o = document.createElement('option'); o.textContent = 'No apartments yet'; s.appendChild(o); s.disabled = true; return; }
   s.disabled = false;
-  for (const id of ids) { const o = document.createElement('option'); o.value = id; o.textContent = (apts[id].name || 'Untitled') + (apts[id].shared ? ' (shared)' : ''); o.selected = id === activeId; s.appendChild(o); }
+  // Three kinds, three groups: the site's plans, yours, a link someone sent.
+  const groups = [['Shared with you', ids.filter(id => apts[id].shared)], ['Yours', ids.filter(id => !apts[id].shared && !apts[id].builtIn)], ['On the site', ids.filter(id => apts[id].builtIn)]];
+  for (const [label, members] of groups) {
+    if (!members.length) continue;
+    const g = document.createElement('optgroup'); g.label = label;
+    for (const id of members) { const o = document.createElement('option'); o.value = id; o.textContent = apts[id].name || 'Untitled'; o.selected = id === activeId; g.appendChild(o); }
+    s.appendChild(g);
+  }
 }
 function renderStage() {
   const W = $('stageWrap'); W.innerHTML = '';
@@ -445,18 +460,23 @@ function renderPanel() {
   const a = apt(), L = $('list'); L.innerHTML = '';
   $('aptName').value = a ? a.name : '';
   $('aptHint').textContent = !a ? 'Upload a plan (a screenshot or a PDF page), then use Set scale on a labelled room dimension.'
-    : a.builtIn ? 'This plan is kept on the site, so its share link stays short. Your layout changes save in this browser.'
-    : a.shared ? 'Someone shared this plan with you. Change anything and it is kept here as your own copy.'
+    : a.builtIn ? 'This plan is kept on the site, so it cannot be deleted here and its share link stays short. Your layout saves in this browser; Duplicate makes a second layout to try.'
+    : a.shared ? 'Someone shared this plan with you. Anything you change is kept here, under Yours.'
     : a.img && a.img.data ? 'This plan lives in this browser. A share link carries the image too, so it will be long.'
     : 'Upload a plan (a screenshot or a PDF page), then use Set scale on a labelled room dimension.';
+  $('aptImgLabel').hidden = !!(a && (a.builtIn || a.shared));
   $('delApt').disabled = !a || !!a.builtIn;
+  $('dupApt').disabled = !a || !a.img;
+  if (!a || a.id !== confirmingDelete) { confirmingDelete = null; $('delConfirm').hidden = true; }
   if (!a || !a.furniture.length) { L.innerHTML = '<p class="hint">Nothing here yet.</p>'; return; }
   for (const it of a.furniture) {
     const p = problems(it);
     const r = document.createElement('div'); r.className = 'row' + (it === selected ? ' sel' : '');
     const name = document.createElement('span'); name.className = 'name'; name.textContent = it.name;
     const sz = document.createElement('span'); sz.className = 'sz'; sz.textContent = `${fmt(it.w)} × ${fmt(it.d)}`;
-    r.append(name, sz);
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '×'; x.title = `Remove ${it.name}`; x.setAttribute('aria-label', `Remove ${it.name}`);
+    x.onclick = e => { e.stopPropagation(); a.furniture = a.furniture.filter(o => o !== it); if (selected === it) selected = null; persist(a); renderStage(); renderPanel(); toast(`${it.name} removed`); };
+    r.append(name, sz, x);
     if (p.length) { const f = document.createElement('span'); f.className = 'flag'; f.textContent = p.join(', '); r.appendChild(f); }
     r.addEventListener('click', () => { selected = it; renderStage(); renderPanel(); });
     L.appendChild(r);
@@ -587,12 +607,29 @@ $('aptForm').addEventListener('submit', async e => {
   if (!a.img) { $('saveState').textContent = 'upload a floor plan image first'; return; }
   $('aptImg').value = ''; persist(a); renderAll();
 });
-let confirmDelete = false;
+// A second layout of the same plan — the only "copy" worth having.
+$('dupApt').onclick = () => {
+  const a = apt(); if (!a || !a.img) return;
+  const id = 'apt-' + (uid++).toString(36);
+  const base = (a.name || 'Untitled').replace(/ · layout \d+$/, '');
+  const n = Object.values(apts).filter(o => (o.name || '').startsWith(base + ' · layout ')).length + 2;
+  const copy = { ...a, id, name: `${base} · layout ${n}`, shared: false, builtIn: false, furniture: a.furniture.map(f => ({ ...f, id: String(uid++) })) };
+  apts[id] = copy; activeId = id; selected = null;
+  if (a.shared) { delete apts.shared; window.history.replaceState(null, '', location.pathname); }
+  persist(copy); renderAll(); toast(`Now on "${copy.name}"`);
+};
+// Delete asks once, in place, with two buttons — not a button that changes its own label.
+let confirmingDelete = null;
 $('delApt').onclick = () => {
   const a = apt(); if (!a || a.builtIn) return;
-  if (!confirmDelete) { confirmDelete = true; $('delApt').textContent = 'Really delete? Tap again'; setTimeout(() => { confirmDelete = false; $('delApt').textContent = 'Delete apartment'; }, 3000); return; }
-  confirmDelete = false; $('delApt').textContent = 'Delete apartment';
-  removeApt(a); activeId = Object.keys(apts)[0] || null; selected = null; if (a.shared) window.history.replaceState(null, '', location.pathname); renderAll();
+  confirmingDelete = a.id;
+  const box = $('delConfirm'); box.hidden = false;
+  box.innerHTML = `<span>Delete <b>${escapeHtml(a.name || 'Untitled')}</b> from this browser? ${a.shared ? 'The link you opened still works.' : 'Its layout goes with it.'}</span><button type="button" class="danger" id="delYes">Delete</button><button type="button" id="delNo">Keep</button>`;
+  $('delNo').onclick = () => { confirmingDelete = null; box.hidden = true; };
+  $('delYes').onclick = () => {
+    confirmingDelete = null; box.hidden = true;
+    removeApt(a); activeId = Object.keys(apts)[0] || null; selected = null; if (a.shared) window.history.replaceState(null, '', location.pathname); renderAll(); toast('Deleted');
+  };
 };
 
 boot();
