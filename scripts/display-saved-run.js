@@ -18,6 +18,62 @@
 class SavedRunDisplay {
     constructor() {
         this.adapter = null;
+        this.trace = [];
+    }
+
+    // Every "📱 Display:" line goes to the console AND to a short trace, so
+    // a failure can carry the steps that led to it (see recordFailure).
+    note(message) {
+        console.log(message);
+        this.trace.push(message);
+        if (this.trace.length > 200) this.trace.shift();
+    }
+
+    // A failed load used to leave nothing behind: the script only prints to
+    // Scriptable's console, which lives on the phone — "Could not load saved
+    // run" on 2026-10-27 could not be diagnosed from the Mac. Every failure
+    // now appends one JSON line to logs/phone-display-errors.ndjson under the
+    // data folder (iCloud, so the Mac reads it) with the trace and the data
+    // root the phone resolved; if that folder cannot be written, the old
+    // Documents/chunky-dad-scraper folder gets the note. Returns the file
+    // written, or null under Node / when nothing could be written.
+    recordFailure(title, message, extra = {}) {
+        if (typeof FileManager === 'undefined') return null;
+        let fm = null;
+        try { fm = FileManager.iCloud(); } catch (_) { return null; }
+        const roots = [];
+        try { roots.push(this.resolveDataRoot(fm)); } catch (_) { /* noted below */ }
+        try { roots.push(fm.joinPath(fm.documentsDirectory(), 'chunky-dad-scraper')); } catch (_) { /* no documents dir */ }
+        const line = JSON.stringify({
+            at: new Date().toISOString(),
+            title,
+            message,
+            dataRoot: roots[0] || null,
+            ...extra,
+            trace: this.trace.slice(-60)
+        });
+        for (const root of roots) {
+            try {
+                const dir = fm.joinPath(root, 'logs');
+                if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+                const file = fm.joinPath(dir, SavedRunDisplay.FAILURE_NOTE_FILE);
+                let existing = '';
+                if (fm.fileExists(file)) {
+                    try { existing = fm.readString(file) || ''; } catch (_) { existing = ''; }
+                }
+                fm.writeString(file, existing + line + '\n');
+                return file;
+            } catch (_) { /* try the next root */ }
+        }
+        return null;
+    }
+
+    // Alert + note: the alert names the file so the owner knows the Mac can
+    // read what happened without the phone's console.
+    async failLoud(title, message, extra = {}) {
+        const file = this.recordFailure(title, message, extra);
+        const where = file ? `logs/${SavedRunDisplay.FAILURE_NOTE_FILE}` : '';
+        await this.showError(title, where ? `${message}\n\nWhat happened is noted in ${where} in iCloud, so the Mac can read it.` : message);
     }
 
     async showError(title, message) {
@@ -35,7 +91,7 @@ class SavedRunDisplay {
             const rootDir = this.resolveDataRoot(fm);
             const runsDir = fm.joinPath(rootDir, 'runs');
             
-            console.log(`📱 Display: Checking for saved runs in ${runsDir}`);
+            this.note(`📱 Display: Checking for saved runs in ${runsDir}`);
             
             // Check if root directory exists first
             if (!fm.fileExists(rootDir)) {
@@ -44,7 +100,7 @@ class SavedRunDisplay {
             
             if (!fm.fileExists(runsDir)) {
                 fm.createDirectory(runsDir, true);
-                console.log(`📱 Display: No saved runs found - created runs directory`);
+                this.note(`📱 Display: No saved runs found - created runs directory`);
                 return [];
             }
             
@@ -59,27 +115,27 @@ class SavedRunDisplay {
             const { entries: jsonFiles, errors: fileErrors } =
                 ScriptableAdapter.listSavedRunEntries(fm, runsDir);
 
-            console.log(`📱 Display: Found ${jsonFiles.length} saved runs${fileErrors.length > 0 ? ` (${fileErrors.length} files had errors)` : ''}`);
+            this.note(`📱 Display: Found ${jsonFiles.length} saved runs${fileErrors.length > 0 ? ` (${fileErrors.length} files had errors)` : ''}`);
 
             if (jsonFiles.length === 0) {
-                console.log(`📱 Display: No .json run files found in directory`);
+                this.note(`📱 Display: No .json run files found in directory`);
             }
 
             const syncingCount = jsonFiles.filter(e => e.downloaded === false).length;
             if (syncingCount > 0) {
-                console.log(`📱 Display: ${syncingCount} run(s) not yet downloaded from iCloud — listed as syncing, downloaded on open`);
+                this.note(`📱 Display: ${syncingCount} run(s) not yet downloaded from iCloud — listed as syncing, downloaded on open`);
             }
 
             return jsonFiles;
         } catch (e) {
-            console.log(`📱 Display: Failed to read runs directory: ${e.message}`);
+            this.note(`📱 Display: Failed to read runs directory: ${e.message}`);
             return [];
         }
     }
 
     async loadSavedRun(runId) {
         try {
-            console.log(`📱 Display: loadSavedRun called with runId: ${JSON.stringify(runId)} (type: ${typeof runId})`);
+            this.note(`📱 Display: loadSavedRun called with runId: ${JSON.stringify(runId)} (type: ${typeof runId})`);
             
             const fm = FileManager.iCloud();
             const documentsDir = fm.documentsDirectory();
@@ -88,13 +144,13 @@ class SavedRunDisplay {
             const fileName = `${runId}.json`;
             const runFilePath = fm.joinPath(runsDir, fileName);
             
-            console.log(`📱 Display: Path components - documentsDir: ${documentsDir}`);
-            console.log(`📱 Display: Path components - rootDir: ${rootDir}`);
-            console.log(`📱 Display: Path components - runsDir: ${runsDir}`);
-            console.log(`📱 Display: Path components - fileName: ${fileName}`);
-            console.log(`📱 Display: Loading run from: ${runFilePath}`);
+            this.note(`📱 Display: Path components - documentsDir: ${documentsDir}`);
+            this.note(`📱 Display: Path components - rootDir: ${rootDir}`);
+            this.note(`📱 Display: Path components - runsDir: ${runsDir}`);
+            this.note(`📱 Display: Path components - fileName: ${fileName}`);
+            this.note(`📱 Display: Loading run from: ${runFilePath}`);
             if (!fm.fileExists(runFilePath)) {
-                console.log(`📱 Display: Run file does not exist: ${runFilePath}`);
+                this.note(`📱 Display: Run file does not exist: ${runFilePath}`);
                 return null;
             }
 
@@ -105,14 +161,14 @@ class SavedRunDisplay {
             // again shortly usually finds the file already local.
             const { ScriptableAdapter } = importModule('adapters/scriptable-adapter');
             const syncTimeoutMs = 30000;
-            console.log(`📱 Display: Ensuring run file is local (bounded ${syncTimeoutMs / 1000}s iCloud download): ${fileName}`);
+            this.note(`📱 Display: Ensuring run file is local (bounded ${syncTimeoutMs / 1000}s iCloud download): ${fileName}`);
             const download = await ScriptableAdapter.downloadFileBounded(fm, runFilePath, syncTimeoutMs);
             if (!download.ok && download.timedOut) {
-                console.log(`📱 Display: Run ${runId} is still syncing from iCloud after ${syncTimeoutMs / 1000}s — not blocking the list`);
+                this.note(`📱 Display: Run ${runId} is still syncing from iCloud after ${syncTimeoutMs / 1000}s — not blocking the list`);
                 return { __icloudSyncPending: true, runId };
             }
             if (!download.ok && download.error) {
-                console.log(`📱 Display: Bounded iCloud download reported: ${download.error} — falling through to read retries`);
+                this.note(`📱 Display: Bounded iCloud download reported: ${download.error} — falling through to read retries`);
             }
 
             // Robust iCloud download with multiple retries
@@ -120,7 +176,7 @@ class SavedRunDisplay {
             const maxRetries = 3;
             
             for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                console.log(`📱 Display: Download attempt ${attempt}/${maxRetries}`);
+                this.note(`📱 Display: Download attempt ${attempt}/${maxRetries}`);
                 
                 try {
                     // The bounded download above already confirmed the
@@ -128,47 +184,47 @@ class SavedRunDisplay {
                     // downloadFileFromiCloud on a 12MB run file is a
                     // second wait for nothing.
                     if (download.ok && attempt === 1) {
-                        console.log(`📱 Display: Bounded download confirmed the file is local — reading it`);
+                        this.note(`📱 Display: Bounded download confirmed the file is local — reading it`);
                     } else {
                         await fm.downloadFileFromiCloud(runFilePath);
-                        console.log(`📱 Display: Download completed for attempt ${attempt}`);
+                        this.note(`📱 Display: Download completed for attempt ${attempt}`);
                     }
                 } catch (downloadError) {
-                    console.log(`📱 Display: Download attempt ${attempt} failed: ${downloadError.message}`);
+                    this.note(`📱 Display: Download attempt ${attempt} failed: ${downloadError.message}`);
                 }
                 
                 // Try to read the file
                 content = fm.readString(runFilePath);
-                console.log(`📱 Display: Read attempt ${attempt} result: ${content === null ? 'null' : content === undefined ? 'undefined' : `${content.length} characters`}`);
+                this.note(`📱 Display: Read attempt ${attempt} result: ${content === null ? 'null' : content === undefined ? 'undefined' : `${content.length} characters`}`);
                 
                 if (content !== null && content !== undefined && content.trim().length > 0) {
-                    console.log(`📱 Display: Successfully got content on attempt ${attempt}`);
+                    this.note(`📱 Display: Successfully got content on attempt ${attempt}`);
                     break;
                 }
                 
                 if (attempt < maxRetries) {
-                    console.log(`📱 Display: Waiting 2 seconds before retry...`);
+                    this.note(`📱 Display: Waiting 2 seconds before retry...`);
                     await new Promise(resolve => Timer.schedule(2000, false, resolve));
                 }
             }
             
             if (content === null || content === undefined) {
-                console.log(`📱 Display: File content is null or undefined after retry`);
+                this.note(`📱 Display: File content is null or undefined after retry`);
                 return null;
             }
             
             if (content.trim().length === 0) {
-                console.log(`📱 Display: File content is empty`);
+                this.note(`📱 Display: File content is empty`);
                 return null;
             }
             
-            console.log(`📱 Display: Successfully read file, content length: ${content.length}`);
+            this.note(`📱 Display: Successfully read file, content length: ${content.length}`);
             const parseStartedAt = Date.now();
             const parsed = JSON.parse(content);
-            console.log(`📱 Display: Successfully parsed JSON in ${Date.now() - parseStartedAt}ms, keys: ${Object.keys(parsed)}`);
+            this.note(`📱 Display: Successfully parsed JSON in ${Date.now() - parseStartedAt}ms, keys: ${Object.keys(parsed)}`);
             return parsed;
         } catch (e) {
-            console.log(`📱 Display: Failed to load run ${runId}: ${e.message}`);
+            this.note(`📱 Display: Failed to load run ${runId}: ${e.message}`);
             return null;
         }
     }
@@ -283,7 +339,7 @@ class SavedRunDisplay {
         const cityKeys = Object.keys(cities).filter((key) => cities[key] && typeof cities[key].calendar === 'string' && cities[key].calendar);
         const written = await adapter.writeCalendarSnapshots(cityKeys);
         const summary = SavedRunDisplay.describeSnapshotRefresh(cityKeys, written, cities, Date.now() - startedAt);
-        console.log(`📱 Display: ${summary.line}`);
+        this.note(`📱 Display: ${summary.line}`);
         // The inbox: pages the Mac asked the phone to fetch (hosts that
         // answer the Mac 429), read here through a headless web view into
         // the shared page cache. Part of "the phone does its part".
@@ -291,7 +347,7 @@ class SavedRunDisplay {
             const inbox = await adapter.fulfillInboxRequests();
             if (inbox.asked > 0) {
                 const line = `Inbox: ${inbox.fetched} page(s) fetched for the Mac${inbox.failed ? `, ${inbox.failed} failed` : ''}${inbox.skipped ? `, ${inbox.skipped} left for next time` : ''}`;
-                console.log(`📱 Display: ${line}`);
+                this.note(`📱 Display: ${line}`);
                 summary.message += `\n\n${line}${inbox.details.length ? `\n${inbox.details.slice(0, 6).join('\n')}` : ''}`;
             }
         }
@@ -329,7 +385,7 @@ class SavedRunDisplay {
     async executeReviewedRun(options = {}) {
         const runId = typeof options.runId === 'string' ? options.runId.trim() : '';
         if (!runId) {
-            await this.showError('No run named', 'reviewExecute needs a runId — open the link from the Mac server\'s review page.');
+            await this.failLoud('No run named', 'reviewExecute needs a runId — open the link from the Mac server\'s review page.', { options });
             return null;
         }
         // Phase timings in the log: "the script takes forever to load" needs
@@ -339,11 +395,11 @@ class SavedRunDisplay {
         const saved = await this.loadSavedRun(runId);
         const loadedAt = Date.now();
         if (saved && saved.__icloudSyncPending === true) {
-            await this.showError('Still syncing from iCloud', `Run ${runId} is still syncing from iCloud — try the link again shortly.`);
+            await this.failLoud('Still syncing from iCloud', `Run ${runId} is still syncing from iCloud — try the link again shortly.`, { runId });
             return null;
         }
         if (!saved) {
-            await this.showError('Load failed', `Could not load saved run: ${runId}`);
+            await this.failLoud('Load failed', `Could not load saved run: ${runId}`, { runId });
             return null;
         }
         const resultsLike = this.buildResultsLike(saved, { readOnly: false });
@@ -351,7 +407,7 @@ class SavedRunDisplay {
         const decisions = typeof adapter.loadOwnerDecisions === 'function'
             ? await adapter.loadOwnerDecisions()
             : [];
-        console.log(`📱 Display: Reviewed execute of run ${runId} with ${decisions.length} owner decision(s) — run file loaded in ${loadedAt - startedAt}ms, adapter + decisions in ${Date.now() - loadedAt}ms`);
+        this.note(`📱 Display: Reviewed execute of run ${runId} with ${decisions.length} owner decision(s) — run file loaded in ${loadedAt - startedAt}ms, adapter + decisions in ${Date.now() - loadedAt}ms`);
         if (typeof adapter.executeReviewedSavedRun !== 'function') {
             await this.showError('Adapter too old', 'This adapter has no executeReviewedSavedRun — update scripts/adapters/scriptable-adapter.js.');
             return null;
@@ -363,7 +419,7 @@ class SavedRunDisplay {
         try {
             const runs = await this.listSavedRuns();
             if (!runs || runs.length === 0) {
-                await this.showError('No saved runs', 'No saved runs were found to display.\n\nTo create runs, first run the bear-event-scraper-unified.js script.\n\nRuns are saved in the chunky-dad-scraper/runs/ directory relative to where this script is located.');
+                await this.failLoud('No saved runs', 'No saved runs were found to display.\n\nTo create runs, first run the bear-event-scraper-unified.js script.\n\nRuns are saved in the chunky-dad-scraper/runs/ directory relative to where this script is located.');
                 return;
             }
 
@@ -398,11 +454,11 @@ class SavedRunDisplay {
                     runToShow = runs[0].runId || runs[0];
                 }
 
-                console.log(`📱 Display: About to load runToShow: ${JSON.stringify(runToShow)} (type: ${typeof runToShow})`);
+                this.note(`📱 Display: About to load runToShow: ${JSON.stringify(runToShow)} (type: ${typeof runToShow})`);
 
                 // Ensure runToShow is a string, not an object
                 runIdString = typeof runToShow === 'string' ? runToShow : runToShow.runId || runToShow.toString();
-                console.log(`📱 Display: Final runId to load: ${runIdString}`);
+                this.note(`📱 Display: Final runId to load: ${runIdString}`);
 
                 saved = await this.loadSavedRun(runIdString);
                 if (saved && saved.__icloudSyncPending === true) {
@@ -417,7 +473,7 @@ class SavedRunDisplay {
             }
 
             if (!saved) {
-                await this.showError('Load failed', `Could not load saved run: ${runIdString}`);
+                await this.failLoud('Load failed', `Could not load saved run: ${runIdString}`, { runId: runIdString });
                 return;
             }
 
@@ -427,10 +483,12 @@ class SavedRunDisplay {
             const adapter = this.createAdapter();
             await adapter.displayResults(resultsLike);
         } catch (e) {
-            console.log(`📱 Display: Failed to display saved run: ${e.message}`);
+            this.note(`📱 Display: Failed to display saved run: ${e.message}`);
         }
     }
 }
+
+SavedRunDisplay.FAILURE_NOTE_FILE = 'phone-display-errors.ndjson';
 
 // Launch options from the URL-scheme / widget parameters. Pure, exported
 // for tests: runId (query runId/runid or widget "runid:<id>"), last (query
@@ -497,6 +555,7 @@ if (!isNodeEnvironment) {
             }
         } catch (e) {
             console.error(`Display Saved Run failed: ${e.message}`);
+            try { display.recordFailure('Display Saved Run Error', e.message, { stack: String(e.stack || '') }); } catch (_) { /* the alert still shows */ }
             const alert = new Alert();
             alert.title = 'Display Saved Run Error';
             alert.message = `${e.message}`;

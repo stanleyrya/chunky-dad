@@ -90,6 +90,68 @@ test('executeReviewedRun degrades with an alert when the run is missing, syncing
   assert.deepEqual(errors, ['Load failed', 'Still syncing from iCloud', 'No run named']);
 });
 
+// A failed load leaves a note the Mac can read (2026-10-27: "Could not load
+// saved run" on the phone, nothing in iCloud to diagnose it from).
+function fakeFileManager(files) {
+  const dirs = new Set(['/icloud', '/icloud/chunky-dad-data', '/icloud/chunky-dad-data/storage']);
+  const fm = {
+    documentsDirectory: () => '/icloud',
+    joinPath: (a, b) => `${a}/${b}`,
+    fileExists: (p) => dirs.has(p) || Object.prototype.hasOwnProperty.call(files, p),
+    isDirectory: (p) => dirs.has(p),
+    createDirectory: (p) => { dirs.add(p); },
+    readString: (p) => files[p],
+    writeString: (p, s) => { files[p] = s; },
+    bookmarkedPath: () => '/icloud/chunky-dad-data',
+    bookmarkExists: () => true
+  };
+  return { iCloud: () => fm, local: () => fm };
+}
+
+test('a failed reviewed execute appends a note with the Display trace to logs/phone-display-errors.ndjson, and the alert says so', async () => {
+  const files = {};
+  global.FileManager = fakeFileManager(files);
+  try {
+    const display = new SavedRunDisplay();
+    display.resolveDataRoot = () => '/icloud/chunky-dad-data'; // the bookmarked folder (importModule is Scriptable-only)
+    const errors = [];
+    display.showError = async (title, message) => { errors.push({ title, message }); };
+    display.loadSavedRun = async (runId) => { display.note(`📱 Display: Run file does not exist: /icloud/chunky-dad-data/runs/${runId}.json`); return null; };
+    display.createAdapter = () => { throw new Error('no adapter without a run'); };
+
+    assert.equal(await display.executeReviewedRun({ runId: '20261027-052842' }), null);
+    assert.equal(errors.length, 1);
+    assert.equal(errors[0].title, 'Load failed');
+    assert.match(errors[0].message, /noted in logs\/phone-display-errors\.ndjson in iCloud/);
+
+    const file = '/icloud/chunky-dad-data/logs/phone-display-errors.ndjson';
+    const notes = files[file].trim().split('\n').map((line) => JSON.parse(line));
+    assert.equal(notes.length, 1);
+    assert.equal(notes[0].title, 'Load failed');
+    assert.equal(notes[0].runId, '20261027-052842');
+    assert.equal(notes[0].dataRoot, '/icloud/chunky-dad-data', 'the note says which folder the phone resolved');
+    assert.ok(notes[0].trace.some((line) => /Run file does not exist/.test(line)), 'the Display trace rides along');
+    assert.match(notes[0].at, /^\d{4}-\d{2}-\d{2}T/);
+
+    // A second failure appends; the first line is kept.
+    display.loadSavedRun = async () => ({ __icloudSyncPending: true, runId: '20261027-052842' });
+    await display.executeReviewedRun({ runId: '20261027-052842' });
+    assert.equal(files[file].trim().split('\n').length, 2);
+    assert.equal(JSON.parse(files[file].trim().split('\n')[1]).title, 'Still syncing from iCloud');
+  } finally {
+    delete global.FileManager;
+  }
+});
+
+test('recordFailure under Node (no FileManager) is a no-op and the alert stays as it was', async () => {
+  const display = new SavedRunDisplay();
+  const errors = [];
+  display.showError = async (title, message) => { errors.push(message); };
+  assert.equal(display.recordFailure('x', 'y'), null);
+  await display.failLoud('Load failed', 'Could not load saved run: r');
+  assert.deepEqual(errors, ['Could not load saved run: r']);
+});
+
 // ---------------------------------------------------------------------------
 // Snapshot only: scriptable:///run?scriptName=display-saved-run&snapshot=1
 // reads the calendars and writes the files the Mac needs — no scrape.
