@@ -225,6 +225,54 @@ test('images: saved copy first, refreshed behind it; the cache is capped at the 
     assert.ok(sw.IMAGE_LIMIT >= 200 && sw.IMAGE_LIMIT <= 1000);
 });
 
+test('cdn: an opaque copy (a plain tag) never answers a crossorigin tag; the copy with headers, once fetched, serves both and is never overwritten by an opaque one', async () => {
+    reset();
+    const url = 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js';
+    const opaque = () => ({ type: 'opaque', status: 0, clone() { return this; } });
+    const cdn = await global.caches.open(sw.CACHES.cdn);
+    await cdn.put(url, opaque()); // what the home page's plain <script> tag left behind
+    fetchImpl = async () => new Response('js', { status: 200, headers: { 'Content-Type': 'text/javascript' } });
+    const cors = await run(req(url, { mode: 'cors', destination: 'script' }));
+    assert.notEqual(cors.response.type, 'opaque', 'the crossorigin tag waited for the network, not the opaque copy');
+    assert.equal(await cors.response.text(), 'js');
+    assert.notEqual((await cdn.match(url)).type, 'opaque', 'the copy with headers replaced the opaque one');
+
+    fetchImpl = async () => opaque(); // the plain tag's own refresh comes back opaque
+    const plain = await run(req(url, { mode: 'no-cors', destination: 'script' }));
+    assert.equal(await plain.response.text(), 'js', 'the plain tag is served the copy with headers');
+    assert.notEqual((await cdn.match(url)).type, 'opaque', 'an opaque refresh never overwrites a copy with headers');
+
+    reset();
+    const cdn2 = await global.caches.open(sw.CACHES.cdn);
+    await cdn2.put(url, opaque());
+    await assert.rejects(run(req(url, { mode: 'cors', destination: 'script' })), /offline/, 'offline with only an opaque copy: the network error, not a copy the browser would refuse');
+});
+
+test('save-page: a CDN file is fetched with its headers first, so the saved copy serves plain and crossorigin tags; a host that refuses cors still gives an opaque copy', async () => {
+    reset();
+    const calls = [];
+    fetchImpl = async (target, init) => {
+        const href = typeof target === 'string' ? target : target.url;
+        const mode = (init && init.mode) || target.mode;
+        calls.push(mode + ' ' + href);
+        if (/unpkg/.test(href) && mode === 'cors') return new Response('js', { status: 200, headers: { 'Content-Type': 'text/javascript' } });
+        if (/unpkg/.test(href)) throw new Error('should not be asked without headers');
+        if (/flyers.example/.test(href) && mode === 'cors') throw new TypeError('Failed to fetch');
+        if (/flyers.example/.test(href)) return { type: 'opaque', status: 0, clone() { return this; } };
+        return html('<html></html>');
+    };
+    await sw.savePage(ORIGIN + '/nyc/', ['https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js', 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css', 'https://flyers.example/a.png']);
+    assert.ok(calls.includes('cors https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js'));
+    assert.ok(calls.includes('cors https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css'));
+    assert.ok(!calls.some((c) => c === 'no-cors https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js'), 'a CDN that answers cors is not asked twice');
+    assert.ok(!calls.some((c) => c.startsWith('cors https://flyers.example')), 'images are only ever plain tags');
+    assert.ok(calls.includes('no-cors https://flyers.example/a.png'));
+    const cdn = await global.caches.open(sw.CACHES.cdn);
+    assert.notEqual((await cdn.match('https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js')).type, 'opaque');
+    const images = await global.caches.open(sw.CACHES.images);
+    assert.equal((await images.match('https://flyers.example/a.png')).type, 'opaque');
+});
+
 test('install precaches the home page and the offline page one by one (a missing file does not fail the install); activate drops old chunky caches only', async () => {
     reset();
     fetchImpl = async (url) => (String(url) === '/styles.css' ? Promise.reject(new Error('nope')) : html(`ok ${url}`));
@@ -266,7 +314,7 @@ test('save-page: the page that installed the worker sends its address and what i
     assert.deepEqual(await names(sw.CACHES.images), ['/favicons/favicon-96x96.png']);
     assert.deepEqual(await names(sw.CACHES.cdn), ['/maplibre-gl@5.24.0/dist/maplibre-gl.js']);
     assert.ok(!fetched.some(([u]) => u.includes('googletagmanager') || u.includes('openfreemap') || u.includes('/review/')), 'bypassed shapes are not fetched');
-    assert.ok(fetched.some(([u, mode]) => u.includes('unpkg.com') && mode === 'no-cors'), 'cross-origin files are fetched the way a tag would');
+    assert.ok(fetched.some(([u, mode]) => u.includes('unpkg.com') && mode === 'cors'), 'a CDN file is fetched with its headers, so the copy serves plain and crossorigin tags alike');
     sw.handleMessage({ data: { type: 'something-else' } });
     sw.handleMessage({ data: null });
 });

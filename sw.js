@@ -119,9 +119,27 @@ async function fromCache(response) {
     return new Response(body, { status: response.status, statusText: response.statusText, headers });
 }
 
+// A copy saved from a plain tag (<script src> with no crossorigin — a
+// no-cors request) is opaque. A page that asks for the same file with
+// crossorigin="anonymous" (a cors request: city.html's MapLibre tags) cannot
+// be given that copy — the browser refuses it and the script never loads.
+// 2026-10-27: the home page's handshake saved MapLibre opaque, and the NYC
+// page opened from the home page had no map. So an opaque copy never
+// answers a cors request, and a copy with headers is never replaced by an
+// opaque one: once the file is saved with its headers it serves both shapes.
+function usable(saved, request) {
+    if (!saved) return false;
+    if (saved.type === 'opaque' && request && request.mode === 'cors') return false;
+    return true;
+}
+
 async function save(cacheName, request, response, limit) {
     try {
         const cache = await caches.open(cacheName);
+        if (response.type === 'opaque') {
+            const existing = await cache.match(request);
+            if (existing && existing.type !== 'opaque') return;
+        }
         await cache.put(request, await stamped(response));
         if (limit) await trim(cache, limit);
     } catch (_) { /* quota or a request the cache refuses — the page still got its answer */ }
@@ -179,10 +197,21 @@ async function savePage(url, resources) {
             const target = new URL(item, origin);
             const sameOrigin = target.origin === origin;
             if (kind === 'page') target.search = '';
-            const response = await fetch(target.href, sameOrigin ? { cache: 'no-cache' } : { mode: 'no-cors' });
+            const response = sameOrigin ? await fetch(target.href, { cache: 'no-cache' }) : await fetchCrossOrigin(target.href, kind);
             if (cacheable(response)) await save(cacheName, target.href, response, kind === 'image' ? IMAGE_LIMIT : undefined);
         } catch (_) { /* saved on its next load instead */ }
     }
+}
+
+// A CDN file is asked for with its headers first (every CDN the pages use
+// answers cors), so the saved copy serves plain and crossorigin tags alike;
+// a host that refuses cors still gives an opaque copy for plain tags.
+// Flyers and favicons come from anywhere and are only ever plain tags.
+async function fetchCrossOrigin(href, kind) {
+    if (kind === 'cdn') {
+        try { return await fetch(href, { mode: 'cors' }); } catch (_) { /* no CORS headers on that host */ }
+    }
+    return fetch(href, { mode: 'no-cors' });
 }
 
 function handleMessage(event) {
@@ -234,7 +263,7 @@ async function cacheFirst(event, request, cacheName, limit) {
         return response;
     });
     extend(event, refresh.catch(() => {}));
-    if (saved) return saved;
+    if (usable(saved, request)) return saved;
     return refresh;
 }
 
