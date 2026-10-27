@@ -1834,7 +1834,7 @@ test('the review page fits the stack to the screen, lets the reject sheet scroll
 
   // The stack: sized from what the header, the buttons and the hint leave.
   assert.ok(html.includes('height:var(--stage-h, min(68vh, 640px));'), 'the old height is the fallback, not the rule');
-  for (const piece of ['function fitStage() {', "window.innerHeight - above - controls.offsetHeight - hint.offsetHeight", "stage.getBoundingClientRect().top", "setProperty('--stage-h'", "window.addEventListener('resize', fitStage);"]) assert.ok(html.includes(piece), piece);
+  for (const piece of ['function fitStage() {', "window.innerHeight - above - controls.offsetHeight - hint.offsetHeight", "stage.getBoundingClientRect().top", "setProperty('--stage-h'", "window.addEventListener('resize', refitIfNewScreen);"]) assert.ok(html.includes(piece), piece);
   assert.ok(/function render\(\) \{[^}]*fitStage\(\); \}/.test(html), 'measured after every render — the pills may have wrapped');
   assert.ok(html.includes('max-height:calc(var(--stage-h, 68vh) * 0.59)'), 'the flyer takes its share of the card, not of the screen');
   // The Results link shares the first row with the run picker.
@@ -2332,4 +2332,12 @@ test('out of reach: the deck page loads the outbox and registers its own worker,
   assert.ok(deck.includes("window.ReviewOutbox.create(") && deck.includes('waiting to send to the Mac'), 'the deck script uses it');
   const friend = require('../tools/serve-results').renderFriendPage();
   assert.ok(!friend.includes("register('/review-sw.js'") && !friend.includes('<script src="/review-outbox.js">'), 'the friend page on chunky.dad has its own worker');
+});
+
+test('phone fit: at phone width the header links are their icons (titles kept) and the run picker takes the room; a toolbar-sized resize does not refit the card', () => {
+  const html = renderReviewPage({ runId: 'r', cards: [], decided: [], counts: {}, friends: [] }, { runs: [], scriptName: 'display-saved-run', ctx: {} });
+  assert.ok(html.includes('.top .tool-buttons .secondary-button span { position:absolute; width:1px; height:1px;'), 'the words leave the row but stay for screen readers');
+  assert.ok(html.includes('title="Source audit" aria-label="Source audit"') && html.includes('title="Metrics" aria-label="Metrics"') && html.includes('title="Results" aria-label="Results"'));
+  assert.ok(html.includes("if (w === fitted.w && Math.abs(h - fitted.h) < 160) return;"), 'a toolbar collapse is not a new screen');
+  assert.ok(html.includes("window.addEventListener('resize', refitIfNewScreen);") && !html.includes("window.addEventListener('resize', fitStage);"));
 });

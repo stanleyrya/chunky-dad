@@ -1707,7 +1707,18 @@ a { color:var(--accent); }
 @media (max-width: 560px) { .top .tool-buttons { width:100%; margin-left:0; } .top .tool-buttons > * { flex:1 1 0; min-width:0; } }
 /* Every row of the header is a row the card does not get: on a phone the
    Results link shares the first row with the run picker instead of taking
-   a row of its own under the pills, and the age line and pills follow. */
+   a row of its own under the pills, and the age line and pills follow.
+   Four things on that row (the run, Results, Source audit, Metrics) do not
+   fit with their words at phone width — the words overran their icons and
+   each other (2026-10-26) — so there the links are their icons (each keeps
+   its title), and the run picker takes the room they give up. The friend
+   page's orange Send back keeps its words: it is the one button there. */
+@media (max-width: 560px) {
+  .top .tool-buttons .secondary-button span { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .top .tool-buttons a.secondary-button { flex:0 0 auto; padding:9px 12px; }
+  .top .tool-buttons a.secondary-button i { font-size:17px; }
+  .top .tool-buttons select.action-button { flex:1 1 0; }
+}
 
 .top h1 { margin:0; min-width:0; }
 .top h1 .logo { width:34px; height:34px; }
@@ -1983,7 +1994,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
   <h1><a class="brand" href="https://chunky.dad/" aria-label="chunky.dad home"><img class="logo" src="/favicons/favicon-96x96.png" srcset="/favicons/favicon-96x96.png 1x, /favicons/favicon-192x192.png 2x" alt="" width="34" height="34"><span class="brand-name">chunky.dad</span><span class="tool-page-label" id="top-title">${options.friendMode === true ? 'Phone a friend' : 'Review'}</span></a></h1>
   <div class="tool-buttons">
     <select id="run-select" class="action-button secondary-button" aria-label="Run" onchange="location.href='/review?run='+encodeURIComponent(this.value)">${runOptions}</select>
-    <a id="results-link" class="action-button secondary-button" href="/"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>${options.friendMode === true ? '' : `\n    <a id="source-audit-link" class="action-button secondary-button" href="/review/source-audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit${Number(options.sourceAuditOpen) > 0 ? ` (${Number(options.sourceAuditOpen)})` : ''}</span></a>\n    <a id="metrics-link" class="action-button secondary-button" href="/metrics"><i class="bi bi-activity" aria-hidden="true"></i><span>Metrics</span></a>`}
+    <a id="results-link" class="action-button secondary-button" href="/" title="Results" aria-label="Results"><i class="bi bi-list-ul" aria-hidden="true"></i><span>Results</span></a>${options.friendMode === true ? '' : `\n    <a id="source-audit-link" class="action-button secondary-button" href="/review/source-audit" title="Source audit" aria-label="Source audit"><i class="bi bi-search" aria-hidden="true"></i><span>Source audit${Number(options.sourceAuditOpen) > 0 ? ` (${Number(options.sourceAuditOpen)})` : ''}</span></a>\n    <a id="metrics-link" class="action-button secondary-button" href="/metrics" title="Metrics" aria-label="Metrics"><i class="bi bi-activity" aria-hidden="true"></i><span>Metrics</span></a>`}
     <a id="friend-sms" class="action-button primary-button" href="#"><i class="bi bi-send" aria-hidden="true"></i><span id="friend-send-label">Send back</span></a>
   </div>
 </header>
@@ -2531,8 +2542,19 @@ window.__startDeck = function () {
     var room = Math.floor(window.innerHeight - above - controls.offsetHeight - hint.offsetHeight - 14);
     document.documentElement.style.setProperty('--stage-h', Math.max(280, Math.min(640, room)) + 'px');
   }
-  window.addEventListener('resize', fitStage);
-  window.addEventListener('orientationchange', fitStage);
+  // iPhone Safari fires resize as its toolbars slide away on scroll, ~60–120px
+  // of height with the same width; refitting then made the card change size
+  // mid-scroll. A refit is for a new screen: a width change, or a height
+  // change bigger than any toolbar (rotation, split view, the keyboard).
+  var fitted = { w: window.innerWidth, h: window.innerHeight };
+  function refitIfNewScreen() {
+    var w = window.innerWidth, h = window.innerHeight;
+    if (w === fitted.w && Math.abs(h - fitted.h) < 160) return;
+    fitted = { w: w, h: h };
+    fitStage();
+  }
+  window.addEventListener('resize', refitIfNewScreen);
+  window.addEventListener('orientationchange', function () { fitted = { w: 0, h: 0 }; fitStage(); });
   function render() { renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderOutbox(); renderWaiting(); renderFriends(); renderDecided(); fitStage(); }
 
   // ---- views: the stack, the same cards as a list, or the sources ----
