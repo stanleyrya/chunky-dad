@@ -1970,6 +1970,33 @@ test('run-once: the network is waited for, then the run aborts before any parser
   assert.equal((await runOnce.waitForNetwork({ env: {}, fetch: async () => ({ ok: false, status: 404 }), sleep: async () => {} })).attempts, 1);
 });
 
+test('run-once: the AI servers the config names must answer before any parser work — a model still loading is waited for, a dead name aborts loudly, replays and disabled AI ask nothing', async () => {
+  const config = { config: { ai: { enabled: true, endpoint: 'http://rybook.pumpkinseed-rainbow.ts.net:8000/v1/chat/completions', provider: 'openai' }, ocr: { enabled: true, endpoint: 'http://rybook.pumpkinseed-rainbow.ts.net:8001/v1/chat/completions', provider: 'openai' } } };
+  assert.deepEqual(runOnce.aiHealthUrls(config).map((s) => [s.label, s.health]), [['text', 'http://rybook.pumpkinseed-rainbow.ts.net:8000/health'], ['vision', 'http://rybook.pumpkinseed-rainbow.ts.net:8001/health']]);
+  assert.deepEqual(runOnce.aiHealthUrls({ config: { ai: { enabled: true, endpoint: 'http://desktop:11434/api/generate', provider: 'ollama' }, ocr: { enabled: false, endpoint: 'http://x:8001/v1' } } }).map((s) => s.health), ['http://desktop:11434/api/tags']);
+  // The vision server loads its model for two attempts (503), then both answer.
+  const asked = []; const sleeps = [];
+  let calls = 0;
+  const loading = async (url) => { asked.push(url); if (url.includes(':8001') && ++calls <= 2) return { ok: false, status: 503 }; return { ok: true, status: 200 }; };
+  const logs = [];
+  const up = await runOnce.waitForAiServers(config, { env: {}, fetch: loading, sleep: async (ms) => { sleeps.push(ms); }, attempts: 5, gapMs: 15000, log: (l) => logs.push(l) });
+  assert.deepEqual(up, { skipped: false, attempts: 3, servers: ['text', 'vision'] });
+  assert.deepEqual(sleeps, [15000, 15000]);
+  assert.equal(asked.filter((u) => u.includes(':8000')).length, 1, 'a server that answered is not asked again');
+  assert.match(logs[0], /vision: HTTP 503 .* waiting up to 1 min/);
+  // A name that no longer resolves: every attempt fails fast, then the run aborts.
+  let dead = 0;
+  await assert.rejects(
+    runOnce.waitForAiServers(config, { env: {}, fetch: async () => { dead++; throw new TypeError('fetch failed'); }, sleep: async () => {}, attempts: 3, gapMs: 1, log: () => {} }),
+    /AI server\(s\) unreachable after 3 attempts — text: fetch failed \(http:\/\/rybook[^)]*:8000\/health\); vision: fetch failed .* — ABORTING before any parser work \(no partial runs/
+  );
+  assert.equal(dead, 6);
+  let skipped = 0;
+  assert.deepEqual(await runOnce.waitForAiServers(config, { env: { CHUNKY_SKIP_NETWORK_PREFLIGHT: '1' }, fetch: async () => { skipped++; } }), { skipped: true, servers: [] });
+  assert.deepEqual(await runOnce.waitForAiServers({ config: { ai: { enabled: false, endpoint: 'http://x:8000/v1' } } }, { env: {}, fetch: async () => { skipped++; } }), { skipped: true, servers: [] });
+  assert.equal(skipped, 0);
+});
+
 test('run-once: a run that could not read the saved calendars is discarded, not written', () => {
   const { SharedCore } = require(path.join(__dirname, 'shared-core'));
   assert.equal(runOnce.assertCalendarsWereRead({ publishedCalendarSnapshots: { nyc: { status: 'ok' }, sydney: { status: 'unavailable', reason: 'missing' } } }, SharedCore).degraded, false);
