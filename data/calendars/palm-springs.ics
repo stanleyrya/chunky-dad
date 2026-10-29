@@ -26,7 +26,7 @@ END:VTIMEZONE
 BEGIN:VEVENT
 DTSTART:20261015T160000Z
 DTEND:20261019T065959Z
-DTSTAMP:20261011T203743Z
+DTSTAMP:20261029T100517Z
 UID:E7DD7B68-E0A5-485C-A244-88F7F3E58450
 CREATED:20260919T161250Z
 DESCRIPTION:description: Western Xposure's XXL is weekend 2 of Western Xpos
@@ -53,9 +53,106 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART;TZID=America/Los_Angeles:20261104T190000
+DTEND;TZID=America/Los_Angeles:20261104T220000
+RRULE:FREQ=MONTHLY;BYDAY=1WE
+DTSTAMP:20261029T100517Z
+UID:woof-20261011T020000Z@chunky.dad
+CREATED:20261011T200917Z
+DESCRIPTION:description: Monthly bear party at Dick's on Arenas\, first Wed
+ nesday of the month\, 7–10pm. Guest DJs every time.\nbar: Dick's on Arenas\
+ naddress: 301 E Arenas Rd\, Palm Springs\, CA 92262\ninstagram: https://www
+ .instagram.com/woof.ps\nfavicon: https://www.instagram.com/woof.ps\nrecurre
+ nce: FREQ=MONTHLY\;BYDAY=1WE
+LAST-MODIFIED:20261011T200919Z
+LOCATION:33.8210557\, -116.5444345
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:WOOF
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260925T070000Z
+DTEND:20260928T065959Z
+DTSTAMP:20261029T100517Z
+UID:1FF301F0-00FE-4849-BB32-A779D9362E83
+CREATED:20260919T161248Z
+DESCRIPTION:bar: Casa Oliver\naddress: 535 South Warm Sands Drive\, Palm Sp
+ rings\, California\nwebsite: https://www.sticky-rice.org/\nticketUrl: https
+ ://forms.gle/TCYs6qPPvVoQoPMD7\nimage: https://acqvlhciredwtlbpisso.supabas
+ e.co/storage/v1/object/public/event-images/3db056113273d048.jpg\nimageSourc
+ e: json-api\ncover: $25\ntimezone: America/Los_Angeles\nimageVertical: http
+ s://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/
+ 3db056113273d048.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com
+ /maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20D
+ rive%2C%20Palm%20Springs%2C%20California\npinSource: geocoded-exact\nbarSou
+ rce: geo-poi\nkey: sticky-rice|2026-09-25|casa oliver\nbearSource: ai\nshor
+ tName: STICKY RICE
+LAST-MODIFIED:20260919T161248Z
+LOCATION:33.8147765\, -116.5376249
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Sticky Rice
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261107T060000Z
+DTEND:20261107T100000Z
+DTSTAMP:20261029T100517Z
+UID:23BBF494-F864-4D6E-A461-70D7CC0DAA0E
+CREATED:20261009T134029Z
+DESCRIPTION:description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na
+ ddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: h
+ ttps://www.tickettailor.com/events/toucanstikilounge\nimage: https://static
+ .wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimage
+ Vertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b927
+ 2b94a4887~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ni
+ nstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/fur
+ ballnyc\nkey: furball-palm-springs-pride|2026-11-07|toucans tiki lounge\nbe
+ arSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSou
+ rce: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/sea
+ rch/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE
+LAST-MODIFIED:20261010T213256Z
+LOCATION:33.8486910\, -116.5480960
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL Palm Springs PRIDE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261109T000000Z
+DTEND:20261109T030000Z
+DTSTAMP:20261029T100517Z
+UID:34376345-A67F-4D37-B4BC-DD39395A1BEB
+CREATED:20261029T100434Z
+DESCRIPTION:description: Drag Show-Dance Party\nbar: Toucans\naddress: 9226
+ 2\ntimezone: America/Los_Angeles\nimage: https://uploads.tickettailorassets
+ .com/c_crop\,dpr_1.0\,h_1000\,q_100\,w_1000\,x_0\,y_0/c_scale\,dpr_2.0\,h_2
+ 50\,q_85\,w_250/v1/production/userfiles/klw7tsa9avnrpnexfm96.jpg?_a=BAAHWXD
+ Q\ncover: $200\nimageSource: page\naddressSource: page\nwebsite: https://ww
+ w.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=33.84
+ 8691%2C-116.548096\npinSource: curated\nshortName: FUR­BALL\ninstagram: htt
+ ps://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey:
+  meatball-presents-fat-slut-drag-show-and-dance-party|2026-11-09|toucans\nt
+ icketUrl: https://www.tickettailor.com/events/toucanstikilounge\nbearSource
+ : keyword\nendUnknown: true
+LAST-MODIFIED:20261029T100434Z
+LOCATION:33.8486910\, -116.5480960
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Meatball Presents "Fat Slut Drag Show and Dance Party"
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260911T180000Z
 DTEND:20260914T070000Z
-DTSTAMP:20261011T203743Z
+DTSTAMP:20261029T100517Z
 UID:E21A39AC-AC29-47E3-A8C2-23C3D36AD105
 CREATED:20260802T134345Z
 DESCRIPTION:bar: CCBC Resort\naddress: 68-300 Gay Resort Dr\, Cathedral Cit
@@ -86,28 +183,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART;TZID=America/Los_Angeles:20261104T190000
-DTEND;TZID=America/Los_Angeles:20261104T220000
-RRULE:FREQ=MONTHLY;BYDAY=1WE
-DTSTAMP:20261011T203743Z
-UID:woof-20261011T020000Z@chunky.dad
-CREATED:20261011T200917Z
-DESCRIPTION:description: Monthly bear party at Dick's on Arenas\, first Wed
- nesday of the month\, 7–10pm. Guest DJs every time.\nbar: Dick's on Arenas\
- naddress: 301 E Arenas Rd\, Palm Springs\, CA 92262\ninstagram: https://www
- .instagram.com/woof.ps\nfavicon: https://www.instagram.com/woof.ps\nrecurre
- nce: FREQ=MONTHLY\;BYDAY=1WE
-LAST-MODIFIED:20261011T200919Z
-LOCATION:33.8210557\, -116.5444345
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:WOOF
-TRANSP:OPAQUE
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260222T050000Z
 DTEND:20260222T200000Z
-DTSTAMP:20261011T203743Z
+DTSTAMP:20261029T100517Z
 UID:88686A1C-DD82-4C9B-A917-74B3647FD814
 CREATED:20260117T210201Z
 DESCRIPTION:description: SHINY DISCO BALLS IBC WEEKEND\nbar: Palm Springs\n
@@ -132,67 +210,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260925T070000Z
-DTEND:20260928T065959Z
-DTSTAMP:20261011T203743Z
-UID:1FF301F0-00FE-4849-BB32-A779D9362E83
-CREATED:20260919T161248Z
-DESCRIPTION:bar: Casa Oliver\naddress: 535 South Warm Sands Drive\, Palm Sp
- rings\, California\nwebsite: https://www.sticky-rice.org/\nticketUrl: https
- ://forms.gle/TCYs6qPPvVoQoPMD7\nimage: https://acqvlhciredwtlbpisso.supabas
- e.co/storage/v1/object/public/event-images/3db056113273d048.jpg\nimageSourc
- e: json-api\ncover: $25\ntimezone: America/Los_Angeles\nimageVertical: http
- s://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/
- 3db056113273d048.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com
- /maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20D
- rive%2C%20Palm%20Springs%2C%20California\npinSource: geocoded-exact\nbarSou
- rce: geo-poi\nkey: sticky-rice|2026-09-25|casa oliver\nbearSource: ai\nshor
- tName: STICKY RICE
-LAST-MODIFIED:20260919T161248Z
-LOCATION:33.8147765\, -116.5376249
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Sticky Rice
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261224T180000Z
-DTEND:20261228T030000Z
-DTSTAMP:20261011T203743Z
-UID:F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC
-CREATED:20260930T202318Z
-DESCRIPTION:description: Celebrate the season with your chosen family at We
- stern Xposure's new holiday tradition.\nbar: CCBC Resort Hotel\naddress: 68
- -300 Gay Resort Drive\, Cathedral City\, CA 92234\nticketUrl: https://www.e
- ventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-19995022159
- 53\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F106
- 3551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=c
- rop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88
- b9bca8b332b547e6570152d5\nimageSource: jsonld\ncover: $28.52-$161.90\ntimez
- one: America/Los_Angeles\nimageHorizontal: https://img.evbuc.com/https%3A%2
- F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250
- 630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp
- =10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5\nbarSource: curate
- d\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&qu
- ery=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral
- %20City%2C%20CA%2092234\npinSource: curated\nkey: western-x-mas-holiday-bea
- r-retreat-2026|2026-12-24|ccbc resort hotel\nbearSource: keyword\nshortName
- : WESTERN XMAS
-LAST-MODIFIED:20260930T202318Z
-LOCATION:33.7796835\, -116.4689784
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Western X-Mas: Holiday Bear Retreat 2026
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20261008T160000Z
 DTEND:20261012T065959Z
-DTSTAMP:20261011T203743Z
+DTSTAMP:20261029T100517Z
 UID:CF94E9E5-F620-4918-AB7E-6B3BC007FB5C
 CREATED:20260919T161250Z
 DESCRIPTION:description: Western Xposure's HAUNTED GAY RESORT returns this 
@@ -221,27 +241,33 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261107T060000Z
-DTEND:20261107T100000Z
-DTSTAMP:20261011T203743Z
-UID:23BBF494-F864-4D6E-A461-70D7CC0DAA0E
-CREATED:20261009T134029Z
-DESCRIPTION:description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na
- ddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: h
- ttps://www.tickettailor.com/events/toucanstikilounge\nimage: https://static
- .wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimage
- Vertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b927
- 2b94a4887~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ni
- nstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/fur
- ballnyc\nkey: furball-palm-springs-pride|2026-11-07|toucans tiki lounge\nbe
- arSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSou
- rce: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/sea
- rch/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE
-LAST-MODIFIED:20261010T213256Z
-LOCATION:33.8486910\, -116.5480960
+DTSTART:20261224T180000Z
+DTEND:20261228T030000Z
+DTSTAMP:20261029T100517Z
+UID:F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC
+CREATED:20260930T202318Z
+DESCRIPTION:description: Celebrate the season with your chosen family at We
+ stern Xposure's new holiday tradition.\nbar: CCBC Resort Hotel\naddress: 68
+ -300 Gay Resort Drive\, Cathedral City\, CA 92234\nticketUrl: https://www.e
+ ventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-19995022159
+ 53\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F106
+ 3551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=c
+ rop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88
+ b9bca8b332b547e6570152d5\nimageSource: jsonld\ncover: $28.52-$161.90\ntimez
+ one: America/Los_Angeles\nimageHorizontal: https://img.evbuc.com/https%3A%2
+ F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250
+ 630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp
+ =10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5\nbarSource: curate
+ d\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&qu
+ ery=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral
+ %20City%2C%20CA%2092234\npinSource: curated\nkey: western-x-mas-holiday-bea
+ r-retreat-2026|2026-12-24|ccbc resort hotel\nbearSource: keyword\nshortName
+ : WESTERN XMAS
+LAST-MODIFIED:20260930T202318Z
+LOCATION:33.7796835\, -116.4689784
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:FURBALL Palm Springs PRIDE
+SUMMARY:Western X-Mas: Holiday Bear Retreat 2026
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

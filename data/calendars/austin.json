@@ -5,60 +5,6 @@
   },
   "events": [
     {
-      "name": "CLUB CHUB: AUSTIN HORROR STORY: COVEN",
-      "day": "Saturday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 30.2684429,
-        "lng": -97.745511
-      },
-      "startDate": "2026-10-24T21:00:00",
-      "endDate": "2026-10-25T02:00:00",
-      "unprocessedDescription": "description: Something wicked—and wonderfully chubby—is coming \rto Austin. Club Chub presents AUSTIN HORROR STORY\\: COVEN on Saturday, October 24 at The Iron Bear.\nbar: THE IRON BEAR AUSTIN\naddress: 301 W 6th St, Austin, TX 78701, USA\ntimezone: America/Chicago\nimage: https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg\npinSource: page\naddressSource: page\nwebsite: https://www.clubchubusa.com/event-details/austin-horror-story-coven\ngmaps: https://www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-austin-horror-story-coven|2026-10-25|the iron bear austin\nimageSource: page\nbarSource: uncorroborated\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "7A8C19B1-A286-4369-967F-2A8E8A79472B",
-      "uid": "7A8C19B1-A286-4369-967F-2A8E8A79472B",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "THE IRON BEAR AUSTIN",
-      "image": "https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg",
-      "favicon": "https://www.clubchubusa.com",
-      "tea": "Something wicked—and wonderfully chubby—is coming to Austin. Club Chub presents AUSTIN HORROR STORY: COVEN on Saturday, October 24 at The Iron Bear.",
-      "cadence": null,
-      "address": "301 W 6th St, Austin, TX 78701, USA",
-      "website": "https://www.clubchubusa.com/event-details/austin-horror-story-coven",
-      "instagram": "https://www.instagram.com/clubchubparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511",
-      "shortName": "CLUB CHUB",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.clubchubusa.com/event-details/austin-horror-story-coven",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "club-chub-austin-horror-story-coven-601fbd6d"
-    },
-    {
       "name": "MEGAWOOF AMERICA - AUSTIN DEBUT - HALLOWEEN SPECIAL",
       "day": "Friday",
       "time": "9PM-2AM",
@@ -118,6 +64,122 @@
         }
       ],
       "slug": "megawoof-america-austin-debut-halloween-special-587f53a0"
+    },
+    {
+      "name": "CLUB CHUB: AUSTIN HORROR STORY: COVEN",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 30.2684429,
+        "lng": -97.745511
+      },
+      "startDate": "2026-10-24T21:00:00",
+      "endDate": "2026-10-25T02:00:00",
+      "unprocessedDescription": "description: Something wicked—and wonderfully chubby—is coming \rto Austin. Club Chub presents AUSTIN HORROR STORY\\: COVEN on Saturday, October 24 at The Iron Bear.\nbar: THE IRON BEAR AUSTIN\naddress: 301 W 6th St, Austin, TX 78701, USA\ntimezone: America/Chicago\nimage: https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg\npinSource: page\naddressSource: page\nwebsite: https://www.clubchubusa.com/event-details/austin-horror-story-coven\ngmaps: https://www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-austin-horror-story-coven|2026-10-25|the iron bear austin\nimageSource: page\nbarSource: uncorroborated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "7A8C19B1-A286-4369-967F-2A8E8A79472B",
+      "uid": "7A8C19B1-A286-4369-967F-2A8E8A79472B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "THE IRON BEAR AUSTIN",
+      "image": "https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/f91121_6840b0ed32b94d459f26bf404854e91e~mv2.jpg",
+      "favicon": "https://www.clubchubusa.com",
+      "tea": "Something wicked—and wonderfully chubby—is coming to Austin. Club Chub presents AUSTIN HORROR STORY: COVEN on Saturday, October 24 at The Iron Bear.",
+      "cadence": null,
+      "address": "301 W 6th St, Austin, TX 78701, USA",
+      "website": "https://www.clubchubusa.com/event-details/austin-horror-story-coven",
+      "instagram": "https://www.instagram.com/clubchubparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511",
+      "shortName": "CLUB CHUB",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.clubchubusa.com/event-details/austin-horror-story-coven",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=30.2684429%2C-97.745511",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "club-chub-austin-horror-story-coven-601fbd6d"
+    },
+    {
+      "name": "FURBALL Austin",
+      "day": "Saturday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 30.3310359,
+        "lng": -97.6668989
+      },
+      "startDate": "2026-11-21T21:00:00",
+      "endDate": "2026-11-22T03:00:00",
+      "unprocessedDescription": "description: Joe Fiore Presents Furball Austin !Jock + Fetish +\r Gear Saturday, November 21, 2026Doors Open At 9\\:00 PM 🌀Music\\: DJ Chez Calabrese🌀🔷Eye Candy Alert - Hot Dancers bringing in the heat!!🔷Double DJ Power from DJ Boost Opening!!!🔷Austin Bears strutting their stuff in Jock + Gear!!! 21+ Underwear / Gear - encouraged but not required Clothes Check Available The Austin Eagle - 8201 Cross Park Drive Austin TX SPONSORS\\: Beefy Boy - BearSkn - MISTR\nbar: The Austin Eagle\naddress: 8201 Cross Park Drive Suite B2, Austin, TX 78754\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-austin-11-21-26\nimage: https://static.wixstatic.com/media/238fae_64e0c40260de4d69bde99d06fb797185~mv2.png\ncover: $10-$15\ntimezone: America/Chicago\nimageHorizontal: https://tlt-events.s3.amazonaws.com/120735/2214837/09be442c0e728af6970a50174ed6a0b0ddd265bd4eaac1d055bd3b26e306ba66/9d69d91a-3219-495c-8f50-b67067ba90f7.png\naddressSource: page\nwebsite: https://furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=30.3310359%2C-97.6668989\npinSource: geocoded-exact\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-austin|2026-11-22|the austin eagle\nimageVertical: https://static.wixstatic.com/media/238fae_64e0c40260de4d69bde99d06fb797185~mv2.png\nimageSource: page\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "EEF5F736-66E2-47C9-984A-26234F0A4EA2",
+      "uid": "EEF5F736-66E2-47C9-984A-26234F0A4EA2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Austin Eagle",
+      "cover": "$10-$15",
+      "image": "https://static.wixstatic.com/media/238fae_64e0c40260de4d69bde99d06fb797185~mv2.png",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_64e0c40260de4d69bde99d06fb797185~mv2.png",
+      "imageHorizontal": "https://tlt-events.s3.amazonaws.com/120735/2214837/09be442c0e728af6970a50174ed6a0b0ddd265bd4eaac1d055bd3b26e306ba66/9d69d91a-3219-495c-8f50-b67067ba90f7.png",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Joe Fiore Presents Furball Austin !Jock + Fetish + Gear Saturday, November 21, 2026Doors Open At 9:00 PM 🌀Music: DJ Chez Calabrese🌀🔷Eye Candy Alert - Hot Dancers bringing in the heat!!🔷Double DJ Power from DJ Boost Opening!!!🔷Austin Bears strutting their stuff in Jock + Gear!!! 21+ Underwear / Gear - encouraged but not required Clothes Check Available The Austin Eagle - 8201 Cross Park Drive Austin TX SPONSORS: Beefy Boy - BearSkn - MISTR",
+      "cadence": null,
+      "address": "8201 Cross Park Drive Suite B2, Austin, TX 78754",
+      "website": "https://furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=30.3310359%2C-97.6668989",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-austin-11-21-26",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=30.3310359%2C-97.6668989",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-austin-11-21-26",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-austin-0235c893"
     },
     {
       "name": "FURBALL Austin",

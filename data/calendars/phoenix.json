@@ -5,66 +5,6 @@
   },
   "events": [
     {
-      "name": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
-      "day": "Saturday",
-      "time": "9:30PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.4832996,
-        "lng": -112.0753159
-      },
-      "startDate": "2026-08-08T21:30:00",
-      "endDate": "2026-08-09T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: \rKobalt\naddress: 3110 North Central Avenue, #175, Phoenix, AZ 85012\nticketUrl: https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61\ncover: $11.58-$22.10\ntimezone: America/Phoenix\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nbearSource: keyword\nkey: megawoof-america-phoenix-summer-woofers|2026-08-09|kobalt\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Phoenix",
-      "wasUTC": true,
-      "sourceUid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
-      "uid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Kobalt",
-      "cover": "$11.58-$22.10",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61",
-      "favicon": "https://linktr.ee/megawoof_america",
-      "tea": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
-      "cadence": null,
-      "address": "3110 North Central Avenue, #175, Phoenix, AZ 85012",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-america-phoenix-summer-woofers-007d0b12"
-    },
-    {
       "name": "MEGAWOOF",
       "day": "Saturday",
       "time": "9PM-2AM",
@@ -122,6 +62,131 @@
         }
       ],
       "slug": "megawoof-2f8a9cb8"
+    },
+    {
+      "name": "Bearracuda Phoenix RELAUNCH Party!",
+      "day": "Saturday",
+      "time": "9:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 3110,
+        "lng": null
+      },
+      "startDate": "2026-05-23T21:30:00",
+      "unprocessedDescription": "description: Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23t\rh, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9\\:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!\nbar: Kobalt\naddress: 3110 N Central Ave\nticketUrl: https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp\ncover: EARLY BEAR\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/phoenix/\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave\nkey: bearracuda-2026-05-24-phoenix\ntimezone: America/Phoenix",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Phoenix",
+      "wasUTC": true,
+      "sourceUid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
+      "uid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "Kobalt",
+      "cover": "EARLY BEAR",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp",
+      "tea": "Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23th, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!",
+      "cadence": null,
+      "address": "3110 N Central Ave",
+      "website": "https://bearracuda.com/events/phoenix/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
+      "ticketUrl": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
+      "shortName": "Bear-rac-uda",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/phoenix/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearracuda-phoenix-relaunch-party-320faa75"
+    },
+    {
+      "name": "Treasure Trail Phoenix: Wish Boned",
+      "day": "Saturday",
+      "time": "9:30PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.4977695,
+        "lng": -112.0823699
+      },
+      "startDate": "2026-11-21T21:30:00",
+      "endDate": "2026-11-22T02:00:00",
+      "unprocessedDescription": "description: Treasure Trail makes it debut in Phoenix and we in\rvite you to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab a wristband when you walk in\\: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You can choose one when you arrive or go without one. Knowing someones preference helps break the ice. Consent is mandatory. Clothes Check Available Hosted by JP Hardy Music by DJ Hi Sir\nbar: Royale\naddress: 635 W Glenrosa Ave, Phoenix, Arizona, AZ 85013\nticketUrl: https://www.sickening.events/e/treasuretrail-phoenix/tickets\nimage: https://bearracuda.com/wp-content/uploads/2026/08/newttphxweb-819x1024.jpg\ncover: $15\ntimezone: America/Phoenix\naddressSource: page\nwebsite: https://bearracuda.com/events/phoenixtt/\ngmaps: https://www.google.com/maps/search/?api=1&query=Royale%2C%20635%20W%20Glenrosa%20Ave%2C%20Phoenix%2C%20Arizona%2C%20AZ%2085013\npinSource: curated\nshortName: TREAS­URE TRAIL\ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracuda.com/\nkey: treasure-trail-phoenix-wish-boned|2026-11-22|royale\nfacebook: https://www.facebook.com/bearracuda/\nendNote: late\nimageVertical: https://bearracuda.com/wp-content/uploads/2026/08/newttphxweb-819x1024.jpg\nimageSource: og-image\nbarSource: curated\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Phoenix",
+      "wasUTC": true,
+      "sourceUid": "B74122C0-789A-4EC5-AB41-9FB1B22BD8D1",
+      "uid": "B74122C0-789A-4EC5-AB41-9FB1B22BD8D1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Royale",
+      "cover": "$15",
+      "image": "https://bearracuda.com/wp-content/uploads/2026/08/newttphxweb-819x1024.jpg",
+      "imageVertical": "https://bearracuda.com/wp-content/uploads/2026/08/newttphxweb-819x1024.jpg",
+      "favicon": "https://bearracuda.com/",
+      "tea": "Treasure Trail makes it debut in Phoenix and we invite you to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab a wristband when you walk in: Red Wristband TOP Blue Wristband VERS Green Wristband BOTTOM White Wristband SIDE You can choose one when you arrive or go without one. Knowing someones preference helps break the ice. Consent is mandatory. Clothes Check Available Hosted by JP Hardy Music by DJ Hi Sir",
+      "cadence": null,
+      "address": "635 W Glenrosa Ave, Phoenix, Arizona, AZ 85013",
+      "website": "https://bearracuda.com/events/phoenixtt/",
+      "instagram": "https://www.instagram.com/bearracuda",
+      "facebook": "https://www.facebook.com/bearracuda/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Royale%2C%20635%20W%20Glenrosa%20Ave%2C%20Phoenix%2C%20Arizona%2C%20AZ%2085013",
+      "ticketUrl": "https://www.sickening.events/e/treasuretrail-phoenix/tickets",
+      "shortName": "TREAS­URE TRAIL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearracuda.com/events/phoenixtt/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearracuda",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/bearracuda/",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Royale%2C%20635%20W%20Glenrosa%20Ave%2C%20Phoenix%2C%20Arizona%2C%20AZ%2085013",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/treasuretrail-phoenix/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "treasure-trail-phoenix-wish-boned-73e9c798"
     },
     {
       "name": "BEARRACUDA: PHOENIX PRIDE",
@@ -191,62 +256,125 @@
       "slug": "bearracuda-phoenix-pride-16d08e9d"
     },
     {
-      "name": "Bearracuda Phoenix RELAUNCH Party!",
+      "name": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
       "day": "Saturday",
-      "time": "9:30PM",
+      "time": "9:30PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 3110,
-        "lng": null
+        "lat": 33.4832996,
+        "lng": -112.0753159
       },
-      "startDate": "2026-05-23T21:30:00",
-      "unprocessedDescription": "description: Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23t\rh, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9\\:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!\nbar: Kobalt\naddress: 3110 N Central Ave\nticketUrl: https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets\ninstagram: https://www.instagram.com/bearracuda\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp\ncover: EARLY BEAR\nshortName: Bear-rac-uda\nwebsite: https://bearracuda.com/events/phoenix/\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave\nkey: bearracuda-2026-05-24-phoenix\ntimezone: America/Phoenix",
+      "startDate": "2026-08-08T21:30:00",
+      "endDate": "2026-08-09T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: \rKobalt\naddress: 3110 North Central Avenue, #175, Phoenix, AZ 85012\nticketUrl: https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61\ncover: $11.58-$22.10\ntimezone: America/Phoenix\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nbearSource: keyword\nkey: megawoof-america-phoenix-summer-woofers|2026-08-09|kobalt\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Phoenix",
       "wasUTC": true,
-      "sourceUid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
-      "uid": "9165A83C-32B2-497F-A522-7C5ADF7B9A2A",
+      "sourceUid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
+      "uid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 1,
+      "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Kobalt",
-      "cover": "EARLY BEAR",
-      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1775591376/saas/logos/image_1775591369401_a4demr8jg.webp",
-      "tea": "Bearracuda PhoenixRELAUNCH PARTYSaturday, May 23th, 2026DJ Freddy King of Pants (Seattle) Hosted by JP Hardy Kobalt - 3110 N. Central AveHOT GoGos All nightAdv. tix at Bearracuda.com - Doors at 9:30pmBearracuda is back in PHOENIX after a 6 year hiatus! Now at Kobalt! Join 100s of guys dancing til late, with sexy GoGos, chunky visuals and YOU!",
+      "cover": "$11.58-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61",
+      "favicon": "https://linktr.ee/megawoof_america",
+      "tea": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
       "cadence": null,
-      "address": "3110 N Central Ave",
-      "website": "https://bearracuda.com/events/phoenix/",
-      "instagram": "https://www.instagram.com/bearracuda",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
-      "ticketUrl": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
-      "shortName": "Bear-rac-uda",
+      "address": "3110 North Central Avenue, #175, Phoenix, AZ 85012",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
+      "shortName": "MEGA-WOOF",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearracuda.com/events/phoenix/",
+          "url": "https://linktr.ee/megawoof_america",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://www.instagram.com/bearracuda",
+          "url": "https://www.instagram.com/megawoof_america",
           "label": "📷 Instagram"
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20Central%20Ave",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.sickening.events/e/bearracuda-phoenix-relaunch-party/tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearracuda-phoenix-relaunch-party-320faa75"
+      "slug": "megawoof-america-phoenix-summer-woofers-007d0b12"
+    },
+    {
+      "name": "MEGAWOOF PHOENIX - BLACK OUT...",
+      "day": "Saturday",
+      "time": "9:30PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.5199151,
+        "lng": -112.0737137
+      },
+      "startDate": "2026-11-28T21:30:00",
+      "endDate": "2026-11-29T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF PHOENIX - BLACK OUT...\nbar: North Centra\rl Avenue\naddress: North Central Avenue, Phoenix, AZ 85012\nticketUrl: https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\nimageSource: jsonld\ncover: $11.58-$22.10\ntimezone: America/Phoenix\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\naddressSource: page\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.5199151%2C-112.0737137\npinSource: geocoded-approx\nshortName: MEGA­WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-phoenix-black-out|2026-11-29|north central avenue\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Phoenix",
+      "wasUTC": true,
+      "sourceUid": "80A14257-C100-4528-9AA2-30633F446B56",
+      "uid": "80A14257-C100-4528-9AA2-30633F446B56",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "North Central Avenue",
+      "cover": "$11.58-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972",
+      "imageVertical": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972",
+      "favicon": "https://linktr.ee/megawoof_america",
+      "tea": "MEGAWOOF PHOENIX - BLACK OUT...",
+      "cadence": null,
+      "address": "North Central Avenue, Phoenix, AZ 85012",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.5199151%2C-112.0737137",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802",
+      "shortName": "MEGA­WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.5199151%2C-112.0737137",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-phoenix-black-out-5030927e"
     }
   ]
 }

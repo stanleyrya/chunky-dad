@@ -5,259 +5,50 @@
   },
   "events": [
     {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
+      "name": "FLW – LEATHER NIGHT",
+      "day": "Sunday",
+      "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
+        "lat": 26.14626,
+        "lng": -80.1403612
       },
-      "startDate": "2027-01-08T21:30:00",
-      "endDate": "2027-01-09T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-08/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-09|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2026-11-08T21:00:00",
+      "endDate": "2026-11-09T02:00:00",
+      "unprocessedDescription": "description: FLW – LEATHER NIGHT The official Welcome Party of \rFlorida Leather Week kicks off at RAMROD. Fort Lauderdale’s legendary leather bar where the lights are low and anything can happen. Come ready to cruise, dance, and connect with your tribe.\nbar: Ramrod\nwebsite: https://eaglebarwm.com/event/flw-chili-cook-off-3/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/26-11-08_ramrod_Square_1080x1080.png?wsr\nimageSource: json-api\ntimezone: America/New_York\ngmaps: https://www.google.com/maps/search/?api=1&query=Ramrod%2C%20Northeast%204th%20Avenue%2C%20Fort%20Lauderdale%2C%20Florida\naddress: Northeast 4th Avenue, Fort Lauderdale, Florida\naddressSource: geo-poi\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: flw-–-leather-night|2026-11-09|ramrod\nbearSource: keyword\nshortName: FLW",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "1A8A00CF-E097-493F-A8DD-72AFC5ABB4E7",
-      "uid": "1A8A00CF-E097-493F-A8DD-72AFC5ABB4E7",
+      "sourceUid": "FDA6940B-8862-41BA-94D4-3F9B603F50CF",
+      "uid": "FDA6940B-8862-41BA-94D4-3F9B603F50CF",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "bar": "Ramrod",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/26-11-08_ramrod_Square_1080x1080.png?wsr",
+      "tea": "FLW – LEATHER NIGHT The official Welcome Party of Florida Leather Week kicks off at RAMROD. Fort Lauderdale’s legendary leather bar where the lights are low and anything can happen. Come ready to cruise, dance, and connect with your tribe.",
       "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-08/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "address": "Northeast 4th Avenue, Fort Lauderdale, Florida",
+      "website": "https://eaglebarwm.com/event/flw-chili-cook-off-3/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ramrod%2C%20Northeast%204th%20Avenue%2C%20Fort%20Lauderdale%2C%20Florida",
+      "shortName": "FLW",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-08/",
+          "url": "https://eaglebarwm.com/event/flw-chili-cook-off-3/",
           "label": "🌐 Website"
         },
         {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "url": "https://www.google.com/maps/search/?api=1&query=Ramrod%2C%20Northeast%204th%20Avenue%2C%20Fort%20Lauderdale%2C%20Florida",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-12d6d275"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-11-28T21:30:00",
-      "endDate": "2026-11-29T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-28/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-29|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "68CCFDC2-16CA-47E8-8EB2-7FB3ABBF828F",
-      "uid": "68CCFDC2-16CA-47E8-8EB2-7FB3ABBF828F",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-28/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-28/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-5088aad2"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-12-26T21:30:00",
-      "endDate": "2026-12-27T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-26/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-27|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "97B99334-C50B-422C-B94A-6ACBA666C560",
-      "uid": "97B99334-C50B-422C-B94A-6ACBA666C560",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-26/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-26/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-44ce18be"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-10-09T21:30:00",
-      "endDate": "2026-10-10T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-10|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "B81AD4F4-8388-447B-A5E0-22ADFEF5B854",
-      "uid": "B81AD4F4-8388-447B-A5E0-22ADFEF5B854",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-7978927b"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-12-12T21:30:00",
-      "endDate": "2026-12-13T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-12/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-13|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "36553BFC-A0E9-4379-9D21-23A66B9885C1",
-      "uid": "36553BFC-A0E9-4379-9D21-23A66B9885C1",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-12/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-12/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-0800982f"
+      "slug": "flw-leather-night-55e3cfe4"
     },
     {
       "name": "DADDY POP",
@@ -362,158 +153,6 @@
       "slug": "daddy-pop-4a29495a"
     },
     {
-      "name": "HONEY POT",
-      "day": "Wednesday",
-      "time": "6PM-8PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-12-16T18:00:00",
-      "endDate": "2026-12-16T20:00:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-12-16|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "1BDF53F0-F5CF-45DE-82C7-9A3E479282C2",
-      "uid": "1BDF53F0-F5CF-45DE-82C7-9A3E479282C2",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
-      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "honey-pot-3e2ea5a4"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-11-06T21:30:00",
-      "endDate": "2026-11-07T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-06/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-07|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "EC2242AB-ADB0-4754-A102-1FDC6346E89E",
-      "uid": "EC2242AB-ADB0-4754-A102-1FDC6346E89E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-06/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-06/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-5e31d272"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-12-18T21:30:00",
-      "endDate": "2026-12-19T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-18/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-19|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "4257669B-E157-4D5D-AFCB-BB8C349904F6",
-      "uid": "4257669B-E157-4D5D-AFCB-BB8C349904F6",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-18/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-18/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-1a5fc9d6"
-    },
-    {
       "name": "DADDY POP",
       "day": "Saturday",
       "time": "9:30PM-2:30AM",
@@ -565,41 +204,87 @@
       "slug": "daddy-pop-17a88367"
     },
     {
-      "name": "BULLPEN",
+      "name": "Cannonball Bash 2026",
+      "day": "Wednesday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.205331,
+        "lng": -80.139493
+      },
+      "startDate": "2026-10-28T00:00:00",
+      "endDate": "2026-11-02T23:59:59",
+      "unprocessedDescription": "bar: The Westin Fort Lauderdale\naddress: 400 Corporate Drive,\r Fort Lauderdale, Florida\nwebsite: https://cannonballbash.com/product/registration-package/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/d6a501726d7dc880.png\ncover: $65-$379\ntimezone: America/New_York\nkey: cannonball-bash-2026|2026-10-28|the westin fort lauderdale\nbearSource: ai\nshortName: CANNONBALL\npinSource: curated\naddressSource: geo-poi\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Westin%20Fort%20Lauderdale%2C%20400%20Corporate%20Drive%2C%20Fort%20Lauderdale%2C%20Florida",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "CAF83EE2-4012-41EE-8B1A-BB34AA76DB60",
+      "uid": "CAF83EE2-4012-41EE-8B1A-BB34AA76DB60",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "The Westin Fort Lauderdale",
+      "cover": "$65-$379",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/d6a501726d7dc880.png",
+      "cadence": null,
+      "address": "400 Corporate Drive, Fort Lauderdale, Florida",
+      "website": "https://cannonballbash.com/product/registration-package/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Westin%20Fort%20Lauderdale%2C%20400%20Corporate%20Drive%2C%20Fort%20Lauderdale%2C%20Florida",
+      "shortName": "CANNONBALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://cannonballbash.com/product/registration-package/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=The%20Westin%20Fort%20Lauderdale%2C%20400%20Corporate%20Drive%2C%20Fort%20Lauderdale%2C%20Florida",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "cannonball-bash-2026-72ca808d"
+    },
+    {
+      "name": "DADDY POP",
       "day": "Friday",
-      "time": "9PM-3AM",
+      "time": "9:30PM-2:30AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-16T21:00:00",
-      "endDate": "2026-10-17T03:00:00",
-      "unprocessedDescription": "description: BULLPEN Music By\\: MOHAMMAD\nbar: Eagle Wilton Ma\rnors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bullpen/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-16-BULLPEN_Square_1080x1080.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: bullpen|2026-10-17|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
+      "startDate": "2027-01-08T21:30:00",
+      "endDate": "2027-01-09T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-08/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-09|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "01FC231C-5396-441D-8D02-B2F889BE426F",
-      "uid": "01FC231C-5396-441D-8D02-B2F889BE426F",
+      "sourceUid": "1A8A00CF-E097-493F-A8DD-72AFC5ABB4E7",
+      "uid": "1A8A00CF-E097-493F-A8DD-72AFC5ABB4E7",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-16-BULLPEN_Square_1080x1080.jpg?wsr",
-      "tea": "BULLPEN Music By: MOHAMMAD",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/bullpen/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-08/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/bullpen/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-08/",
           "label": "🌐 Website"
         },
         {
@@ -613,7 +298,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "bullpen-23ee7c2f"
+      "slug": "daddy-pop-12d6d275"
     },
     {
       "name": "HONEY POT",
@@ -625,15 +310,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-21T18:00:00",
-      "endDate": "2026-10-21T20:00:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-10-21|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
+      "startDate": "2026-09-16T18:00:00",
+      "endDate": "2026-09-16T20:00:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-09-16|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "50F1A51F-D363-4296-B2EF-6A4D1A2480C6",
-      "uid": "50F1A51F-D363-4296-B2EF-6A4D1A2480C6",
+      "sourceUid": "1EC28430-9AF5-4651-BE47-211658E0BEF1",
+      "uid": "1EC28430-9AF5-4651-BE47-211658E0BEF1",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -642,14 +327,14 @@
       "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
       "cadence": "FREQ=MONTHLY;BYDAY=3WE",
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/",
+      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/",
+          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/",
           "label": "🌐 Website"
         },
         {
@@ -663,44 +348,43 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "honey-pot-50edb9db"
+      "slug": "honey-pot-206931fd"
     },
     {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
+      "name": "HONEY POT",
+      "day": "Wednesday",
+      "time": "6PM-8PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-30T21:30:00",
-      "endDate": "2026-10-31T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-10-30/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-31|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startDate": "2026-11-18T18:00:00",
+      "endDate": "2026-11-18T20:00:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-11-18|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "30E1B544-D1B6-4F74-A44A-411371733920",
-      "uid": "30E1B544-D1B6-4F74-A44A-411371733920",
+      "sourceUid": "31158504-87C9-4736-89C0-A254DDC18B19",
+      "uid": "31158504-87C9-4736-89C0-A254DDC18B19",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
+      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-10-30/",
+      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-10-30/",
+          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/",
           "label": "🌐 Website"
         },
         {
@@ -714,206 +398,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-07d4afe3"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-12-11T21:30:00",
-      "endDate": "2026-12-12T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-11/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-12|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "9866F1DF-9FA7-4653-9F49-D2ED6FBA2C7F",
-      "uid": "9866F1DF-9FA7-4653-9F49-D2ED6FBA2C7F",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-11/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-11/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-5d859f8d"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-11-14T21:30:00",
-      "endDate": "2026-11-15T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-14/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-15|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "3782BDD5-3E89-46B5-8906-C775B2711296",
-      "uid": "3782BDD5-3E89-46B5-8906-C775B2711296",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-14/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-14/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-4a14133a"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-10-10T21:30:00",
-      "endDate": "2026-10-11T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-11|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "2C0F084F-1E45-405E-8AE6-E94CA23F7FDE",
-      "uid": "2C0F084F-1E45-405E-8AE6-E94CA23F7FDE",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-0c95cc2b"
-    },
-    {
-      "name": "Eastern Caribbean Adventure Cruise",
-      "day": "Sunday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2027-11-21T00:00:00",
-      "endDate": "2027-11-28T23:59:59",
-      "unprocessedDescription": "address: Fort Lauderdale, FL\nwebsite: https://www.adventurebe\rars.com/eastern-caribbean-puerto-rico-cruise-2027\nticketUrl: https://www.adventurebears.com/eastern-caribbean-cruise-2027-reservation\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b230ac9121c06008.jpg\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Fort%20Lauderdale%2C%20FL\nkey: eastern-caribbean-adventure-cruise|2027-11-21|\nbearSource: ai\nshortName: EASTERN",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "F19F1BB7-5C89-4288-B3E4-60DD9BFE2A33",
-      "uid": "F19F1BB7-5C89-4288-B3E4-60DD9BFE2A33",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b230ac9121c06008.jpg",
-      "cadence": null,
-      "address": "Fort Lauderdale, FL",
-      "website": "https://www.adventurebears.com/eastern-caribbean-puerto-rico-cruise-2027",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Fort%20Lauderdale%2C%20FL",
-      "ticketUrl": "https://www.adventurebears.com/eastern-caribbean-cruise-2027-reservation",
-      "shortName": "EASTERN",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.adventurebears.com/eastern-caribbean-puerto-rico-cruise-2027",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Fort%20Lauderdale%2C%20FL",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.adventurebears.com/eastern-caribbean-cruise-2027-reservation",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "eastern-caribbean-adventure-cruise-6ee4f942"
+      "slug": "honey-pot-25713e6a"
     },
     {
       "name": "DADDY POP",
@@ -1027,32 +512,32 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-11-27T21:30:00",
-      "endDate": "2026-11-28T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-27/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-28|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startDate": "2027-01-15T21:30:00",
+      "endDate": "2027-01-16T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-15/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-16|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "C283A2DC-6BC7-45EE-95FC-E58A143F9A5A",
-      "uid": "C283A2DC-6BC7-45EE-95FC-E58A143F9A5A",
+      "sourceUid": "512E0FE6-F15D-4AAC-ADFE-06392C2BBA4A",
+      "uid": "512E0FE6-F15D-4AAC-ADFE-06392C2BBA4A",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr",
       "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-27/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-15/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-27/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-15/",
           "label": "🌐 Website"
         },
         {
@@ -1066,109 +551,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-2080205b"
-    },
-    {
-      "name": "BEARTRAP",
-      "day": "Friday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-10-23T21:00:00",
-      "endDate": "2026-10-24T03:00:00",
-      "unprocessedDescription": "description: BEARTRAP Music By\\: GLOVIBES\nbar: Eagle Wilton M\ranors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/beartrap/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-23-BEARTRAP_Square_1080x1080.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: beartrap|2026-10-24|eagle wilton manors\nbearSource: keyword\nshortName: BEAR-TRAP",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "29A2742D-84FB-458D-B1E9-810447EC5D32",
-      "uid": "29A2742D-84FB-458D-B1E9-810447EC5D32",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-23-BEARTRAP_Square_1080x1080.jpg?wsr",
-      "tea": "BEARTRAP Music By: GLOVIBES",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/beartrap/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "shortName": "BEAR-TRAP",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/beartrap/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "beartrap-0c35209b"
-    },
-    {
-      "name": "HONEY POT",
-      "day": "Wednesday",
-      "time": "6PM-8PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-11-18T18:00:00",
-      "endDate": "2026-11-18T20:00:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-11-18|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "31158504-87C9-4736-89C0-A254DDC18B19",
-      "uid": "31158504-87C9-4736-89C0-A254DDC18B19",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
-      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-11-18/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "honey-pot-25713e6a"
+      "slug": "daddy-pop-099a685e"
     },
     {
       "name": "DADDY POP",
@@ -1180,15 +563,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2027-01-09T21:30:00",
-      "endDate": "2027-01-10T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-09/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-10|eagle wilton manors\nbearSource: keyword",
+      "startDate": "2027-01-23T21:30:00",
+      "endDate": "2027-01-24T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-23/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-24|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "B227D76C-7FE8-4F49-B1C0-D85C51D88D10",
-      "uid": "B227D76C-7FE8-4F49-B1C0-D85C51D88D10",
+      "sourceUid": "1B375920-CB3E-419D-97C2-F3CD6DC3B79B",
+      "uid": "1B375920-CB3E-419D-97C2-F3CD6DC3B79B",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -1198,14 +581,14 @@
       "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-09/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-23/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-09/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-23/",
           "label": "🌐 Website"
         },
         {
@@ -1219,7 +602,160 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-608de8d5"
+      "slug": "daddy-pop-344f2095"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-17T21:30:00",
+      "endDate": "2026-10-18T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-10-17/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-18|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "E1C333A7-8A38-449F-A6D8-827EB03A0EB8",
+      "uid": "E1C333A7-8A38-449F-A6D8-827EB03A0EB8",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-10-17/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-10-17/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-0c0c29f7"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2027-01-22T21:30:00",
+      "endDate": "2027-01-23T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-22/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-23|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "B9AF1EDC-1774-4BEB-A538-FE2B06F39BAC",
+      "uid": "B9AF1EDC-1774-4BEB-A538-FE2B06F39BAC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-22/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-22/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-1b75624b"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-11-28T21:30:00",
+      "endDate": "2026-11-29T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-28/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-29|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "68CCFDC2-16CA-47E8-8EB2-7FB3ABBF828F",
+      "uid": "68CCFDC2-16CA-47E8-8EB2-7FB3ABBF828F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-28/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-28/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-5088aad2"
     },
     {
       "name": "DADDY POP",
@@ -1320,52 +856,6 @@
       "slug": "adventure-bears-panama-canal-cruise-2026-188ddf2a"
     },
     {
-      "name": "FLW – LEATHER NIGHT",
-      "day": "Sunday",
-      "time": "9PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.14626,
-        "lng": -80.1403612
-      },
-      "startDate": "2026-11-08T21:00:00",
-      "endDate": "2026-11-09T02:00:00",
-      "unprocessedDescription": "description: FLW – LEATHER NIGHT The official Welcome Party of \rFlorida Leather Week kicks off at RAMROD. Fort Lauderdale’s legendary leather bar where the lights are low and anything can happen. Come ready to cruise, dance, and connect with your tribe.\nbar: Ramrod\nwebsite: https://eaglebarwm.com/event/flw-chili-cook-off-3/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/26-11-08_ramrod_Square_1080x1080.png?wsr\nimageSource: json-api\ntimezone: America/New_York\ngmaps: https://www.google.com/maps/search/?api=1&query=Ramrod%2C%20Northeast%204th%20Avenue%2C%20Fort%20Lauderdale%2C%20Florida\naddress: Northeast 4th Avenue, Fort Lauderdale, Florida\naddressSource: geo-poi\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: flw-–-leather-night|2026-11-09|ramrod\nbearSource: keyword\nshortName: FLW",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "FDA6940B-8862-41BA-94D4-3F9B603F50CF",
-      "uid": "FDA6940B-8862-41BA-94D4-3F9B603F50CF",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Ramrod",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/26-11-08_ramrod_Square_1080x1080.png?wsr",
-      "tea": "FLW – LEATHER NIGHT The official Welcome Party of Florida Leather Week kicks off at RAMROD. Fort Lauderdale’s legendary leather bar where the lights are low and anything can happen. Come ready to cruise, dance, and connect with your tribe.",
-      "cadence": null,
-      "address": "Northeast 4th Avenue, Fort Lauderdale, Florida",
-      "website": "https://eaglebarwm.com/event/flw-chili-cook-off-3/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Ramrod%2C%20Northeast%204th%20Avenue%2C%20Fort%20Lauderdale%2C%20Florida",
-      "shortName": "FLW",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/flw-chili-cook-off-3/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Ramrod%2C%20Northeast%204th%20Avenue%2C%20Fort%20Lauderdale%2C%20Florida",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "flw-leather-night-55e3cfe4"
-    },
-    {
       "name": "DADDY POP",
       "day": "Friday",
       "time": "9:30PM-2:30AM",
@@ -1375,15 +865,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-12-25T21:30:00",
-      "endDate": "2026-12-26T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-25/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-26|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startDate": "2026-12-18T21:30:00",
+      "endDate": "2026-12-19T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-18/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-19|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "2654BB72-D2F0-4861-A537-52677BAB835B",
-      "uid": "2654BB72-D2F0-4861-A537-52677BAB835B",
+      "sourceUid": "4257669B-E157-4D5D-AFCB-BB8C349904F6",
+      "uid": "4257669B-E157-4D5D-AFCB-BB8C349904F6",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -1393,14 +883,14 @@
       "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-25/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-18/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-25/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-18/",
           "label": "🌐 Website"
         },
         {
@@ -1414,7 +904,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-75ac1a81"
+      "slug": "daddy-pop-1a5fc9d6"
     },
     {
       "name": "DADDY POP",
@@ -1426,32 +916,32 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-09-26T21:30:00",
-      "endDate": "2026-09-27T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-27|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startDate": "2027-01-16T21:30:00",
+      "endDate": "2027-01-17T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-16/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-17|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "99ACF102-CA86-48C0-B09F-2AA6AE625D38",
-      "uid": "99ACF102-CA86-48C0-B09F-2AA6AE625D38",
+      "sourceUid": "E9796D4C-2A59-4E25-8425-8863E562766A",
+      "uid": "E9796D4C-2A59-4E25-8425-8863E562766A",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr",
       "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-16/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-16/",
           "label": "🌐 Website"
         },
         {
@@ -1465,211 +955,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-31564bff"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-12-05T21:30:00",
-      "endDate": "2026-12-06T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-05/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-06|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "F28BF3CA-3A50-4EB0-91C9-E611A0E30474",
-      "uid": "F28BF3CA-3A50-4EB0-91C9-E611A0E30474",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-05/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-05/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-71dc7658"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-09-25T21:30:00",
-      "endDate": "2026-09-26T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-26|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "2067700C-74F8-485F-A698-0D2E38824C42",
-      "uid": "2067700C-74F8-485F-A698-0D2E38824C42",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-14f46cf0"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-12-19T21:30:00",
-      "endDate": "2026-12-20T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-19/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-20|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "A7599EF8-D2B2-4BAC-BE60-24CFE8B9E7CA",
-      "uid": "A7599EF8-D2B2-4BAC-BE60-24CFE8B9E7CA",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-19/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-19/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-706ef8d4"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Friday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2027-01-01T21:30:00",
-      "endDate": "2027-01-02T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-01/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-02|eagle wilton manors\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "615BC222-08EF-476E-AB98-9CBBF1303BF9",
-      "uid": "615BC222-08EF-476E-AB98-9CBBF1303BF9",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-01/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-01/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-15a7c9ec"
+      "slug": "daddy-pop-6f257fd8"
     },
     {
       "name": "Club Chub Presents: MEAT MARKET",
@@ -1733,6 +1019,262 @@
     },
     {
       "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-03T21:30:00",
+      "endDate": "2026-10-04T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-04|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "E6A9D3BB-4628-4154-AF92-25761260E642",
+      "uid": "E6A9D3BB-4628-4154-AF92-25761260E642",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-04a1a646"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2027-01-09T21:30:00",
+      "endDate": "2027-01-10T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-09/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-10|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "B227D76C-7FE8-4F49-B1C0-D85C51D88D10",
+      "uid": "B227D76C-7FE8-4F49-B1C0-D85C51D88D10",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-09/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-09/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-608de8d5"
+    },
+    {
+      "name": "BEARTRAP",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-23T21:00:00",
+      "endDate": "2026-10-24T03:00:00",
+      "unprocessedDescription": "description: BEARTRAP Music By\\: GLOVIBES\nbar: Eagle Wilton M\ranors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/beartrap/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-23-BEARTRAP_Square_1080x1080.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: beartrap|2026-10-24|eagle wilton manors\nbearSource: keyword\nshortName: BEAR-TRAP",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "29A2742D-84FB-458D-B1E9-810447EC5D32",
+      "uid": "29A2742D-84FB-458D-B1E9-810447EC5D32",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-23-BEARTRAP_Square_1080x1080.jpg?wsr",
+      "tea": "BEARTRAP Music By: GLOVIBES",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/beartrap/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "shortName": "BEAR-TRAP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/beartrap/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "beartrap-0c35209b"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-09-26T21:30:00",
+      "endDate": "2026-09-27T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-27|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "99ACF102-CA86-48C0-B09F-2AA6AE625D38",
+      "uid": "99ACF102-CA86-48C0-B09F-2AA6AE625D38",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-09-26/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-31564bff"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-11-14T21:30:00",
+      "endDate": "2026-11-15T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-14/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-15|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "3782BDD5-3E89-46B5-8906-C775B2711296",
+      "uid": "3782BDD5-3E89-46B5-8906-C775B2711296",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-14/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-11-14/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-4a14133a"
+    },
+    {
+      "name": "DADDY POP",
       "day": "Friday",
       "time": "9:30PM-2:30AM",
       "eventType": "routine",
@@ -1784,6 +1326,307 @@
     },
     {
       "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-12T21:30:00",
+      "endDate": "2026-12-13T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-12/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-13|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "36553BFC-A0E9-4379-9D21-23A66B9885C1",
+      "uid": "36553BFC-A0E9-4379-9D21-23A66B9885C1",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-12/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-12/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-0800982f"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-11-06T21:30:00",
+      "endDate": "2026-11-07T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-06/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-07|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "EC2242AB-ADB0-4754-A102-1FDC6346E89E",
+      "uid": "EC2242AB-ADB0-4754-A102-1FDC6346E89E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-06/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-06/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-5e31d272"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-11-27T21:30:00",
+      "endDate": "2026-11-28T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-27/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-11-28|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "C283A2DC-6BC7-45EE-95FC-E58A143F9A5A",
+      "uid": "C283A2DC-6BC7-45EE-95FC-E58A143F9A5A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-27/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-11-27/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-2080205b"
+    },
+    {
+      "name": "Eastern Caribbean Adventure Cruise",
+      "day": "Sunday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-11-21T00:00:00",
+      "endDate": "2027-11-28T23:59:59",
+      "unprocessedDescription": "address: Fort Lauderdale, FL\nwebsite: https://www.adventurebe\rars.com/eastern-caribbean-puerto-rico-cruise-2027\nticketUrl: https://www.adventurebears.com/eastern-caribbean-cruise-2027-reservation\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b230ac9121c06008.jpg\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Fort%20Lauderdale%2C%20FL\nkey: eastern-caribbean-adventure-cruise|2027-11-21|\nbearSource: ai\nshortName: EASTERN",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "F19F1BB7-5C89-4288-B3E4-60DD9BFE2A33",
+      "uid": "F19F1BB7-5C89-4288-B3E4-60DD9BFE2A33",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/b230ac9121c06008.jpg",
+      "cadence": null,
+      "address": "Fort Lauderdale, FL",
+      "website": "https://www.adventurebears.com/eastern-caribbean-puerto-rico-cruise-2027",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Fort%20Lauderdale%2C%20FL",
+      "ticketUrl": "https://www.adventurebears.com/eastern-caribbean-cruise-2027-reservation",
+      "shortName": "EASTERN",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.adventurebears.com/eastern-caribbean-puerto-rico-cruise-2027",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Fort%20Lauderdale%2C%20FL",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.adventurebears.com/eastern-caribbean-cruise-2027-reservation",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "eastern-caribbean-adventure-cruise-6ee4f942"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-19T21:30:00",
+      "endDate": "2026-12-20T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-19/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-20|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "A7599EF8-D2B2-4BAC-BE60-24CFE8B9E7CA",
+      "uid": "A7599EF8-D2B2-4BAC-BE60-24CFE8B9E7CA",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-19/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-19/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-706ef8d4"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-09-25T21:30:00",
+      "endDate": "2026-09-26T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-09-26|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "2067700C-74F8-485F-A698-0D2E38824C42",
+      "uid": "2067700C-74F8-485F-A698-0D2E38824C42",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-09-25/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-14f46cf0"
+    },
+    {
+      "name": "DADDY POP",
       "day": "Friday",
       "time": "9:30PM-2:30AM",
       "eventType": "routine",
@@ -1832,57 +1675,6 @@
         }
       ],
       "slug": "daddy-pop-1ef4ee62"
-    },
-    {
-      "name": "DADDY POP",
-      "day": "Saturday",
-      "time": "9:30PM-2:30AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2027-01-02T21:30:00",
-      "endDate": "2027-01-03T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-02/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-03|eagle wilton manors\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "B1CDA2F2-C7E4-42F1-92AB-86F61490C627",
-      "uid": "B1CDA2F2-C7E4-42F1-92AB-86F61490C627",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr",
-      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
-      "cadence": null,
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-02/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-02/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "daddy-pop-340fcb07"
     },
     {
       "name": "DADDY POP",
@@ -1945,15 +1737,15 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-03T21:30:00",
-      "endDate": "2026-10-04T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-04|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startDate": "2026-12-26T21:30:00",
+      "endDate": "2026-12-27T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-26/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-27|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "E6A9D3BB-4628-4154-AF92-25761260E642",
-      "uid": "E6A9D3BB-4628-4154-AF92-25761260E642",
+      "sourceUid": "97B99334-C50B-422C-B94A-6ACBA666C560",
+      "uid": "97B99334-C50B-422C-B94A-6ACBA666C560",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
@@ -1963,14 +1755,14 @@
       "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-26/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-03/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-26/",
           "label": "🌐 Website"
         },
         {
@@ -1984,53 +1776,515 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-04a1a646"
+      "slug": "daddy-pop-44ce18be"
     },
     {
-      "name": "Cannonball Bash 2026",
-      "day": "Wednesday",
-      "time": null,
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 26.205331,
-        "lng": -80.139493
+        "lat": 26.156486,
+        "lng": -80.138547
       },
-      "startDate": "2026-10-28T00:00:00",
-      "endDate": "2026-11-02T23:59:59",
-      "unprocessedDescription": "bar: The Westin Fort Lauderdale\naddress: 400 Corporate Drive,\r Fort Lauderdale, Florida\nwebsite: https://cannonballbash.com/product/registration-package/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/d6a501726d7dc880.png\ncover: $65-$379\ntimezone: America/New_York\nkey: cannonball-bash-2026|2026-10-28|the westin fort lauderdale\nbearSource: ai\nshortName: CANNONBALL\npinSource: curated\naddressSource: geo-poi\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=The%20Westin%20Fort%20Lauderdale%2C%20400%20Corporate%20Drive%2C%20Fort%20Lauderdale%2C%20Florida",
+      "startDate": "2027-01-01T21:30:00",
+      "endDate": "2027-01-02T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-01/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-02|eagle wilton manors\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "CAF83EE2-4012-41EE-8B1A-BB34AA76DB60",
-      "uid": "CAF83EE2-4012-41EE-8B1A-BB34AA76DB60",
+      "sourceUid": "615BC222-08EF-476E-AB98-9CBBF1303BF9",
+      "uid": "615BC222-08EF-476E-AB98-9CBBF1303BF9",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "The Westin Fort Lauderdale",
-      "cover": "$65-$379",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/d6a501726d7dc880.png",
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
       "cadence": null,
-      "address": "400 Corporate Drive, Fort Lauderdale, Florida",
-      "website": "https://cannonballbash.com/product/registration-package/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=The%20Westin%20Fort%20Lauderdale%2C%20400%20Corporate%20Drive%2C%20Fort%20Lauderdale%2C%20Florida",
-      "shortName": "CANNONBALL",
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-01/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://cannonballbash.com/product/registration-package/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2027-01-01/",
           "label": "🌐 Website"
         },
         {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=The%20Westin%20Fort%20Lauderdale%2C%20400%20Corporate%20Drive%2C%20Fort%20Lauderdale%2C%20Florida",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "cannonball-bash-2026-72ca808d"
+      "slug": "daddy-pop-15a7c9ec"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2027-01-02T21:30:00",
+      "endDate": "2027-01-03T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-02/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2027-01-03|eagle wilton manors\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "B1CDA2F2-C7E4-42F1-92AB-86F61490C627",
+      "uid": "B1CDA2F2-C7E4-42F1-92AB-86F61490C627",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2-1.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-02/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2027-01-02/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-340fcb07"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-25T21:30:00",
+      "endDate": "2026-12-26T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-25/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-26|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "2654BB72-D2F0-4861-A537-52677BAB835B",
+      "uid": "2654BB72-D2F0-4861-A537-52677BAB835B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-25/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-25/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-75ac1a81"
+    },
+    {
+      "name": "HONEY POT",
+      "day": "Wednesday",
+      "time": "6PM-8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-16T18:00:00",
+      "endDate": "2026-12-16T20:00:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-12-16|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "1BDF53F0-F5CF-45DE-82C7-9A3E479282C2",
+      "uid": "1BDF53F0-F5CF-45DE-82C7-9A3E479282C2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
+      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-12-16/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "honey-pot-3e2ea5a4"
+    },
+    {
+      "name": "BULLPEN",
+      "day": "Friday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-16T21:00:00",
+      "endDate": "2026-10-17T03:00:00",
+      "unprocessedDescription": "description: BULLPEN Music By\\: MOHAMMAD\nbar: Eagle Wilton Ma\rnors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bullpen/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-16-BULLPEN_Square_1080x1080.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\nkey: bullpen|2026-10-17|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "01FC231C-5396-441D-8D02-B2F889BE426F",
+      "uid": "01FC231C-5396-441D-8D02-B2F889BE426F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/09/26-10-16-BULLPEN_Square_1080x1080.jpg?wsr",
+      "tea": "BULLPEN Music By: MOHAMMAD",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/bullpen/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/bullpen/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bullpen-23ee7c2f"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-05T21:30:00",
+      "endDate": "2026-12-06T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-05/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-06|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "F28BF3CA-3A50-4EB0-91C9-E611A0E30474",
+      "uid": "F28BF3CA-3A50-4EB0-91C9-E611A0E30474",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-05/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-12-05/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-71dc7658"
+    },
+    {
+      "name": "HONEY POT",
+      "day": "Wednesday",
+      "time": "6PM-8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-21T18:00:00",
+      "endDate": "2026-10-21T20:00:00",
+      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-10-21|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "50F1A51F-D363-4296-B2EF-6A4D1A2480C6",
+      "uid": "50F1A51F-D363-4296-B2EF-6A4D1A2480C6",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
+      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-10-21/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "honey-pot-50edb9db"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Saturday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-10T21:30:00",
+      "endDate": "2026-10-11T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-11|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "2C0F084F-1E45-405E-8AE6-E94CA23F7FDE",
+      "uid": "2C0F084F-1E45-405E-8AE6-E94CA23F7FDE",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2/2026-10-10/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-0c95cc2b"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-10-30T21:30:00",
+      "endDate": "2026-10-31T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-10-30/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-31|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "30E1B544-D1B6-4F74-A44A-411371733920",
+      "uid": "30E1B544-D1B6-4F74-A44A-411371733920",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-10-30/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-10-30/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-07d4afe3"
+    },
+    {
+      "name": "DADDY POP",
+      "day": "Friday",
+      "time": "9:30PM-2:30AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 26.156486,
+        "lng": -80.138547
+      },
+      "startDate": "2026-12-11T21:30:00",
+      "endDate": "2026-12-12T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-11/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-12-12|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "9866F1DF-9FA7-4653-9F49-D2ED6FBA2C7F",
+      "uid": "9866F1DF-9FA7-4653-9F49-D2ED6FBA2C7F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Eagle Wilton Manors",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
+      "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
+      "cadence": null,
+      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-11/",
+      "instagram": "https://www.instagram.com/eaglebarwm",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3-3/2026-12-11/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/eaglebarwm",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "daddy-pop-5d859f8d"
     },
     {
       "name": "DADDY POP",
@@ -2136,7 +2390,7 @@
     },
     {
       "name": "DADDY POP",
-      "day": "Saturday",
+      "day": "Friday",
       "time": "9:30PM-2:30AM",
       "eventType": "routine",
       "recurring": false,
@@ -2144,32 +2398,32 @@
         "lat": 26.156486,
         "lng": -80.138547
       },
-      "startDate": "2026-10-17T21:30:00",
-      "endDate": "2026-10-18T02:30:00",
-      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-10-17/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-18|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
+      "startDate": "2026-10-09T21:30:00",
+      "endDate": "2026-10-10T02:30:00",
+      "unprocessedDescription": "description: DADDY POP in Bear Cave | 9 PM – 2 AM Music By\\: R\ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover\nbar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANORS, FL, 33305\nwebsite: https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/\nimage: https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr\ntimezone: America/New_York\ninstagram: https://www.instagram.com/eaglebarwm\nkey: daddy-pop|2026-10-10|eagle wilton manors\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "E1C333A7-8A38-449F-A6D8-827EB03A0EB8",
-      "uid": "E1C333A7-8A38-449F-A6D8-827EB03A0EB8",
+      "sourceUid": "B81AD4F4-8388-447B-A5E0-22ADFEF5B854",
+      "uid": "B81AD4F4-8388-447B-A5E0-22ADFEF5B854",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2026/06/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-2.png?wsr",
+      "image": "https://eaglebarwm.com/wp-content/uploads/2026/02/2026-09-02-DADDY-POP-1080x1080-RONNIE-MINUTELLA-1.png?wsr",
       "tea": "DADDY POP in Bear Cave | 9 PM – 2 AM Music By: Ronnie Minutella Rugged, Sexy, Husky & Hairy Daddies with Pop Music Radio Edits, Guilty Pleasures, and Forgotten Favorites. No Shazam Needed. Your Body Remembers the Beat. Included in Cover",
       "cadence": null,
       "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-10-17/",
+      "website": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
       "instagram": "https://www.instagram.com/eaglebarwm",
       "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-2-3-2-3/2026-10-17/",
+          "url": "https://eaglebarwm.com/event/daddy-pop-5-3-3/2026-10-09/",
           "label": "🌐 Website"
         },
         {
@@ -2183,57 +2437,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "daddy-pop-0c0c29f7"
-    },
-    {
-      "name": "HONEY POT",
-      "day": "Wednesday",
-      "time": "6PM-8PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 26.156486,
-        "lng": -80.138547
-      },
-      "startDate": "2026-09-16T18:00:00",
-      "endDate": "2026-09-16T20:00:00",
-      "unprocessedDescription": "bar: Eagle Wilton Manors\naddress: 2209 WILTON DR, WILTON MANO\rRS, FL, 33305\nwebsite: https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/\nimage: https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547\npinSource: curated\ninstagram: https://www.instagram.com/eaglebarwm\ncadence: FREQ=MONTHLY;BYDAY=3WE\nkey: honey-pot|2026-09-16|eagle wilton manors\nbearSource: manual-bear (verdict store 2026-09-19)",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "1EC28430-9AF5-4651-BE47-211658E0BEF1",
-      "uid": "1EC28430-9AF5-4651-BE47-211658E0BEF1",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Eagle Wilton Manors",
-      "image": "https://eaglebarwm.com/wp-content/uploads/2025/03/square-BoSF-HONEY-POT.jpg?wsr",
-      "cadence": "FREQ=MONTHLY;BYDAY=3WE",
-      "address": "2209 WILTON DR, WILTON MANORS, FL, 33305",
-      "website": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/",
-      "instagram": "https://www.instagram.com/eaglebarwm",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://eaglebarwm.com/event/bosfl-happy-hour-2-2-2/2026-09-16/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/eaglebarwm",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=26.156486%2C-80.138547",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "honey-pot-206931fd"
+      "slug": "daddy-pop-7978927b"
     }
   ]
 }

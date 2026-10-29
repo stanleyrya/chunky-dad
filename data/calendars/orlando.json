@@ -5,6 +5,63 @@
   },
   "events": [
     {
+      "name": "Bear Jamboree: Orlando Gay Bear Weekend",
+      "day": "Thursday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2027-06-03T00:00:00",
+      "endDate": "2027-06-08T00:00:00",
+      "unprocessedDescription": "description: Bear Jamboree is Orlando’s ultimate LGBTQ+ bear we\rekend—packed with pool parties, nightlife, comedy, DJs, and community events. Book your hotel and tickets now.\ntimezone: America/New_York\ninstagram: https://www.instagram.com/bearjamboree\nfacebook: http://www.facebook.com/orlandobearpride\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png\nimageHorizontal: https://static.wixstatic.com/media/ee7b13_5b00ecd68efb442d915e135b8438039bf000.jpg/v1/fill/w_797,h_448,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/ee7b13_5b00ecd68efb442d915e135b8438039bf000.jpg\nwebsite: https://www.bearjamboree.com/\nshortName: JAM­BO­REE\nfavicon: https://www.bearjamboree.com\nkey: bear-jamboree-orlando-gay-bear-weekend|2027-06-03|\nbearSource: keyword\nbar: Crowne Plaza Lake Buena Vista\naddress: Orlando, FL\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png\nallDay: true\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "85C0CDE1-2520-4BCC-B47A-B7AE5B6AD54E",
+      "uid": "85C0CDE1-2520-4BCC-B47A-B7AE5B6AD54E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crowne Plaza Lake Buena Vista",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png",
+      "imageHorizontal": "https://static.wixstatic.com/media/ee7b13_5b00ecd68efb442d915e135b8438039bf000.jpg/v1/fill/w_797,h_448,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/ee7b13_5b00ecd68efb442d915e135b8438039bf000.jpg",
+      "favicon": "https://www.bearjamboree.com",
+      "tea": "Bear Jamboree is Orlando’s ultimate LGBTQ+ bear weekend—packed with pool parties, nightlife, comedy, DJs, and community events. Book your hotel and tickets now.",
+      "cadence": null,
+      "address": "Orlando, FL",
+      "website": "https://www.bearjamboree.com/",
+      "instagram": "https://www.instagram.com/bearjamboree",
+      "facebook": "http://www.facebook.com/orlandobearpride",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL",
+      "shortName": "JAM­BO­REE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearjamboree.com/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearjamboree",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "http://www.facebook.com/orlandobearpride",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bear-jamboree-orlando-gay-bear-weekend-21473785"
+    },
+    {
       "name": "Bear Tea-Dance",
       "day": "Sunday",
       "time": "12PM-6PM",
@@ -55,48 +112,6 @@
         }
       ],
       "slug": "bear-tea-dance-67b9f342"
-    },
-    {
-      "name": "Bear Jamboree",
-      "day": "Thursday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "startDate": "2027-06-03T00:00:00",
-      "endDate": "2027-06-08T00:00:00",
-      "unprocessedDescription": "bar: Crowne Plaza Lake Buena Vista\naddress: Orlando, FL\nwebs\rite: https://www.bearjamboree.com/\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png\nimageSource: json-api\ntimezone: America/New_York\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL\nkey: bear-jamboree|2027-06-03|crowne plaza lake buena vista\nallDay: true\nbearSource: keyword\nshortName: BEAR JAMBOREE",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "85C0CDE1-2520-4BCC-B47A-B7AE5B6AD54E",
-      "uid": "85C0CDE1-2520-4BCC-B47A-B7AE5B6AD54E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Crowne Plaza Lake Buena Vista",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png",
-      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png",
-      "cadence": null,
-      "address": "Orlando, FL",
-      "website": "https://www.bearjamboree.com/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL",
-      "shortName": "BEAR JAMBOREE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.bearjamboree.com/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "bear-jamboree-21473785"
     }
   ]
 }

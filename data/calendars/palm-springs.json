@@ -76,6 +76,220 @@
       "slug": "western-xposures-xxl-27c8c346"
     },
     {
+      "name": "WOOF",
+      "day": "Wednesday",
+      "time": "7PM-10PM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1WE",
+      "coordinates": {
+        "lat": 33.8210557,
+        "lng": -116.5444345
+      },
+      "startDate": "2026-11-04T19:00:00",
+      "endDate": "2026-11-04T22:00:00",
+      "unprocessedDescription": "description: Monthly bear party at Dick's on Arenas, first Wed\rnesday of the month, 7–10pm. Guest DJs every time.\nbar: Dick's on Arenas\naddress: 301 E Arenas Rd, Palm Springs, CA 92262\ninstagram: https://www.instagram.com/woof.ps\nfavicon: https://www.instagram.com/woof.ps\nrecurrence: FREQ=MONTHLY;BYDAY=1WE",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": false,
+      "sourceUid": "woof-20261011T020000Z@chunky.dad",
+      "uid": "woof-20261011T020000Z@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dick's on Arenas",
+      "favicon": "https://www.instagram.com/woof.ps",
+      "tea": "Monthly bear party at Dick's on Arenas, first Wednesday of the month, 7–10pm. Guest DJs every time.",
+      "cadence": null,
+      "address": "301 E Arenas Rd, Palm Springs, CA 92262",
+      "website": null,
+      "instagram": "https://www.instagram.com/woof.ps",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/woof.ps",
+          "label": "📷 Instagram"
+        }
+      ],
+      "slug": "woof-080ebf02"
+    },
+    {
+      "name": "Sticky Rice",
+      "day": "Friday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.8147765,
+        "lng": -116.5376249
+      },
+      "startDate": "2026-09-25T00:00:00",
+      "endDate": "2026-09-27T23:59:59",
+      "unprocessedDescription": "bar: Casa Oliver\naddress: 535 South Warm Sands Drive, Palm Sp\rrings, California\nwebsite: https://www.sticky-rice.org/\nticketUrl: https://forms.gle/TCYs6qPPvVoQoPMD7\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg\nimageSource: json-api\ncover: $25\ntimezone: America/Los_Angeles\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: sticky-rice|2026-09-25|casa oliver\nbearSource: ai\nshortName: STICKY RICE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "1FF301F0-00FE-4849-BB32-A779D9362E83",
+      "uid": "1FF301F0-00FE-4849-BB32-A779D9362E83",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Casa Oliver",
+      "cover": "$25",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
+      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
+      "cadence": null,
+      "address": "535 South Warm Sands Drive, Palm Springs, California",
+      "website": "https://www.sticky-rice.org/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California",
+      "ticketUrl": "https://forms.gle/TCYs6qPPvVoQoPMD7",
+      "shortName": "STICKY RICE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.sticky-rice.org/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://forms.gle/TCYs6qPPvVoQoPMD7",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "sticky-rice-4f2be4aa"
+    },
+    {
+      "name": "FURBALL Palm Springs PRIDE",
+      "day": "Friday",
+      "time": "10PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.848691,
+        "lng": -116.548096
+      },
+      "startDate": "2026-11-06T22:00:00",
+      "endDate": "2026-11-07T02:00:00",
+      "unprocessedDescription": "description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na\rddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nimage: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-palm-springs-pride|2026-11-07|toucans tiki lounge\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "23BBF494-F864-4D6E-A461-70D7CC0DAA0E",
+      "uid": "23BBF494-F864-4D6E-A461-70D7CC0DAA0E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Toucans Tiki Lounge",
+      "image": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "SAM GEE marcos moreno",
+      "cadence": null,
+      "address": "2100 PALM CANYON DRIVE",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
+      "ticketUrl": "https://www.tickettailor.com/events/toucanstikilounge",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tickettailor.com/events/toucanstikilounge",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-palm-springs-pride-719921a0"
+    },
+    {
+      "name": "Meatball Presents \"Fat Slut Drag Show and Dance Party\"",
+      "day": "Sunday",
+      "time": "4PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.848691,
+        "lng": -116.548096
+      },
+      "startDate": "2026-11-08T16:00:00",
+      "endDate": "2026-11-08T19:00:00",
+      "unprocessedDescription": "description: Drag Show-Dance Party\nbar: Toucans\naddress: 9226\r2\ntimezone: America/Los_Angeles\nimage: https://uploads.tickettailorassets.com/c_crop,dpr_1.0,h_1000,q_100,w_1000,x_0,y_0/c_scale,dpr_2.0,h_250,q_85,w_250/v1/production/userfiles/klw7tsa9avnrpnexfm96.jpg?_a=BAAHWXDQ\ncover: $200\nimageSource: page\naddressSource: page\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=33.848691%2C-116.548096\npinSource: curated\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: meatball-presents-fat-slut-drag-show-and-dance-party|2026-11-09|toucans\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nbearSource: keyword\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "34376345-A67F-4D37-B4BC-DD39395A1BEB",
+      "uid": "34376345-A67F-4D37-B4BC-DD39395A1BEB",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Toucans",
+      "cover": "$200",
+      "image": "https://uploads.tickettailorassets.com/c_crop,dpr_1.0,h_1000,q_100,w_1000,x_0,y_0/c_scale,dpr_2.0,h_250,q_85,w_250/v1/production/userfiles/klw7tsa9avnrpnexfm96.jpg?_a=BAAHWXDQ",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Drag Show-Dance Party",
+      "cadence": null,
+      "address": "92262",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.848691%2C-116.548096",
+      "ticketUrl": "https://www.tickettailor.com/events/toucanstikilounge",
+      "shortName": "FUR­BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.848691%2C-116.548096",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tickettailor.com/events/toucanstikilounge",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "meatball-presents-fat-slut-drag-show-and-dance-party-0a751f9a"
+    },
+    {
       "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
       "day": "Friday",
       "time": "11AM-12AM",
@@ -137,47 +351,6 @@
       "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
     },
     {
-      "name": "WOOF",
-      "day": "Wednesday",
-      "time": "7PM-10PM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1WE",
-      "coordinates": {
-        "lat": 33.8210557,
-        "lng": -116.5444345
-      },
-      "startDate": "2026-11-04T19:00:00",
-      "endDate": "2026-11-04T22:00:00",
-      "unprocessedDescription": "description: Monthly bear party at Dick's on Arenas, first Wed\rnesday of the month, 7–10pm. Guest DJs every time.\nbar: Dick's on Arenas\naddress: 301 E Arenas Rd, Palm Springs, CA 92262\ninstagram: https://www.instagram.com/woof.ps\nfavicon: https://www.instagram.com/woof.ps\nrecurrence: FREQ=MONTHLY;BYDAY=1WE",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "woof-20261011T020000Z@chunky.dad",
-      "uid": "woof-20261011T020000Z@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Dick's on Arenas",
-      "favicon": "https://www.instagram.com/woof.ps",
-      "tea": "Monthly bear party at Dick's on Arenas, first Wednesday of the month, 7–10pm. Guest DJs every time.",
-      "cadence": null,
-      "address": "301 E Arenas Rd, Palm Springs, CA 92262",
-      "website": null,
-      "instagram": "https://www.instagram.com/woof.ps",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/woof.ps",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "woof-080ebf02"
-    },
-    {
       "name": "MEGAWOOF",
       "day": "Saturday",
       "time": "9PM-12PM",
@@ -237,59 +410,6 @@
       "slug": "megawoof-22570191"
     },
     {
-      "name": "Sticky Rice",
-      "day": "Friday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.8147765,
-        "lng": -116.5376249
-      },
-      "startDate": "2026-09-25T00:00:00",
-      "endDate": "2026-09-27T23:59:59",
-      "unprocessedDescription": "bar: Casa Oliver\naddress: 535 South Warm Sands Drive, Palm Sp\rrings, California\nwebsite: https://www.sticky-rice.org/\nticketUrl: https://forms.gle/TCYs6qPPvVoQoPMD7\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg\nimageSource: json-api\ncover: $25\ntimezone: America/Los_Angeles\nimageVertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg\naddressSource: geo-poi\ngmaps: https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: sticky-rice|2026-09-25|casa oliver\nbearSource: ai\nshortName: STICKY RICE",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "1FF301F0-00FE-4849-BB32-A779D9362E83",
-      "uid": "1FF301F0-00FE-4849-BB32-A779D9362E83",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Casa Oliver",
-      "cover": "$25",
-      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
-      "imageVertical": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/3db056113273d048.jpg",
-      "cadence": null,
-      "address": "535 South Warm Sands Drive, Palm Springs, California",
-      "website": "https://www.sticky-rice.org/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California",
-      "ticketUrl": "https://forms.gle/TCYs6qPPvVoQoPMD7",
-      "shortName": "STICKY RICE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.sticky-rice.org/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Casa%20Oliver%2C%20535%20South%20Warm%20Sands%20Drive%2C%20Palm%20Springs%2C%20California",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://forms.gle/TCYs6qPPvVoQoPMD7",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "sticky-rice-4f2be4aa"
-    },
-    {
       "name": "Western X-Mas: Holiday Bear Retreat 2026",
       "day": "Thursday",
       "time": "10AM-7PM",
@@ -337,66 +457,6 @@
         }
       ],
       "slug": "western-x-mas-holiday-bear-retreat-2026-66c97ab6"
-    },
-    {
-      "name": "FURBALL Palm Springs PRIDE",
-      "day": "Friday",
-      "time": "10PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.848691,
-        "lng": -116.548096
-      },
-      "startDate": "2026-11-06T22:00:00",
-      "endDate": "2026-11-07T02:00:00",
-      "unprocessedDescription": "description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na\rddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nimage: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-palm-springs-pride|2026-11-07|toucans tiki lounge\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "23BBF494-F864-4D6E-A461-70D7CC0DAA0E",
-      "uid": "23BBF494-F864-4D6E-A461-70D7CC0DAA0E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Toucans Tiki Lounge",
-      "image": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "SAM GEE marcos moreno",
-      "cadence": null,
-      "address": "2100 PALM CANYON DRIVE",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
-      "ticketUrl": "https://www.tickettailor.com/events/toucanstikilounge",
-      "shortName": "FUR­BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.tickettailor.com/events/toucanstikilounge",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "furball-palm-springs-pride-719921a0"
     }
   ]
 }

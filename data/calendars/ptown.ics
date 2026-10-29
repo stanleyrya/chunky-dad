@@ -6,56 +6,57 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-provincetown
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART;VALUE=DATE:20261031
-DTEND;VALUE=DATE:20261101
-DTSTAMP:20261010T220656Z
-UID:C2CA8263-B167-4BC8-9AF6-87738E966BCA
-CREATED:20261010T213255Z
-DESCRIPTION:description: Goldiloxx brings Tricks & Treat to Purgatory for H
- alloween night.\nbar: Purgatory\naddress: SB\ntimezone: America/New_York\na
- ddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=
- 42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instag
- ram.com/goldiloxx__\nshortName: GOLDI­LOXX\nshorterName: GLX\nfavicon: http
- s://linktr.ee/goldiloxx\nkey: goldiloxx-tricks-treat|2026-10-31|purgatory\n
- timeUnknown: true\nbearSource: ai
-LAST-MODIFIED:20261010T213255Z
-LOCATION:42.0496268\, -70.1900224
+DTSTART:20260717T020000Z
+DTSTAMP:20261029T100517Z
+UID:EA8572E1-44B4-47B7-A8F3-9D128EE5C5A5
+CREATED:20260701T132043Z
+DESCRIPTION:description: MUSIC\\:\nGSP + HARLOW\nJOCKS · UNDERWEAR · GEAR\n
+ LIMITED CLOTHES CHECK (FIRST COME\, FIRST SERVED)\n$5 DISCOUNT WITH BEAR TA
+ GS\nbar: REDROOM\naddress: 258 Commercial St\, Provincetown\, MA 02657\ntim
+ ezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/f
+ urballnyc/UnderbearNYC-bear-week-2026\ninstagram: https://instagram.com/fur
+ ballnyc/\nimage: https://static.wixstatic.com/media/238fae_ccecfe5565134a15
+ b54c70f056f0e4c0~mv2.png/v1/fill/w_296\,h_476\,al_c\,q_85\,usm_0.66_1.00_0.
+ 01\,enc_avif\,quality_auto/238fae_ccecfe5565134a15b54c70f056f0e4c0~mv2.png\
+ ncover: $5 DISCOUNT WITH BEAR TAGS\nshortName: FUR-BALL\nfavicon: https://l
+ inktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.g
+ oogle.com/maps/search/?api=1&query=REDROOM%2C%20258%20COMMERCIAL%20ST%2C%20
+ PROVINCETOWN%2C%20MA\nkey: riptide|2026-07-17|redroom
+LAST-MODIFIED:20260712T000449Z
+LOCATION:42.0510476\, -70.1876737
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Goldiloxx: Tricks & Treat
+SUMMARY:Riptide
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261031T010000Z
-DTEND:20261031T050000Z
-DTSTAMP:20261010T220656Z
-UID:A846A338-A48E-4DFF-A6AD-AD9CD5F73D58
-CREATED:20261010T213252Z
-DESCRIPTION:description: Motherdisco returns to Provincetown for a special 
- Spooky Bear takeover at the Crown & Anchor. Dead Disco Prom is your invitat
- ion to dress up\, get down\, and dance all night to a high-energy mix of di
- sco\, house\, and queer nightlife favorites. Expect killer looks\, sweaty d
- ancing\, spooky glamour\, and a packed dance floor as Motherdisco brings it
- s signature NYC energy back to Ptown for Halloween.\nbar: Crown & Anchor\na
- ddress: 247 Commercial Street\, Provincetown\, MA 02657\nticketUrl: https:/
- /www.tryst.events/e/mother-disco-spooky-bear/tickets\nimage: https://onlyat
- thecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png\ncover: $38\
- ntimezone: America/New_York\naddressSource: page\nwebsite: https://tryst.ev
- ents/e/mother-disco-spooky-bear\ngmaps: https://www.google.com/maps/search/
- ?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provi
- ncetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstag
- ram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.c
- om/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: motherdisco
- |2026-10-31|crown & anchor\nimageVertical: https://onlyatthecrown.com/wp-co
- ntent/uploads/2026/08/Untitled-design-14.png\nimageSource: json-api\nbarSou
- rce: curated\nbearSource: keyword
-LAST-MODIFIED:20261010T213252Z
+DTSTART:20261030T010000Z
+DTEND:20261030T050000Z
+DTSTAMP:20261029T100517Z
+UID:70C49CFF-E896-4B98-A398-6415EC3B2AAE
+CREATED:20261010T213251Z
+DESCRIPTION:description: LA drag superstar Meatball is bringing her hit par
+ ty FAT SLUT to Spooky Bear 2026! Bears know how to party in the fattest and
+  sluttiest way possible. -DRAG SHOWS & SPECIAL GUEST -SEXY GOGO DANCERS -DA
+ NCE PARTY -THE ORIGINAL SEXY FOOD EATING COMPETITION\nbar: Crown & Anchor\n
+ address: 247 Commercial Street\, Provincetown\, MA 02657\nticketUrl: https:
+ //www.tryst.events/e/fat-slut-spooky-bear/tickets\nimage: https://onlyatthe
+ crown.com/wp-content/uploads/2026/07/ange-gradient-5.75-x-8.75-in-Instagram
+ -Post-45-819x1024.png\ncover: $22\ntimezone: America/New_York\naddressSourc
+ e: page\nwebsite: https://tryst.events/e/fat-slut-spooky-bear\ngmaps: https
+ ://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20
+ Commercial%20Street%2C%20Provincetown%2C%20MA%2002657\npinSource: curated\n
+ shortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfa
+ cebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.or
+ g/spookybear\nkey: fat-slut-spooky-bear|2026-10-30|crown & anchor\nimageSou
+ rce: json-api\nbarSource: curated\nbearSource: keyword
+LAST-MODIFIED:20261010T213251Z
 LOCATION:42.0502291\, -70.1876737
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Motherdisco
+SUMMARY:Fat Slut: Spooky Bear
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -63,127 +64,25 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261030T013000Z
 DTEND:20261030T035959Z
-DTSTAMP:20261010T220656Z
+DTSTAMP:20261029T100517Z
 UID:4F5C20C9-C452-44E6-93DA-0F71CCB32065
 CREATED:20260927T214740Z
 DESCRIPTION:description: Get your tickets now! Last year it sold out. Thurs
  day Night! Brooklyn Joe brings his underwear party back to Red Room for Spo
  oky Bear!\nbar: Red Room\naddress: 258 Commercial St\, Provincetown\, MA 02
- 657\nimage: https://static.wixstatic.com/media/238fae_ca15afbae4d24d32b03c0
- db59a7806bc~mv2.png\ntimezone: America/New_York\nwebsite: https://redroom.c
- lub/shows/387797\ninstagram: https://instagram.com/furballnyc/\nshortName: 
- FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-provincetown|
- 2026-10-30|red room\nbearSource: keyword\ncover: $26\npinSource: curated\na
- ddressSource: curated\nimageSource: page\nbarSource: curated\ngmaps: https:
- //www.google.com/maps/search/?api=1&query=Red%20Room%2C%20258%20Commercial%
- 20St%2C%20Provincetown%2C%20MA%2002657
-LAST-MODIFIED:20261010T213255Z
+ 657\nticketUrl: https://redroom.club/shows/387797\nimage: https://files.sea
+ tengine.com/talent/headshots/photos/95709/full/data\ntimezone: America/New_
+ York\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/fu
+ rballnyc/\nshortName: FUR­BALL\nfavicon: https://linktr.ee/furballnyc\nkey:
+  furball-provincetown|2026-10-30|red room\nbearSource: keyword\ncover: $26\
+ npinSource: curated\naddressSource: curated\nimageSource: jsonld\nbarSource
+ : curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Red%20Roo
+ m%2C%20258%20Commercial%20St%2C%20Provincetown%2C%20MA%2002657
+LAST-MODIFIED:20261029T100434Z
 LOCATION:42.0510476\, -70.1876737
 SEQUENCE:1
 STATUS:CONFIRMED
-SUMMARY:FURBALL Provincetown
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261031T230000Z
-DTEND:20261101T003000Z
-DTSTAMP:20261010T220656Z
-UID:9E8225F7-D8D2-4C51-87AE-E0AAA848F382
-CREATED:20261010T213254Z
-DESCRIPTION:description: Doors @ 6\\:30PM | Show @ 7\\:00PM Witch Perfect\,
-  is an all live-singing\, comedy parody based on the cult-classic and audie
- nce favorite Disney film Hocus Pocus! It features Emmy-winning stars from R
- uPaul's Drag Race\\: All-Stars 10 and S13 Tina Burner as Winifred. Season 1
- 1\, All-Stars S6\, and UK vs the World S2’s Scarlet Envy as Sara\, and Seas
- on 9 and All Stars S8's Alexis Michelle as Mary. The show features hits fro
- m such pop icons as Lady Gaga\, Madonna and Cher\, as well as Disney classi
- cs Little Mermaid and The Lion King.\nbar: Crown & Anchor\naddress: 247 Com
- mercial St\, Provencetown\, MA 02657\nticketUrl: https://www.tryst.events/e
- /witch-perfect-10-31-2026/tickets\nimage: https://onlyatthecrown.com/wp-con
- tent/uploads/2026/08/PROVINCETOWN.png\ncover: $45-$75\naddressSource: page\
- nwebsite: https://tryst.events/e/witch-perfect-10-31-2026\ngmaps: https://w
- ww.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Comm
- ercial%20St%2C%20Provencetown%2C%20MA%2002657\npinSource: curated\nshortNam
- e: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: 
- https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spooky
- bear\nkey: witch-perfect|2026-10-31|crown & anchor\ntimezone: America/New_Y
- ork\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/08/P
- ROVINCETOWN.png\nimageSource: json-api\nbarSource: curated\nbearSource: ai
-LAST-MODIFIED:20261010T213254Z
-LOCATION:42.0502291\, -70.1876737
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Witch Perfect
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261031T200000Z
-DTEND:20261101T010000Z
-DTSTAMP:20261010T220656Z
-UID:A6FDC452-F814-4A77-A628-B03B0E6691D7
-CREATED:20261010T213253Z
-DESCRIPTION:description: Spooky Bear Weekend's biggest tea dance. Special e
- xtended hours from 4 to 9 PM\, time enough for a couple of costume changes!
-  Attire\\: it's Halloween\, you know what to do.\nbar: Boatslip\naddress: S
- B\nimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe06
- 5/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\nimageSource: json-api
- \ntimezone: America/New_York\nimageHorizontal: https://files.elfsightcdn.co
- m/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d
- /SpookyTea.jpg\nbarSource: curated\naddressSource: page\ngmaps: https://www
- .google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\npinSource: 
- curated\ninstagram: https://www.instagram.com/boatslipresort\nkey: spooky-t
- ea|2026-10-31|boatslip\nbearSource: keyword\nshortName: SPOOKY TEA
-LAST-MODIFIED:20261010T213253Z
-LOCATION:42.0470329\, -70.1901852
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Spooky Tea
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261031T020000Z
-DTEND:20261031T050000Z
-DTSTAMP:20261010T220656Z
-UID:02D26467-021B-44C5-AA44-004F9BA89370
-CREATED:20261010T213253Z
-DESCRIPTION:description: Night two of HIMBO / Jockstrap at Purgatory.\nbar:
-  Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ng
- maps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900
- 224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house
- \nkey: himbo-jockstrap-night-2-of-2)|2026-10-31|purgatory\nbearSource: keyw
- ord
-LAST-MODIFIED:20261010T213253Z
-LOCATION:42.0496268\, -70.1900224
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:HIMBO / Jockstrap (Night 2 of 2)
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261030T020000Z
-DTEND:20261030T050000Z
-DTSTAMP:20261010T220656Z
-UID:B294E101-C461-4F2A-B6F1-5B50CC22078F
-CREATED:20261010T213251Z
-DESCRIPTION:description: Night one of HIMBO / Jockstrap at Purgatory.\nbar:
-  Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ng
- maps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900
- 224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house
- \nkey: himbo-jockstrap-night-1-of-2)|2026-10-30|purgatory\nbearSource: keyw
- ord
-LAST-MODIFIED:20261010T213251Z
-LOCATION:42.0496268\, -70.1900224
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:HIMBO / Jockstrap (Night 1 of 2)
+SUMMARY:FURBALL:Howl Underwear and Gear Party
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -191,7 +90,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261030T230000Z
 DTEND:20261031T003000Z
-DTSTAMP:20261010T220656Z
+DTSTAMP:20261029T100517Z
 UID:9D92759E-52C9-4D91-B707-CA2D152246FD
 CREATED:20261010T213252Z
 DESCRIPTION:description: Doors @ 6\\:30PM | Show @ 7\\:00PM Witch Perfect\,
@@ -224,82 +123,93 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261030T010000Z
-DTEND:20261030T050000Z
-DTSTAMP:20261010T220656Z
-UID:70C49CFF-E896-4B98-A398-6415EC3B2AAE
-CREATED:20261010T213251Z
-DESCRIPTION:description: LA drag superstar Meatball is bringing her hit par
- ty FAT SLUT to Spooky Bear 2026! Bears know how to party in the fattest and
-  sluttiest way possible. -DRAG SHOWS & SPECIAL GUEST -SEXY GOGO DANCERS -DA
- NCE PARTY -THE ORIGINAL SEXY FOOD EATING COMPETITION\nbar: Crown & Anchor\n
- address: 247 Commercial Street\, Provincetown\, MA 02657\nticketUrl: https:
- //www.tryst.events/e/fat-slut-spooky-bear/tickets\nimage: https://onlyatthe
- crown.com/wp-content/uploads/2026/07/ange-gradient-5.75-x-8.75-in-Instagram
- -Post-45-819x1024.png\ncover: $22\ntimezone: America/New_York\naddressSourc
- e: page\nwebsite: https://tryst.events/e/fat-slut-spooky-bear\ngmaps: https
- ://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20
- Commercial%20Street%2C%20Provincetown%2C%20MA%2002657\npinSource: curated\n
- shortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfa
- cebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.or
- g/spookybear\nkey: fat-slut-spooky-bear|2026-10-30|crown & anchor\nimageSou
- rce: json-api\nbarSource: curated\nbearSource: keyword
-LAST-MODIFIED:20261010T213251Z
+DTSTART:20260718T020000Z
+DTEND:20260718T030000Z
+DTSTAMP:20261029T100517Z
+UID:A648996C-FBF3-4F80-B009-64E0FB665858
+CREATED:20260913T132708Z
+DESCRIPTION:description: ✨ BELLY is more than a party—it’s a MOVEMENT. ✨We 
+ celebrate big bodies and the people who love them\, creating nightlife wher
+ e size isn’t a side note—it’s the spotlight. BELLY\\: Thick\, Juicy\, and U
+ napologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please em
+ ail Members@massbearsandcubs.org‍\nbar: Red Room\naddress: 258 Commercial S
+ treet\, Provincetown\, MA\, 02657\nwebsite: https://www.massbearsandcubs.or
+ g/events/bellyparty1-pl3n8-gfpnw\nimage: https://images.squarespace-cdn.com
+ /content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BEL
+ LY+INSTGRAM+SIZE.jpg\nimageSource: json-api\nticketUrl: https://redroom.clu
+ b/shows/376078\nimageVertical: https://images.squarespace-cdn.com/content/v
+ 1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRA
+ M+SIZE.jpg\npinSource: page\naddressSource: page\ngmaps: https://www.google
+ .com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\ninstagram: https:/
+ /www.instagram.com/redroomptown\nkey: the-belly-party-bear-week|2026-07-18|
+ red room\nbearSource: keyword\nshortName: THE BELLY PARTY
+LAST-MODIFIED:20260913T132708Z
+LOCATION:42.0510351\, -70.1876798
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:The Belly Party (Bear Week)
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261031T010000Z
+DTEND:20261031T050000Z
+DTSTAMP:20261029T100517Z
+UID:34E17B66-94AA-4026-AC08-441617D79F1E
+CREATED:20260918T134814Z
+DESCRIPTION:bar: Red Room\naddress: 258 Commercial Street Provincetown\, Ma
+ ssachusetts\, 02657 United States\nimage: https://images.squarespace-cdn.co
+ m/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BE
+ LLY+INSTGRAM+SIZE.jpg\ntimezone: America/New_York\nimageVertical: https://i
+ mages.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406
+ -7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\naddressSource: page\nwebsite
+ : https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p
+ 4h\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIA
+ I-jRz2eak\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursa
+ men\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\n
+ favicon: https://www.ursamen.org/spookybear\nkey: the-belly-party-spooky-be
+ ar|2026-10-31|red room\ndescription: BOSTON’S hottest chubby party is comin
+ g to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.\nimageSourc
+ e: json-api\nbarSource: curated\nbearSource: keyword
+LAST-MODIFIED:20260918T134814Z
+LOCATION:42.0510476\, -70.1876737
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:The Belly Party - SPOOKY BEAR!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261031T010000Z
+DTEND:20261031T050000Z
+DTSTAMP:20261029T100517Z
+UID:A846A338-A48E-4DFF-A6AD-AD9CD5F73D58
+CREATED:20261010T213252Z
+DESCRIPTION:description: Motherdisco returns to Provincetown for a special 
+ Spooky Bear takeover at the Crown & Anchor. Dead Disco Prom is your invitat
+ ion to dress up\, get down\, and dance all night to a high-energy mix of di
+ sco\, house\, and queer nightlife favorites. Expect killer looks\, sweaty d
+ ancing\, spooky glamour\, and a packed dance floor as Motherdisco brings it
+ s signature NYC energy back to Ptown for Halloween.\nbar: Crown & Anchor\na
+ ddress: 247 Commercial Street\, Provincetown\, MA 02657\nticketUrl: https:/
+ /www.tryst.events/e/mother-disco-spooky-bear/tickets\nimage: https://onlyat
+ thecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png\ncover: $38\
+ ntimezone: America/New_York\naddressSource: page\nwebsite: https://tryst.ev
+ ents/e/mother-disco-spooky-bear\ngmaps: https://www.google.com/maps/search/
+ ?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provi
+ ncetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstag
+ ram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.c
+ om/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: motherdisco
+ |2026-10-31|crown & anchor\nimageVertical: https://onlyatthecrown.com/wp-co
+ ntent/uploads/2026/08/Untitled-design-14.png\nimageSource: json-api\nbarSou
+ rce: curated\nbearSource: keyword
+LAST-MODIFIED:20261010T213252Z
 LOCATION:42.0502291\, -70.1876737
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:Fat Slut: Spooky Bear
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260717T020000Z
-DTSTAMP:20261010T220656Z
-UID:EA8572E1-44B4-47B7-A8F3-9D128EE5C5A5
-CREATED:20260701T132043Z
-DESCRIPTION:description: MUSIC\\:\nGSP + HARLOW\nJOCKS · UNDERWEAR · GEAR\n
- LIMITED CLOTHES CHECK (FIRST COME\, FIRST SERVED)\n$5 DISCOUNT WITH BEAR TA
- GS\nbar: REDROOM\naddress: 258 Commercial St\, Provincetown\, MA 02657\ntim
- ezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/f
- urballnyc/UnderbearNYC-bear-week-2026\ninstagram: https://instagram.com/fur
- ballnyc/\nimage: https://static.wixstatic.com/media/238fae_ccecfe5565134a15
- b54c70f056f0e4c0~mv2.png/v1/fill/w_296\,h_476\,al_c\,q_85\,usm_0.66_1.00_0.
- 01\,enc_avif\,quality_auto/238fae_ccecfe5565134a15b54c70f056f0e4c0~mv2.png\
- ncover: $5 DISCOUNT WITH BEAR TAGS\nshortName: FUR-BALL\nfavicon: https://l
- inktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.g
- oogle.com/maps/search/?api=1&query=REDROOM%2C%20258%20COMMERCIAL%20ST%2C%20
- PROVINCETOWN%2C%20MA\nkey: riptide|2026-07-17|redroom
-LAST-MODIFIED:20260712T000449Z
-LOCATION:42.0510476\, -70.1876737
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Riptide
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260819T020000Z
-DTSTAMP:20261010T220656Z
-UID:42DA779D-6393-4D26-B639-49FBB415029D
-CREATED:20260811T142850Z
-DESCRIPTION:description: Carnival Deep Sea Disco\nbar: Red Room\naddress: 2
- 58 Commercial St\, Provincetown\, MA 02657\ntimezone: America/New_York\ntic
- ketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-underwear-
- party-carnival-week\nimage: https://static.wixstatic.com/media/238fae_67817
- ca3aad448c59fa804866d89bd92~mv2.jpg\nimageVertical: https://static.wixstati
- c.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nwebsite: https
- ://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName
- : FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-p'town|2026
- -08-19|red room\nbearSource: keyword\npinSource: curated\naddressSource: cu
- rated\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.goog
- le.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak
-LAST-MODIFIED:20260812T041510Z
-LOCATION:42.0510476\, -70.1876737
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:FURBALL P'Town
+SUMMARY:Motherdisco
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
@@ -307,7 +217,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261101T010000Z
 DTEND:20261101T050000Z
-DTSTAMP:20261010T220656Z
+DTSTAMP:20261029T100517Z
 UID:3896CDD2-87E1-4BD0-9B28-30AAC665BA5A
 CREATED:20261010T213254Z
 DESCRIPTION:description: Step into a decadent night of glamour\, drag\, dan
@@ -340,67 +250,8 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260718T020000Z
-DTEND:20260718T030000Z
-DTSTAMP:20261010T220656Z
-UID:A648996C-FBF3-4F80-B009-64E0FB665858
-CREATED:20260913T132708Z
-DESCRIPTION:description: ✨ BELLY is more than a party—it’s a MOVEMENT. ✨We 
- celebrate big bodies and the people who love them\, creating nightlife wher
- e size isn’t a side note—it’s the spotlight. BELLY\\: Thick\, Juicy\, and U
- napologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please em
- ail Members@massbearsandcubs.org‍\nbar: Red Room\naddress: 258 Commercial S
- treet\, Provincetown\, MA\, 02657\nwebsite: https://www.massbearsandcubs.or
- g/events/bellyparty1-pl3n8-gfpnw\nimage: https://images.squarespace-cdn.com
- /content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BEL
- LY+INSTGRAM+SIZE.jpg\nimageSource: json-api\nticketUrl: https://redroom.clu
- b/shows/376078\nimageVertical: https://images.squarespace-cdn.com/content/v
- 1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRA
- M+SIZE.jpg\npinSource: page\naddressSource: page\ngmaps: https://www.google
- .com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\ninstagram: https:/
- /www.instagram.com/redroomptown\nkey: the-belly-party-bear-week|2026-07-18|
- red room\nbearSource: keyword\nshortName: THE BELLY PARTY
-LAST-MODIFIED:20260913T132708Z
-LOCATION:42.0510351\, -70.1876798
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:The Belly Party (Bear Week)
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261031T010000Z
-DTEND:20261031T050000Z
-DTSTAMP:20261010T220656Z
-UID:34E17B66-94AA-4026-AC08-441617D79F1E
-CREATED:20260918T134814Z
-DESCRIPTION:bar: Red Room\naddress: 258 Commercial Street Provincetown\, Ma
- ssachusetts\, 02657 United States\nimage: https://images.squarespace-cdn.co
- m/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BE
- LLY+INSTGRAM+SIZE.jpg\ntimezone: America/New_York\nimageVertical: https://i
- mages.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406
- -7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\naddressSource: page\nwebsite
- : https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p
- 4h\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIA
- I-jRz2eak\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursa
- men\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\n
- favicon: https://www.ursamen.org/spookybear\nkey: the-belly-party-spooky-be
- ar|2026-10-31|red room\ndescription: BOSTON’S hottest chubby party is comin
- g to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.\nimageSourc
- e: json-api\nbarSource: curated\nbearSource: keyword
-LAST-MODIFIED:20260918T134814Z
-LOCATION:42.0510476\, -70.1876737
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:The Belly Party - SPOOKY BEAR!
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20260712T020000Z
-DTSTAMP:20261010T220656Z
+DTSTAMP:20261029T100517Z
 UID:D0D6C7F9-24C0-48F2-B9AB-8F785BF13389
 CREATED:20260701T132042Z
 DESCRIPTION:description: PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY O
@@ -420,6 +271,155 @@ LOCATION:42.0470329\, -70.1901852
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:FURBALL
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261031T200000Z
+DTEND:20261101T010000Z
+DTSTAMP:20261029T100517Z
+UID:A6FDC452-F814-4A77-A628-B03B0E6691D7
+CREATED:20261010T213253Z
+DESCRIPTION:description: Spooky Bear Weekend's biggest tea dance. Special e
+ xtended hours from 4 to 9 PM\, time enough for a couple of costume changes!
+  Attire\\: it's Halloween\, you know what to do.\nbar: Boatslip\naddress: S
+ B\nimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe06
+ 5/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\nimageSource: json-api
+ \ntimezone: America/New_York\nimageHorizontal: https://files.elfsightcdn.co
+ m/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d
+ /SpookyTea.jpg\nbarSource: curated\naddressSource: page\ngmaps: https://www
+ .google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\npinSource: 
+ curated\ninstagram: https://www.instagram.com/boatslipresort\nkey: spooky-t
+ ea|2026-10-31|boatslip\nbearSource: keyword\nshortName: SPOOKY TEA
+LAST-MODIFIED:20261010T213253Z
+LOCATION:42.0470329\, -70.1901852
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Spooky Tea
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260819T020000Z
+DTSTAMP:20261029T100517Z
+UID:42DA779D-6393-4D26-B639-49FBB415029D
+CREATED:20260811T142850Z
+DESCRIPTION:description: Carnival Deep Sea Disco\nbar: Red Room\naddress: 2
+ 58 Commercial St\, Provincetown\, MA 02657\ntimezone: America/New_York\ntic
+ ketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-underwear-
+ party-carnival-week\nimage: https://static.wixstatic.com/media/238fae_67817
+ ca3aad448c59fa804866d89bd92~mv2.jpg\nimageVertical: https://static.wixstati
+ c.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nwebsite: https
+ ://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName
+ : FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-p'town|2026
+ -08-19|red room\nbearSource: keyword\npinSource: curated\naddressSource: cu
+ rated\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.goog
+ le.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak
+LAST-MODIFIED:20260812T041510Z
+LOCATION:42.0510476\, -70.1876737
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:FURBALL P'Town
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261030T020000Z
+DTEND:20261030T050000Z
+DTSTAMP:20261029T100517Z
+UID:B294E101-C461-4F2A-B6F1-5B50CC22078F
+CREATED:20261010T213251Z
+DESCRIPTION:description: Night one of HIMBO / Jockstrap at Purgatory.\nbar:
+  Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ng
+ maps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900
+ 224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house
+ \nkey: himbo-jockstrap-night-1-of-2)|2026-10-30|purgatory\nbearSource: keyw
+ ord
+LAST-MODIFIED:20261010T213251Z
+LOCATION:42.0496268\, -70.1900224
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:HIMBO / Jockstrap (Night 1 of 2)
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261031T020000Z
+DTEND:20261031T050000Z
+DTSTAMP:20261029T100517Z
+UID:02D26467-021B-44C5-AA44-004F9BA89370
+CREATED:20261010T213253Z
+DESCRIPTION:description: Night two of HIMBO / Jockstrap at Purgatory.\nbar:
+  Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ng
+ maps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900
+ 224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house
+ \nkey: himbo-jockstrap-night-2-of-2)|2026-10-31|purgatory\nbearSource: keyw
+ ord
+LAST-MODIFIED:20261010T213253Z
+LOCATION:42.0496268\, -70.1900224
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:HIMBO / Jockstrap (Night 2 of 2)
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261031T230000Z
+DTEND:20261101T003000Z
+DTSTAMP:20261029T100517Z
+UID:9E8225F7-D8D2-4C51-87AE-E0AAA848F382
+CREATED:20261010T213254Z
+DESCRIPTION:description: Doors @ 6\\:30PM | Show @ 7\\:00PM Witch Perfect\,
+  is an all live-singing\, comedy parody based on the cult-classic and audie
+ nce favorite Disney film Hocus Pocus! It features Emmy-winning stars from R
+ uPaul's Drag Race\\: All-Stars 10 and S13 Tina Burner as Winifred. Season 1
+ 1\, All-Stars S6\, and UK vs the World S2’s Scarlet Envy as Sara\, and Seas
+ on 9 and All Stars S8's Alexis Michelle as Mary. The show features hits fro
+ m such pop icons as Lady Gaga\, Madonna and Cher\, as well as Disney classi
+ cs Little Mermaid and The Lion King.\nbar: Crown & Anchor\naddress: 247 Com
+ mercial St\, Provencetown\, MA 02657\nticketUrl: https://www.tryst.events/e
+ /witch-perfect-10-31-2026/tickets\nimage: https://onlyatthecrown.com/wp-con
+ tent/uploads/2026/08/PROVINCETOWN.png\ncover: $45-$75\naddressSource: page\
+ nwebsite: https://tryst.events/e/witch-perfect-10-31-2026\ngmaps: https://w
+ ww.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Comm
+ ercial%20St%2C%20Provencetown%2C%20MA%2002657\npinSource: curated\nshortNam
+ e: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: 
+ https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spooky
+ bear\nkey: witch-perfect|2026-10-31|crown & anchor\ntimezone: America/New_Y
+ ork\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/08/P
+ ROVINCETOWN.png\nimageSource: json-api\nbarSource: curated\nbearSource: ai
+LAST-MODIFIED:20261010T213254Z
+LOCATION:42.0502291\, -70.1876737
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Witch Perfect
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20261031
+DTEND;VALUE=DATE:20261101
+DTSTAMP:20261029T100517Z
+UID:C2CA8263-B167-4BC8-9AF6-87738E966BCA
+CREATED:20261010T213255Z
+DESCRIPTION:description: Goldiloxx brings Tricks & Treat to Purgatory for H
+ alloween night.\nbar: Purgatory\naddress: SB\ntimezone: America/New_York\na
+ ddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=
+ 42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instag
+ ram.com/goldiloxx__\nshortName: GOLDI­LOXX\nshorterName: GLX\nfavicon: http
+ s://linktr.ee/goldiloxx\nkey: goldiloxx-tricks-treat|2026-10-31|purgatory\n
+ timeUnknown: true\nbearSource: ai
+LAST-MODIFIED:20261010T213255Z
+LOCATION:42.0496268\, -70.1900224
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Goldiloxx: Tricks & Treat
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

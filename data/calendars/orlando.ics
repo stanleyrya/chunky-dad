@@ -6,9 +6,39 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-orlando
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
+DTSTART;VALUE=DATE:20270603
+DTEND;VALUE=DATE:20270608
+DTSTAMP:20261029T100517Z
+UID:85C0CDE1-2520-4BCC-B47A-B7AE5B6AD54E
+CREATED:20261001T131416Z
+DESCRIPTION:description: Bear Jamboree is Orlando’s ultimate LGBTQ+ bear we
+ ekend—packed with pool parties\, nightlife\, comedy\, DJs\, and community e
+ vents. Book your hotel and tickets now.\ntimezone: America/New_York\ninstag
+ ram: https://www.instagram.com/bearjamboree\nfacebook: http://www.facebook.
+ com/orlandobearpride\nimage: https://acqvlhciredwtlbpisso.supabase.co/stora
+ ge/v1/object/public/event-images/7d34cf689a47f41c.png\nimageHorizontal: htt
+ ps://static.wixstatic.com/media/ee7b13_5b00ecd68efb442d915e135b8438039bf000
+ .jpg/v1/fill/w_797\,h_448\,al_c\,q_80\,usm_0.66_1.00_0.01\,enc_avif\,qualit
+ y_auto/ee7b13_5b00ecd68efb442d915e135b8438039bf000.jpg\nwebsite: https://ww
+ w.bearjamboree.com/\nshortName: JAM­BO­REE\nfavicon: https://www.bearjambor
+ ee.com\nkey: bear-jamboree-orlando-gay-bear-weekend|2027-06-03|\nbearSource
+ : keyword\nbar: Crowne Plaza Lake Buena Vista\naddress: Orlando\, FL\nimage
+ Vertical: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public
+ /event-images/7d34cf689a47f41c.png\nallDay: true\naddressSource: page\nimag
+ eSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=C
+ rowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL
+LAST-MODIFIED:20261029T100444Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bear Jamboree: Orlando Gay Bear Weekend
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261018T160000Z
 DTEND:20261018T220000Z
-DTSTAMP:20261001T140823Z
+DTSTAMP:20261029T100517Z
 UID:87567182-B9D4-4FC5-9098-33440F2400B1
 CREATED:20261001T131416Z
 DESCRIPTION:bar: Anthem Orlando\naddress: Orlando\, FL\nwebsite: https://ww
@@ -25,29 +55,6 @@ LOCATION:28.5437437\, -81.3792958
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:Bear Tea-Dance
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART;VALUE=DATE:20270603
-DTEND;VALUE=DATE:20270608
-DTSTAMP:20261001T140823Z
-UID:85C0CDE1-2520-4BCC-B47A-B7AE5B6AD54E
-CREATED:20261001T131416Z
-DESCRIPTION:bar: Crowne Plaza Lake Buena Vista\naddress: Orlando\, FL\nwebs
- ite: https://www.bearjamboree.com/\nimage: https://acqvlhciredwtlbpisso.sup
- abase.co/storage/v1/object/public/event-images/7d34cf689a47f41c.png\nimageS
- ource: json-api\ntimezone: America/New_York\nimageVertical: https://acqvlhc
- iredwtlbpisso.supabase.co/storage/v1/object/public/event-images/7d34cf689a4
- 7f41c.png\naddressSource: page\ngmaps: https://www.google.com/maps/search/?
- api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL\nkey
- : bear-jamboree|2027-06-03|crowne plaza lake buena vista\nallDay: true\nbea
- rSource: keyword\nshortName: BEAR JAMBOREE
-LAST-MODIFIED:20261001T131416Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Bear Jamboree
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
