@@ -2315,6 +2315,7 @@ class SharedCore {
             image: pct(q.image, n),
             desc: pct(q.desc, n),
             flags,
+            renamed: { n: q.renamed, examples: q.renamedExamples.slice() },
             bear: { extracted: row.extracted, kept: row.bear, ai_dropped: q.aiDropped, manual_dropped: q.manualDropped, top_reason: reasons.length ? reasons[0][0] : '' },
             dedup: { removed: q.dedupRemoved, pct: pct(q.dedupRemoved, q.dedupRemoved + (row.extracted || 0)) },
             stability,
@@ -2746,19 +2747,21 @@ class SharedCore {
                     extracted: 0, events: 0, bear: 0, upcoming: 0, duration_ms: 0,
                     proposals: { new: 0, merge: 0 }, upcomingKeys: {}, eventKeyIndex: new Set(),
                     roles: [], url: '', signals: { structured: 0, ai: 0 },
-                    quality: { n: 0, time: 0, place: 0, coords: 0, url: 0, image: 0, desc: 0, keys: new Set(), maxDay: '', flags: {}, aiDropped: 0, manualDropped: 0, dropReasons: new Map(), dedupRemoved: 0, merges: 0, changed: 0, churnFields: {}, errors: {} }
+                    quality: { n: 0, time: 0, place: 0, coords: 0, url: 0, image: 0, desc: 0, keys: new Set(), maxDay: '', flags: {}, aiDropped: 0, manualDropped: 0, dropReasons: new Map(), dedupRemoved: 0, merges: 0, changed: 0, churnFields: {}, errors: {}, renamed: 0, renamedExamples: [] }
                 });
             }
             return byHost.get(host);
         };
         const allHomeHosts = new Set();
         const eventKeyToHost = new Map();
+        const parserPrimaryHost = new Map();
 
         parserResults.forEach((parser) => {
             if (!parser || typeof parser !== 'object') return;
             const hosts = SharedCore.sourceLedgerParserHosts(parser);
             const { name, config, configUrls, events, homeHosts, primary } = hosts;
             const siteRole = String(config.siteRole || '').trim().toLowerCase();
+            parserPrimaryHost.set(name, primary);
             homeHosts.forEach((host) => {
                 allHomeHosts.add(host);
                 const row = hostOf(host);
@@ -2835,6 +2838,20 @@ class SharedCore {
             if (day && day >= todayKey && day > q.maxDay) q.maxDay = day;
         });
 
+        // An aggregator's copy folded into the site's own slot under another
+        // name (reconcileAggregatorPointers): charged to the AGGREGATOR's
+        // host, so the Sources view shows which aggregators invent names.
+        analyzedEvents.forEach((event) => {
+            const folded = event && Array.isArray(event._aggregatorCopiesFolded) ? event._aggregatorCopiesFolded : [];
+            folded.forEach((entry) => {
+                if (!entry || entry.renamed !== true) return;
+                const host = parserPrimaryHost.get(String(entry.aggregator || ''));
+                if (!host) return;
+                const q = hostOf(host).quality;
+                q.renamed += 1;
+                if (q.renamedExamples.length < 3) q.renamedExamples.push(`"${String(entry.title || '').slice(0, 60)}" = ${entry.source || 'the site'}'s "${String(event.title || '').slice(0, 60)}" (${entry.day || ''})`);
+            });
+        });
         analyzedEvents.forEach((event) => {
             if (!event || typeof event !== 'object') return;
             const action = String(event._action || '').toLowerCase();
@@ -16852,9 +16869,44 @@ class SharedCore {
 
     // The pass. Runs on the whole run AFTER the cross-parser fold, with
     // the parser results it came from. Returns counts for the log.
+    // ── The site's own slot ─────────────────────────────────────────────
+    // Owner ruling 2026-10-29, after a week of the same two cards: Gathr
+    // re-listed the Boatslip's "HALLOWEEN UNIFORM TEA" as "Daddy-O's Dog
+    // Tag Tea" and its "SPOOKY TEA" as "Heebie-Jeebie Halloween Tea" — same
+    // bar, same 4pm, same street line — and the name rungs never met them,
+    // so the deck asked every day which to keep. Names are exactly what an
+    // aggregator gets wrong; the slot is the hard fact both sides state. An
+    // aggregator's copy that lands in a slot the pointed-at site lists —
+    // same local day, starts within 15 minutes, both times real, positive
+    // place agreement with no contradicting place evidence (two rooms of
+    // one building geocode to one pin, so differing bar names or street
+    // lines still keep two events) — is that event, and folds in under the
+    // site's own name. The fold loses nothing: an aggregator never wins a
+    // field. Exactly ONE such event on the site and one such record in the
+    // run: two parties in one slot (two rooms) are the deck's to tell apart.
+    isAggregatorCopyInSiteEventSlot(copy, siteEvent) {
+        if (!copy || typeof copy !== 'object' || !siteEvent || typeof siteEvent !== 'object' || copy === siteEvent) return false;
+        if (!this.isAggregatorRecord(copy) || this.isAggregatorRecord(siteEvent)) return false;
+        if (this.areDistinctPublishedFeedRows(copy, siteEvent)) return false;
+        const incoming = this.buildIdentityComparisonShape(copy);
+        const existing = this.buildIdentityComparisonShape(siteEvent);
+        if (!this.areIdentityDatesOnSameLocalDay(incoming, existing)) return false;
+        if (!this.areDatesEqual(incoming.startDate, existing.startDate, 15)) return false;
+        if (this.hasMissingTimeStartPlaceholder(copy, siteEvent)) return false;
+        if (!(incoming.bar || incoming.address) || !(existing.bar || existing.address)) return false;
+        if (!this.areIdentityPlacesSimilar(incoming, existing)) return false;
+        if (this.haveContradictingPlaceEvidence(incoming, existing, copy, siteEvent)) return false;
+        return !this.getIdentityContradiction(copy, siteEvent);
+    }
+
+    static titlesReadTheSame(a, b) {
+        const fold = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+        return fold(a) === fold(b);
+    }
+
     reconcileAggregatorPointers(events, results = {}) {
         const list = Array.isArray(events) ? events.filter(event => event && typeof event === 'object') : [];
-        const summary = { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 };
+        const summary = { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 };
         if (list.length === 0) return summary;
         const coverage = this.buildFirstPartySiteCoverage(results && results.parserResults);
         const firstPartyImages = this.indexFirstPartyImages(list);
@@ -16867,6 +16919,38 @@ class SharedCore {
             if (!target) continue;
             const day = this.normalizeEventDateLocal(event.startDate, event.timezone || null);
             if (!day) continue;
+            // The site lists this very slot (isAggregatorCopyInSiteEventSlot):
+            // the copy is that event. One on the site and one in the run,
+            // or the deck decides.
+            const slotOnSite = target.events.filter(candidate => this.isAggregatorCopyInSiteEventSlot(event, candidate));
+            if (slotOnSite.length > 0) {
+                const slotInRun = list.filter(candidate => this.isAggregatorCopyInSiteEventSlot(event, candidate));
+                const ownIndex = slotInRun.length === 1 ? events.indexOf(slotInRun[0]) : -1;
+                const copyIndex = events.indexOf(event);
+                if (slotOnSite.length === 1 && ownIndex !== -1 && copyIndex !== -1) {
+                    const own = slotInRun[0];
+                    const renamed = !SharedCore.titlesReadTheSame(event.title, own.title);
+                    const clock = this.formatLocalClockTime(own.startDate, own.timezone || event.timezone || null) || '';
+                    const merged = this.mergeAggregatorCopyIntoOwnRecord(own, event);
+                    merged._aggregatorCopiesFolded = [...(Array.isArray(own._aggregatorCopiesFolded) ? own._aggregatorCopiesFolded : []), {
+                        aggregator,
+                        title: String(event.title || ''),
+                        startDate: event.startDate instanceof Date ? event.startDate.toISOString() : String(event.startDate || ''),
+                        bar: String(event.bar || ''),
+                        day,
+                        site: target.site,
+                        source: target.source,
+                        renamed
+                    }];
+                    events[ownIndex] = merged;
+                    list[list.indexOf(own)] = merged;
+                    events.splice(copyIndex, 1);
+                    console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) is ${target.source}'s "${own.title || 'event'}" — ${target.site} lists exactly that slot (${own.bar || own.address || 'same place'}${clock ? `, ${clock}` : ''}); the copy folds in under the site's own name${renamed ? ` (${aggregator} had renamed it)` : ''}`);
+                    summary.foldedInSlot++;
+                    continue;
+                }
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) sits in a slot ${target.site} lists ${slotOnSite.length === 1 ? 'once' : `${slotOnSite.length} times`} (${slotInRun.length} such record${slotInRun.length === 1 ? '' : 's'} in the run) — two parties in one slot? Not folded; the deck decides`);
+            }
             const backing = target.dropped.find(candidate => this.normalizeEventDateLocal(candidate.startDate, candidate.timezone || event.timezone || null) === day);
             if (backing) {
                 console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} lists "${backing.title || 'an event'}" that night but the bear check dropped it; the copy stands as found`);

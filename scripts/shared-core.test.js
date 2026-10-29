@@ -28349,7 +28349,7 @@ test('aggregator pointers: a copy the pointed-at site does not list is withheld 
   const { result: summary, logs } = withLogs(() => core.reconcileAggregatorPointers(events, {
     parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: site }, { name: 'Gathr', config: GATHR, events: [copy, unread] }]
   }));
-  assert.deepEqual(summary, { withheld: 1, backedByDropped: 0, imagesCleared: 1, pageUnread: 0 });
+  assert.deepEqual(summary, { withheld: 1, backedByDropped: 0, imagesCleared: 1, pageUnread: 0, foldedInSlot: 0 });
   const stamp = copy._aggregatorUnbackedWithheld;
   assert.ok(stamp, 'the copy is stamped');
   assert.equal(stamp.aggregator, 'Gathr');
@@ -28397,7 +28397,7 @@ test('aggregator pointers: fail closed — no first-party coverage, a bear-dropp
   // No first-party source read the site this run: the copy stands as found.
   const alone = gathrCopy();
   let summary = withLogs(() => core.reconcileAggregatorPointers([alone], { parserResults: [{ name: 'Gathr', config: GATHR, events: [alone] }] })).result;
-  assert.deepEqual(summary, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.deepEqual(summary, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 });
   assert.equal(alone._aggregatorUnbackedWithheld, undefined);
   assert.equal(alone.image, JULY4_FLYER_OG_CROP);
 
@@ -28407,7 +28407,7 @@ test('aggregator pointers: fail closed — no first-party coverage, a bear-dropp
   const { result: backedSummary, logs } = withLogs(() => core.reconcileAggregatorPointers([chunkSiteEvent(), backed], {
     parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [chunkSiteEvent()], bearDroppedEvents: [{ event: dropped, reason: 'not bear' }] }]
   }));
-  assert.deepEqual(backedSummary, { withheld: 0, backedByDropped: 1, imagesCleared: 0, pageUnread: 0 });
+  assert.deepEqual(backedSummary, { withheld: 0, backedByDropped: 1, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 });
   assert.equal(backed._aggregatorUnbackedWithheld, undefined);
   assert.ok(logs.some(line => line.includes('lists "Some Wednesday thing" that night but the bear check dropped it; the copy stands as found')), logs.join('\n'));
 
@@ -28422,7 +28422,7 @@ test('aggregator pointers: fail closed — no first-party coverage, a bear-dropp
   const folsomSite = chunkSiteEvent({ title: 'CHUNK FOLSOM - Bear Playground', bar: 'F8 Nightclub & Bar', city: 'sf', timezone: 'America/Los_Angeles', startDate: '2026-09-27T05:00:00.000Z', url: 'https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26', image: '' });
   const folsomCopy = gathrCopy({ title: "CHUNK: San Francisco Folsom '26 - Bear Playground", bar: 'F8 (1192 Folsom St)', city: 'sf', timezone: 'America/Los_Angeles', startDate: '2026-09-27T05:00:00.000Z', url: 'https://www.chunk-party.com', image: '', imageHorizontal: '' });
   const folsom = withLogs(() => core.reconcileAggregatorPointers([folsomSite, folsomCopy], { parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [folsomSite] }] }));
-  assert.deepEqual(folsom.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.deepEqual(folsom.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 });
   assert.deepEqual(folsomCopy._aggregatorUnbackedWithheld.sameNight, [{ title: 'CHUNK FOLSOM - Bear Playground', startDate: '2026-09-27T05:00:00.000Z', clock: '22:00', hoursApart: 0, bar: 'F8 Nightclub & Bar', url: 'https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26' }]);
   assert.equal(folsomCopy._aggregatorUnbackedWithheld.reason, 'Gathr points at chunk-party.com, where CHUNK lists "CHUNK FOLSOM - Bear Playground" at F8 Nightclub & Bar that same night — the two did not fold as one event');
   assert.ok(folsom.logs.some(line => line.includes('that same night and the fold left this copy standing; one event or two? Withheld to the deck.')), folsom.logs.join('\n'));
@@ -28503,7 +28503,7 @@ test('aggregator pointers: a read vouches only for the pages it reached — a co
   assert.equal(target.namesPage, true);
   assert.equal(target.pageRead, false);
   const unread = withLogs(() => core.reconcileAggregatorPointers([...eagle, southern], results));
-  assert.deepEqual(unread.result, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 1 });
+  assert.deepEqual(unread.result, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 1, foldedInSlot: 0 });
   assert.equal(southern._aggregatorUnbackedWithheld, undefined, 'the copy stands as found');
   assert.ok(unread.logs.some(line => line === '🧭 AGGREGATOR: "Southern Bears Bar Night" (The Bear Calendar, 2026-11-14) points at https://atlantaeagle.com/event/southern-bears-bar-night/, a page Atlanta Eagle did not read this run — the copy stands as found'), unread.logs.join('\n'));
 
@@ -28511,25 +28511,25 @@ test('aggregator pointers: a read vouches only for the pages it reached — a co
   const listingCopy = bearCalendarCopy({ url: 'https://atlantaeagle.com/events/' });
   assert.equal(core.getAggregatorPointerTarget(listingCopy, coverage).pageRead, true, 'the configured listing is a page the read reached');
   const listing = withLogs(() => core.reconcileAggregatorPointers([...eagle, listingCopy], results));
-  assert.deepEqual(listing.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.deepEqual(listing.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 });
   assert.equal(listingCopy._aggregatorUnbackedWithheld.nearest.title, 'First Friday Express Lane');
 
   // A page a kept record carries was read: a copy pointing at it under another night is withheld.
   const redated = bearCalendarCopy({ title: 'Halloween Ball', url: 'https://www.atlantaeagle.com/event/halloween' });
   assert.equal(core.getAggregatorPointerTarget(redated, coverage).pageRead, true, 'www. and the trailing slash do not make another page');
   const redatedRun = withLogs(() => core.reconcileAggregatorPointers([...eagle, redated], results));
-  assert.deepEqual(redatedRun.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.deepEqual(redatedRun.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 });
   assert.equal(redated._aggregatorUnbackedWithheld.nearest.title, 'First Friday Express Lane', 'nearest by time, not the page pointed at');
 
   // A page the bear check dropped was read too; its own night backs the copy, another night is withheld.
   const triviaCopy = bearCalendarCopy({ title: 'Trivia', url: 'https://atlantaeagle.com/event/trivia-night/', startDate: '2026-10-15T01:00:00.000Z' });
   assert.equal(core.getAggregatorPointerTarget(triviaCopy, coverage).pageRead, true);
   const trivia = withLogs(() => core.reconcileAggregatorPointers([...eagle, triviaCopy], results));
-  assert.deepEqual(trivia.result, { withheld: 0, backedByDropped: 1, imagesCleared: 0, pageUnread: 0 });
+  assert.deepEqual(trivia.result, { withheld: 0, backedByDropped: 1, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 });
 
   // The bare root never names a page: CHUNK's stale Nov 11 copy is still withheld.
   const ghost = withLogs(() => core.reconcileAggregatorPointers([chunkSiteEvent(), gathrCopy({ image: '', imageHorizontal: '' })], { parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [chunkSiteEvent()] }] }));
-  assert.deepEqual(ghost.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.deepEqual(ghost.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 });
 
   assert.equal(SharedCore.getPointerPageKey('HTTPS://www.Example.com/Event/A-Night/?id=7#top'), 'example.com/event/a-night?id=7');
   assert.equal(SharedCore.getPointerPageKey('https://example.com'), 'example.com');
@@ -28553,7 +28553,7 @@ test('aggregator pointers: a link hub is a platform — a source on linktr.ee/<h
   assert.equal(core.getAggregatorPointerTarget(megawoof, coverage), null, 'another party\'s handle page is not Cubhouse\'s site');
   assert.equal(core.getAggregatorPointerTarget({ ...megawoof, website: 'https://linktr.ee/cubhouse' }, coverage).source, 'Cubhouse');
   const run = withLogs(() => core.reconcileAggregatorPointers([cubhouse, megawoof], { parserResults: [{ name: 'Cubhouse', config: CUBHOUSE, events: [cubhouse] }] }));
-  assert.deepEqual(run.result, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.deepEqual(run.result, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 });
   assert.equal(megawoof._aggregatorUnbackedWithheld, undefined);
 });
 
@@ -29141,7 +29141,7 @@ test('aggregator pointers: a same-day neighbour hours away is "that day", with i
   const tea = chunkSiteEvent({ title: 'HALLOWEEN UNIFORM TEA - Spooky Bear Wknd', bar: 'Boatslip', city: 'ptown', startDate: '2026-10-30T20:00:00.000Z', endDate: '2026-10-30T23:00:00.000Z', url: 'https://theboatslip.com/pages/events', image: '', imageHorizontal: '', _parserConfig: BOATSLIP_SITE });
   const party = gathrCopy({ title: 'Sinners & Saints', bar: 'Boatslip', city: 'ptown', startDate: '2026-10-31T02:00:00.000Z', endDate: '2026-10-31T05:00:00.000Z', url: 'https://theboatslip.com/', image: '', imageHorizontal: '' });
   const { result, logs } = withLogs(() => core.reconcileAggregatorPointers([tea, party], { parserResults: [{ name: 'The Boatslip', config: BOATSLIP_SITE, events: [tea] }] }));
-  assert.deepEqual(result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  assert.deepEqual(result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0, foldedInSlot: 0 });
   const stamp = party._aggregatorUnbackedWithheld;
   assert.ok(stamp, 'still withheld: one event or two is the owner\'s call');
   assert.equal(stamp.claimClock, '22:00');
@@ -29167,4 +29167,67 @@ test('two sessions a page published as distinct rows stay two events behind thei
   const bare = sessions.map(s => { const copy = { ...s }; delete copy._sourceRowFeed; delete copy._sourceRowId; return copy; });
   const { result: folded } = await withLogsAsync(() => core.deduplicateEvents(bare));
   assert.ok(folded.length < 4, 'unstamped twins on one page fold');
+});
+
+test('aggregator pointers: a copy in the slot the site lists — same place, same start, one such event on the site and in the run — folds in under the site\'s own name, no card (Gathr\'s "Daddy-O\'s Dog Tag Tea" at the Boatslip\'s 4pm is its "HALLOWEEN UNIFORM TEA"); two in the slot, another hour or another bar keep the card', () => {
+  const core = createCore();
+  const slot = { bar: 'Boatslip', address: '161 Commercial St, Provincetown, MA 02657', city: 'ptown', startDate: '2026-10-30T20:00:00.000Z', endDate: '2026-10-30T23:00:00.000Z' };
+  const tea = () => chunkSiteEvent({ ...slot, title: 'HALLOWEEN UNIFORM TEA - Spooky Bear Wknd', url: '', website: 'https://www.ursamen.org/spookybear', image: DOG_TAG_JPG, imageHorizontal: '', _parserConfig: BOATSLIP_SITE });
+  const copy = (overrides = {}) => gathrCopy({ ...slot, title: "Daddy-O's Dog Tag Tea", url: '', image: '', imageHorizontal: '', notes: 'website: https://theboatslip.com/', ...overrides });
+  const run = (site, copies) => {
+    const events = [...site, ...copies];
+    const { result: summary, logs } = withLogs(() => core.reconcileAggregatorPointers(events, {
+      parserResults: [{ name: 'The Boatslip', config: BOATSLIP_SITE, events: site }, { name: 'Gathr', config: GATHR, events: copies }]
+    }));
+    return { events, summary, logs };
+  };
+
+  const own = tea();
+  const renamed = copy();
+  const folded = run([own], [renamed]);
+  assert.deepEqual(folded.summary, { withheld: 0, backedByDropped: 0, imagesCleared: 0, pageUnread: 0, foldedInSlot: 1 });
+  assert.equal(folded.events.length, 1, 'the copy is gone from the run');
+  assert.equal(folded.events[0].title, 'HALLOWEEN UNIFORM TEA - Spooky Bear Wknd', 'the site\'s own name stands');
+  assert.equal(folded.events[0].image, DOG_TAG_JPG);
+  assert.deepEqual(folded.events[0]._aggregatorCopiesFolded, [{
+    aggregator: 'Gathr', title: "Daddy-O's Dog Tag Tea", startDate: '2026-10-30T20:00:00.000Z', bar: 'Boatslip', day: '2026-10-30',
+    site: 'theboatslip.com', source: 'The Boatslip', renamed: true
+  }]);
+  assert.equal(renamed._aggregatorUnbackedWithheld, undefined, 'no card');
+  assert.ok(folded.logs.some(line => line.startsWith('🧭 AGGREGATOR: "Daddy-O\'s Dog Tag Tea" (Gathr, 2026-10-30) is The Boatslip\'s "HALLOWEEN UNIFORM TEA - Spooky Bear Wknd" — theboatslip.com lists exactly that slot (Boatslip, 16:00); the copy folds in under the site\'s own name (Gathr had renamed it)')), folded.logs.join('\n'));
+
+  // The same name: folds too, and is not counted as a renaming.
+  const sameName = run([tea()], [copy({ title: 'Halloween Uniform Tea – Spooky Bear Wknd!' })]);
+  assert.equal(sameName.summary.foldedInSlot, 1);
+  assert.equal(sameName.events[0]._aggregatorCopiesFolded[0].renamed, false);
+
+  // Two parties in the slot on the site (two rooms): the deck decides, as before.
+  const twoRooms = run([tea(), chunkSiteEvent({ ...slot, title: 'Dungeon Tea', url: '', image: '', imageHorizontal: '', _parserConfig: BOATSLIP_SITE })], [copy()]);
+  assert.equal(twoRooms.summary.foldedInSlot, 0);
+  assert.equal(twoRooms.summary.withheld, 1);
+  assert.equal(twoRooms.events.length, 3);
+  assert.equal(twoRooms.events[2]._aggregatorUnbackedWithheld.sameNight.length, 2);
+  assert.ok(twoRooms.logs.some(line => line.includes('sits in a slot theboatslip.com lists 2 times (2 such records in the run) — two parties in one slot? Not folded; the deck decides')), twoRooms.logs.join('\n'));
+
+  // Another hour that day: not the slot — the "that day, N hours" card as before.
+  const lateCopy = copy({ startDate: '2026-10-31T02:00:00.000Z', endDate: '2026-10-31T05:00:00.000Z', title: 'Sinners & Saints' });
+  const late = run([tea()], [lateCopy]);
+  assert.equal(late.summary.foldedInSlot, 0);
+  assert.equal(late.summary.withheld, 1);
+  assert.equal(lateCopy._aggregatorUnbackedWithheld.claimClock, '22:00');
+
+  // Another bar in the same town at the same hour: a different place is a different party.
+  const elsewhere = copy({ bar: 'Crown & Anchor', address: '247 Commercial St, Provincetown, MA 02657' });
+  const other = run([tea()], [elsewhere]);
+  assert.equal(other.summary.foldedInSlot, 0);
+  assert.equal(other.summary.withheld, 1);
+  assert.equal(core.isAggregatorCopyInSiteEventSlot(elsewhere, tea()), false);
+  // The helper itself fails closed on the midnight placeholder, another day, a first-party pair, and distinct published rows.
+  assert.equal(core.isAggregatorCopyInSiteEventSlot(copy({ startDate: '2026-10-30T04:00:00.000Z' }), tea()), false, 'another day');
+  const one = copy();
+  assert.equal(core.isAggregatorCopyInSiteEventSlot(one, one), false, 'the same object');
+  assert.equal(core.isAggregatorCopyInSiteEventSlot(tea(), tea()), false, 'a first-party pair is the dedup ladder\'s, not this pass\'s');
+  assert.equal(core.isAggregatorCopyInSiteEventSlot(copy(), copy({ title: 'x' })), false, 'an aggregator record is never the site\'s event');
+  assert.equal(core.isAggregatorCopyInSiteEventSlot(copy({ _sourceRowFeed: 'f', _sourceRowId: '1' }), tea()), true);
+  assert.equal(core.isAggregatorCopyInSiteEventSlot(copy({ _sourceRowFeed: 'f', _sourceRowId: '1' }), { ...tea(), _sourceRowFeed: 'f', _sourceRowId: '2' }), false, 'two rows of one feed');
 });
