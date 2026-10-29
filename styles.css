@@ -7063,7 +7063,7 @@ html.dusk body {
         padding-left: 1rem;
         padding-right: 1rem;
         width: 100%;
-        grid-template-columns: 430px minmax(0, 1fr);
+        grid-template-columns: 440px minmax(0, 1fr);
         grid-template-rows: auto auto;
         gap: 0 1.5rem;
     }
@@ -7147,6 +7147,32 @@ html.dusk body {
     .dusk .event-card.detailed.aurora .ec-row { font-size: 0.8rem; }
     .dusk .event-card.detailed.aurora .ec-tea { font-size: 0.8rem; }
 
+    /* ---------- the calendar is the phone's, verbatim ----------
+       The column is the 440px portrait phone's width, and everything
+       inside it carries the values the <=480px cascade gives that phone:
+       the same pill type, pill padding, zero cell gutters and the same
+       header row. So a name that fits on one line on the phone fits on
+       one line here, and the strip is exactly as tall. The desktop
+       cascade above gave the pills a bigger font inside narrower cells
+       (0.3rem of cell padding each side, 0.2rem gaps), and that is what
+       read as "less compact" on a foldable or a monitor: the same events
+       wrapped more ("LEATHE / R DADDY") and the grid grew to hold them.
+       Width is the only thing the wide screen adds, and it goes to the
+       cards and the map, never into the grid. */
+    .dusk .calendar-day,
+    .dusk .calendar-day.week-view,
+    .dusk .calendar-day.month-day { --day-padding: 0px; padding: 0; border-radius: 0; }
+    .dusk .calendar-day.week-view { min-height: 0; }
+    .dusk .calendar-day.month-day { min-height: 50px; }
+    .dusk .calendar-day.week-view h3 { font-size: 0.8rem; margin: 0; }
+    .dusk .calendar-day.week-view .day-date { font-size: 0.9rem; }
+    .dusk .event-item { padding: 0.2rem; margin-bottom: 0; border-radius: 4px; font-size: 0.7rem; line-height: 1.3; }
+    .dusk .event-item .event-name,
+    .dusk .event-item .event-name-mobile { font-size: 0.75rem; line-height: 1.2; }
+    .dusk .event-item .event-time { font-size: 0.7rem; line-height: 1.3; }
+    .dusk .calendar-day.week-view .daily-events { padding: 1.45rem 0 0.45rem; gap: 0.05rem; }
+    .dusk .calendar-grid { margin-bottom: 0; }
+
     /* the overlay re-homes and re-sizes the map section — the base's
        entrance animation and transition:all replay as a slide every time */
     .dusk .city-page .events-map-section,
@@ -7220,7 +7246,7 @@ html.dusk body {
     /* MONTH VIEW: three columns — the tall calendar, a full-height map,
        and ONE file of events scrolling on the right */
     .dusk .city-page:has(.month-view-grid) {
-        grid-template-columns: 430px minmax(260px, 1fr) minmax(380px, 470px);
+        grid-template-columns: 440px minmax(260px, 1fr) minmax(380px, 470px);
         grid-template-rows: auto;
         gap: 0 1.25rem;
     }
