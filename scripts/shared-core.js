@@ -26961,6 +26961,32 @@ class SharedCore {
         return null;
     }
 
+    // TRUE when `value` is a shortName (or shorterName) some curated promoter
+    // registry entry stamps — compared with soft hyphens stripped (the
+    // registry writes "GOLDI\u00ADLOXX" so the site can break the word) and
+    // through normalizeIdentityText. Keyed on the registry array itself so a
+    // core built with another list (tests, a bare core) never reads a stale
+    // set. No registry → nothing is branding here; the static stamp still is.
+    isCuratedPromoterShortName(value) {
+        const key = this.normalizeIdentityText(String(value || '').replace(/\u00AD/g, ''));
+        if (!key) return false;
+        const promoters = Array.isArray(this.promoters) ? this.promoters : [];
+        if (promoters.length === 0) return false;
+        if (this._promoterBrandKeysFor !== promoters) {
+            const keys = new Set();
+            promoters.forEach((entry) => {
+                if (!entry || typeof entry !== 'object') return;
+                ['shortName', 'shorterName'].forEach((field) => {
+                    const brand = this.normalizeIdentityText(String(entry[field] || '').replace(/\u00AD/g, ''));
+                    if (brand) keys.add(brand);
+                });
+            });
+            this._promoterBrandKeys = keys;
+            this._promoterBrandKeysFor = promoters;
+        }
+        return this._promoterBrandKeys.has(key);
+    }
+
     // Normalize scraped events and calendar events (which carry `name` instead of `title`
     // and stash extra fields in notes) into one comparable shape.
     // A STATICALLY STAMPED shortName is deliberately left out of `names`:
@@ -26976,10 +27002,21 @@ class SharedCore {
         const staticFields = event && event._staticFields && typeof event._staticFields === 'object'
             ? event._staticFields
             : {};
-        const shortNameIsBranding = Object.prototype.hasOwnProperty.call(staticFields, 'shortName');
-        const shortNames = [shortNameIsBranding ? '' : event.shortName, shortNameIsBranding ? '' : fields.shortName]
+        const shortNameIsStatic = Object.prototype.hasOwnProperty.call(staticFields, 'shortName');
+        // …and the stamp is not the only way to know. Underscore stamps die
+        // at a parser merge (a listing stub + its event page + its ticket
+        // page become one new object with the registry's shortName but no
+        // _staticFields), after which the brand reads as the event's own
+        // name: run 20261029-121117 welded "Loving Our Bear Bodies at
+        // Spooky Bear in Provincetown" (Wilde Playhouse at the Gifford
+        // House, Sat 11:00) into "GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT"
+        // (Purgatory at the Gifford House, Sat 12:00) — both carried the
+        // registry's "SPOOKY BEAR", and areTitlesSimilar found it inside the
+        // other title. A value the curated registry itself stamps is
+        // branding on whichever record carries it, stamp or no stamp.
+        const shortNames = [event.shortName, fields.shortName]
             .map(value => String(value || '').trim())
-            .filter(Boolean);
+            .filter(value => value && !shortNameIsStatic && !this.isCuratedPromoterShortName(value));
         const names = [event.title, event.name, event.originalTitle, ...shortNames]
             .map(value => String(value || '').trim())
             .filter(Boolean);
