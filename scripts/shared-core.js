@@ -3063,6 +3063,10 @@ class SharedCore {
     isOwnerReviewCandidate(event) {
         if (!event || typeof event !== 'object') return false;
         if (SharedCore.filterEventsForExecution([event], { offeringToOwner: true }).length !== 1) return false;
+        // A lone crawl event whose guessed date also falls outside its own
+        // festival's window never reaches the deck (prepareEventsForCalendar
+        // stamps noCard); it stays in results as a withheld record.
+        if (event._loneCrawlWithheld && typeof event._loneCrawlWithheld === 'object' && event._loneCrawlWithheld.noCard) return false;
         if (event._action === 'new') return true;
         // A big-drift merge is ALWAYS a card — it is withheld from every
         // automatic write precisely so the owner sees its data.
@@ -9481,6 +9485,21 @@ class SharedCore {
     clearNonIdentityLinkFields(event, label = 'event') {
         const cleared = [];
         if (!event || typeof event !== 'object') return cleared;
+        // Tracking parameters are the referrer's, never the event's. An
+        // aggregator's affiliate copy of a ticket link (The Bear Calendar's
+        // utm_source=thebearcalendar on bearadisemx.com, run 20261029-121117)
+        // is the same link as the site's own, and the stored link is the clean
+        // one. This runs on BOTH sides of a calendar merge (hygiene), so a
+        // tagged link an earlier run saved heals into a notes-only update.
+        for (const field of ['website', 'url', 'ticketUrl']) {
+            const value = typeof event[field] === 'string' ? event[field].trim() : '';
+            if (!value) continue;
+            const clean = this.stripTrackingFromUrl(value);
+            if (clean !== value) {
+                event[field] = clean;
+                console.log(`🔗 LINKS: dropped tracking parameters from ${field} for "${label}" — ${value} → ${clean}`);
+            }
+        }
         for (const field of ['website', 'url', 'ticketUrl']) {
             const value = typeof event[field] === 'string' ? event[field].trim() : '';
             if (!value) continue;
@@ -14068,6 +14087,33 @@ class SharedCore {
         return filtered.length > 0 ? `?${filtered.join('&')}` : '';
     }
 
+    // The same link without its tracking parameters (utm_*, aff, fbclid, …):
+    // what a stored link looks like. A tracker names the referrer, never the
+    // event; a locale parameter (lang=de) changes the page and stays. String
+    // parsing only — the URL global does not exist in Scriptable.
+    stripTrackingFromUrl(url) {
+        const value = typeof url === 'string' ? url.trim() : '';
+        if (!value) return value;
+        const hashIndex = value.indexOf('#');
+        const hash = hashIndex >= 0 ? value.slice(hashIndex) : '';
+        const beforeHash = hashIndex >= 0 ? value.slice(0, hashIndex) : value;
+        const queryIndex = beforeHash.indexOf('?');
+        if (queryIndex < 0) return value;
+        const path = beforeHash.slice(0, queryIndex);
+        const parts = beforeHash.slice(queryIndex + 1).split('&').filter(Boolean);
+        const kept = parts.filter(part => {
+            const [rawKey = ''] = String(part).split('=');
+            return !this.trackingParamPattern.test(this.decodeQueryComponent(rawKey).toLowerCase());
+        });
+        if (kept.length === parts.length) return value;
+        return `${path}${kept.length > 0 ? `?${kept.join('&')}` : ''}${hash}`;
+    }
+
+    urlCarriesTrackingParams(url) {
+        const value = typeof url === 'string' ? url.trim() : '';
+        return Boolean(value) && this.stripTrackingFromUrl(value) !== value;
+    }
+
     decodeQueryComponent(value) {
         try {
             return decodeURIComponent(String(value || '').replace(/\+/g, '%20'));
@@ -18037,6 +18083,7 @@ class SharedCore {
 
         const scrapedIsAggregator = this.isAggregatorRecord(scraperObject) || this.isAggregatorRecord(newEvent);
         const aggregatorKeptFields = [];
+        const aggregatorLinkBlanksKept = [];
 
         // Apply merge logic for each field
         for (const fieldName of allFields) {
@@ -18308,6 +18355,21 @@ class SharedCore {
                 mergedObject[fieldName] = calendarValue;
                 continue;
             }
+            // AN AGGREGATOR'S LINK IS NEVER A SAVED EVENT'S IDENTITY LINK.
+            // url/website are the one canonical field — the event's own page
+            // — and an aggregator's copy of it is a referral pointer, not the
+            // event's statement: a blank stays blank until the event's own
+            // source states it (a ticket link may still fill a blank). Run
+            // 20261029-121117: The Bear Calendar's utm-tagged
+            // bearadisemx.com/en/tickets link was dealt as the url of the
+            // saved "Bearadise IBFF Bear Week 2027"; owner: "something is
+            // wrong".
+            if (scrapedIsAggregator && (fieldName === 'url' || fieldName === 'website')
+                && this.isEmptyArbitrationValue(calendarValue) && !this.isEmptyArbitrationValue(scraperValue)) {
+                aggregatorLinkBlanksKept.push(fieldName);
+                mergedObject[fieldName] = calendarValue;
+                continue;
+            }
 
             // WHO THROWS THE PARTY beats WHERE IT IS, under EVERY strategy. A
             // venue parser stamps its own site as static metadata, merged
@@ -18455,6 +18517,9 @@ class SharedCore {
 
         if (aggregatorKeptFields.length > 0) {
             console.log(`🧭 AGGREGATOR: "${mergeTitle}" — the saved event keeps ${aggregatorKeptFields.join(', ')}; an aggregator only fills blanks`);
+        }
+        if (aggregatorLinkBlanksKept.length > 0) {
+            console.log(`🧭 AGGREGATOR: "${mergeTitle}" — ${aggregatorLinkBlanksKept.join(', ')} stays blank; an aggregator's link never becomes a saved event's own link`);
         }
 
         // STEP 3b: AI arbitration for genuine conflicts — one batched request.
@@ -22697,8 +22762,10 @@ class SharedCore {
             return `WITHHELD (big drift — ${reason || 'identity changed'}; decide on the deck)`;
         }
         if (SharedCore.isLoneCrawlWithheld(event)) {
-            const reason = String(event._loneCrawlWithheld.reason || '').trim();
-            return `WITHHELD (lone event from a crawled page — ${reason || 'its date is stated nowhere beside its name'}; decide on the deck)`;
+            const reason = String(event._loneCrawlWithheld.reason || '').trim() || 'its date is stated nowhere beside its name';
+            const noCard = String(event._loneCrawlWithheld.noCard || '').trim();
+            if (noCard) return `WITHHELD (lone event from a crawled page — ${reason}, and ${noCard}; no deck card)`;
+            return `WITHHELD (lone event from a crawled page — ${reason}; decide on the deck)`;
         }
         if (SharedCore.isRecurringSeriesEvent(event)) {
             if (event._seriesWrite === true && event._ownerReviewApproved) return 'APPROVED (series — the phone writes the recurring event)';
@@ -24284,6 +24351,55 @@ class SharedCore {
                     action: 'new',
                     reason: 'assembled from two listings — never matched against the calendar, write withheld'
                 }, calendarAdapter, config));
+                continue;
+            }
+
+            // A LONE CRAWL EVENT, BEFORE THE MATCH: the only event read off a
+            // page the crawl reached, its date stated nowhere beside its name
+            // (AiWebParser.markLoneCrawlEvent) — that date is the model's
+            // guess, and a guess anchors no saved party. Run 20261029-121117:
+            // bearitmtl.com's April post "BEAR PLAYGROUND - Thick & Glazed"
+            // was read with the night of the site-wide Spooky Playground
+            // flyer, place-exact-start matched the saved "SPOOKY PLAYGROUND"
+            // at the same bar, and the deck offered to rename this autumn's
+            // party after last spring's edition. The stamp dies inside the
+            // calendar merge (createFinalEventObject rebuilds the record from
+            // fields), so the execution gate never saw it. The record is
+            // analyzed as a stand-alone NEW record the gate withholds (the
+            // deck decides) and takes no part in slot precedence or overlap
+            // findings; an owner approval creates it as new — the stamp keeps
+            // it off every saved event either way.
+            if (event._loneCrawlWithheld && typeof event._loneCrawlWithheld === 'object') {
+                const loneEntry = await this.buildAnalyzedCalendarEvent(event, {
+                    action: 'new',
+                    reason: 'lone event from a crawled page — never matched against the calendar, write withheld'
+                }, calendarAdapter, config);
+                if (event._festivalContext && !loneEntry._festivalContext) {
+                    loneEntry._festivalContext = event._festivalContext;
+                }
+                const loneReason = String(loneEntry._loneCrawlWithheld.reason || 'its date is stated nowhere beside its name').trim();
+                // NO CARD: a guessed date that also falls outside its own
+                // festival's curated window (±7d) has nothing behind it — the
+                // page states no date and the festival says not now. Run
+                // 20261029-121117: bearitmtl.com's "Rabais Hotel - Festival
+                // Sugar Bear 2026" (a hotel-discount post for an April
+                // festival, dated by the model to a November night) reached
+                // the deck wearing three flags; the owner's note was "not an
+                // event". The record stays in results with its reason; the
+                // deck never deals it (isOwnerReviewCandidate).
+                const windowFlag = this.getFestivalWindowSanityFlag(loneEntry);
+                if (windowFlag) {
+                    if (!Array.isArray(loneEntry._sanityFlags)) loneEntry._sanityFlags = [];
+                    if (!loneEntry._sanityFlags.some(flag => flag && flag.code === windowFlag.code)) {
+                        loneEntry._sanityFlags.push(windowFlag);
+                    }
+                    const window = loneEntry._festivalContext.nextDates || {};
+                    loneEntry._loneCrawlWithheld.noCard = `its guessed date falls outside the curated "${loneEntry._festivalContext.name}" window ${window.start || '?'} – ${window.end || '?'}`;
+                    console.log(`🧭 LONE EVENT: "${event.title || 'Unknown'}" — ${loneReason}, and ${loneEntry._loneCrawlWithheld.noCard}; never matched against the calendar; write withheld; no deck card (kept in results)`);
+                } else {
+                    console.log(`🧭 LONE EVENT: "${event.title || 'Unknown'}" — ${loneReason}; never matched against the calendar (a guessed date anchors no saved party); write withheld; the deck decides`);
+                }
+                analyzedEvents.push(loneEntry);
                 continue;
             }
 
