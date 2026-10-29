@@ -23238,3 +23238,137 @@ test('furniture by shape: a buy button in any language, a calendar view heading,
     assert.ok(logs.some((line) => line.includes('"en-US" is a locale tag')));
   } finally { console.log = quiet; }
 });
+
+
+// ---------------------------------------------------------------------------
+// A programme IMAGE on an event page (run 20261029-071349): the weekend's
+// schedule picture on ursamen.org/spookybear, OCR'd perfectly, kept as one
+// "Spooky Bear" record. Its timed rows are the events.
+// ---------------------------------------------------------------------------
+const SPOOKY_SCHEDULE_OCR = `THE NORTHEAST URSAMEN PRESENT
+SPOOKY BEAR
+ROARING TWENTIES
+WEDNESDAY
+7:00 PM - MONSTER MASH DANCE PARTY &
+FUNDRAISER - BOATSLIP RESORT
+THURSDAY
+8:00PM-10:00 PM - SPOOKY BEAR EARLY BEAR MEET UP
+GIFFORD HOUSE - PORCH BAR
+FRIDAY
+10:30 AM & 1:00PM — HALLOQUEEN BURNER BRUNCH
+5:00-8:00 PM - URSAMEN MEET & GREET
+CROWN & ANCHOR
+8:00-10:00 PM - SANCTUM PARANORMAL GHOST TOUR
+10:00 PM-1:00 AM - SAINTS & SINNERS PARTY
+BOATSLIP RESORT
+SATURDAY
+9:30 AM — BEARS IN THE DUNES - ART'S DUNE TOURS
+10:00 AM-2:30 PM — SPOOKY BEAR MARKETPLACE
+BOATSLIP RESORT
+2:00-4:30 PM — SPOOKY BEAR BINGO
+CROWN & ANCHOR (DOORS OPEN AT 1:30 PM)
+6:00 PM-8:00 PM — THE PROHIBITION PAWTY
+KEYHOLE AT PROVINCETOWN INN
+8:00-10:00 PM — SANCTUM PARANORMAL GHOST TOUR
+9:00 PM-1:00AM — DEATH BECOMES THEM:
+A ROARING TWENTIES HALLOWEEN COSTUME BALL -
+CROWN & ANCHOR
+
+A ROARING TWENTIES CROWN & ANCHOR
+OCT 29TH - NOV 1ST, 2026
+PROVINCETOWN, MA`;
+
+test('programme image on an event page: every timed row under a weekday heading is an event, dated by the range the picture states; venue lines, wrapped names, two seatings and overnight ends all read', () => {
+  const parser = createParser();
+  parser.now = () => new Date('2026-10-29T12:00:00.000Z');
+  parser.core.festivals = [{ key: 'spooky-bear', name: 'Spooky Bear', cityKey: 'ptown', nextDates: { start: '2026-10-29', end: '2026-11-01' } }];
+  parser.core.bars = { ptown: [{ name: 'Boatslip' }, { name: 'Crown & Anchor' }, { name: 'Gifford House' }, { name: 'Purgatory Gifford House' }] };
+  const cities = require('../scraper-cities');
+  const url = 'https://static.wixstatic.com/media/bc384a_a7a538150a46426d9c59dae05f9165a6~mv2.jpg';
+  parser.recordOcrImageVerdict(url, { imageClassification: 'event-flyer', text: SPOOKY_SCHEDULE_OCR });
+  assert.equal(parser.isMultiEventProgrammeImage(url), true, 'the clock census calls it a programme although the model said event-flyer');
+  const htmlData = { url: 'https://www.ursamen.org/spookybear', html: '<html><body><h1>Spooky Bear</h1><p>Weekend Schedule (Ticket links can be found by clicking on the event listed)</p></body></html>' };
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let events;
+  try { events = parser.buildProgrammeImageEvents([{ url, text: SPOOKY_SCHEDULE_OCR }], htmlData, cities, { name: 'Spooky Bear' }); } finally { console.log = original; }
+  const rows = events.map(e => `${e.startDate.toISOString().slice(0, 16)}|${e.endDate ? e.endDate.toISOString().slice(0, 16) : '-'}|${e.title}|${e.bar}`);
+  assert.deepEqual(rows, [
+    '2026-10-28T19:00|-|MONSTER MASH DANCE PARTY & FUNDRAISER|Boatslip',
+    '2026-10-29T20:00|2026-10-29T22:00|SPOOKY BEAR EARLY BEAR MEET UP|Gifford House',
+    '2026-10-30T10:30|-|HALLOQUEEN BURNER BRUNCH|',
+    '2026-10-30T13:00|-|HALLOQUEEN BURNER BRUNCH|',
+    '2026-10-30T17:00|2026-10-30T20:00|URSAMEN MEET & GREET|Crown & Anchor',
+    '2026-10-30T20:00|2026-10-30T22:00|SANCTUM PARANORMAL GHOST TOUR|',
+    '2026-10-30T22:00|2026-10-31T01:00|SAINTS & SINNERS PARTY|Boatslip',
+    "2026-10-31T09:30|-|BEARS IN THE DUNES|ART'S DUNE TOURS",
+    '2026-10-31T10:00|2026-10-31T14:30|SPOOKY BEAR MARKETPLACE|Boatslip',
+    '2026-10-31T14:00|2026-10-31T16:30|SPOOKY BEAR BINGO|Crown & Anchor',
+    '2026-10-31T18:00|2026-10-31T20:00|THE PROHIBITION PAWTY|KEYHOLE AT PROVINCETOWN INN',
+    '2026-10-31T20:00|2026-10-31T22:00|SANCTUM PARANORMAL GHOST TOUR|',
+    '2026-10-31T21:00|2026-11-01T01:00|DEATH BECOMES THEM: A ROARING TWENTIES HALLOWEEN COSTUME BALL|Crown & Anchor'
+  ]);
+  for (const event of events) {
+    assert.equal(event.city, 'ptown', `${event.title}: "PROVINCETOWN, MA" on the picture places it`);
+    assert.equal(event.timezone, 'America/New_York');
+    assert.equal(event._timezoneUnresolved, true, 'wall-clock times anchor in the city zone downstream');
+    assert.equal(event.url, 'https://www.ursamen.org/spookybear', 'the page is the event\'s link');
+    assert.ok(!event.image, 'the schedule picture is nobody\'s artwork');
+    assert.ok(String(event.description).includes('Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES'), `${event.title}: the programme heading rides along`);
+    assert.equal(event._programmeImage, url);
+  }
+  assert.match(events[9].description, /^DOORS OPEN AT 1:30 PM/, 'a parenthetical is detail, not name or venue');
+  assert.match(events[1].description, /^PORCH BAR/, 'the room after the venue is detail');
+  assert.ok(logs.some(line => line.includes('4 day headings, 12 timed rows → 13 event(s); days anchored to oct 29th - nov 1st, 2026 (the picture states the range), placed in ptown')), logs.join('\n'));
+
+  // A picture the census does not call a programme (three clock times) reads nothing.
+  const flyerUrl = 'https://static.wixstatic.com/media/flyer~mv2.jpg';
+  const flyer = 'FRIDAY\n10 PM - BEAR PARTY\nSATURDAY\n4 PM - TEA\n9 PM - BALL\nOCT 30 - 31, 2026';
+  parser.recordOcrImageVerdict(flyerUrl, { imageClassification: 'event-flyer', text: flyer });
+  assert.deepEqual(parser.buildProgrammeImageEvents([{ url: flyerUrl, text: flyer }], htmlData, cities, {}), []);
+  // One day heading only: a day's running order is not a programme.
+  const oneDay = 'SATURDAY\n4 PM - TEA\n7 PM - DINNER\n9 PM - BALL\n11 PM - AFTERS\nOCT 31, 2026';
+  parser.recordOcrImageVerdict('https://static.wixstatic.com/media/oneday~mv2.jpg', { imageClassification: 'multi-event-flyer', text: oneDay });
+  assert.deepEqual(parser.buildProgrammeImageEvents([{ url: 'https://static.wixstatic.com/media/oneday~mv2.jpg', text: oneDay }], htmlData, cities, {}), []);
+  // No range on the picture or the page, and no curated festival named: rows left unread.
+  const undated = 'WEEKEND\nFRIDAY\n4 PM - TEA\n9 PM - BALL\nSATURDAY\n4 PM - TEA\n9 PM - BALL';
+  parser.recordOcrImageVerdict('https://static.wixstatic.com/media/undated~mv2.jpg', { imageClassification: 'multi-event-flyer', text: undated });
+  assert.deepEqual(parser.buildProgrammeImageEvents([{ url: 'https://static.wixstatic.com/media/undated~mv2.jpg', text: undated }], { url: 'https://x.example/', html: '<p>Join us</p>' }, cities, {}), []);
+  // The curated festival the picture names dates it when nothing else does.
+  const named = 'SPOOKY BEAR\nFRIDAY\n4 PM - TEA\n9 PM - BALL\nSATURDAY\n4 PM - TEA\n9 PM - BALL';
+  parser.recordOcrImageVerdict('https://static.wixstatic.com/media/named~mv2.jpg', { imageClassification: 'multi-event-flyer', text: named });
+  const byFestival = parser.buildProgrammeImageEvents([{ url: 'https://static.wixstatic.com/media/named~mv2.jpg', text: named }], { url: 'https://x.example/', html: '<p>Join us</p>' }, cities, {});
+  assert.deepEqual(byFestival.map(e => `${e.startDate.toISOString().slice(0, 16)}|${e.title}|${e.city}`), ['2026-10-30T16:00|TEA|ptown', '2026-10-30T21:00|BALL|ptown', '2026-10-31T16:00|TEA|ptown', '2026-10-31T21:00|BALL|ptown']);
+});
+
+test('programme image: clocks, date ranges and weekday anchoring', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.readProgrammeRowClocks('8:00PM-10:00 PM'), { starts: ['20:00'], end: '22:00' });
+  assert.deepEqual(parser.readProgrammeRowClocks('2:00-4:30 PM'), { starts: ['14:00'], end: '16:30' }, 'a meridiem stated once covers both ends');
+  assert.deepEqual(parser.readProgrammeRowClocks('11-1 PM'), { starts: ['11:00'], end: '13:00' }, 'flipped when borrowing would put the start after the end');
+  assert.deepEqual(parser.readProgrammeRowClocks('9 PM - 1'), { starts: ['21:00'], end: '01:00' }, 'an end before the start is the next morning');
+  assert.deepEqual(parser.readProgrammeRowClocks('10:30 AM & 1:00PM'), { starts: ['10:30', '13:00'], end: null }, 'two seatings');
+  assert.deepEqual(parser.readProgrammeRowClocks('17:00-20:00'), { starts: ['17:00'], end: '20:00' }, '24-hour');
+  assert.deepEqual(parser.readProgrammeRowClocks('12 PM'), { starts: ['12:00'], end: null });
+  assert.deepEqual(parser.readProgrammeRowClocks('12 AM - 2 AM'), { starts: ['00:00'], end: '02:00' });
+  assert.equal(parser.readProgrammeRowClocks('2'), null, 'a bare number is no clock');
+  assert.equal(parser.readProgrammeRowClocks('10 - 12'), null, 'two bare numbers are no clocks');
+  assert.deepEqual(parser.readProgrammeDateRange('OCT 29TH - NOV 1ST, 2026'), { startMonth: 10, startDay: 29, endMonth: 11, endDay: 1, year: 2026, phrase: 'oct 29th - nov 1st, 2026' });
+  assert.deepEqual(parser.readProgrammeDateRange('Bears Sitges Week · September 5–7'), { startMonth: 9, startDay: 5, endMonth: 9, endDay: 7, year: null, phrase: 'september 5–7' });
+  assert.deepEqual(parser.readProgrammeDateRange('Del 3 al 13 de septiembre'), { startMonth: 9, startDay: 3, endMonth: 9, endDay: 13, year: null, phrase: '3 al 13 de septiembre' });
+  assert.deepEqual(parser.readProgrammeDateRange('29 Oct – 1 Nov 2026'), { startMonth: 10, startDay: 29, endMonth: 11, endDay: 1, year: 2026, phrase: '29 oct – 1 nov 2026' });
+  assert.equal(parser.readProgrammeDateRange('Doors 9 PM, 21+'), null);
+  const WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const headers = (...names) => names.map(name => ({ weekday: WEEK.indexOf(name), month: null, day: null }));
+  const range = { startMonth: 10, startDay: 29, endMonth: 11, endDay: 1, year: 2026 };
+  assert.deepEqual(parser.anchorProgrammeHeaders(headers('wednesday', 'thursday', 'friday', 'saturday'), range), ['2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31'], 'a Wednesday warm-up sits the day before the Thursday opening');
+  assert.deepEqual(parser.anchorProgrammeHeaders(headers('saturday', 'sunday'), range), ['2026-10-31', '2026-11-01']);
+  const sitges = { startMonth: 9, startDay: 5, endMonth: 9, endDay: 7, year: null };
+  assert.deepEqual(parser.anchorProgrammeHeaders(headers('friday', 'saturday', 'sunday'), sitges, new Date('2026-07-13T12:00:00Z')), ['2026-09-04', '2026-09-05', '2026-09-06'], 'no year: this year\'s edition while it is current');
+  assert.deepEqual(parser.anchorProgrammeHeaders(headers('friday'), sitges, new Date('2026-12-01T12:00:00Z')), ['2027-09-03'], 'a range that ended over 45 days ago is next year\'s edition');
+  assert.deepEqual(parser.anchorProgrammeHeaders([{ weekday: 5, month: 9, day: 11 }, headers('saturday')[0]], { startMonth: 9, startDay: 10, endMonth: 9, endDay: 13, year: 2026 }), ['2026-09-11', '2026-09-12'], 'a heading with its own date states it; the next weekday follows it');
+  const read = parser.readProgrammeImageRows('FRIDAY, OCT 30\n5:00-8:00 PM - MEET & GREET\nCROWN & ANCHOR\n\nSATURDAY 31\n9:30 AM — DUNES');
+  assert.deepEqual(read.headers.map(h => [h.weekday, h.month, h.day]), [[5, 10, 30], [6, null, 31]], 'a heading may carry its month and day');
+  assert.deepEqual(read.rows.map(r => [r.headerIndex, r.starts, r.end, r.lines]), [[0, ['17:00'], '20:00', ['MEET & GREET', 'CROWN & ANCHOR']], [1, ['09:30'], null, ['DUNES']]]);
+});

@@ -16891,9 +16891,25 @@ class SharedCore {
                 if (gap < nearestGap) { nearestGap = gap; nearest = candidate; }
             }
             const nearestDay = nearest ? this.normalizeEventDateLocal(nearest.startDate, nearest.timezone || event.timezone || null) : '';
-            const describe = (candidate) => `"${candidate.title || 'event'}"${candidate.bar ? ` at ${candidate.bar}` : ''}`;
+            // "That same night" is only true when the two starts are close.
+            // Gathr's "Sinners & Saints" (Boatslip, Friday 10pm) was told the
+            // Boatslip "lists HALLOWEEN UNIFORM TEA that same night" — a 4pm
+            // tea, six hours earlier (run 20261029-071349). The card now says
+            // the hour and the distance, so a same-DAY neighbour reads as one.
+            const hoursApart = (candidate) => {
+                const ms = SharedCore.toEpochMillis(candidate.startDate);
+                return Number.isFinite(ms) && Number.isFinite(startMs) ? (ms - startMs) / 3600000 : null;
+            };
+            const clockOf = (candidate) => this.formatLocalClockTime(candidate.startDate, candidate.timezone || event.timezone || null);
+            const describe = (candidate) => {
+                const gap = hoursApart(candidate);
+                const far = gap !== null && Math.abs(gap) >= 3;
+                const when = far ? ` (${clockOf(candidate)}, ${Math.round(Math.abs(gap))} hours ${gap < 0 ? 'before' : 'after'} this copy's ${clockOf(event)})` : '';
+                return `"${candidate.title || 'event'}"${candidate.bar ? ` at ${candidate.bar}` : ''}${when}`;
+            };
+            const allClose = sameNight.every(candidate => { const gap = hoursApart(candidate); return gap !== null && Math.abs(gap) < 3; });
             const reason = sameNight.length > 0
-                ? `${aggregator} points at ${target.site}, where ${target.source} lists ${sameNight.map(describe).join(' and ')} that same night — the two did not fold as one event`
+                ? `${aggregator} points at ${target.site}, where ${target.source} lists ${sameNight.map(describe).join(' and ')} ${allClose ? 'that same night' : 'that day'} — the two did not fold as one event`
                 : `${aggregator} points at ${target.site}, which ${target.source} read this run (${target.events.length} event${target.events.length === 1 ? '' : 's'}) and lists no event that night`;
             event._aggregatorUnbackedWithheld = {
                 aggregator,
@@ -16910,9 +16926,12 @@ class SharedCore {
                 sameNight: sameNight.map(candidate => ({
                     title: String(candidate.title || ''),
                     startDate: candidate.startDate instanceof Date ? candidate.startDate.toISOString() : String(candidate.startDate || ''),
+                    clock: clockOf(candidate),
+                    hoursApart: hoursApart(candidate),
                     bar: String(candidate.bar || ''),
                     url: String(candidate.url || candidate.website || '')
                 })),
+                claimClock: clockOf(event),
                 nearest: nearest ? {
                     title: String(nearest.title || ''),
                     startDate: nearest.startDate instanceof Date ? nearest.startDate.toISOString() : String(nearest.startDate || ''),
@@ -16923,7 +16942,7 @@ class SharedCore {
                 reason
             };
             if (sameNight.length > 0) {
-                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} lists ${sameNight.map(describe).join(' and ')} that same night and the fold left this copy standing; one event or two? Withheld to the deck.`);
+                console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} lists ${sameNight.map(describe).join(' and ')} ${allClose ? 'that same night' : 'that day'} and the fold left this copy standing; one event or two? Withheld to the deck.`);
             } else {
                 console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" (${aggregator}, ${day}) points at ${target.site} — ${target.source} read it this run (${target.events.length} events) and lists nothing that night${nearest ? `; nearest there: "${nearest.title || 'event'}" ${nearestDay}` : ''}. Withheld to the deck.`);
             }
@@ -17329,6 +17348,31 @@ class SharedCore {
                 const newIsListing = newEvent._pageOrigin === 'listing';
                 const existingIsCrawl = existingEvent._pageOrigin === 'crawl';
                 const newIsCrawl = newEvent._pageOrigin === 'crawl';
+                // A listing row titled with nothing but a curated festival's
+                // name is wearing the festival's BANNER, not naming its event:
+                // sickening.events' search row for Goldiloxx's party read
+                // "SPOOKY BEAR" while its own event page said "GOLDILOXX -
+                // SPOOKY BEAR DAYTIME DELIGHT" (run 20261029-071349); the
+                // listing's authority kept the banner, and the curated-festival
+                // umbrella then swallowed the party. The event page's own,
+                // longer title stands.
+                if (fieldName === 'title' && ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl))) {
+                    const listingTitle = existingIsListing ? existingValue : newValue;
+                    const pageTitle = existingIsListing ? newValue : existingValue;
+                    const banner = this.findCuratedFestivalByExactName(listingTitle);
+                    if (banner && !this.findCuratedFestivalByExactName(pageTitle)) {
+                        mergedEvent[fieldName] = pageTitle;
+                        console.log(`🏷️ MERGE: "${mergeEventTitle}" field=title — the listing's "${listingTitle}" is the curated festival ${banner.name}'s banner, not this event's name; the event page's own title "${pageTitle}" stands`);
+                        mergeDecisions.push({
+                            field: fieldName,
+                            existingValue: existingValue,
+                            newValue: newValue,
+                            chosenValue: pageTitle,
+                            reason: `listing title is the curated festival ${banner.name}'s banner — the event page's own title names the event`
+                        });
+                        return;
+                    }
+                }
                 const listingThumbnailReIllustrated = ((existingIsListing && newIsCrawl) || (newIsListing && existingIsCrawl))
                     && IMAGE_SLOT_FIELDS.has(fieldName)
                     && this.ownSiteDetailPageReIllustrates(
@@ -22794,6 +22838,24 @@ class SharedCore {
         return !ownHosts.some(host => this.areUrlHostsSameSite(host, pageHost));
     }
 
+    // The curated festival whose name (or alias) a title IS, once years and
+    // punctuation are folded away — "SPOOKY BEAR", "Spooky Bear 2026". Null
+    // for anything longer: "Goldiloxx: Spooky Bear Daytime Delight" names a
+    // party, not the festival.
+    findCuratedFestivalByExactName(title) {
+        const fold = (value) => this.decodeBasicHtmlEntities(String(value || '')).toLowerCase()
+            .replace(/\b(?:19|20)\d{2}\b/g, ' ')
+            .replace(/[^a-z0-9]+/g, '');
+        const wanted = fold(title);
+        if (!wanted) return null;
+        for (const festival of Array.isArray(this.festivals) ? this.festivals : []) {
+            if (!festival || !festival.name) continue;
+            const names = [festival.name].concat(Array.isArray(festival.aliases) ? festival.aliases : []);
+            if (names.some(name => fold(name) === wanted)) return festival;
+        }
+        return null;
+    }
+
     // TRUE when a title-similar record is the festival itself rather than a
     // party inside it: the same name once years and punctuation are folded
     // away, or a span of at least a day.
@@ -23001,6 +23063,24 @@ class SharedCore {
         if (this.festivalDriftLogged.has(driftKey)) return;
         this.festivalDriftLogged.add(driftKey);
         console.log(`📆 FESTIVAL: scraped ${festival.name} dates ${scrapedStart} – ${scrapedEnd} differ from curated ${window.start} – ${window.end} — curated wins; update data/festivals.json from the official source if real`);
+    }
+
+    // The umbrella stamp itself: what the execution gate, the disposition
+    // label and the results UI read. Set in prepareEventsForCalendar, before
+    // the calendar match for a scraped umbrella and after it for a merged
+    // record that came out umbrella-shaped.
+    stampCuratedFestivalMatch(entry, festival) {
+        if (!entry || typeof entry !== 'object' || !festival) return entry;
+        entry._festivalMatch = {
+            key: festival.key || '',
+            name: festival.name || '',
+            cityKey: festival.cityKey || null,
+            nextDates: festival.nextDates
+                ? { start: festival.nextDates.start || null, end: festival.nextDates.end || null }
+                : null,
+            reason: `matches curated festival: ${festival.name}`
+        };
+        return entry;
     }
 
     // A record stamped as a curated-festival umbrella (_festivalMatch, set in
@@ -24116,6 +24196,34 @@ class SharedCore {
                 continue;
             }
 
+            // FESTIVAL UMBRELLA, BEFORE THE MATCH: a record that IS a curated
+            // festival (its name, or a span of days — findCuratedFestivalMatch)
+            // is never matched against the calendar. Run 20261029-071349: the
+            // ursamen.org page's "Spooky Bear" fragment (Crown & Anchor, an
+            // AI-guessed Thu 7pm → Sun 1am) identity-matched the saved "Fat
+            // Slut: Spooky Bear" at the same bar that Thursday, and the merge
+            // arbiter took the fragment's description, 7pm start and 54-hour
+            // end; only the festival withhold below kept it off the calendar,
+            // and the deck still showed a rewrite of a real party. An
+            // umbrella anchors no saved party: it is analyzed as a stand-alone
+            // NEW record the execution gate withholds, and takes no part in
+            // slot precedence or overlap findings.
+            const umbrellaFestival = this.findCuratedFestivalMatch(event);
+            if (umbrellaFestival) {
+                const umbrellaEntry = await this.buildAnalyzedCalendarEvent(event, {
+                    action: 'new',
+                    reason: `matches curated festival ${umbrellaFestival.name} — never matched against the calendar, write withheld`
+                }, calendarAdapter, config);
+                if (event._festivalContext && !umbrellaEntry._festivalContext) {
+                    umbrellaEntry._festivalContext = event._festivalContext;
+                }
+                this.stampCuratedFestivalMatch(umbrellaEntry, umbrellaFestival);
+                console.log(`🎪 FESTIVAL: "${event.title || 'Unknown'}" is the curated festival "${umbrellaFestival.name}" itself — never matched against the calendar (an umbrella anchors no saved party); write withheld (curated dataset renders it)`);
+                this.reportCuratedFestivalDrift(umbrellaEntry, umbrellaFestival);
+                analyzedEvents.push(umbrellaEntry);
+                continue;
+            }
+
             // Get existing events from the adapter
             const existingEvents = this.viewStoredAllDayRecords(await calendarAdapter.getExistingEvents(event), event);
 
@@ -24202,15 +24310,7 @@ class SharedCore {
             // curated nextDates is reported once, report-only.
             const curatedFestival = this.findCuratedFestivalMatch(analyzedEntry);
             if (curatedFestival) {
-                analyzedEntry._festivalMatch = {
-                    key: curatedFestival.key || '',
-                    name: curatedFestival.name || '',
-                    cityKey: curatedFestival.cityKey || null,
-                    nextDates: curatedFestival.nextDates
-                        ? { start: curatedFestival.nextDates.start || null, end: curatedFestival.nextDates.end || null }
-                        : null,
-                    reason: `matches curated festival: ${curatedFestival.name}`
-                };
+                this.stampCuratedFestivalMatch(analyzedEntry, curatedFestival);
                 console.log(`🎪 FESTIVAL: "${analyzedEntry.title || 'Unknown'}" matches curated festival "${curatedFestival.name}" — write withheld (curated dataset renders it)`);
                 this.reportCuratedFestivalDrift(analyzedEntry, curatedFestival);
             } else if (analyzedEntry._festivalContext) {
@@ -27071,7 +27171,8 @@ class SharedCore {
             && !this.haveContradictingPlaceEvidence(incoming, existing, newEvent, existingEvent)
             && (this.recordsShareLinkLineage(newEvent, existingEvent)
                 || this.namesHaveAffinity(newEvent, existingEvent)
-                || this.recordsShareEventBrand(newEvent, existingEvent))) {
+                || this.recordsShareEventBrand(newEvent, existingEvent)
+                || this.recordsShareImageFile(newEvent, existingEvent))) {
             return 'place-exact-start';
         }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
@@ -27429,6 +27530,27 @@ class SharedCore {
         if (!brandA) return false;
         const brandB = this.getRecordBrandEntry(eventB);
         return Boolean(brandB && brandB.name === brandA.name);
+    }
+
+    // TRUE when the two records show the same picture FILE (host + path,
+    // the CDN's render recipe cut off — getImageMediaKey). A flyer is one
+    // party's: with the place and the start instant already agreeing, two
+    // records wearing one file are one event however the two sources named
+    // it. Gathr's "Daddy-O's Dog Tag Tea" beside the Boatslip's own
+    // "HALLOWEEN UNIFORM TEA" — same Boatslip, same Friday 4pm, the same
+    // elfsightcdn DogTagTea.jpg (run 20261029-071349) — shared no distinctive
+    // word, so the fold missed and the deck offered the aggregator's copy as
+    // a second tea. A reused flyer on ANOTHER night never reaches here: every
+    // rung above requires the same local day, and the aggregator pass clears
+    // such pictures (clearReusedAggregatorImage).
+    recordsShareImageFile(eventA, eventB) {
+        const keysOf = (event) => SharedCore.getAggregatorImageFields()
+            .map(field => SharedCore.getImageMediaKey(event && event[field]))
+            .filter(Boolean);
+        const a = keysOf(eventA);
+        if (a.length === 0) return false;
+        const b = new Set(keysOf(eventB));
+        return a.some(key => b.has(key));
     }
 
     // TRUE when the two names share a distinctive word (5+ letters, not

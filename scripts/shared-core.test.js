@@ -28423,7 +28423,7 @@ test('aggregator pointers: fail closed — no first-party coverage, a bear-dropp
   const folsomCopy = gathrCopy({ title: "CHUNK: San Francisco Folsom '26 - Bear Playground", bar: 'F8 (1192 Folsom St)', city: 'sf', timezone: 'America/Los_Angeles', startDate: '2026-09-27T05:00:00.000Z', url: 'https://www.chunk-party.com', image: '', imageHorizontal: '' });
   const folsom = withLogs(() => core.reconcileAggregatorPointers([folsomSite, folsomCopy], { parserResults: [{ name: 'CHUNK', config: CHUNK_SITE, events: [folsomSite] }] }));
   assert.deepEqual(folsom.result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
-  assert.deepEqual(folsomCopy._aggregatorUnbackedWithheld.sameNight, [{ title: 'CHUNK FOLSOM - Bear Playground', startDate: '2026-09-27T05:00:00.000Z', bar: 'F8 Nightclub & Bar', url: 'https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26' }]);
+  assert.deepEqual(folsomCopy._aggregatorUnbackedWithheld.sameNight, [{ title: 'CHUNK FOLSOM - Bear Playground', startDate: '2026-09-27T05:00:00.000Z', clock: '22:00', hoursApart: 0, bar: 'F8 Nightclub & Bar', url: 'https://www.chunk-party.com/event-details/chunk-folsom-bear-playground-9-26' }]);
   assert.equal(folsomCopy._aggregatorUnbackedWithheld.reason, 'Gathr points at chunk-party.com, where CHUNK lists "CHUNK FOLSOM - Bear Playground" at F8 Nightclub & Bar that same night — the two did not fold as one event');
   assert.ok(folsom.logs.some(line => line.includes('that same night and the fold left this copy standing; one event or two? Withheld to the deck.')), folsom.logs.join('\n'));
 
@@ -29069,4 +29069,83 @@ test('calendar twins: contained names at one bar, one name at two places, a plac
   assert.equal(byUid.PASS1, undefined, 'a pass link three nights share pairs nothing');
   assert.equal(byUid.ONE1, undefined, 'a series occurrence is never paired');
   assert.equal(byUid.ROOM1, undefined, 'two rooms in one slot are two events');
+});
+
+// ---------------------------------------------------------------------------
+// Spooky Bear weekend, run 20261029-071349: an aggregator's copy wearing the
+// first-party record's own picture, an umbrella fragment anchoring a saved
+// party, a listing row titled with the festival's banner, and a same-day
+// neighbour called "that same night".
+// ---------------------------------------------------------------------------
+
+const BOATSLIP_SITE = { name: 'The Boatslip', siteRole: 'venue', urls: ['https://theboatslip.com/pages/events'] };
+const DOG_TAG_JPG = 'https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg';
+
+async function withLogsAsync(fn) {
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  try { return { result: await fn(), logs }; } finally { console.log = original; }
+}
+
+test('same place, same start instant, same picture file: one event whatever the two sources call it (Gathr\'s "Daddy-O\'s Dog Tag Tea" is the Boatslip\'s "HALLOWEEN UNIFORM TEA")', () => {
+  const core = createCore();
+  const tea = { title: 'HALLOWEEN UNIFORM TEA - Spooky Bear Wknd', bar: 'Boatslip', city: 'ptown', timezone: 'America/New_York', startDate: new Date('2026-10-30T20:00:00.000Z'), endDate: new Date('2026-10-30T23:00:00.000Z'), image: DOG_TAG_JPG, _parserConfig: BOATSLIP_SITE, _pageOrigin: 'listing', _sourcePageUrl: 'https://theboatslip.com/pages/events' };
+  const copy = { title: "Daddy-O's Dog Tag Tea", bar: 'Boatslip', city: 'ptown', timezone: 'America/New_York', startDate: new Date('2026-10-30T20:00:00.000Z'), endDate: new Date('2026-10-30T23:00:00.000Z'), image: DOG_TAG_JPG, _parserConfig: GATHR, _pageOrigin: 'listing', _sourcePageUrl: 'https://gathrparty.com/' };
+  assert.equal(core.namesHaveAffinity(copy, tea), false, 'the names share nothing distinctive');
+  assert.equal(core.recordsShareImageFile(copy, tea), true);
+  assert.equal(core.getSameEventIdentitySignal(copy, tea), 'place-exact-start');
+  assert.equal(core.getSameEventIdentitySignal({ ...copy, image: 'https://files.elfsightcdn.com/a294b4f2/other/SolidGold.jpg' }, tea), null, 'a different picture is no evidence');
+  assert.equal(core.getSameEventIdentitySignal({ ...copy, startDate: new Date('2026-10-31T20:00:00.000Z'), endDate: new Date('2026-10-31T23:00:00.000Z') }, tea), null, 'the same picture on another night never folds');
+  assert.equal(core.getSameEventIdentitySignal({ ...copy, startDate: new Date('2026-10-30T23:00:00.000Z') }, tea), null, 'the same picture at another hour never folds');
+  assert.equal(core.recordsShareImageFile({ imageHorizontal: `${DOG_TAG_JPG}?w=600` }, { image: DOG_TAG_JPG }), true, 'one file behind a query string, in any slot');
+  assert.equal(core.recordsShareImageFile({}, { image: DOG_TAG_JPG }), false);
+});
+
+test('festival umbrella: a scraped umbrella fragment never anchors a saved party (the ursamen.org "Spooky Bear" fragment at Crown & Anchor matched "Fat Slut: Spooky Bear" and the arbiter took its 7pm start and 54-hour end)', async () => {
+  const core = createFestivalCore();
+  const fatSlut = { title: 'Fat Slut: Spooky Bear', startDate: '2037-10-30T01:00:00.000Z', endDate: '2037-10-30T05:00:00.000Z', bar: 'Crown & Anchor', city: 'ptown', timezone: 'America/New_York', identifier: 'cal:FATSLUT', notes: 'key: fat-slut-spooky-bear|2037-10-29|' };
+  const adapter = buildFestivalPrepAdapter([fatSlut]);
+  const fragment = { title: 'Spooky Bear', startDate: '2037-10-29T23:00:00.000Z', endDate: '2037-11-01T05:00:00.000Z', bar: 'Crown & Anchor', city: 'ptown', timezone: 'America/New_York', source: 'ai-web', isBearEvent: true, _venueSitePageHost: 'www.ursamen.org', _sourcePageUrl: 'https://www.ursamen.org/spookybear', _parserConfig: { name: 'Spooky Bear' } };
+  const { result: analyzed, logs } = await withLogsAsync(() => core.prepareEventsForCalendar([fragment], adapter, {}));
+  assert.equal(analyzed.length, 1);
+  const umbrella = analyzed[0];
+  assert.equal(umbrella._action, 'new', 'never a merge');
+  assert.equal(umbrella._festivalMatch && umbrella._festivalMatch.key, 'spooky-bear');
+  assert.equal(SharedCore.toEpochMillis(umbrella.startDate), Date.parse('2037-10-29T23:00:00.000Z'), 'its own dates, no arbitration');
+  assert.equal(SharedCore.toEpochMillis(umbrella.endDate), Date.parse('2037-11-01T05:00:00.000Z'));
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed), [], 'withheld');
+  assert.equal(adapter.calls.length, 0, 'the calendar is not even asked');
+  assert.ok(logs.some(line => line.includes('"Spooky Bear" is the curated festival "Spooky Bear" itself — never matched against the calendar')), logs.join('\n'));
+});
+
+test('mergeParsedEvents: a listing title that is exactly a curated festival\'s name is its banner — the event page\'s own title names the event (Goldiloxx on sickening.events)', async () => {
+  const core = createFestivalCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+  const listing = { title: 'SPOOKY BEAR', startDate: new Date('2037-10-31T16:00:00.000Z'), endDate: new Date('2037-10-31T21:00:00.000Z'), bar: 'Gifford House', city: 'ptown', source: 'ai-web', _extractionSource: 'ai', _pageOrigin: 'listing', _sourcePageUrl: 'https://sickening.events/events?q=goldiloxx', _parserConfig: TEST_AI_PARSER_CONFIG, _fieldPriorities: priorities };
+  const page = { title: 'GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT', startDate: new Date('2037-10-31T16:00:00.000Z'), endDate: new Date('2037-10-31T21:00:00.000Z'), bar: 'Gifford House', city: 'ptown', source: 'ai-web', _extractionSource: 'jsonld', _pageOrigin: 'crawl', _sourcePageUrl: 'https://sickening.events/e/spookygoldiloxx', _parserConfig: TEST_AI_PARSER_CONFIG, _fieldPriorities: priorities };
+  const merged = await core.mergeParsedEvents(listing, page, { httpAdapter: adapter });
+  assert.equal(merged.title, 'GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT');
+  const flipped = await core.mergeParsedEvents(page, listing, { httpAdapter: adapter });
+  assert.equal(flipped.title, 'GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT', 'order does not decide');
+  const named = await core.mergeParsedEvents({ ...listing, title: 'Goldiloxx: Spooky Bear Daytime Delight' }, { ...page, title: 'Spooky Bear 2037' }, { httpAdapter: adapter });
+  assert.equal(named.title, 'Goldiloxx: Spooky Bear Daytime Delight', 'a listing that names its party keeps the name over a crawl page\'s banner');
+  assert.equal(core.findCuratedFestivalByExactName('Spooky Bear 2037').key, 'spooky-bear');
+  assert.equal(core.findCuratedFestivalByExactName('The Belly Party - SPOOKY BEAR!'), null, 'a party carrying the name is not the banner');
+  assert.equal(adapter.calls.length, 0, 'deterministic');
+});
+
+test('aggregator pointers: a same-day neighbour hours away is "that day", with its hour and the distance (Gathr\'s "Sinners & Saints", Boatslip Friday 10pm, beside the Boatslip\'s own 4pm tea)', () => {
+  const core = createCore();
+  const tea = chunkSiteEvent({ title: 'HALLOWEEN UNIFORM TEA - Spooky Bear Wknd', bar: 'Boatslip', city: 'ptown', startDate: '2026-10-30T20:00:00.000Z', endDate: '2026-10-30T23:00:00.000Z', url: 'https://theboatslip.com/pages/events', image: '', imageHorizontal: '', _parserConfig: BOATSLIP_SITE });
+  const party = gathrCopy({ title: 'Sinners & Saints', bar: 'Boatslip', city: 'ptown', startDate: '2026-10-31T02:00:00.000Z', endDate: '2026-10-31T05:00:00.000Z', url: 'https://theboatslip.com/', image: '', imageHorizontal: '' });
+  const { result, logs } = withLogs(() => core.reconcileAggregatorPointers([tea, party], { parserResults: [{ name: 'The Boatslip', config: BOATSLIP_SITE, events: [tea] }] }));
+  assert.deepEqual(result, { withheld: 1, backedByDropped: 0, imagesCleared: 0, pageUnread: 0 });
+  const stamp = party._aggregatorUnbackedWithheld;
+  assert.ok(stamp, 'still withheld: one event or two is the owner\'s call');
+  assert.equal(stamp.claimClock, '22:00');
+  assert.deepEqual(stamp.sameNight.map(entry => [entry.title, entry.clock, entry.hoursApart]), [['HALLOWEEN UNIFORM TEA - Spooky Bear Wknd', '16:00', -6]]);
+  assert.equal(stamp.reason, 'Gathr points at theboatslip.com, where The Boatslip lists "HALLOWEEN UNIFORM TEA - Spooky Bear Wknd" at Boatslip (16:00, 6 hours before this copy\'s 22:00) that day — the two did not fold as one event');
+  assert.ok(logs.some(line => line.includes('that day and the fold left this copy standing')), logs.join('\n'));
 });

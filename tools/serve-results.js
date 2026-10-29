@@ -839,7 +839,16 @@ function renderReviewPointerFacts(display = {}) {
         rows.push(`<div class="fact"><span class="fact-k">points at</span><span class="fact-v">${unbacked.link ? reviewAnchor(unbacked.link, reviewUrlLabel(unbacked.link, 60)) : escapeHtmlText(unbacked.site || '∅')}</span></div>`);
         const sameNight = Array.isArray(unbacked.sameNight) ? unbacked.sameNight : [];
         if (sameNight.length > 0) {
-            rows.push(`<div class="fact"><span class="fact-k">that night the site lists</span><span class="fact-v warn">${sameNight.map((entry) => `${entry.url ? reviewAnchor(entry.url, escapeHtmlText(entry.title || 'event')) : escapeHtmlText(entry.title || 'event')}${entry.bar ? ` · ${escapeHtmlText(entry.bar)}` : ''}`).join(' · ')} — not folded with this copy: one event or two?</span></div>`);
+            // A same-DAY neighbour hours away is not "that night": a 4pm tea
+            // beside a 10pm party. Each entry says its hour and the distance.
+            const allClose = sameNight.every((entry) => Number.isFinite(entry.hoursApart) && Math.abs(entry.hoursApart) < 3);
+            const describe = (entry) => {
+                const name = entry.url ? reviewAnchor(entry.url, escapeHtmlText(entry.title || 'event')) : escapeHtmlText(entry.title || 'event');
+                const far = Number.isFinite(entry.hoursApart) && Math.abs(entry.hoursApart) >= 3;
+                const when = far ? ` (${escapeHtmlText(entry.clock || '')}, ${Math.round(Math.abs(entry.hoursApart))} h ${entry.hoursApart < 0 ? 'before' : 'after'} this copy's ${escapeHtmlText(unbacked.claimClock || 'start')})` : '';
+                return `${name}${entry.bar ? ` · ${escapeHtmlText(entry.bar)}` : ''}${when}`;
+            };
+            rows.push(`<div class="fact"><span class="fact-k">${allClose ? 'that night' : 'that day'} the site lists</span><span class="fact-v warn">${sameNight.map(describe).join(' · ')} — not folded with this copy: one event or two?</span></div>`);
         } else {
             rows.push(`<div class="fact"><span class="fact-k">that site lists</span><span class="fact-v warn">${escapeHtmlText(`${unbacked.siteEvents} event${unbacked.siteEvents === 1 ? '' : 's'} (read by ${unbacked.source || 'its source'} this run) — none that night`)}</span></div>`);
         }

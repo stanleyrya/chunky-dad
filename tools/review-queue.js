@@ -905,8 +905,11 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         day: String(unbacked.day || ''),
         reason: String(unbacked.reason || ''),
         sameNight: (Array.isArray(unbacked.sameNight) ? unbacked.sameNight : []).filter((entry) => entry && typeof entry === 'object').map((entry) => ({
-            title: String(entry.title || ''), bar: String(entry.bar || ''), url: String(entry.url || '')
+            title: String(entry.title || ''), bar: String(entry.bar || ''), url: String(entry.url || ''),
+            clock: String(entry.clock || ''),
+            hoursApart: Number.isFinite(Number(entry.hoursApart)) && entry.hoursApart !== null ? Number(entry.hoursApart) : null
         })),
+        claimClock: String(unbacked.claimClock || ''),
         nearest: unbacked.nearest && typeof unbacked.nearest === 'object' ? {
             title: String(unbacked.nearest.title || ''),
             day: String(unbacked.nearest.day || ''),

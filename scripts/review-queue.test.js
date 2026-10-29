@@ -1462,6 +1462,7 @@ test('buildDeck: an aggregator\'s copy the pointed-at site does not list is a ca
     aggregator: 'Gathr', site: 'chunk-party.com', source: 'CHUNK', link: 'https://www.chunk-party.com/', siteEvents: 13, day: '2030-10-03',
     reason: 'Gathr points at chunk-party.com, which CHUNK read this run (13 events) and lists no event that night',
     sameNight: [],
+    claimClock: '',
     nearest: { title: 'CHUNK Brooklyn', day: '2030-10-13', bar: "C'mon Everybody", url: 'https://www.chunk-party.com/event-details/chunk-brooklyn' }
   });
   assert.deepEqual(deck.cards[0].display.imageReusedFrom, { image: 'https://static.wixstatic.com/media/x~mv2.jpg', title: 'CHUNK Brooklyn 7/4', day: '2026-07-04', source: 'CHUNK', url: 'https://www.chunk-party.com/event-details/chunk-brooklyn-7-4' });
