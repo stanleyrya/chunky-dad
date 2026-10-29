@@ -5247,6 +5247,90 @@ test('curated promoter branding in shortName is not same-event evidence', () => 
   assert.deepEqual(core.buildIdentityComparisonShape(derived).names, ['FURBALL DALLAS', 'FURBALL']);
 });
 
+// A parser merge builds a NEW object and underscore stamps do not survive it,
+// so a merged record carries the registry's shortName with no _staticFields.
+// Run 20261029-121117: "Loving Our Bear Bodies at Spooky Bear in Provincetown"
+// (Wilde Playhouse at the Gifford House, Sat 11:00) and "GOLDILOXX - SPOOKY
+// BEAR DAYTIME DELIGHT" (Purgatory at the Gifford House, Sat 12:00) both wore
+// the registry's "SPOOKY BEAR"; with the stamp gone it read as a name, and
+// "SPOOKY BEAR" sits inside the other title — one session folded into the
+// party and the party's card carried the workshop's website and poster.
+const GIFFORD_CITIES = { ptown: { timezone: 'America/New_York', patterns: ['provincetown', 'ptown'] } };
+function giffordHouseRecord(overrides = {}) {
+  return {
+    shortName: 'SPOOKY BEAR',
+    city: 'ptown',
+    timezone: 'America/New_York',
+    address: '9 Carver Street Provincetown, MA, 02657 United States',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+
+test('a curated promoter brand in shortName is branding even when the merge dropped the static stamp', () => {
+  const core = new SharedCore(GIFFORD_CITIES, { eventSchema: EventSchema, promoters: REAL_PROMOTERS });
+  const workshop = giffordHouseRecord({
+    title: 'Loving Our Bear Bodies at Spooky Bear in Provincetown',
+    bar: 'Wilde Playhouse at the Gifford House',
+    startDate: new Date('2026-10-31T15:00:00.000Z'),
+    endDate: new Date('2026-10-31T17:00:00.000Z')
+  });
+  const party = giffordHouseRecord({
+    title: 'GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT',
+    bar: 'Purgatory Gifford House',
+    startDate: new Date('2026-10-31T16:00:00.000Z'),
+    endDate: new Date('2026-10-31T21:00:00.000Z')
+  });
+  assert.equal(core.isCuratedPromoterShortName('SPOOKY BEAR'), true);
+  assert.equal(core.isCuratedPromoterShortName('GOLDILOXX'), true, 'soft hyphens in the registry value are ignored');
+  assert.equal(core.isCuratedPromoterShortName('Bear Bodies'), false);
+  assert.deepEqual(core.buildIdentityComparisonShape(workshop).names, ['Loving Our Bear Bodies at Spooky Bear in Provincetown']);
+  assert.deepEqual(core.buildIdentityComparisonShape(party).names, ['GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT']);
+  assert.equal(core.getSameEventIdentitySignal(workshop, party, { requireCloseStartTimes: false }), null, 'two Spooky Bear events in one building, an hour apart');
+  assert.equal(core.getSameEventIdentitySignal(party, workshop, {}), null);
+
+  // Without a registry the only branding evidence is the stamp — the shape
+  // reads the shortName as the event's own, as before (#1440's renamed-event signal).
+  const bare = new SharedCore(GIFFORD_CITIES, { eventSchema: EventSchema, promoters: [] });
+  assert.equal(bare.isCuratedPromoterShortName('SPOOKY BEAR'), false);
+  assert.deepEqual(bare.buildIdentityComparisonShape(party).names, ['GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT', 'SPOOKY BEAR']);
+  // A static stamp still rules on its own.
+  assert.deepEqual(bare.buildIdentityComparisonShape({ ...party, _staticFields: { shortName: 'SPOOKY BEAR' } }).names, ['GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT']);
+  // An event's own, non-registry shortName is identity evidence as ever.
+  assert.deepEqual(core.buildIdentityComparisonShape({ title: 'Heebie-Jeebie Tea', shortName: 'HEEBIE' }).names, ['Heebie-Jeebie Tea', 'HEEBIE']);
+});
+
+test('the real registry: a run-shaped merged record and a sibling session never fold on the festival brand', async () => {
+  const core = new SharedCore(GIFFORD_CITIES, { eventSchema: EventSchema, promoters: REAL_PROMOTERS });
+  const sessions = ['2026-10-31T15:00:00.000Z', '2026-10-31T17:30:00.000Z'].map((start, index) => giffordHouseRecord({
+    title: 'Loving Our Bear Bodies at Spooky Bear in Provincetown',
+    bar: 'Wilde Playhouse at the Gifford House',
+    startDate: new Date(start),
+    endDate: new Date(new Date(start).getTime() + 2 * 3600 * 1000),
+    website: 'https://www.bearyoursoul.org/events/spookylobb',
+    _sourceRowFeed: 'session-lines:https://www.bearyoursoul.org/events/spookylobb',
+    _sourceRowId: `session:${index}`
+  }));
+  const party = giffordHouseRecord({
+    title: 'GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT',
+    bar: 'Purgatory Gifford House',
+    startDate: new Date('2026-10-31T16:00:00.000Z'),
+    endDate: new Date('2026-10-31T21:00:00.000Z'),
+    website: 'https://www.sickening.events/e/spookygoldiloxx',
+    ticketUrl: 'https://www.sickening.events/e/spookygoldiloxx/tickets'
+  });
+  const deduped = await core.deduplicateEvents([party, ...sessions]);
+  assert.equal(deduped.length, 3, 'the party and both sessions survive');
+  assert.deepEqual(deduped.map(e => e.title).sort(), [
+    'GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT',
+    'Loving Our Bear Bodies at Spooky Bear in Provincetown',
+    'Loving Our Bear Bodies at Spooky Bear in Provincetown'
+  ]);
+  const survivor = deduped.find(e => /GOLDILOXX/.test(e.title));
+  assert.equal(survivor.website, 'https://www.sickening.events/e/spookygoldiloxx', 'the party keeps its own page');
+});
+
+
 test('same-local-day relaxation needs a degraded start, not just the same night', async () => {
   const core = new SharedCore(BEAR_IT_CITIES, { eventSchema: EventSchema });
   const relaxed = { requireCloseStartTimes: false };
