@@ -599,3 +599,40 @@ test('savedEventUid: EventKit "<calendar>:<uid>" and a bare ICS uid both yield t
   assert.equal(SharedCore.savedEventUid('ABCD:7848F567/RID=1234'), '7848F567');
   assert.equal(SharedCore.savedEventUid(''), '');
 });
+
+test('buildSourceLedger: a copy an aggregator listed under its own name, folded into the site\'s slot, is charged to the AGGREGATOR host (renamed), never to the site', () => {
+  const boatslip = { name: 'The Boatslip', siteRole: 'venue', urls: ['https://theboatslip.com/pages/events'] };
+  const gathr = { name: 'Gathr', siteRole: 'aggregator', urls: ['https://gathrparty.com/'] };
+  const tea = { title: 'HALLOWEEN UNIFORM TEA - Spooky Bear Wknd', bar: 'Boatslip', city: 'ptown', timezone: 'America/New_York', startDate: '2026-10-30T20:00:00.000Z', endDate: '2026-10-30T23:00:00.000Z', website: 'https://theboatslip.com/pages/events', isBearEvent: true };
+  const payload = {
+    summary: { runId: '20261030-051500', timestamp: '2026-10-30T09:15:00.000Z' },
+    runContext: { type: 'automated', environment: 'node', trigger: 'scheduled' },
+    parserResults: [
+      { name: 'The Boatslip', totalEvents: 1, durationMs: 500, config: boatslip, urlClassifications: {}, events: [tea] },
+      { name: 'Gathr', totalEvents: 1, durationMs: 900, config: gathr, urlClassifications: {}, events: [{ ...tea, title: "Daddy-O's Dog Tag Tea", website: '' }] }
+    ],
+    analyzedEvents: [{
+      ...tea, _action: 'new',
+      _aggregatorCopiesFolded: [
+        { aggregator: 'Gathr', title: "Daddy-O's Dog Tag Tea", startDate: tea.startDate, bar: 'Boatslip', day: '2026-10-30', site: 'theboatslip.com', source: 'The Boatslip', renamed: true },
+        { aggregator: 'Gathr', title: 'Halloween Uniform Tea', startDate: tea.startDate, bar: 'Boatslip', day: '2026-10-30', site: 'theboatslip.com', source: 'The Boatslip', renamed: false },
+        { aggregator: 'Nobody', title: 'x', startDate: tea.startDate, bar: 'Boatslip', day: '2026-10-30', site: 'theboatslip.com', source: 'The Boatslip', renamed: true }
+      ]
+    }],
+    errors: []
+  };
+  const built = SharedCore.buildSourceLedger(payload, { now: new Date('2026-10-30T12:00:00Z') });
+  const gathrRow = built.records.find((r) => r.host === 'gathrparty.com');
+  const siteRow = built.records.find((r) => r.host === 'theboatslip.com');
+  assert.deepEqual(gathrRow.quality.renamed, { n: 1, examples: ['"Daddy-O\'s Dog Tag Tea" = The Boatslip\'s "HALLOWEEN UNIFORM TEA - Spooky Bear Wknd" (2026-10-30)'] }, 'the same-name fold and an unknown aggregator count for nothing');
+  assert.deepEqual(siteRow.quality.renamed, { n: 0, examples: [] });
+  // The Sources view shows it as a signal on the aggregator only.
+  const health = assessSourceHealth(built.records, { now: new Date('2026-10-30T12:00:00Z') });
+  const gathrHealth = health.rows.find((row) => row.host === 'gathrparty.com');
+  const signal = (gathrHealth.quality && Array.isArray(gathrHealth.quality.signals) ? gathrHealth.quality.signals : []).find((s) => s.key === 'renamed');
+  assert.ok(signal, `renamed signal present: ${JSON.stringify(gathrHealth.quality)}`);
+  assert.equal(signal.value, '1');
+  assert.match(signal.detail, /Daddy-O's Dog Tag Tea/);
+  const siteHealth = health.rows.find((row) => row.host === 'theboatslip.com');
+  assert.ok(!(siteHealth.quality && siteHealth.quality.signals || []).some((s) => s.key === 'renamed'), 'the site is not blamed');
+});

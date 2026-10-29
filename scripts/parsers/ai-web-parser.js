@@ -70,6 +70,22 @@ const CACHE_TOUCH_INTERVAL_DAYS = 7;
 // starts being a schedule — the same threshold SharedCore's programme census
 // set from the 669-flyer corpus.
 const MULTI_EVENT_PROGRAMME_CLOCK_TIMES = 4;
+// Month names a programme's date range or day heading may use (English,
+// Spanish, French, German, Italian, Portuguese, Catalan, Dutch), lower case.
+const PROGRAMME_MONTHS = {
+    january: 1, jan: 1, enero: 1, ene: 1, gener: 1, janvier: 1, janv: 1, januar: 1, gennaio: 1, genn: 1, janeiro: 1, januari: 1,
+    february: 2, feb: 2, febrero: 2, febrer: 2, fevrier: 2, février: 2, fev: 2, februar: 2, febbraio: 2, fevereiro: 2, februari: 2,
+    march: 3, mar: 3, marzo: 3, marc: 3, març: 3, mars: 3, marz: 3, märz: 3, maerz: 3, marco: 3, março: 3, maart: 3,
+    april: 4, apr: 4, abril: 4, abr: 4, avril: 4, avr: 4, aprile: 4,
+    may: 5, mayo: 5, maig: 5, mai: 5, maggio: 5, mag: 5, maio: 5, mei: 5,
+    june: 6, jun: 6, junio: 6, juny: 6, juin: 6, juni: 6, giugno: 6, giu: 6, junho: 6,
+    july: 7, jul: 7, julio: 7, juliol: 7, juillet: 7, juil: 7, juli: 7, luglio: 7, lug: 7, julho: 7,
+    august: 8, aug: 8, agosto: 8, ago: 8, agost: 8, aout: 8, août: 8, augustus: 8, augusti: 8,
+    september: 9, sep: 9, sept: 9, septiembre: 9, setembre: 9, set: 9, septembre: 9, settembre: 9, sett: 9, setembro: 9,
+    october: 10, oct: 10, octubre: 10, octobre: 10, oktober: 10, okt: 10, ottobre: 10, ott: 10, outubro: 10, out: 10,
+    november: 11, nov: 11, noviembre: 11, novembre: 11, novembro: 11,
+    december: 12, dec: 12, diciembre: 12, dic: 12, desembre: 12, des: 12, decembre: 12, décembre: 12, dezember: 12, dez: 12, dicembre: 12, dezembro: 12
+};
 // Below this many days apart, a start/end pair is an ordinary event (including
 // an overnight or a weekender) and is never re-read as a list of occurrences.
 const LISTED_OCCURRENCE_MIN_SPAN_DAYS = 8;
@@ -1746,8 +1762,13 @@ class AiWebParser {
                 // AFTER the conflict flag so a flyer that disagrees about the
                 // START is already on record as suspect.
                 this.fillEndTimeFromFlyerOcr(keptStructuredEvents);
+                // A day-dated page (Squarespace's 00:01 marker) whose text
+                // lists its sessions: one event per session line.
+                const structuredSessionEvents = pageClassification !== 'multi-event-page'
+                    ? this.buildSessionLineEvents(keptStructuredEvents, effectiveHtmlData, cityConfig)
+                    : keptStructuredEvents;
                 return {
-                    events: keptStructuredEvents,
+                    events: structuredSessionEvents,
                     additionalLinks: additionalLinks,
                     discoveredSegments: null,
                     ocrResults: [],
@@ -1908,6 +1929,19 @@ class AiWebParser {
                         events = await this.extractEventsFromSinglePage(effectiveHtmlData, parserConfig, cityConfig, promptFields, ocrResults, httpAdapter);
                     }
                 }
+            }
+
+            // A programme IMAGE on a single-event page: its timed rows are
+            // events of their own (buildProgrammeImageEvents). A multi-event
+            // page's pictures already ride its segments.
+            if (pageClassification !== 'multi-event-page' && Array.isArray(ocrResults) && ocrResults.length > 0) {
+                const programmeImageEvents = this.buildProgrammeImageEvents(ocrResults, effectiveHtmlData, cityConfig, parserConfig);
+                if (programmeImageEvents.length > 0) events = events.concat(programmeImageEvents);
+            }
+            // A day-dated event page whose text lists its sessions: one
+            // event per session line (buildSessionLineEvents).
+            if (pageClassification !== 'multi-event-page') {
+                events = this.buildSessionLineEvents(events, effectiveHtmlData, cityConfig);
             }
 
             // Enrichment only: fills empty fields on the finished AI/OCR events
@@ -10793,6 +10827,510 @@ class AiWebParser {
             console.log(`🗓️ PROGRAMME: built ${events.length} event(s) from ${programme.days} day page(s) of "${heading || sourceUrl}"${headingCity ? ` — ${placed} placed in ${headingCity} by the heading` : ' — the heading names no city'}`);
         }
         return events;
+    }
+
+    // ── Session lines on a day-dated event page ─────────────────────────
+    // Squarespace dates an event page to the DAY (JSON-LD start 00:01 local,
+    // end 12:01) and the body states the sessions: bearyoursoul.org's "Loving
+    // Our Bear Bodies at Spooky Bear" lists "Friday, October 30, 11:00
+    // a.m.–1:00 p.m." and three more (run 20261029-071349); the one record
+    // shipped at 12:01am with an improbable-overnight-span flag, and the
+    // owner rejected it asking for the sessions. When a page yields ONE
+    // event whose start is such a day placeholder, and its text states two
+    // or more dated session lines within a week of that day, each line is
+    // the event once more at its own hours — the record's title, venue, link
+    // and artwork, the line's day and clock. Nothing else about the record
+    // changes; a page with a real start time, or one dated line, is left
+    // exactly as it was.
+    buildSessionLineEvents(events, htmlData, cityConfig = null) {
+        if (!Array.isArray(events) || events.length !== 1) return events;
+        const event = events[0];
+        if (!event || typeof event !== 'object') return events;
+        const day = this.dateOnlyStartDay(event);
+        if (!day) return events;
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        if (!html) return events;
+        const lines = this.decodeEntitiesFully(this.stripTags(
+            html.replace(/<(?:script|style)\b[\s\S]*?<\/(?:script|style)>/gi, ' ')
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt)>/gi, '$&\n')
+        )).split(/\r?\n/).map(line => this.normalizeWhitespace(line)).filter(Boolean);
+        const MONTHS = AiWebParser.PROGRAMME_MONTHS;
+        const monthAlternation = Object.keys(MONTHS).sort((a, b) => b.length - a.length).join('|');
+        const clockToken = '(?:2[0-3]|[01]?\\d)(?:[:.][0-5]\\d)?\\s*(?:[ap]\\.?\\s?m\\.?)?';
+        const sessionPattern = new RegExp(`^(?:(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\\.?,?\\s+)?(?:(${monthAlternation})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?|(\\d{1,2})(?:st|nd|rd|th)?\\.?\\s+(?:de\\s+|of\\s+)?(${monthAlternation})\\.?)(?:,?\\s*(\\d{4}))?[,:\\s]+(${clockToken}\\s*(?:-|–|—|to)\\s*${clockToken})\\s*$`, 'i');
+        const dayMs = Date.UTC(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)));
+        const WEEK = 7 * 24 * 60 * 60 * 1000;
+        const sessions = [];
+        const seen = new Set();
+        for (const line of lines) {
+            const match = line.match(sessionPattern);
+            if (!match) continue;
+            const month = MONTHS[String(match[1] || match[4] || '').toLowerCase()];
+            const dayOfMonth = parseInt(match[2] || match[3], 10);
+            if (!month || !(dayOfMonth >= 1 && dayOfMonth <= 31)) continue;
+            const year = match[5] ? parseInt(match[5], 10) : Number(day.slice(0, 4));
+            const ms = Date.UTC(year, month - 1, dayOfMonth);
+            if (Math.abs(ms - dayMs) > WEEK) continue;
+            const clocks = this.readProgrammeRowClocks(match[6].replace(/([ap])\.\s?m\./gi, '$1m'));
+            if (!clocks || clocks.starts.length !== 1 || !clocks.end) continue;
+            const sessionDay = new Date(ms).toISOString().slice(0, 10);
+            const key = `${sessionDay}T${clocks.starts[0]}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            sessions.push({ day: sessionDay, start: clocks.starts[0], end: clocks.end, line });
+        }
+        if (sessions.length < 2) return events;
+        const timezone = event.timezone || (event.city ? this.getTimezoneForCity(event.city, cityConfig) : '') || '';
+        const built = sessions.map(session => {
+            let endDay = session.day;
+            if (session.end <= session.start) {
+                const next = new Date(`${session.day}T00:00:00Z`);
+                next.setUTCDate(next.getUTCDate() + 1);
+                endDay = next.toISOString().slice(0, 10);
+            }
+            const clone = { ...event };
+            clone.startDate = new Date(`${session.day}T${session.start}:00Z`);
+            clone.endDate = new Date(`${endDay}T${session.end}:00Z`);
+            clone._timezoneUnresolved = true;
+            if (timezone) clone.timezone = timezone;
+            clone._startDateRawText = session.line;
+            clone._sessionLine = { page: sourceUrl, line: session.line, placeholder: day };
+            // The page published these as distinct rows: no similarity rung
+            // may fold two sessions of one day, or Friday's into Saturday's
+            // (areDistinctPublishedFeedRows — the same contract a feed's row
+            // ids give).
+            clone._sourceRowFeed = sourceUrl || clone._sourceRowFeed || '';
+            clone._sourceRowId = `session:${session.day}T${session.start}`;
+            delete clone._sanityFlags;
+            delete clone._listedOccurrenceDates;
+            return clone;
+        });
+        console.log(`🗓️ SESSIONS: "${event.title || 'event'}" on ${sourceUrl || 'the page'} is dated only to the day (${day}) — the page lists ${sessions.length} sessions (${sessions.map(s => s.line).join('; ')}); one event each`);
+        return built;
+    }
+
+    // The calendar day of a record whose start is the DAY, not a time: a
+    // raw value that is a bare date or reads 00:00 / 00:01 (Squarespace's
+    // day marker), or a resolved start at local midnight. '' otherwise.
+    dateOnlyStartDay(event) {
+        const raw = typeof event._startDateRawText === 'string' ? event._startDateRawText.trim() : '';
+        const bare = raw.match(/^(\d{4}-\d{2}-\d{2})(?:T00:0[01](?::00)?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/);
+        if (bare) return bare[1];
+        if (raw) return '';
+        const start = event.startDate instanceof Date ? event.startDate : (event.startDate ? new Date(event.startDate) : null);
+        if (!start || Number.isNaN(start.getTime())) return '';
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', { timeZone: event.timezone || 'UTC', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+            const parts = Object.fromEntries(formatter.formatToParts(start).filter(p => p.type !== 'literal').map(p => [p.type, p.value]));
+            if (parts.hour !== '00' || !(parts.minute === '00' || parts.minute === '01')) return '';
+            return `${parts.year}-${parts.month}-${parts.day}`;
+        } catch (_) { return ''; }
+    }
+
+    // ── A programme IMAGE on an event page ──────────────────────────────
+    // A festival publishes its weekend as ONE picture: weekday headings and
+    // a timed row per event ("THURSDAY / 8:00PM-10:00 PM - SPOOKY BEAR
+    // EARLY BEAR MEET UP / GIFFORD HOUSE - PORCH BAR"). The vision model
+    // transcribes every row and then calls the picture "a single
+    // overarching event"; the page is an event-page; the whole-page
+    // extraction keeps ONE record named after the festival, which the
+    // curated dataset withholds. Run 20261029-071349: ursamen.org/spookybear
+    // was OCR'd perfectly and thirteen official events reached no run. The
+    // rows ARE the events: read deterministically, the way the Switched
+    // programme door reads its day pages, and dated by their weekday
+    // headings anchored to the date range the picture or the page states —
+    // or, failing both, to the curated festival the picture names. Only a
+    // picture the clock census already calls a multi-event listing graphic
+    // qualifies (isMultiEventProgrammeImage — the same verdict that drops
+    // it as artwork), and only with two day headings and three timed rows.
+    buildProgrammeImageEvents(ocrResults, htmlData, cityConfig = null, parserConfig = null) {
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const events = [];
+        const seen = new Set();
+        let pageText = null;
+        for (const ocr of Array.isArray(ocrResults) ? ocrResults : []) {
+            if (!ocr || typeof ocr.url !== 'string' || !ocr.url || typeof ocr.text !== 'string' || !ocr.text.trim()) continue;
+            const key = this.canonicalizeImageUrlForComparison(ocr.url) || ocr.url;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            if (!this.isMultiEventProgrammeImage(ocr.url)) continue;
+            const programme = this.readProgrammeImageRows(ocr.text);
+            const datedRows = programme.rows.filter(row => row.headerIndex >= 0);
+            if (programme.headers.length < 2 || datedRows.length < 3) continue;
+            if (pageText === null) pageText = this.normalizeWhitespace(this.decodeEntitiesFully(this.stripTags(html.replace(/<(?:script|style)\b[\s\S]*?<\/(?:script|style)>/gi, ' '))));
+            const named = this.findCuratedFestivalNamedInText(`${programme.heading}\n${programme.footer}`);
+            let range = this.readProgrammeDateRange(ocr.text);
+            let anchor = 'the picture states the range';
+            if (!range) { range = this.readProgrammeDateRange(pageText); anchor = 'the page states the range'; }
+            if (!range && named && named.nextDates && named.nextDates.start && named.nextDates.end) {
+                const [sy, sm, sd] = String(named.nextDates.start).split('-').map(Number);
+                const [ey, em, ed] = String(named.nextDates.end).split('-').map(Number);
+                if ([sy, sm, sd, ey, em, ed].every(Number.isFinite)) {
+                    range = { startMonth: sm, startDay: sd, endMonth: em, endDay: ed, year: sy, phrase: `${named.nextDates.start} – ${named.nextDates.end}` };
+                    anchor = `the curated festival ${named.name} dates it`;
+                }
+            }
+            if (!range) {
+                console.log(`🗓️ PROGRAMME IMAGE: ${ocr.url} has ${programme.headers.length} day headings and ${datedRows.length} timed rows, but neither the picture nor the page states a date range and no curated festival is named — rows left unread`);
+                continue;
+            }
+            const dates = this.anchorProgrammeHeaders(programme.headers, range, this.now());
+            const cityKey = this.findCityKeyInText(ocr.text, cityConfig)
+                || (named && named.cityKey && (!cityConfig || this.getCityConfigMap(cityConfig)[named.cityKey]) ? named.cityKey : '')
+                || this.findCityKeyInText(pageText, cityConfig)
+                || '';
+            const timezone = cityKey ? this.getTimezoneForCity(cityKey, cityConfig) : '';
+            const cards = [];
+            for (const row of datedRows) {
+                const day = dates[row.headerIndex];
+                if (!day) continue;
+                const parts = this.splitProgrammeRowText(row, cityKey);
+                if (!parts.title) continue;
+                // Two seatings of one brunch ("10:30 AM & 1:00PM") fold to one
+                // record downstream: the description keeps every seating.
+                const seatings = row.starts.length > 1 ? `Seatings: ${row.starts.map(clock => this.formatProgrammeClock(clock)).join(' & ')}` : '';
+                const description = [parts.detail, seatings, programme.heading ? `Part of ${programme.heading}` : ''].filter(Boolean).join('\n');
+                for (const start of row.starts) {
+                    let endLocal = null;
+                    if (row.end) {
+                        let endDay = day;
+                        if (row.end <= start) {
+                            const next = new Date(`${day}T00:00:00Z`);
+                            next.setUTCDate(next.getUTCDate() + 1);
+                            endDay = next.toISOString().slice(0, 10);
+                        }
+                        endLocal = `${endDay}T${row.end}:00`;
+                    }
+                    cards.push({ title: parts.title, description, startLocal: `${day}T${start}:00`, endLocal, image: '', bar: parts.bar, webUrl: sourceUrl });
+                }
+            }
+            const jsonLd = this.buildSwitchedProgrammeJsonLd(cards);
+            const built = jsonLd ? this.extractEventsFromJsonLd(jsonLd, sourceUrl, cityConfig) : [];
+            for (const event of built) {
+                if (cityKey && !event.city) {
+                    event.city = cityKey;
+                    if (timezone) event.timezone = timezone;
+                }
+                event._programmeImage = ocr.url;
+                // The picture published these as distinct rows (two parties
+                // at one bar on one day, both linking the page): no
+                // similarity rung may fold them — areDistinctPublishedFeedRows.
+                event._sourceRowFeed = ocr.url;
+                event._sourceRowId = `row:${event._startDateRawText || ''}|${event.title}`;
+            }
+            console.log(`🗓️ PROGRAMME IMAGE: ${ocr.url} — ${programme.headers.length} day headings, ${datedRows.length} timed rows → ${built.length} event(s); days anchored to ${range.phrase} (${anchor})${cityKey ? `, placed in ${cityKey}` : ', no city read'}`);
+            events.push(...built);
+        }
+        return events;
+    }
+
+    // The rows of a transcribed programme: whole-line weekday headings
+    // (optionally with a month and day), and under each one lines that
+    // START with a clock — one start, several starts ("10:30 AM & 1:00PM",
+    // two seatings) or a range ("8:00PM-10:00 PM", "2:00-4:30 PM", a
+    // meridiem stated once covering both ends) — followed by a separator
+    // and the row's words. A row runs on to the next lines until the next
+    // row, heading or blank line (a venue on its own line, a wrapped title).
+    // Lines before the first heading are the programme's heading; lines
+    // after a blank following the last row are its footer (the date range,
+    // the city). Nothing here is a date: anchorProgrammeHeaders dates it.
+    readProgrammeImageRows(text) {
+        const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const MONTHS = AiWebParser.PROGRAMME_MONTHS;
+        const monthAlternation = Object.keys(MONTHS).sort((a, b) => b.length - a.length).join('|');
+        const headerPattern = new RegExp(`^\\s*(${WEEKDAYS.join('|')})\\b[\\s,.:\\-–—]*(?:(${monthAlternation})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b|(\\d{1,2})(?:st|nd|rd|th)?\\s+(${monthAlternation})\\b|(\\d{1,2})(?:st|nd|rd|th)?\\b)?[\\s,.:\\-–—]*$`, 'i');
+        const clockToken = '(?:2[0-3]|[01]?\\d)(?:[:.][0-5]\\d)?\\s*(?:[ap]\\.?m\\.?)?';
+        const rowPattern = new RegExp(`^\\s*(${clockToken}(?:\\s*(?:-|–|—|to|&|and|,|\\/)\\s*${clockToken})*)\\s*(?:-|–|—|:|•|\\|)\\s*(.+?)\\s*$`, 'i');
+        const headers = [];
+        const rows = [];
+        const heading = [];
+        const footer = [];
+        let current = null;
+        let afterBlank = false;
+        for (const rawLine of String(text || '').split(/\r?\n/)) {
+            const line = this.normalizeWhitespace(rawLine);
+            if (!line) { current = null; afterBlank = true; continue; }
+            const header = line.match(headerPattern);
+            if (header) {
+                const month = header[2] || header[5] || '';
+                const day = header[3] || header[4] || header[6] || '';
+                headers.push({ weekday: WEEKDAYS.indexOf(header[1].toLowerCase()), month: month ? MONTHS[month.toLowerCase()] : null, day: day ? parseInt(day, 10) : null, line });
+                current = null;
+                afterBlank = false;
+                continue;
+            }
+            const row = line.match(rowPattern);
+            const clocks = row ? this.readProgrammeRowClocks(row[1]) : null;
+            if (clocks) {
+                current = { headerIndex: headers.length - 1, starts: clocks.starts, end: clocks.end, text: row[2], lines: [row[2]] };
+                rows.push(current);
+                afterBlank = false;
+                continue;
+            }
+            if (current) { current.text = `${current.text} ${line}`; current.lines.push(line); continue; }
+            if (headers.length === 0) heading.push(line);
+            else if (afterBlank || rows.length === 0) footer.push(line);
+        }
+        return { headers, rows, heading: heading.join(' '), footer: footer.join(' ') };
+    }
+
+    // "13:00" → "1:00 PM", for the words on a card.
+    formatProgrammeClock(clock) {
+        const [hourText, minuteText] = String(clock || '').split(':');
+        const hour = parseInt(hourText, 10);
+        if (!Number.isFinite(hour)) return String(clock || '');
+        const twelve = hour % 12 === 0 ? 12 : hour % 12;
+        return `${twelve}:${minuteText || '00'} ${hour < 12 ? 'AM' : 'PM'}`;
+    }
+
+    // The clocks of a row's prefix as "HH:MM" wall-clock strings: starts
+    // (one per seating) and an end when the prefix is a range. A meridiem
+    // stated once covers the other end ("2:00-4:30 PM" → 14:00–16:30; "9 PM
+    // - 1" → 21:00–01:00: the end takes the meridiem that keeps it after
+    // the start). A prefix with no meridiem is a clock only in 24-hour form
+    // with minutes ("17:00-20:00"). null when it is not a clock at all.
+    readProgrammeRowClocks(prefix) {
+        const source = String(prefix || '').toLowerCase();
+        const tokenPattern = /(2[0-3]|[01]?\d)(?:[:.]([0-5]\d))?\s*(?:([ap])\.?m\.?)?/g;
+        const tokens = [];
+        let match;
+        while ((match = tokenPattern.exec(source)) !== null) {
+            if (!match[0].trim()) { tokenPattern.lastIndex += 1; continue; }
+            tokens.push({ hour: parseInt(match[1], 10), minute: match[2] ? parseInt(match[2], 10) : 0, meridiem: match[3] || '', hasMinutes: Boolean(match[2]), index: match.index });
+        }
+        if (tokens.length === 0) return null;
+        const anyMeridiem = tokens.some(token => token.meridiem);
+        if (!anyMeridiem && !tokens.every(token => token.hasMinutes)) return null;
+        const minutesOf = (token, meridiem) => {
+            if (!meridiem) return (token.hour * 60) + token.minute;
+            if (token.hour > 12) return null;
+            let hour = token.hour % 12;
+            if (meridiem === 'p') hour += 12;
+            return (hour * 60) + token.minute;
+        };
+        const clock = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
+        const isRange = tokens.length >= 2 && /(?:-|–|—|\bto\b)/.test(source.slice(tokens[tokens.length - 2].index, tokens[tokens.length - 1].index));
+        const startTokens = isRange ? tokens.slice(0, -1) : tokens;
+        const endToken = isRange ? tokens[tokens.length - 1] : null;
+        const stated = (token) => token.meridiem || (anyMeridiem ? '' : null);
+        const starts = [];
+        let end = null;
+        if (endToken) {
+            const borrowed = tokens.find(token => token.meridiem);
+            const endMeridiem = stated(endToken) === null ? '' : (endToken.meridiem || (borrowed ? borrowed.meridiem : ''));
+            const endMinutes = minutesOf(endToken, endMeridiem);
+            if (endMinutes === null) return null;
+            end = endMinutes;
+        }
+        for (const token of startTokens) {
+            const own = stated(token);
+            let minutes;
+            if (own === null) {
+                minutes = minutesOf(token, '');
+            } else if (own) {
+                minutes = minutesOf(token, own);
+            } else if (end !== null) {
+                // Borrow the end's meridiem, flipped when that would put the
+                // start after the end ("11-1 PM" is 11am–1pm).
+                const endMeridiem = end >= 12 * 60 ? 'p' : 'a';
+                minutes = minutesOf(token, endMeridiem);
+                if (minutes !== null && minutes >= end) minutes = minutesOf(token, endMeridiem === 'p' ? 'a' : 'p');
+            } else {
+                const borrowed = tokens.find(other => other.meridiem);
+                minutes = minutesOf(token, borrowed ? borrowed.meridiem : '');
+            }
+            if (minutes === null) return null;
+            starts.push(clock(minutes));
+        }
+        if (end !== null && starts.length === 1) {
+            // An end stated without its own meridiem that lands before the
+            // start takes the other one ("9 PM - 1" ends at 1am).
+            const startMinutes = (parseInt(starts[0].slice(0, 2), 10) * 60) + parseInt(starts[0].slice(3), 10);
+            if (!endToken.meridiem && end <= startMinutes && endToken.hour <= 12) {
+                const flipped = minutesOf(endToken, end >= 12 * 60 ? 'a' : 'p');
+                if (flipped !== null) end = flipped;
+            }
+        }
+        return { starts, end: end === null ? null : clock(end) };
+    }
+
+    // A date range stated as text: "OCT 29TH - NOV 1ST, 2026", "October 29
+    // – November 1, 2026", "Sept 5-7", "29 Oct – 1 Nov 2026", "Del 3 al 13
+    // de septiembre". The year may be absent (anchorProgrammeHeaders picks
+    // the edition that is current). null when no month-day range is stated.
+    readProgrammeDateRange(text) {
+        const source = this.normalizeWhitespace(String(text || '')).toLowerCase();
+        if (!source) return null;
+        const MONTHS = AiWebParser.PROGRAMME_MONTHS;
+        const month = `(${Object.keys(MONTHS).sort((a, b) => b.length - a.length).join('|')})`;
+        const day = '(\\d{1,2})(?:st|nd|rd|th|\\.|º|°|er)?';
+        const dash = '\\s*(?:-|–|—|to|through|thru|al|a|bis|au)\\s*';
+        const year = '(?:,?\\s*(\\d{4}))?';
+        const candidates = [
+            { pattern: new RegExp(`\\b${month}\\.?\\s+${day}${dash}(?:${month}\\.?\\s+)?${day}${year}\\b`), pick: (m) => ({ sm: m[1], sd: m[2], em: m[3] || m[1], ed: m[4], y: m[5] }) },
+            { pattern: new RegExp(`\\b${day}\\s+(?:de\\s+|of\\s+)?${month}\\.?${dash}${day}\\s+(?:de\\s+|of\\s+)?${month}\\.?${year}\\b`), pick: (m) => ({ sm: m[2], sd: m[1], em: m[4], ed: m[3], y: m[5] }) },
+            { pattern: new RegExp(`\\b${day}${dash}${day}\\s+(?:de\\s+|of\\s+)?${month}\\.?${year}\\b`), pick: (m) => ({ sm: m[3], sd: m[1], em: m[3], ed: m[2], y: m[4] }) }
+        ];
+        for (const candidate of candidates) {
+            const match = source.match(candidate.pattern);
+            if (!match) continue;
+            const picked = candidate.pick(match);
+            const startMonth = MONTHS[picked.sm];
+            const endMonth = MONTHS[picked.em];
+            const startDay = parseInt(picked.sd, 10);
+            const endDay = parseInt(picked.ed, 10);
+            if (!startMonth || !endMonth || !(startDay >= 1 && startDay <= 31) || !(endDay >= 1 && endDay <= 31)) continue;
+            return { startMonth, startDay, endMonth, endDay, year: picked.y ? parseInt(picked.y, 10) : null, phrase: match[0].trim() };
+        }
+        return null;
+    }
+
+    // The calendar date of each heading, as "YYYY-MM-DD". A heading with a
+    // month and day states its own; a weekday-only heading takes the date of
+    // that weekday nearest the range (one day before it counts — a festival's
+    // Wednesday warm-up before its Thursday opening), and every later
+    // heading the next such weekday after the one before. A range without a
+    // year is the edition that is current: this year unless it ended more
+    // than 45 days ago, then next year.
+    anchorProgrammeHeaders(headers, range, now = new Date()) {
+        if (!range || !Array.isArray(headers) || headers.length === 0) return [];
+        const nowMs = now instanceof Date ? now.getTime() : Date.now();
+        let year = Number.isFinite(range.year) ? range.year : new Date(nowMs).getUTCFullYear();
+        const endYearOf = (y) => (range.endMonth < range.startMonth ? y + 1 : y);
+        if (!Number.isFinite(range.year)) {
+            const endMs = Date.UTC(endYearOf(year), range.endMonth - 1, range.endDay);
+            if (endMs < nowMs - (45 * 24 * 60 * 60 * 1000)) year += 1;
+        }
+        const startMs = Date.UTC(year, range.startMonth - 1, range.startDay);
+        const endMs = Date.UTC(endYearOf(year), range.endMonth - 1, range.endDay);
+        const DAY = 24 * 60 * 60 * 1000;
+        const iso = (ms) => new Date(ms).toISOString().slice(0, 10);
+        const distance = (ms) => (ms < startMs ? startMs - ms : (ms > endMs ? ms - endMs : 0));
+        const dates = [];
+        let previous = null;
+        for (const header of headers) {
+            if (!header) { dates.push(''); continue; }
+            if (Number.isFinite(header.month) && Number.isFinite(header.day)) {
+                const statedYear = header.month < range.startMonth && range.endMonth < range.startMonth ? year + 1 : year;
+                const ms = Date.UTC(statedYear, header.month - 1, header.day);
+                dates.push(iso(ms));
+                previous = ms;
+                continue;
+            }
+            if (Number.isFinite(header.day) && !Number.isFinite(header.month)) {
+                // "SATURDAY 31": the day of the month, in the range's month(s).
+                let chosen = null;
+                for (let ms = startMs - (6 * DAY); ms <= endMs + (6 * DAY); ms += DAY) {
+                    const at = new Date(ms);
+                    if (at.getUTCDate() !== header.day) continue;
+                    if (Number.isFinite(header.weekday) && at.getUTCDay() !== header.weekday) continue;
+                    if (chosen === null || distance(ms) < distance(chosen)) chosen = ms;
+                }
+                dates.push(chosen === null ? '' : iso(chosen));
+                if (chosen !== null) previous = chosen;
+                continue;
+            }
+            if (!Number.isFinite(header.weekday)) { dates.push(''); continue; }
+            let chosen = null;
+            if (previous === null) {
+                for (let ms = startMs - (6 * DAY); ms <= endMs + (6 * DAY); ms += DAY) {
+                    if (new Date(ms).getUTCDay() !== header.weekday) continue;
+                    if (chosen === null || distance(ms) < distance(chosen)) chosen = ms;
+                }
+            } else {
+                for (let ms = previous + DAY; ms <= previous + (7 * DAY); ms += DAY) {
+                    if (new Date(ms).getUTCDay() === header.weekday) { chosen = ms; break; }
+                }
+            }
+            dates.push(chosen === null ? '' : iso(chosen));
+            if (chosen !== null) previous = chosen;
+        }
+        return dates;
+    }
+
+    // The curated festival a text names outright (its name or an alias,
+    // years and punctuation folded away). Longest name first, so "BeefDip
+    // Bear Week" is not mistaken for a plainer "Bear Week".
+    findCuratedFestivalNamedInText(text) {
+        const festivals = this.core && Array.isArray(this.core.festivals) ? this.core.festivals : [];
+        const fold = (value) => String(value || '').toLowerCase().replace(/\b(?:19|20)\d{2}\b/g, ' ').replace(/[^a-z0-9]+/g, '');
+        const haystack = fold(text);
+        if (!haystack) return null;
+        const candidates = [];
+        for (const festival of festivals) {
+            if (!festival || !festival.name) continue;
+            for (const name of [festival.name].concat(Array.isArray(festival.aliases) ? festival.aliases : [])) {
+                const needle = fold(name);
+                if (needle.length >= 6 && haystack.includes(needle)) candidates.push({ festival, length: needle.length });
+            }
+        }
+        candidates.sort((a, b) => b.length - a.length);
+        return candidates.length > 0 ? candidates[0].festival : null;
+    }
+
+    // A row's words split into the event's name, its venue and the rest.
+    // The row's lines are cut at their dashes; a segment naming a curated
+    // bar of the city (or, with none curated, a later segment that reads as
+    // a place — INN, RESORT, TOURS…) is the venue, and everything after it
+    // belongs to the venue too ("GIFFORD HOUSE - PORCH BAR"). A venue on a
+    // line of its own needs no dash; a name wrapped over two lines ("MONSTER
+    // MASH DANCE PARTY & / FUNDRAISER") is joined with a space, two dashed
+    // pieces of a name with the dash. Parentheticals ("(DOORS OPEN AT 1:30
+    // PM)") are detail, never part of the name.
+    splitProgrammeRowText(row, cityKey = '') {
+        const lines = row && Array.isArray(row.lines) ? row.lines : [String((row && row.text) || row || '')];
+        const detail = [];
+        const segments = [];
+        for (const rawLine of lines) {
+            const bare = String(rawLine || '').replace(/\(([^)]*)\)/g, (_, inner) => { if (inner.trim()) detail.push(inner.trim()); return ' '; });
+            const pieces = this.normalizeWhitespace(bare).split(/\s+[-–—]\s+/).map(piece => piece.replace(/^[\s:–—-]+|[\s–—-]+$/g, '').trim());
+            const endsWithDash = /[-–—]\s*$/.test(this.normalizeWhitespace(bare));
+            pieces.forEach((piece, index) => {
+                if (!piece) return;
+                segments.push({ text: piece, dashAfter: index < pieces.length - 1 || endsWithDash });
+            });
+        }
+        if (segments.length === 0) return { title: '', bar: '', detail: detail.join('; ') };
+        const fold = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+        const bars = cityKey && this.core && this.core.bars && Array.isArray(this.core.bars[cityKey]) ? this.core.bars[cityKey] : [];
+        let venueAt = -1;
+        let bar = '';
+        let longest = 0;
+        segments.forEach((segment, index) => {
+            const folded = fold(segment.text);
+            for (const curated of bars) {
+                const name = curated && typeof curated.name === 'string' ? curated.name.trim() : '';
+                const needle = fold(name);
+                if (needle.length >= 4 && folded.includes(needle)) {
+                    if (needle.length > longest) { longest = needle.length; bar = name; venueAt = index; }
+                    continue;
+                }
+                // The segment names the house a curated room belongs to
+                // ("GIFFORD HOUSE" beside the curated "Purgatory Gifford
+                // House"): the venue as printed, for the bars data downstream.
+                if (folded.length >= 8 && needle.includes(folded) && folded.length > longest) {
+                    longest = folded.length; bar = segment.text; venueAt = index;
+                }
+            }
+        });
+        if (venueAt < 0 && segments.length >= 2) {
+            const placeWord = /\b(?:inn|hotel|motel|bar|house|club|resort|theat(?:re|er)|lounge|tours?|cafe|restaurant|hall|room|pub|tavern|beach|park|pier|cent(?:er|re)|playhouse|gallery|studio|garden|patio|deck|pool|porch|rooftop|lodge|saloon|brewery|winery|distillery|church|museum|library|arena|stadium|pavilion|plaza|square|market|ballroom|cabaret|nightclub|venue)\b/i;
+            for (let index = segments.length - 1; index >= 1; index--) {
+                if (placeWord.test(segments[index].text)) { venueAt = index; bar = segments[index].text; break; }
+            }
+        }
+        const join = (list) => list.reduce((text, segment, index) => (index === 0 ? segment.text : `${text}${list[index - 1].dashAfter ? ' - ' : ' '}${segment.text}`), '')
+            .replace(/[\s&,:–—-]+$/g, '').trim();
+        if (venueAt === 0) {
+            // The venue leads ("BOATSLIP - TEA DANCE"): the rest is the name.
+            return { title: join(segments.slice(1)), bar, detail: detail.join('; ') };
+        }
+        const title = join(venueAt > 0 ? segments.slice(0, venueAt) : segments);
+        const rooms = venueAt > 0 ? segments.slice(venueAt + 1).map(segment => segment.text) : [];
+        return { title, bar, detail: rooms.concat(detail).join('; ') };
     }
 
     // ── EventON (WordPress calendar plugin) ─────────────────────────────
@@ -29376,10 +29914,16 @@ TEXT:
     // see SharedCore.countDistinctFlyerClockTimes for the corpus that set the
     // threshold at 4). The model's label alone is not sufficient: it called
     // BeefDip's own "BEAR WEEK SCHEDULE" an event-flyer.
+    static get PROGRAMME_MONTHS() { return PROGRAMME_MONTHS; }
+
     isMultiEventProgrammeImage(imageUrl) {
         const verdict = this.getOcrImageVerdict(imageUrl);
         if (!verdict) return false;
-        if (String(verdict.imageClassification || '').trim().toLowerCase() === 'multi-event-flyer') return true;
+        // The verdict store keeps the model's label under `classification`
+        // (recordOcrImageVerdict); a raw response carries `imageClassification`.
+        // Reading only the latter meant the label never counted and only the
+        // clock census ever fired (run 20261029-071349).
+        if (String(verdict.classification || verdict.imageClassification || '').trim().toLowerCase() === 'multi-event-flyer') return true;
         if (!this.core || typeof this.core.countDistinctFlyerClockTimes !== 'function') return false;
         const text = typeof verdict.text === 'string' ? verdict.text : '';
         return this.core.countDistinctFlyerClockTimes(text) >= MULTI_EVENT_PROGRAMME_CLOCK_TIMES;

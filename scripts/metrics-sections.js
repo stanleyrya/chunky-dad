@@ -341,6 +341,12 @@ function assessSourceQuality(row, options = {}) {
         const flagTotal = Object.keys(flags).reduce((sum, code) => sum + (Number(flags[code]) || 0), 0);
         const topFlags = Object.keys(flags).sort((a, b) => (flags[b] || 0) - (flags[a] || 0)).slice(0, 3).map((code) => `${code} ×${flags[code]}`);
         add({ key: 'flags', label: 'Sanity flags', value: String(flagTotal), chip: `flags ${flagTotal}`, off: flagTotal >= 1, detail: topFlags.join(' · ') || 'none' });
+        // Copies this aggregator listed under a name of its own, folded into
+        // the site's own event (reconcileAggregatorPointers): shown only
+        // when it happened, with the pairs.
+        const renamed = q.renamed && typeof q.renamed === 'object' ? q.renamed : null;
+        const renamedCount = renamed ? Number(renamed.n) || 0 : 0;
+        if (renamedCount > 0) add({ key: 'renamed', label: 'Copies under its own name', value: String(renamedCount), chip: `renamed ${renamedCount}`, off: true, detail: (Array.isArray(renamed.examples) ? renamed.examples : []).join(' · ') || 'folded into the site\'s own events' });
         const bear = q.bear && typeof q.bear === 'object' ? q.bear : {};
         const aiDropped = Number(bear.ai_dropped) || 0;
         add({ key: 'bear', label: 'Bear funnel', value: `${Number(bear.kept) || 0} of ${Number(bear.extracted) || 0}`, chip: `AI-drop ${aiDropped}`, off: aiDropped >= thresholds.aiDropped, detail: `${aiDropped} AI-dropped unreviewed · ${Number(bear.manual_dropped) || 0} by your verdicts${bear.top_reason ? ` · ${String(bear.top_reason).slice(0, 80)}` : ''}` });
