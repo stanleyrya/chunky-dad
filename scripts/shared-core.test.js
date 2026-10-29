@@ -29149,3 +29149,22 @@ test('aggregator pointers: a same-day neighbour hours away is "that day", with i
   assert.equal(stamp.reason, 'Gathr points at theboatslip.com, where The Boatslip lists "HALLOWEEN UNIFORM TEA - Spooky Bear Wknd" at Boatslip (16:00, 6 hours before this copy\'s 22:00) that day — the two did not fold as one event');
   assert.ok(logs.some(line => line.includes('that day and the fold left this copy standing')), logs.join('\n'));
 });
+
+
+test('two sessions a page published as distinct rows stay two events behind their shared page link (the same-URL pass honours areDistinctPublishedFeedRows)', async () => {
+  const core = createCore();
+  const page = 'https://www.bearyoursoul.org/events/spookylobb';
+  const session = (day, start, end) => ({
+    title: 'Loving Our Bear Bodies at Spooky Bear in Provincetown', bar: 'Wilde Playhouse at the Gifford House', city: 'ptown', timezone: 'America/New_York',
+    startDate: new Date(`${day}T${start}:00.000Z`), endDate: new Date(`${day}T${end}:00.000Z`), url: page, source: 'ai-web',
+    _sourceRowFeed: page, _sourceRowId: `session:${day}T${start}`, _parserConfig: { name: 'Spooky Bear' }
+  });
+  const sessions = [session('2026-10-30', '15:00', '17:00'), session('2026-10-30', '17:30', '19:30'), session('2026-10-31', '15:00', '17:00'), session('2026-10-31', '17:30', '19:30')];
+  assert.equal(core.getSameEventIdentitySignal(sessions[0], sessions[1]), null, 'same page, same day: still two published rows');
+  const { result: kept, logs } = await withLogsAsync(() => core.deduplicateEvents(sessions.map(s => ({ ...s }))));
+  assert.equal(kept.length, 4, logs.filter(l => /Same event URL|DEDUP|IDENTITY/.test(l)).join('\n'));
+  // Without the row ids the old folds return: this is what the stamp buys.
+  const bare = sessions.map(s => { const copy = { ...s }; delete copy._sourceRowFeed; delete copy._sourceRowId; return copy; });
+  const { result: folded } = await withLogsAsync(() => core.deduplicateEvents(bare));
+  assert.ok(folded.length < 4, 'unstamped twins on one page fold');
+});

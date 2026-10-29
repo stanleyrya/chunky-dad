@@ -1762,8 +1762,13 @@ class AiWebParser {
                 // AFTER the conflict flag so a flyer that disagrees about the
                 // START is already on record as suspect.
                 this.fillEndTimeFromFlyerOcr(keptStructuredEvents);
+                // A day-dated page (Squarespace's 00:01 marker) whose text
+                // lists its sessions: one event per session line.
+                const structuredSessionEvents = pageClassification !== 'multi-event-page'
+                    ? this.buildSessionLineEvents(keptStructuredEvents, effectiveHtmlData, cityConfig)
+                    : keptStructuredEvents;
                 return {
-                    events: keptStructuredEvents,
+                    events: structuredSessionEvents,
                     additionalLinks: additionalLinks,
                     discoveredSegments: null,
                     ocrResults: [],
@@ -1932,6 +1937,11 @@ class AiWebParser {
             if (pageClassification !== 'multi-event-page' && Array.isArray(ocrResults) && ocrResults.length > 0) {
                 const programmeImageEvents = this.buildProgrammeImageEvents(ocrResults, effectiveHtmlData, cityConfig, parserConfig);
                 if (programmeImageEvents.length > 0) events = events.concat(programmeImageEvents);
+            }
+            // A day-dated event page whose text lists its sessions: one
+            // event per session line (buildSessionLineEvents).
+            if (pageClassification !== 'multi-event-page') {
+                events = this.buildSessionLineEvents(events, effectiveHtmlData, cityConfig);
             }
 
             // Enrichment only: fills empty fields on the finished AI/OCR events
@@ -10819,6 +10829,106 @@ class AiWebParser {
         return events;
     }
 
+    // ── Session lines on a day-dated event page ─────────────────────────
+    // Squarespace dates an event page to the DAY (JSON-LD start 00:01 local,
+    // end 12:01) and the body states the sessions: bearyoursoul.org's "Loving
+    // Our Bear Bodies at Spooky Bear" lists "Friday, October 30, 11:00
+    // a.m.–1:00 p.m." and three more (run 20261029-071349); the one record
+    // shipped at 12:01am with an improbable-overnight-span flag, and the
+    // owner rejected it asking for the sessions. When a page yields ONE
+    // event whose start is such a day placeholder, and its text states two
+    // or more dated session lines within a week of that day, each line is
+    // the event once more at its own hours — the record's title, venue, link
+    // and artwork, the line's day and clock. Nothing else about the record
+    // changes; a page with a real start time, or one dated line, is left
+    // exactly as it was.
+    buildSessionLineEvents(events, htmlData, cityConfig = null) {
+        if (!Array.isArray(events) || events.length !== 1) return events;
+        const event = events[0];
+        if (!event || typeof event !== 'object') return events;
+        const day = this.dateOnlyStartDay(event);
+        if (!day) return events;
+        const html = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+        const sourceUrl = htmlData && typeof htmlData.url === 'string' ? htmlData.url : '';
+        if (!html) return events;
+        const lines = this.decodeEntitiesFully(this.stripTags(
+            html.replace(/<(?:script|style)\b[\s\S]*?<\/(?:script|style)>/gi, ' ')
+                .replace(/<br\s*\/?>/gi, '\n')
+                .replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt)>/gi, '$&\n')
+        )).split(/\r?\n/).map(line => this.normalizeWhitespace(line)).filter(Boolean);
+        const MONTHS = AiWebParser.PROGRAMME_MONTHS;
+        const monthAlternation = Object.keys(MONTHS).sort((a, b) => b.length - a.length).join('|');
+        const clockToken = '(?:2[0-3]|[01]?\\d)(?:[:.][0-5]\\d)?\\s*(?:[ap]\\.?\\s?m\\.?)?';
+        const sessionPattern = new RegExp(`^(?:(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)\\.?,?\\s+)?(?:(${monthAlternation})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?|(\\d{1,2})(?:st|nd|rd|th)?\\.?\\s+(?:de\\s+|of\\s+)?(${monthAlternation})\\.?)(?:,?\\s*(\\d{4}))?[,:\\s]+(${clockToken}\\s*(?:-|–|—|to)\\s*${clockToken})\\s*$`, 'i');
+        const dayMs = Date.UTC(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)));
+        const WEEK = 7 * 24 * 60 * 60 * 1000;
+        const sessions = [];
+        const seen = new Set();
+        for (const line of lines) {
+            const match = line.match(sessionPattern);
+            if (!match) continue;
+            const month = MONTHS[String(match[1] || match[4] || '').toLowerCase()];
+            const dayOfMonth = parseInt(match[2] || match[3], 10);
+            if (!month || !(dayOfMonth >= 1 && dayOfMonth <= 31)) continue;
+            const year = match[5] ? parseInt(match[5], 10) : Number(day.slice(0, 4));
+            const ms = Date.UTC(year, month - 1, dayOfMonth);
+            if (Math.abs(ms - dayMs) > WEEK) continue;
+            const clocks = this.readProgrammeRowClocks(match[6].replace(/([ap])\.\s?m\./gi, '$1m'));
+            if (!clocks || clocks.starts.length !== 1 || !clocks.end) continue;
+            const sessionDay = new Date(ms).toISOString().slice(0, 10);
+            const key = `${sessionDay}T${clocks.starts[0]}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            sessions.push({ day: sessionDay, start: clocks.starts[0], end: clocks.end, line });
+        }
+        if (sessions.length < 2) return events;
+        const timezone = event.timezone || (event.city ? this.getTimezoneForCity(event.city, cityConfig) : '') || '';
+        const built = sessions.map(session => {
+            let endDay = session.day;
+            if (session.end <= session.start) {
+                const next = new Date(`${session.day}T00:00:00Z`);
+                next.setUTCDate(next.getUTCDate() + 1);
+                endDay = next.toISOString().slice(0, 10);
+            }
+            const clone = { ...event };
+            clone.startDate = new Date(`${session.day}T${session.start}:00Z`);
+            clone.endDate = new Date(`${endDay}T${session.end}:00Z`);
+            clone._timezoneUnresolved = true;
+            if (timezone) clone.timezone = timezone;
+            clone._startDateRawText = session.line;
+            clone._sessionLine = { page: sourceUrl, line: session.line, placeholder: day };
+            // The page published these as distinct rows: no similarity rung
+            // may fold two sessions of one day, or Friday's into Saturday's
+            // (areDistinctPublishedFeedRows — the same contract a feed's row
+            // ids give).
+            clone._sourceRowFeed = sourceUrl || clone._sourceRowFeed || '';
+            clone._sourceRowId = `session:${session.day}T${session.start}`;
+            delete clone._sanityFlags;
+            delete clone._listedOccurrenceDates;
+            return clone;
+        });
+        console.log(`🗓️ SESSIONS: "${event.title || 'event'}" on ${sourceUrl || 'the page'} is dated only to the day (${day}) — the page lists ${sessions.length} sessions (${sessions.map(s => s.line).join('; ')}); one event each`);
+        return built;
+    }
+
+    // The calendar day of a record whose start is the DAY, not a time: a
+    // raw value that is a bare date or reads 00:00 / 00:01 (Squarespace's
+    // day marker), or a resolved start at local midnight. '' otherwise.
+    dateOnlyStartDay(event) {
+        const raw = typeof event._startDateRawText === 'string' ? event._startDateRawText.trim() : '';
+        const bare = raw.match(/^(\d{4}-\d{2}-\d{2})(?:T00:0[01](?::00)?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/);
+        if (bare) return bare[1];
+        if (raw) return '';
+        const start = event.startDate instanceof Date ? event.startDate : (event.startDate ? new Date(event.startDate) : null);
+        if (!start || Number.isNaN(start.getTime())) return '';
+        try {
+            const formatter = new Intl.DateTimeFormat('en-US', { timeZone: event.timezone || 'UTC', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+            const parts = Object.fromEntries(formatter.formatToParts(start).filter(p => p.type !== 'literal').map(p => [p.type, p.value]));
+            if (parts.hour !== '00' || !(parts.minute === '00' || parts.minute === '01')) return '';
+            return `${parts.year}-${parts.month}-${parts.day}`;
+        } catch (_) { return ''; }
+    }
+
     // ── A programme IMAGE on an event page ──────────────────────────────
     // A festival publishes its weekend as ONE picture: weekday headings and
     // a timed row per event ("THURSDAY / 8:00PM-10:00 PM - SPOOKY BEAR
@@ -10879,7 +10989,10 @@ class AiWebParser {
                 if (!day) continue;
                 const parts = this.splitProgrammeRowText(row, cityKey);
                 if (!parts.title) continue;
-                const description = [parts.detail, programme.heading ? `Part of ${programme.heading}` : ''].filter(Boolean).join('\n');
+                // Two seatings of one brunch ("10:30 AM & 1:00PM") fold to one
+                // record downstream: the description keeps every seating.
+                const seatings = row.starts.length > 1 ? `Seatings: ${row.starts.map(clock => this.formatProgrammeClock(clock)).join(' & ')}` : '';
+                const description = [parts.detail, seatings, programme.heading ? `Part of ${programme.heading}` : ''].filter(Boolean).join('\n');
                 for (const start of row.starts) {
                     let endLocal = null;
                     if (row.end) {
@@ -10902,6 +11015,11 @@ class AiWebParser {
                     if (timezone) event.timezone = timezone;
                 }
                 event._programmeImage = ocr.url;
+                // The picture published these as distinct rows (two parties
+                // at one bar on one day, both linking the page): no
+                // similarity rung may fold them — areDistinctPublishedFeedRows.
+                event._sourceRowFeed = ocr.url;
+                event._sourceRowId = `row:${event._startDateRawText || ''}|${event.title}`;
             }
             console.log(`🗓️ PROGRAMME IMAGE: ${ocr.url} — ${programme.headers.length} day headings, ${datedRows.length} timed rows → ${built.length} event(s); days anchored to ${range.phrase} (${anchor})${cityKey ? `, placed in ${cityKey}` : ', no city read'}`);
             events.push(...built);
@@ -10957,6 +11075,15 @@ class AiWebParser {
             else if (afterBlank || rows.length === 0) footer.push(line);
         }
         return { headers, rows, heading: heading.join(' '), footer: footer.join(' ') };
+    }
+
+    // "13:00" → "1:00 PM", for the words on a card.
+    formatProgrammeClock(clock) {
+        const [hourText, minuteText] = String(clock || '').split(':');
+        const hour = parseInt(hourText, 10);
+        if (!Number.isFinite(hour)) return String(clock || '');
+        const twelve = hour % 12 === 0 ? 12 : hour % 12;
+        return `${twelve}:${minuteText || '00'} ${hour < 12 ? 'AM' : 'PM'}`;
     }
 
     // The clocks of a row's prefix as "HH:MM" wall-clock strings: starts
@@ -11177,8 +11304,16 @@ class AiWebParser {
             for (const curated of bars) {
                 const name = curated && typeof curated.name === 'string' ? curated.name.trim() : '';
                 const needle = fold(name);
-                if (needle.length < 4 || !folded.includes(needle)) continue;
-                if (needle.length > longest) { longest = needle.length; bar = name; venueAt = index; }
+                if (needle.length >= 4 && folded.includes(needle)) {
+                    if (needle.length > longest) { longest = needle.length; bar = name; venueAt = index; }
+                    continue;
+                }
+                // The segment names the house a curated room belongs to
+                // ("GIFFORD HOUSE" beside the curated "Purgatory Gifford
+                // House"): the venue as printed, for the bars data downstream.
+                if (folded.length >= 8 && needle.includes(folded) && folded.length > longest) {
+                    longest = folded.length; bar = segment.text; venueAt = index;
+                }
             }
         });
         if (venueAt < 0 && segments.length >= 2) {

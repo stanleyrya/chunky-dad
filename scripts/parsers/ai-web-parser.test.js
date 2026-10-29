@@ -23372,3 +23372,49 @@ test('programme image: clocks, date ranges and weekday anchoring', () => {
   assert.deepEqual(read.headers.map(h => [h.weekday, h.month, h.day]), [[5, 10, 30], [6, null, 31]], 'a heading may carry its month and day');
   assert.deepEqual(read.rows.map(r => [r.headerIndex, r.starts, r.end, r.lines]), [[0, ['17:00'], '20:00', ['MEET & GREET', 'CROWN & ANCHOR']], [1, ['09:30'], null, ['DUNES']]]);
 });
+
+test('session lines on a day-dated event page: a Squarespace 00:01 start with "Friday, October 30, 11:00 a.m.–1:00 p.m." lines in the body becomes one event per session (Loving Our Bear Bodies, run 20261029-071349)', () => {
+  const parser = createParser();
+  const url = 'https://www.bearyoursoul.org/events/spookylobb';
+  const html = `<html><body><h1>Loving Our Bear Bodies at Spooky Bear in Provincetown</h1>
+    <time>Friday, October 30, 2026</time><time>12:01 AM</time>
+    <p>We have once again partnered with the Northeast Ursamen to bring our workshops to their annual Halloween Weekend Celebration! We will offering four chances to join:</p>
+    <ul><li>Friday, October 30, 11:00 a.m.–1:00 p.m.</li><li>Friday, October 30, 1:30–3:30 p.m.</li><li>Saturday, October 31, 11:00 a.m.–1:00 p.m.</li><li>Saturday, October 31, 1:30–3:30 p.m.</li></ul>
+    <p>Last year: Friday, October 31, 2025, 11:00 a.m.–1:00 p.m.</p>
+    <p>Doors 10:30 a.m.</p></body></html>`;
+  const record = () => ({ title: 'Loving Our Bear Bodies at Spooky Bear in Provincetown', startDate: new Date('2026-10-30T04:01:00.000Z'), endDate: new Date('2026-10-30T16:01:00.000Z'), timezone: 'America/New_York', city: 'ptown', _startDateRawText: '2026-10-30T00:01:00-0400', bar: 'Wilde Playhouse at the Gifford House', url, image: 'https://static1.squarespace.com/x.jpg', _sanityFlags: [{ code: 'improbable-overnight-span' }] });
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let sessions;
+  try { sessions = parser.buildSessionLineEvents([record()], { url, html }, null); } finally { console.log = original; }
+  assert.deepEqual(sessions.map(e => `${e.startDate.toISOString().slice(0, 16)}→${e.endDate.toISOString().slice(0, 16)}`), [
+    '2026-10-30T11:00→2026-10-30T13:00', '2026-10-30T13:30→2026-10-30T15:30', '2026-10-31T11:00→2026-10-31T13:00', '2026-10-31T13:30→2026-10-31T15:30'
+  ], 'four sessions at their own hours; last year\'s line (a year away) and the doors line (no range) are not sessions');
+  for (const session of sessions) {
+    assert.equal(session.title, 'Loving Our Bear Bodies at Spooky Bear in Provincetown');
+    assert.equal(session.bar, 'Wilde Playhouse at the Gifford House');
+    assert.equal(session.url, url);
+    assert.equal(session.image, 'https://static1.squarespace.com/x.jpg');
+    assert.equal(session._timezoneUnresolved, true, 'wall-clock, anchored in the zone downstream');
+    assert.equal(session.timezone, 'America/New_York');
+    assert.equal(session._sanityFlags, undefined, 'the placeholder\'s overnight flag does not survive');
+    assert.equal(session._sessionLine.placeholder, '2026-10-30');
+  }
+  assert.ok(logs.some(line => line.includes('is dated only to the day (2026-10-30) — the page lists 4 sessions')), logs.join('\n'));
+  // Left exactly alone: a real start time, a single session line, two records, lines a month away.
+  const timed = { ...record(), startDate: new Date('2026-10-30T15:00:00.000Z'), _startDateRawText: '2026-10-30T11:00:00-0400' };
+  assert.deepEqual(parser.buildSessionLineEvents([timed], { url, html }, null), [timed]);
+  const one = record();
+  assert.deepEqual(parser.buildSessionLineEvents([one], { url, html: '<p>Friday, October 30, 11:00 a.m.–1:00 p.m.</p>' }, null), [one]);
+  const two = [record(), record()];
+  assert.equal(parser.buildSessionLineEvents(two, { url, html }, null), two);
+  const far = record();
+  assert.deepEqual(parser.buildSessionLineEvents([far], { url, html: '<p>Friday, December 4, 11:00 a.m.–1:00 p.m.</p><p>Saturday, December 5, 11:00 a.m.–1:00 p.m.</p>' }, null), [far]);
+  // The day marker is read from the raw value or, failing that, the resolved local midnight.
+  assert.equal(parser.dateOnlyStartDay({ _startDateRawText: '2026-10-30' }), '2026-10-30');
+  assert.equal(parser.dateOnlyStartDay({ _startDateRawText: '2026-10-30T00:00:00+02:00' }), '2026-10-30');
+  assert.equal(parser.dateOnlyStartDay({ _startDateRawText: '2026-10-30T20:00:00-04:00' }), '');
+  assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T04:00:00Z'), timezone: 'America/New_York' }), '2026-10-30');
+  assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T23:00:00Z'), timezone: 'America/New_York' }), '');
+});

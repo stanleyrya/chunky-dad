@@ -15988,8 +15988,15 @@ class SharedCore {
             // vendor, two curated doors or two numbered street lines behind
             // one shared url are still two events (a chimera wearing a
             // neighbouring card's page link).
+            // …and two rows the publisher told apart (areDistinctPublishedFeedRows:
+            // a feed's row ids, a page's session lines, a programme picture's
+            // rows) stay two events behind their shared page link — the four
+            // "Loving Our Bear Bodies" sessions on one Squarespace page folded
+            // here into one Friday record (run 20261029, verification run).
             const sameUrlContradiction = holder
-                ? this.getIdentityContradiction(holder, event, { ignoreStatedDays: true, softBarNames: true })
+                ? (this.areDistinctPublishedFeedRows(holder, event)
+                    ? 'published row ids'
+                    : this.getIdentityContradiction(holder, event, { ignoreStatedDays: true, softBarNames: true }))
                 : null;
             if (sameUrlContradiction) {
                 console.log(`🛑 IDENTITY: "${event.title || 'event'}" shares event URL ${urlKey} with "${holder.title || 'event'}", but their ${sameUrlContradiction} contradict — two events, not folded`);
