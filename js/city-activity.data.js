@@ -2,11 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-10-29",
+ "generatedAt": "2026-10-30",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-10-29",
     "2026-10-30",
     "2026-10-31",
     "2026-11-01",
@@ -17,8 +16,10 @@ window.CITY_ACTIVITY = {
     "2026-11-07",
     "2026-11-08",
     "2026-11-10",
+    "2026-11-11",
     "2026-11-12",
     "2026-11-13",
+    "2026-11-14",
     "2026-11-15",
     "2026-11-17",
     "2026-11-18",
@@ -74,7 +75,9 @@ window.CITY_ACTIVITY = {
     "2027-01-20",
     "2027-01-21",
     "2027-01-22",
-    "2027-01-24"
+    "2027-01-24",
+    "2027-01-26",
+    "2027-01-27"
    ],
    "recurring": 6,
    "festivalUntil": null
@@ -84,6 +87,7 @@ window.CITY_ACTIVITY = {
     "2026-11-07",
     "2026-11-08",
     "2026-11-15",
+    "2026-11-21",
     "2026-11-29",
     "2026-12-13",
     "2026-12-27",
@@ -94,7 +98,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-10-29",
     "2026-10-31",
     "2026-11-01",
     "2026-11-05",
@@ -156,6 +159,7 @@ window.CITY_ACTIVITY = {
     "2026-11-28",
     "2026-12-06",
     "2026-12-12",
+    "2026-12-13",
     "2026-12-20",
     "2026-12-27",
     "2027-01-17",
@@ -169,6 +173,7 @@ window.CITY_ACTIVITY = {
   },
   "london": {
    "dates": [
+    "2026-10-30",
     "2026-11-13",
     "2026-11-21",
     "2026-12-11",
@@ -199,14 +204,17 @@ window.CITY_ACTIVITY = {
     "2026-12-02",
     "2026-12-04",
     "2026-12-09",
-    "2026-12-11"
+    "2026-12-11",
+    "2026-12-18",
+    "2026-12-24"
    ],
    "recurring": 2,
    "festivalUntil": null
   },
   "berlin": {
    "dates": [
-    "2026-10-31"
+    "2026-10-31",
+    "2026-12-12"
    ],
    "recurring": 0,
    "festivalUntil": null
@@ -228,7 +236,14 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "dallas": {
-   "dates": [],
+   "dates": [
+    "2026-11-06",
+    "2026-11-07",
+    "2026-11-12",
+    "2026-11-15",
+    "2026-11-21",
+    "2026-11-28"
+   ],
    "recurring": 0,
    "festivalUntil": "2027-03-28"
   },
@@ -265,6 +280,7 @@ window.CITY_ACTIVITY = {
     "2026-11-02",
     "2026-11-06",
     "2026-11-08",
+    "2026-11-12",
     "2026-11-13",
     "2026-11-14",
     "2026-11-15",
@@ -279,7 +295,8 @@ window.CITY_ACTIVITY = {
     "2026-12-27",
     "2027-01-01",
     "2027-01-03",
-    "2027-01-08"
+    "2027-01-08",
+    "2027-01-10"
    ],
    "recurring": 1,
    "festivalUntil": null
@@ -293,7 +310,8 @@ window.CITY_ACTIVITY = {
     "2026-12-04",
     "2026-12-11",
     "2026-12-21",
-    "2026-12-31"
+    "2026-12-31",
+    "2027-01-01"
    ],
    "recurring": 0,
    "festivalUntil": null
@@ -309,6 +327,7 @@ window.CITY_ACTIVITY = {
    "dates": [
     "2026-10-30",
     "2026-11-04",
+    "2026-11-14",
     "2026-11-15",
     "2026-11-19",
     "2026-11-28",
@@ -324,16 +343,21 @@ window.CITY_ACTIVITY = {
   "phoenix": {
    "dates": [
     "2026-11-21",
-    "2026-11-28"
+    "2026-11-28",
+    "2026-12-12"
    ],
    "recurring": 0,
    "festivalUntil": null
   },
   "ptown": {
    "dates": [
-    "2026-10-29",
     "2026-10-30",
-    "2026-10-31"
+    "2026-10-31",
+    "2026-11-01",
+    "2027-10-28",
+    "2027-10-29",
+    "2027-10-30",
+    "2027-10-31"
    ],
    "recurring": 0,
    "festivalUntil": "2026-11-01"
@@ -468,7 +492,9 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "paris": {
-   "dates": [],
+   "dates": [
+    "2026-11-14"
+   ],
    "recurring": 0,
    "festivalUntil": null
   },
@@ -544,6 +570,7 @@ window.CITY_ACTIVITY = {
   },
   "sydney": {
    "dates": [
+    "2026-10-30",
     "2026-11-13"
    ],
    "recurring": 0,
@@ -560,6 +587,7 @@ window.CITY_ACTIVITY = {
   },
   "brisbane": {
    "dates": [
+    "2026-10-30",
     "2026-11-13"
    ],
    "recurring": 0,
@@ -674,7 +702,9 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "manila": {
-   "dates": [],
+   "dates": [
+    "2026-10-30"
+   ],
    "recurring": 0,
    "festivalUntil": null
   }
