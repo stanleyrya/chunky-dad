@@ -15618,7 +15618,9 @@ class SharedCore {
     // 'unusable response') and the event ships without shortName exactly as
     // today. No retry ladder — the pass is cheap and optional. Returns true
     // only when a gated value was stored (caller rebuilds notes).
-    async deriveShortNameForEvent(event, parserConfig, httpAdapter) {
+    // options.title: derive from this text instead of event.title (the
+    // promoter chip rule passes the title with the brand's words removed).
+    async deriveShortNameForEvent(event, parserConfig, httpAdapter, options = {}) {
         if (!event || typeof event !== 'object') return false;
         const existing = event.shortName === null || event.shortName === undefined
             ? ''
@@ -15628,7 +15630,10 @@ class SharedCore {
             ? event._staticFields
             : {};
         if (Object.prototype.hasOwnProperty.call(staticFields, 'shortName')) return false;
-        const title = typeof event.title === 'string' ? event.title.trim() : '';
+        const titleSource = options && typeof options.title === 'string' && options.title.trim()
+            ? options.title
+            : event.title;
+        const title = typeof titleSource === 'string' ? titleSource.trim() : '';
         if (!title) return false;
         const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
         if (rawAi.enabled === false) return false;
@@ -15728,6 +15733,161 @@ class SharedCore {
 
         event.shortName = verdict.value;
         console.log(`🏷️ SHORTNAME: derived "${verdict.value}" for "${title}"`);
+        return true;
+    }
+
+    // ------------------------------------------------------------------
+    // PROMOTER CHIP RULE. The registry stamps a promoter's curated shortName
+    // on every event it matches — right for a party brand that runs one
+    // night at a time (LODGE on 78 Lodge nights, BHH, FURBALL, CHUNK), wrong
+    // for a festival's programme: Spooky Bear's thirteen rows all read
+    // "SPOOKY BEAR" on the week grid (run 20261029-154743: 31 SPOOKY BEAR,
+    // 24 BEEFDIP, 17 URBAN BEAR and 30 BOSF chips), and a chip that cannot
+    // tell events apart inside a day is not a chip. Owner, 2026-10-29: "I
+    // don't like that all the events for spooky bear have spooky bear as
+    // the short name". The rule reads the run's own data — no festival flag,
+    // no hand list: when another event the registry matched to the same
+    // promoter sits on the same local day under a different name, the
+    // promoter's shortName is that day's branding, and this event is named
+    // from its own title with the brand's words removed — deterministic
+    // when the remainder fits the chip, else the usual AI derivation (same
+    // verbatim gate) over the remainder. The event whose title IS the brand
+    // (the umbrella) keeps the brand chip. It runs at the final build, on
+    // both sides of a calendar merge, so a saved event already wearing the
+    // brand heals as a notes-only update, and runs again every run (the
+    // registry re-stamps at parse time; the derivation is cached) to the
+    // same value.
+    // ------------------------------------------------------------------
+
+    // Local calendar day of an event in its own timezone (its stamp, else
+    // its city's); '' when undatable.
+    getEventLocalDayKey(event) {
+        if (!event || typeof event !== 'object' || !event.startDate) return '';
+        const timezone = event.timezone || this.getCityTimezone(event.city) || null;
+        return this.normalizeEventDateLocal(event.startDate, timezone) || '';
+    }
+
+    // Every name a registry entry answers to — name, aliases, keywords,
+    // shortName and shorterName (soft hyphens stripped) — as raw strings,
+    // longest first.
+    getPromoterBrandNames(entry) {
+        if (!entry || typeof entry !== 'object') return [];
+        const names = [entry.name, ...(Array.isArray(entry.aliases) ? entry.aliases : []),
+            ...(Array.isArray(entry.keywords) ? entry.keywords : []), entry.shortName, entry.shorterName]
+            .map(value => String(value || '').replace(/­/g, '').trim())
+            .filter(Boolean);
+        return Array.from(new Set(names)).sort((a, b) => b.length - a.length);
+    }
+
+    // TRUE when the title names the promoter and nothing else, a year or a
+    // festival word aside: "Spooky Bear", "Spooky Bear 2026", "BeefDip Bear
+    // Week". That record is the umbrella and keeps the brand chip.
+    isPromoterBrandTitle(title, entry) {
+        const text = String(title || '').replace(/\b(?:19|20)\d\d\b/g, ' ');
+        const key = this.normalizeIdentityText(text);
+        if (!key) return false;
+        const brandKeys = new Set(this.getPromoterBrandNames(entry).map(name => this.normalizeIdentityText(name)).filter(Boolean));
+        if (brandKeys.has(key)) return true;
+        const remainder = this.normalizeIdentityText(this.stripPromoterBrandFromTitle(text, entry)).replace(/[^a-z]/g, '');
+        return !remainder || /^(?:bear)?(?:week|weekend|festival|fest|edition)$/.test(remainder);
+    }
+
+    // The title with the promoter's names removed at word boundaries and
+    // the orphaned separators tidied: "SPOOKY BEAR EARLY BEAR MEET UP" →
+    // "EARLY BEAR MEET UP", "GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT" →
+    // "GOLDILOXX - DAYTIME DELIGHT", "Spooky Bear: Monster Mash" → "Monster
+    // Mash". '' when nothing with a letter remains.
+    stripPromoterBrandFromTitle(title, entry) {
+        let text = String(title || '');
+        if (!text.trim()) return '';
+        const escape = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        for (const name of this.getPromoterBrandNames(entry)) {
+            const tokens = name.split(/[^\p{L}\p{N}]+/u).filter(Boolean).map(escape);
+            if (tokens.length === 0) continue;
+            // A festival word or a year riding on the brand ("Spooky Bear
+            // Weekend: …", "Urban Bear 2026 …") is part of the branding too.
+            const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${tokens.join('[\\s\\-_.]*')}(?:[\\s\\-_.]*(?:week|weekend|festival|fest|edition|(?:19|20)\\d\\d)(?![\\p{L}\\p{N}]))*(?![\\p{L}\\p{N}])`, 'giu');
+            text = text.replace(pattern, ' ');
+        }
+        text = text.replace(/\s+/g, ' ');
+        // An orphaned run of separators where the brand stood ("GOLDILOXX -  -
+        // DAYTIME", ": Monster Mash") collapses to one, and none survives at
+        // either end.
+        text = text.replace(/(?:\s*[-–—|:/•·,]\s*){2,}/g, ' - ');
+        text = text.replace(/^[\s\-–—|:/•·,]+|[\s\-–—|:/•·,]+$/g, '').trim();
+        return /\p{L}/u.test(text) ? text : '';
+    }
+
+    // Other events in the batch the registry matched to the same promoter,
+    // on the same local day, under a different name. Pure over `batch`.
+    getPromoterDaySiblings(event, batch) {
+        const promoter = event && typeof event._promoter === 'string' ? event._promoter.trim() : '';
+        if (!promoter || !Array.isArray(batch) || batch.length === 0) return [];
+        const day = this.getEventLocalDayKey(event);
+        if (!day) return [];
+        const titleKey = this.normalizeIdentityText(event.title);
+        return batch.filter(other => other && typeof other === 'object' && other !== event
+            && typeof other._promoter === 'string' && other._promoter.trim() === promoter
+            && this.getEventLocalDayKey(other) === day
+            && this.normalizeIdentityText(other.title) !== titleKey);
+    }
+
+    // The rule, on one final-build record. `sourceEvent` is the batch record
+    // the analyzed event was built from (its siblings are found in
+    // this._preparingBatch). Returns true when the chip changed.
+    async applyPromoterChipRule(analyzedEvent, sourceEvent, parserConfig, httpAdapter) {
+        if (!analyzedEvent || typeof analyzedEvent !== 'object') return false;
+        const entry = this.getEventPromoterEntry(analyzedEvent) || this.getEventPromoterEntry(sourceEvent);
+        if (!entry) return false;
+        const brandKeys = new Set([entry.shortName, entry.shorterName]
+            .map(value => this.normalizeIdentityText(String(value || '').replace(/­/g, '')))
+            .filter(Boolean));
+        if (brandKeys.size === 0) return false;
+        // Only a chip that IS the registry's brand is in question — a chip the
+        // owner typed or the AI derived is this event's own.
+        const current = String(analyzedEvent.shortName || '').replace(/­/g, '').trim();
+        if (!current || !brandKeys.has(this.normalizeIdentityText(current))) return false;
+        const anchor = sourceEvent && typeof sourceEvent === 'object' && sourceEvent._promoter
+            ? sourceEvent
+            : analyzedEvent;
+        const siblings = this.getPromoterDaySiblings(anchor, this._preparingBatch);
+        if (siblings.length === 0) return false;
+        const title = typeof analyzedEvent.title === 'string' ? analyzedEvent.title.trim() : '';
+        if (!title || this.isPromoterBrandTitle(title, entry)) return false;
+
+        const remainder = this.stripPromoterBrandFromTitle(title, entry) || title;
+        const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        const maxChars = this.resolveAiConfig(rawAi).shortNameDeriveMaxChars;
+        analyzedEvent.shortName = '';
+        if (analyzedEvent._staticFields && typeof analyzedEvent._staticFields === 'object') {
+            delete analyzedEvent._staticFields.shortName;
+        }
+        const shorter = String(analyzedEvent.shorterName || '').replace(/­/g, '').trim();
+        if (shorter && brandKeys.has(this.normalizeIdentityText(shorter))) {
+            delete analyzedEvent.shorterName;
+            if (analyzedEvent._staticFields && typeof analyzedEvent._staticFields === 'object') {
+                delete analyzedEvent._staticFields.shorterName;
+            }
+        }
+        let chip = '';
+        let how = '';
+        if (remainder.length <= maxChars) {
+            chip = remainder.toUpperCase();
+            how = 'its own title';
+        } else if (await this.deriveShortNameForEvent(analyzedEvent, parserConfig, httpAdapter, { title: remainder })) {
+            chip = String(analyzedEvent.shortName || '');
+            how = `its own title ("${remainder}")`;
+        }
+        analyzedEvent.shortName = chip;
+        const day = this.getEventLocalDayKey(anchor);
+        const siblingNames = siblings.slice(0, 2).map(other => `"${other.title || 'Unknown'}"`).join(', ')
+            + (siblings.length > 2 ? `, +${siblings.length - 2}` : '');
+        const outcome = chip
+            ? `named from ${how}: "${chip}"`
+            : 'no chip fits, the title shows';
+        console.log(`🏷️ CHIP: "${title}" shares ${day} with ${siblings.length} other ${entry.name} event(s) (${siblingNames}) — ${current} is the day's branding, not this event's chip; ${outcome}`);
+        this.recordDeterministicFieldRewrite(analyzedEvent, 'shortName',
+            `${current} is ${entry.name}'s branding on a day with ${siblings.length} other ${entry.name} event(s); the chip comes from the event's own title`);
         return true;
     }
 
@@ -25617,6 +25777,12 @@ class SharedCore {
             // exactly as today.
             {
                 const shortNameParserConfig = analyzedEvent._parserConfig || (config && config.ai ? { ai: config.ai } : null);
+                // A promoter's brand chip on a day that holds another of its
+                // events is branding, not a chip (applyPromoterChipRule) —
+                // before the derivation so a cleared chip is derived here.
+                if (await this.applyPromoterChipRule(analyzedEvent, event, shortNameParserConfig, calendarAdapter)) {
+                    notesNeedRebuild = true;
+                }
                 if (await this.deriveShortNameForEvent(analyzedEvent, shortNameParserConfig, calendarAdapter)) {
                     notesNeedRebuild = true;
                 }
