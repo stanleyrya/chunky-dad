@@ -16916,6 +16916,47 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         }
         selected.push({ event, index, decision });
       });
+      const approvedSelected = selected.length;
+      // HOUSEKEEPING RIDES WITH THE APPROVALS. A saved row the Mac run marked
+      // as a notes-only merge (a chip the brand rule renamed, an address a
+      // region code stood in for, a picture the source now publishes) has no
+      // card — there is nothing to decide — and applyOwnerDecisions already
+      // counts it as housekeeping and lets it write. But only approved rows
+      // were selected above, so those heals never left the run file: Fat
+      // Slut and Motherdisco wore SPOOKY BEAR for a week after the chip rule
+      // renamed them (2026-10-30). They ride along now, scoped to the cities
+      // the owner is executing (a city with an approved row in THIS
+      // execute), so an execute never fans out into calendars he is not
+      // curating; a row the ledger says was written since this run was
+      // saved is done. The live analysis still decides: a row whose fresh
+      // merge touches a real field becomes a card and waits.
+      const approvedCities = new Set(selected.map(({ event }) => String((event && event.city) || "")).filter(Boolean));
+      const selectedIndexes = new Set(selected.map(({ index }) => index));
+      const runSavedAt = String(results._savedRunTimestamp || "");
+      const housekeepingRows = [];
+      if (approvedCities.size > 0) {
+        savedEvents.forEach((event, index) => {
+          if (!event || typeof event !== "object" || selectedIndexes.has(index)) return;
+          if (!approvedCities.has(String(event.city || ""))) return;
+          if (event._action !== "merge" || event._mergeNoOp === true) return;
+          if (event._ownerReviewWithheld || event._bigDriftWithheld) return;
+          const changed = Array.isArray(event._changes)
+            ? event._changes
+            : (event._changes && typeof event._changes === "object" ? Object.keys(event._changes) : []);
+          if (changed.length === 0 || changed.some((field) => field !== "notes")) return;
+          const rowKey = core.getOwnerReviewKey(event);
+          const written = rowKey ? ledger.entries[rowKey] : null;
+          if (written && runSavedAt && String(written.executedAt || "") >= runSavedAt) return;
+          housekeepingRows.push({ event, index, decision: null });
+        });
+      }
+      if (housekeepingRows.length > 0) {
+        selected.push(...housekeepingRows);
+        console.log(
+          `📱 Scriptable: 🧹 ${housekeepingRows.length} notes-only update(s) in ${Array.from(approvedCities).join(", ")} ride along with the approvals — chips, addresses and pictures the run healed; none of them was ever a card.`,
+        );
+      }
+      summary.housekeepingSelected = housekeepingRows.length;
       summary.skipped = savedEvents.length - selected.length - summary.alreadyWritten;
       if (summary.alreadyWritten > 0) {
         console.log(
@@ -16923,7 +16964,7 @@ ${results.errors.length > 0 ? `❌ Errors: ${results.errors.length}` : "✅ No e
         );
       }
       console.log(
-        `📱 Scriptable: 🃏 ${selected.length} of ${savedEvents.length} saved event(s) carry an approval — only those are re-analyzed; ${summary.skipped} skipped (not approved on the deck).`,
+        `📱 Scriptable: 🃏 ${approvedSelected} of ${savedEvents.length} saved event(s) carry an approval — those${housekeepingRows.length > 0 ? ` and ${housekeepingRows.length} notes-only update(s) beside them` : ''} are re-analyzed; ${summary.skipped} skipped (not approved on the deck).`,
       );
       if (selected.length === 0) {
         stopPhaseTimers();

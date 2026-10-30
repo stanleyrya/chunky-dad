@@ -1239,6 +1239,14 @@ window.__startDeck = function () {
     // own key, so the kept card waits there until it changes. "Not an
     // event" confirms the drop and keeps the note for the fix queue.
     var droppedNote = card.kind === 'dropped' && verdict === 'reject' && reason && (reason.mode === 'fix' || reason.mode === 'never') && card.fixTarget ? reason.mode : '';
+    // A not-bear card swiped right says two things at once: the party IS
+    // bear (the verdict, so the next run keeps it) and the owner wants it on
+    // the calendar (an approval under the event's own key, so that run's
+    // card is already decided and Execute writes it). One swipe, not a
+    // verdict today, a card tomorrow and a second swipe — 2026-10-30: six
+    // Spooky Bear nights swiped as bear at 15:00 were still not on the site
+    // at 17:00 because each waited for its second swipe.
+    var droppedApprove = card.kind === 'dropped' && verdict === 'approve' && !!card.fixTarget;
     // What this swipe overwrote (the server hands it back): an undo puts
     // it back instead of leaving the key empty — a card on its second look
     // keeps the decision, and the note, it came back with.
@@ -1251,12 +1259,16 @@ window.__startDeck = function () {
       ? postBear(card, droppedNote === 'fix' ? 'bear' : 'not_bear').then(keepBear).then(function () {
           return post({ key: card.fixTarget.key, kind: 'new', verdict: 'reject', runId: deck.runId, snapshot: card.fixTarget, reason: reason }).then(keepDecision);
         })
+      : droppedApprove
+      ? postBear(card, 'bear').then(keepBear).then(function () {
+          return post({ key: card.fixTarget.key, kind: 'new', verdict: 'approve', runId: deck.runId, snapshot: card.fixTarget, reason: null }).then(keepDecision);
+        })
       : card.kind === 'dropped' || isConflict(card)
       ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear').then(keepBear)
       : post(withTwinMirror(card, verdict, reason, { key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })).then(keepDecision)
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(keepBear).then(function () { return result; }) : result; });
     return request.then(function (result) {
-      var record = { queued: !!(result && result.queued), replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: droppedNote ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve' && !isConflict(card), html: card.html, series: card.series || null };
+      var record = { queued: !!(result && result.queued), replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: (droppedNote || droppedApprove) ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve' && !isConflict(card), html: card.html, series: card.series || null };
       decided.push(record);
       return record;
     });

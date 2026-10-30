@@ -1914,6 +1914,9 @@ test('review routes: a swipe reports the decision it replaced, and its undo puts
     // The page keeps what each swipe replaced and sends it with the undo.
     const html = (await request(state, 'GET', '/review')).body;
     for (const piece of ['var replaced = { decision: null, bear: null };', "post({ key: record.key, verdict: 'clear', restore: was.decision || undefined })", "postBear(record, 'clear', was.bear)", "'Undone — your earlier decision is back'"]) assert.ok(html.includes(piece), piece);
+    // A bear swipe on a not-bear card is also the event's approval (one
+    // swipe writes it on the next run), and the undo clears both.
+    for (const piece of ["var droppedApprove = card.kind === 'dropped' && verdict === 'approve' && !!card.fixTarget;", "post({ key: card.fixTarget.key, kind: 'new', verdict: 'approve', runId: deck.runId, snapshot: card.fixTarget, reason: null })", "noteKey: (droppedNote || droppedApprove) ? card.fixTarget.key : ''"]) assert.ok(html.includes(piece), piece);
   } finally {
     if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
     else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;

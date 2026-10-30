@@ -19456,6 +19456,41 @@ test('a curated promoter’s own host resolves the page site role', () => {
   assert.equal(parser.resolvePageSiteRole(unrelated, {}), '');
 });
 
+test('a venue\'s own feed that names no place: its rows are the curated bar\'s events; a stated place and an ambiguous host are left alone', () => {
+  const parser = createParser();
+  parser.core.bars = {
+    ptown: [{ name: 'Crown & Anchor', city: 'ptown', address: '247 Commercial St, Provincetown, MA 02657', website: 'https://onlyatthecrown.com', coordinates: { lat: 42.0502291, lng: -70.1876737 } }],
+    nyc: [{ name: 'Rockbar', city: 'nyc', address: '185 Christopher St, New York, NY', website: 'https://www.rockbarnyc.com' }]
+  };
+  const rows = [
+    { title: 'THE VAULT – Spooky Bear', startDate: new Date('2026-10-31T00:00:00.000Z') },
+    { title: 'Motherdisco', startDate: new Date('2026-10-31T01:00:00.000Z'), bar: 'Paramount at the Crown' },
+    { title: 'Off-site night', startDate: new Date('2026-10-31T01:00:00.000Z'), city: 'boston' }
+  ];
+  const lines = [];
+  const quiet = console.log; console.log = (line) => lines.push(String(line));
+  let placed;
+  try {
+    placed = parser.placeVenueFeedRowsFromCuratedHost(rows, 'https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50');
+  } finally { console.log = quiet; }
+  assert.equal(placed, 1, 'only the row with no place of its own');
+  assert.equal(rows[0].bar, 'Crown & Anchor');
+  assert.equal(rows[0].address, '247 Commercial St, Provincetown, MA 02657');
+  assert.equal(rows[0].city, 'ptown');
+  assert.equal(rows[0].barSource, 'venue-site-identity');
+  assert.equal(rows[0].addressSource, 'curated');
+  assert.equal(rows[1].bar, 'Paramount at the Crown', 'a stated place stands');
+  assert.equal(rows[1].city, undefined);
+  assert.equal(rows[2].bar, undefined, 'a stated city is place evidence already');
+  assert.ok(lines.some(line => line.startsWith('🏠 VENUE FEED: 1 feed row(s) at onlyatthecrown.com name no place — this is Crown & Anchor\'s own site')), lines.join('\n'));
+  // A host no curated bar claims, or one two cities claim, places nothing.
+  const bare = [{ title: 'X', startDate: new Date('2026-10-31T00:00:00.000Z') }];
+  assert.equal(parser.placeVenueFeedRowsFromCuratedHost(bare, 'https://unknown.example/feed'), 0);
+  parser.core.bars.boston = [{ name: 'Crown Twin', city: 'boston', address: '1 Main St', website: 'https://onlyatthecrown.com' }];
+  assert.equal(parser.placeVenueFeedRowsFromCuratedHost(bare, 'https://onlyatthecrown.com/feed'), 0, 'two cities claim the host → nothing derived');
+  assert.equal(bare[0].bar, undefined);
+});
+
 test('a feed that publishes image ids learns its CDN shape from the calendar\'s own page', async () => {
   const parser = createParser();
   // tockify.com/api/ngevent hands out {ownerId, id, width, height} and no URL
@@ -23314,7 +23349,7 @@ test('programme image on an event page: every timed row under a weekday heading 
     assert.equal(event.timezone, 'America/New_York');
     assert.equal(event._timezoneUnresolved, true, 'wall-clock times anchor in the city zone downstream');
     assert.equal(event.url, 'https://www.ursamen.org/spookybear', 'the page is the event\'s link');
-    assert.ok(!event.image, 'the schedule picture is nobody\'s artwork');
+    assert.equal(event.image, url, 'the programme poster stands in for a row with no picture of its own');
     assert.ok(String(event.description).includes('Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES'), `${event.title}: the programme heading rides along`);
     assert.equal(event._programmeImage, url);
   }

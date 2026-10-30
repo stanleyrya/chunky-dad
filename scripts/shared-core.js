@@ -15857,7 +15857,13 @@ class SharedCore {
             ? sourceEvent
             : analyzedEvent;
         const siblings = this.getPromoterDaySiblings(anchor, this._preparingBatch);
-        if (siblings.length === 0) return false;
+        // A festival's brand is the weekend's, never one party's: a lone
+        // Sunday tea under a festival keeps its own name too (the Thursday
+        // one had siblings and read SOLID GOLD TEA; Sunday's read SPOOKY
+        // BEAR, 2026-10-30). A weekly party brand (LODGE, FURBALL) IS the
+        // party — alone on its day it keeps the brand chip.
+        const festival = siblings.length === 0 ? this.getPromoterCuratedFestival(entry) : null;
+        if (siblings.length === 0 && !festival) return false;
         const title = typeof analyzedEvent.title === 'string' ? analyzedEvent.title.trim() : '';
         if (!title || this.isPromoterBrandTitle(title, entry)) return false;
 
@@ -15879,9 +15885,19 @@ class SharedCore {
         let how = '';
         // A remainder the grid can hold (the site's chips wrap at 20) is the
         // chip as it stands — "BEARS IN THE DUNES" beats the model's "BEARS".
-        if (remainder.length <= Math.max(maxChars, 20)) {
+        // A long remainder usually names the party before a colon or dash and
+        // describes it after ("TRYSTER ACT: BRUNCH OF THE DEAD 10:30AM",
+        // "Mixtape: James Jackson Jr. Piano Night"): the leading segment that
+        // fits is the chip — the model, asked instead, answered BRUNCH and
+        // MIXTAPE: JAMES (Crown & Anchor solo run, 2026-10-30).
+        const leading = remainder.split(/\s*(?::|[–—]|\s-\s)\s*/)[0].trim();
+        const cap = Math.max(maxChars, 20);
+        if (remainder.length <= cap) {
             chip = remainder.toUpperCase();
             how = 'its own title';
+        } else if (leading && leading !== remainder && leading.length <= cap && (leading.match(/\p{L}/gu) || []).length >= 4) {
+            chip = leading.toUpperCase();
+            how = `the name before its colon ("${remainder}")`;
         } else if (await this.deriveShortNameForEvent(analyzedEvent, parserConfig, httpAdapter, { title: remainder })) {
             chip = String(analyzedEvent.shortName || '');
             how = `its own title ("${remainder}")`;
@@ -15893,10 +15909,31 @@ class SharedCore {
         const outcome = chip
             ? `named from ${how}: "${chip}"`
             : 'no chip fits, the title shows';
+        if (festival) {
+            console.log(`🏷️ CHIP: "${title}" is a ${entry.name} event on ${day}, alone that day — ${current} is the festival's branding, not this event's chip; ${outcome}`);
+            this.recordDeterministicFieldRewrite(analyzedEvent, 'shortName',
+                `${current} is the ${entry.name} festival's branding; the chip comes from the event's own title`);
+            return true;
+        }
         console.log(`🏷️ CHIP: "${title}" shares ${day} with ${siblings.length} other ${entry.name} event(s) (${siblingNames}) — ${current} is the day's branding, not this event's chip; ${outcome}`);
         this.recordDeterministicFieldRewrite(analyzedEvent, 'shortName',
             `${current} is ${entry.name}'s branding on a day with ${siblings.length} other ${entry.name} event(s); the chip comes from the event's own title`);
         return true;
+    }
+
+    // The curated festival a promoter entry stands for (data/festivals.json
+    // by exact name or alias — "Spooky Bear", "BeefDip Bear Week"), or null
+    // for a party brand that is not a festival.
+    getPromoterCuratedFestival(entry) {
+        if (!entry || typeof entry !== 'object') return null;
+        const names = [entry.name]
+            .concat(Array.isArray(entry.aliases) ? entry.aliases : [])
+            .filter(value => typeof value === 'string' && value.trim());
+        for (const name of names) {
+            const festival = this.findCuratedFestivalByExactName(name);
+            if (festival) return festival;
+        }
+        return null;
     }
 
     // Additive log for the URL-identity dedup signals: when a merge was

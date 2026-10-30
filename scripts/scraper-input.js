@@ -847,6 +847,26 @@ const scraperConfig = {
       metadata: { website: { value: "https://redroom.club" } },
     },
     {
+      name: "Crown & Anchor",
+      // Provincetown's biggest gay venue (247 Commercial St: cabaret, the
+      // Wave bar, the Vault leather bar, Paramount dance floor) on
+      // WordPress + The Events Calendar. The /events/ listing links the
+      // Tribe REST door (/wp-json/tribe/events/v1/events), which answers
+      // every published date on one page (19 rows on 2026-10-30, all of
+      // them the Spooky Bear weekend: the Vault's three nights, the Crown
+      // Ghouls and Tryster Act brunch seatings, Motherdisco, Death Becomes
+      // Them, Witch Perfect, piano nights). Rows carry the show's own
+      // /event/<slug>/ page and poster; the feed's venue list is empty, so
+      // the curated bar (data/bars/ptown.json, this website) gives the
+      // place. Spooky Bear parties share the house with drag, piano and
+      // cabaret: the bear check decides. Until 2026-10-30 its parties
+      // reached the calendar only as Gathr and tryst.events copies.
+      urls: ["https://onlyatthecrown.com/events/"],
+      alwaysBear: false,
+      siteRole: "venue",
+      metadata: { website: { value: "https://onlyatthecrown.com" } },
+    },
+    {
       name: "Two Tons of Fun",
       // London and Manchester body-positive pop night for chubs, chasers and
       // admirers (since 2021). A static one-page site: its JSON-LD carries

@@ -1431,6 +1431,9 @@ class AiWebParser {
                     }
                 }
                 if (adoptedOwnPages > 0) console.log(`🔗 LINKS: ${adoptedOwnPages} feed row(s) carry their own event page as website — this is the ${configuredRole || pageRole}'s own site`);
+                // A VENUE's own feed that names no place: the place is the
+                // venue (placeVenueFeedRowsFromCuratedHost).
+                if ((configuredRole || pageRole) === 'venue') this.placeVenueFeedRowsFromCuratedHost(jsonApiEvents, sourceUrl);
             }
             // A stated city is place evidence too: an aggregator row with no
             // venue yet ("BEAR POOL PARTY", Sitges) is a real event somewhere
@@ -11004,7 +11007,12 @@ class AiWebParser {
                         }
                         endLocal = `${endDay}T${row.end}:00`;
                     }
-                    cards.push({ title: parts.title, description, startLocal: `${day}T${start}:00`, endLocal, image: '', bar: parts.bar, webUrl: sourceUrl });
+                    // The programme poster is the only picture these rows
+                    // have: it stands in as each row's image (the owner's
+                    // call, 2026-10-30 — nine bare Spooky Bear rows on the
+                    // site) and a row's own flyer, when a source publishes
+                    // one, outranks it through the normal image merge.
+                    cards.push({ title: parts.title, description, startLocal: `${day}T${start}:00`, endLocal, image: ocr.url, bar: parts.bar, webUrl: sourceUrl });
                 }
             }
             const jsonLd = this.buildSwitchedProgrammeJsonLd(cards);
@@ -31991,6 +31999,39 @@ TEXT:
             }
         }
         return claimants;
+    }
+
+    // A VENUE's own feed that names no place: the place is the venue. The
+    // Events Calendar at onlyatthecrown.com answers 22 rows with an empty
+    // venue list (the house never fills the field — everything happens at
+    // the Crown), so every row failed the JSON-API completeness gate and the
+    // whole feed fell to the model, which read 5 of 22 and put Fat Slut at
+    // 7 PM (solo run 2026-10-30). The curated bar whose website is this
+    // host is the venue (getCuratedBarsClaimingHost — the same
+    // self-identifying evidence the venue-site-identity rung uses); a row
+    // that states its own place keeps it; a host claimed by bars in two
+    // cities places nothing. Returns the number of rows placed.
+    placeVenueFeedRowsFromCuratedHost(jsonApiEvents, sourceUrl) {
+        const rows = Array.isArray(jsonApiEvents) ? jsonApiEvents : [];
+        const hostKey = this.getVenueSiteHostKey(sourceUrl);
+        const claimants = hostKey ? this.getCuratedBarsClaimingHost(hostKey) : [];
+        const cities = [...new Set(claimants.map(claimant => claimant.city))];
+        if (claimants.length === 0 || cities.length !== 1) return 0;
+        const primary = claimants.find(claimant => claimant.bar && claimant.bar.coordinates) || claimants[0];
+        let placed = 0;
+        for (const event of rows) {
+            if (!event || typeof event !== 'object' || event.bar || event.address || event.city) continue;
+            event.bar = primary.bar.name;
+            event.barSource = 'venue-site-identity';
+            if (primary.bar.address) {
+                event.address = primary.bar.address;
+                event.addressSource = 'curated';
+            }
+            event.city = primary.city;
+            placed++;
+        }
+        if (placed > 0) console.log(`🏠 VENUE FEED: ${placed} feed row(s) at ${hostKey} name no place — this is ${primary.bar.name}'s own site (curated website), so they are its events (${primary.bar.address || primary.city})`);
+        return placed;
     }
 
     getCuratedBarsClaimingHost(host) {

@@ -15959,6 +15959,72 @@ test('promoter chip rule: same-day siblings of one promoter are named from their
   ]);
 });
 
+test('promoter chip rule: a curated festival\'s lone-day event is named from its own title too; a party brand alone on its day keeps the brand', async () => {
+  const festivals = [{ key: 'spooky-bear', name: 'Spooky Bear', category: 'bear-run', cityKey: 'ptown' }];
+  const core = createFinalBuildCore({ promoters: SPOOKY_BEAR_REGISTRY.concat([{ name: 'Lodge NY', shortName: 'LODGE' }]), festivals });
+  const sundayTea = {
+    title: 'SOLID GOLD TEA - Spooky Bear Wknd',
+    startDate: new Date('2026-11-01T21:00:00.000Z'),
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    bar: 'Boatslip',
+    shortName: 'SPOOKY BEAR',
+    _promoter: 'Spooky Bear',
+    _staticFields: { shortName: 'SPOOKY BEAR' }
+  };
+  // The umbrella sits on another day (Thursday) so Sunday's tea is the only
+  // Spooky Bear event of its day; the Lodge night is another promoter's.
+  const umbrella = { ...sundayTea, title: 'Spooky Bear 2026', bar: 'Crown & Anchor', startDate: new Date('2026-10-30T00:00:00.000Z') };
+  const lodge = { ...sundayTea, title: 'Lodge NY: Bears of Brooklyn', shortName: 'LODGE', _promoter: 'Lodge NY', _staticFields: { shortName: 'LODGE' } };
+  core._preparingBatch = [sundayTea, umbrella, lodge];
+  const adapter = createShortNameAdapter('{"shortName": {"value": "UNUSED", "reason": "never asked"}}');
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let built;
+  try {
+    built = {
+      tea: await core.buildAnalyzedCalendarEvent(sundayTea, NEW_ACTION_ANALYSIS, adapter, { ai: {} }),
+      umbrella: await core.buildAnalyzedCalendarEvent(umbrella, NEW_ACTION_ANALYSIS, adapter, { ai: {} }),
+      lodge: await core.buildAnalyzedCalendarEvent(lodge, NEW_ACTION_ANALYSIS, adapter, { ai: {} })
+    };
+  } finally {
+    restore();
+  }
+  // Sunday's tea is the only Spooky Bear event that day; the umbrella is the
+  // festival itself and the Lodge night a weekly party brand's.
+  assert.equal(built.tea.shortName, 'SOLID GOLD TEA', 'a festival brand is the weekend\'s, not the tea\'s');
+  assert.equal(built.umbrella.shortName, 'SPOOKY BEAR', 'the festival itself keeps the brand');
+  assert.equal(built.lodge.shortName, 'LODGE', 'a weekly party brand alone on its day IS the party');
+  assert.equal(adapter.calls.length, 0, 'the remainder fits the chip — no AI call');
+  const chipLines = lines.filter(line => line.startsWith('🏷️ CHIP:'));
+  assert.deepEqual(chipLines, [
+    '🏷️ CHIP: "SOLID GOLD TEA - Spooky Bear Wknd" is a Spooky Bear event on 2026-11-01, alone that day — SPOOKY BEAR is the festival\'s branding, not this event\'s chip; named from its own title: "SOLID GOLD TEA"'
+  ]);
+});
+
+test('promoter chip rule: a long remainder that names the party before a colon or dash is chipped by that name, not by the model', async () => {
+  const core = createFinalBuildCore({ promoters: SPOOKY_BEAR_REGISTRY });
+  const base = (title, startDate) => ({ title, startDate: new Date(startDate), city: 'dallas', timezone: 'America/Chicago', bar: 'Crown & Anchor', shortName: 'SPOOKY BEAR', _promoter: 'Spooky Bear', _staticFields: { shortName: 'SPOOKY BEAR' } });
+  const batch = [
+    base('TRYSTER ACT: BRUNCH OF THE DEAD 10:30AM – Spooky Bear', '2026-11-01T15:30:00.000Z'),
+    base('Mixtape: James Jackson Jr. Piano Night – Spooky Bear', '2026-11-01T22:00:00.000Z'),
+    base('REST IN PIANO: SPOOKY BEAR PIANO LOUNGE WITH LILY MAE!', '2026-11-01T23:00:00.000Z')
+  ];
+  core._preparingBatch = batch;
+  const adapter = createShortNameAdapter('{"shortName": {"value": "LILY MAE", "reason": "the host"}}');
+  const quiet = captureFinalBuildLogs([]);
+  let built;
+  try {
+    built = [];
+    for (const event of batch) built.push(await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, adapter, { ai: {} }));
+  } finally { quiet(); }
+  assert.equal(built[0].shortName, 'TRYSTER ACT');
+  assert.equal(built[1].shortName, 'MIXTAPE');
+  // "REST IN PIANO: PIANO LOUNGE WITH LILY MAE!" → the leading name fits.
+  assert.equal(built[2].shortName, 'REST IN PIANO');
+  assert.equal(adapter.calls.length, 0, 'no model call — every name sat before its colon');
+});
+
 test('promoter chip rule: a saved event wearing the brand heals, recorded as a rule rewrite; an owner-typed chip is left alone', async () => {
   const core = createFinalBuildCore({ promoters: SPOOKY_BEAR_REGISTRY });
   const batch = buildSpookyBearBatch();
