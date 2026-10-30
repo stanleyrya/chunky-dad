@@ -16347,7 +16347,10 @@ test('final build: an eventbrite listing with tracking params never occupies web
   }
   assert.equal(analyzed.website, 'https://www.clubchubusa.com', 'curated identity replaces the ticketing listing');
   assert.equal(analyzed.url, 'https://www.clubchubusa.com');
-  assert.equal(analyzed.ticketUrl, listing, 'query string and all — the value is moved verbatim, never rewritten');
+  // The listing moves whole into ticketUrl; only the referrer's tracking tags
+  // (utm-campaign, aff) come off — they name who shared the link, not the event
+  // (link hygiene, run 20261029-121117).
+  assert.equal(analyzed.ticketUrl, 'https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209', 'moved whole, minus the tracking tags');
 });
 
 test('final build: a duplicated ticket link is cleared out of website even when ticketUrl already holds one (real GOLDILOXX Chicago)', async () => {
@@ -26417,6 +26420,195 @@ test('one destination: prepareEventsForCalendar never matches a chimera against 
   assert.equal(analyzed.find(e => e.title === 'Looking')._slotYield, undefined, 'and the real record yields nothing to it');
   assert.deepEqual(SharedCore.filterEventsForExecution(analyzed).map(e => e.title), ['Looking']);
   assert.ok(logs.some(line => line.startsWith('🧬 ONE DESTINATION: "Bearracuda | Seattle - Red Light District" is assembled from two listings') && line.includes('never matched against the calendar')), logs.join('\n'));
+});
+
+// ============================================================================
+// A LONE CRAWL EVENT NEVER ANCHORS A SAVED PARTY — run 20261029-121117
+// ============================================================================
+//
+// bearitmtl.com's April post "BEAR PLAYGROUND - Thick & Glazed" was read with
+// the night of the site-wide Spooky Playground flyer (the lone-event rule
+// stamped it: its date is stated nowhere on the page), then place-exact-start
+// matched the saved "SPOOKY PLAYGROUND" at the same bar and the deck offered
+// a rename. A guessed date anchors no saved party.
+
+function buildLoneCrawlRecord(overrides = {}) {
+  return {
+    title: 'BEAR PLAYGROUND - Thick & Glazed',
+    bar: 'Massive',
+    address: '1400 E Union St, Seattle, WA',
+    startDate: '2037-10-17T05:00:00.000Z',
+    endDate: '2037-10-17T10:00:00.000Z',
+    timezone: 'America/Los_Angeles',
+    website: 'https://massive.example/bear-playground-thick-glazed/',
+    city: 'seattle',
+    source: 'ai-web',
+    isBearEvent: true,
+    _loneCrawlWithheld: {
+      page: 'https://massive.example/bear-playground-thick-glazed/',
+      day: '2037-10-16',
+      reason: 'the only event read from a page the crawl reached, and its date is stated nowhere on that page',
+      near: []
+    },
+    ...overrides
+  };
+}
+
+test('a lone crawl event is never matched against the calendar — it is a stand-alone withheld NEW card, never a rename of the saved party', async () => {
+  const core = createFestivalCore([]);
+  const saved = {
+    title: 'SPOOKY PLAYGROUND',
+    startDate: new Date('2037-10-17T05:00:00.000Z'),
+    endDate: new Date('2037-10-17T10:00:00.000Z'),
+    location: '47.6136, -122.3135',
+    url: '',
+    notes: 'bar: Massive\naddress: 1400 E Union St, Seattle, WA\ntimezone: America/Los_Angeles'
+  };
+  const adapter = buildFestivalPrepAdapter([saved]);
+  const lone = buildLoneCrawlRecord();
+  const control = buildLoneCrawlRecord({ title: 'SPOOKY PLAYGROUND' });
+  delete control._loneCrawlWithheld;
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([lone, control], adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(adapter.calls.map(call => call.title), ['SPOOKY PLAYGROUND'], 'the calendar is searched for the dated record only');
+  const withheld = analyzed.find(e => e._loneCrawlWithheld);
+  assert.ok(withheld, 'flag, don\'t drop: the lone record is still an analyzed card');
+  assert.equal(withheld._action, 'new');
+  assert.equal(withheld._analysis.reason, 'lone event from a crawled page — never matched against the calendar, write withheld');
+  assert.equal(withheld._existingEvent, undefined, 'it anchors no saved event');
+  assert.equal(withheld._mergeDiff, undefined);
+  assert.equal(withheld._bigDriftWithheld, undefined, 'no rename was ever proposed');
+  assert.equal(withheld._loneCrawlWithheld.noCard, undefined, 'no festival window in play: the deck decides');
+  assert.ok(withheld._venueOverlap === undefined && withheld._slotWins === undefined, 'a lone record takes no part in overlap or slot findings');
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed).map(e => e.title), ['SPOOKY PLAYGROUND'], 'the write is withheld');
+  assert.ok(core.isOwnerReviewCandidate(withheld), 'the deck still deals the card with its reason');
+  assert.equal(SharedCore.describeExecutionDisposition(withheld), 'WITHHELD (lone event from a crawled page — the only event read from a page the crawl reached, and its date is stated nowhere on that page; decide on the deck)');
+  assert.ok(logs.some(line => line.startsWith('🧭 LONE EVENT: "BEAR PLAYGROUND - Thick & Glazed"') && line.includes('never matched against the calendar') && line.includes('the deck decides')), logs.join('\n'));
+  const saved_ = analyzed.find(e => e.title === 'SPOOKY PLAYGROUND');
+  assert.equal(saved_._action, 'merge', 'the dated record still meets the saved party as usual');
+});
+
+// bearitmtl.com's "Rabais Hotel - Festival Sugar Bear 2026": a hotel-discount
+// post for an April festival, dated by the model to a November night, reached
+// the deck wearing three flags (lone event, date orphan, outside the window).
+// Owner: "not an event". A guessed date that its own festival's window also
+// refuses is nothing — kept in results, never dealt.
+test('a lone crawl event whose guessed date falls outside its own festival window gets no deck card — only the results row and a log line', async () => {
+  const core = createFestivalCore([]);
+  const adapter = buildFestivalPrepAdapter([]);
+  const lone = buildLoneCrawlRecord({
+    title: 'Rabais Hotel - Festival Sugar Bear 2037',
+    _festivalContext: { name: 'Sugar Bear Festival', nextDates: { start: '2038-04-07', end: '2038-04-11' } }
+  });
+  const inWindow = buildLoneCrawlRecord({
+    title: 'Bear Spa - Festival Sugar Bear 2037',
+    _festivalContext: { name: 'Sugar Bear Festival', nextDates: { start: '2037-10-15', end: '2037-10-19' } }
+  });
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let analyzed;
+  try {
+    analyzed = await core.prepareEventsForCalendar([lone, inWindow], adapter, {});
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(adapter.calls.length, 0, 'neither lone record is matched against the calendar');
+  const noCard = analyzed.find(e => e.title.startsWith('Rabais'));
+  assert.equal(noCard._action, 'new');
+  assert.equal(noCard._loneCrawlWithheld.noCard, 'its guessed date falls outside the curated "Sugar Bear Festival" window 2038-04-07 – 2038-04-11');
+  assert.ok(noCard._sanityFlags.some(flag => flag.code === 'festival-window-violation'), 'the window flag rides the record');
+  assert.equal(core.isOwnerReviewCandidate(noCard), false, 'the deck never deals it');
+  assert.equal(SharedCore.filterEventsForExecution([noCard]).length, 0, 'and nothing writes it');
+  assert.equal(SharedCore.describeExecutionDisposition(noCard), 'WITHHELD (lone event from a crawled page — the only event read from a page the crawl reached, and its date is stated nowhere on that page, and its guessed date falls outside the curated "Sugar Bear Festival" window 2038-04-07 – 2038-04-11; no deck card)');
+  assert.ok(logs.some(line => line.startsWith('🧭 LONE EVENT: "Rabais Hotel - Festival Sugar Bear 2037"') && line.includes('no deck card')), logs.join('\n'));
+  const dealt = analyzed.find(e => e.title.startsWith('Bear Spa'));
+  assert.equal(dealt._loneCrawlWithheld.noCard, undefined, 'inside the window the festival has no objection');
+  assert.ok(core.isOwnerReviewCandidate(dealt), 'the deck decides that one');
+  assert.ok(!lone._loneCrawlWithheld.noCard, 'the parse-time record is never written to');
+});
+
+// ============================================================================
+// TRACKING PARAMETERS ARE THE REFERRER'S, NEVER THE EVENT'S — run 20261029-121117
+// ============================================================================
+//
+// The Bear Calendar's copy of bearadisemx.com's ticket link carried
+// utm_source=thebearcalendar…, and the deck dealt that tagged link as the url
+// of the saved "Bearadise IBFF Bear Week 2027" (owner: "something is wrong").
+
+test('stripTrackingFromUrl drops utm/aff/fbclid parameters, keeps locale parameters, the hash and a link without a query', () => {
+  const core = createCore();
+  assert.equal(core.stripTrackingFromUrl('https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027'), 'https://bearadisemx.com/en/tickets');
+  assert.equal(core.stripTrackingFromUrl('https://www.eventbrite.com/e/jocks-at-jacques-tickets-1997052100592?aff=ebdssbdestsearch'), 'https://www.eventbrite.com/e/jocks-at-jacques-tickets-1997052100592');
+  assert.equal(core.stripTrackingFromUrl('https://bearadisemx.com/en/checkout?item=ibff-mon-25&utm_source=x#top'), 'https://bearadisemx.com/en/checkout?item=ibff-mon-25#top');
+  assert.equal(core.stripTrackingFromUrl('https://example.com/page?lang=de&fbclid=abc'), 'https://example.com/page?lang=de', 'a locale parameter changes the page and stays');
+  assert.equal(core.stripTrackingFromUrl('https://bearadisemx.com/en/checkout?item=ibff-mon-25'), 'https://bearadisemx.com/en/checkout?item=ibff-mon-25', 'untouched when nothing tracks');
+  assert.equal(core.stripTrackingFromUrl('https://example.com/plain'), 'https://example.com/plain');
+  assert.equal(core.stripTrackingFromUrl(''), '');
+  assert.ok(core.urlCarriesTrackingParams('https://x.example/?utm_source=a'));
+  assert.ok(!core.urlCarriesTrackingParams('https://x.example/?item=a'));
+});
+
+test('link hygiene drops tracking parameters from every link field and says so', () => {
+  const core = createCore();
+  const event = {
+    title: 'Bearadise IBFF Bear Week 2027',
+    website: 'https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027',
+    url: 'https://bearadisemx.com/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027',
+    ticketUrl: 'https://bearadisemx.com/en/bearadise-beach?utm_source=thebearcalendar&utm_medium=listing&utm_campaign=bearadise-beach-ibff-2027'
+  };
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  try {
+    core.clearNonIdentityLinkFields(event, event.title);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(event.website, 'https://bearadisemx.com/en/tickets');
+  assert.equal(event.url, 'https://bearadisemx.com/en/tickets');
+  assert.equal(event.ticketUrl, 'https://bearadisemx.com/en/bearadise-beach');
+  assert.equal(lines.filter(line => line.startsWith('🔗 LINKS: dropped tracking parameters from')).length, 3, lines.join('\n'));
+});
+
+test('calendar merge: a tagged ticket link an earlier run saved heals into the clean link', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildBearTeaPair(core, BEAR_TEA_PAGE);
+  scraped.ticketUrl = 'https://www.eventbrite.com/e/jocks-at-jacques-tickets-1997052100592';
+  existing.notes = existing.notes.replace('ticketUrl: https://www.3dollarbillbk.com/rsvp', 'ticketUrl: https://www.eventbrite.com/e/jocks-at-jacques-tickets-1997052100592?aff=ebdssbdestsearch');
+  const merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) });
+  assert.equal(merged.ticketUrl, 'https://www.eventbrite.com/e/jocks-at-jacques-tickets-1997052100592', 'hygiene cleans the saved side too, so the stored line is rewritten clean');
+});
+
+test('calendar merge: an aggregator\'s link never fills a saved event\'s blank url/website — a ticket link still may, clean', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildBearTeaPair(core, 'https://bearadisemx.example/en/tickets?utm_source=thebearcalendar&utm_medium=referral&utm_campaign=ibff2027');
+  scraped.url = scraped.website;
+  scraped.ticketUrl = 'https://bearadisemx.example/en/bearadise-beach?utm_source=thebearcalendar&utm_medium=listing';
+  scraped._staticFields = {};
+  scraped._parserConfig = { name: 'The Bear Calendar', siteRole: 'aggregator', urls: ['https://thebearcalendar.example/events/'] };
+  existing.url = '';
+  existing.notes = existing.notes.split('\n').filter(line => !line.startsWith('website:') && !line.startsWith('ticketUrl:')).join('\n');
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => { lines.push(args.join(' ')); };
+  let merged;
+  try {
+    merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: buildArbitrationAdapter({}) });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.ok(!merged.website, `website stays blank, got ${merged.website}`);
+  assert.ok(!merged.url, `url stays blank, got ${merged.url}`);
+  assert.equal(merged.ticketUrl, 'https://bearadisemx.example/en/bearadise-beach', 'the ticket pointer fills the blank, without the referrer\'s tag');
+  assert.ok(lines.some(line => line.startsWith('🧭 AGGREGATOR: "Bear Tea"') && line.includes('stays blank') && line.includes('never becomes a saved event\'s own link')), lines.filter(l => l.startsWith('🧭')).join('\n'));
 });
 
 test('one destination: processParser sets a chimera aside before dedup and the bear check, and it rejoins the parser\'s events with its stamp', async () => {
