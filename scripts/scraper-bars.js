@@ -1092,7 +1092,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/CrownAnchorProvincetown",
       "googleMaps": "https://www.google.com/maps/place/?q=247+Commercial+St,+Provincetown,+MA+02657",
       "gayCities": "https://ptown.gaycities.com/bars/541-crown-anchor",
-      "gayCitiesLastScrapedAt": "2026-06-13T20:35:03.709Z"
+      "gayCitiesLastScrapedAt": "2026-06-13T20:35:03.709Z",
+      "website": "https://onlyatthecrown.com"
     },
     {
       "name": "Purgatory Gifford House",
@@ -1102,7 +1103,8 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/gifford_house",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJE9zxSn6n_IkRbOMJFiVbw_k",
       "gayCities": "https://ptown.gaycities.com/bars/543-purgatory-gifford-house",
-      "gayCitiesLastScrapedAt": "2026-06-14T01:14:29.670Z"
+      "gayCitiesLastScrapedAt": "2026-06-14T01:14:29.670Z",
+      "website": "https://www.gifford.house"
     },
     {
       "name": "Red Room",

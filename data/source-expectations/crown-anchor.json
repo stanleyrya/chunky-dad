@@ -1,0 +1,548 @@
+{
+  "schemaVersion": 1,
+  "source": "Crown & Anchor",
+  "slug": "crown-anchor",
+  "status": "complete",
+  "recheckAfter": "2026-11-29",
+  "recon": {
+    "date": "2026-10-30",
+    "method": [
+      "feed",
+      "static"
+    ],
+    "parserUrlsAtRecon": [
+      "https://onlyatthecrown.com/events/"
+    ],
+    "doors": [
+      {
+        "url": "https://onlyatthecrown.com/robots.txt",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 0,
+        "truthFlag": "User-agent: * → Allow: / (Content-Signal search=yes, ai-train=no); the Disallow: / blocks name only AI-training crawlers (Amazonbot, Applebot-Extended, …)",
+        "note": "Cloudflare managed robots. A general reader is allowed everywhere."
+      },
+      {
+        "url": "https://onlyatthecrown.com/events/",
+        "kind": "html",
+        "role": "listing",
+        "rowsReturned": 19,
+        "truthFlag": "The Events Calendar list view: every upcoming date as a card (title, weekday date, poster, /event/<slug>/ link); the page links the Tribe REST route",
+        "note": "WordPress + The Events Calendar (tribe-events markup, 370 class hits). The home page shows the same cards in a carousel."
+      },
+      {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "kind": "json",
+        "role": "feed",
+        "rowsReturned": 19,
+        "truthFlag": "total 19, total_pages 1, no next_rest_url",
+        "note": "Every published date on one page. Each row: id, title (HTML entities), description (HTML), start_date/end_date as local wall clock with timezone America/New_York, url (/event/<slug>/), image.url (the poster), empty venue[] and organizer[], empty cost. Three rows share one slug with a date suffix (the Vault's three nights). An unbounded read (no dates) on 2026-10-30 answered 22, the three extra being Oct 29 dates already past."
+      },
+      {
+        "url": "https://onlyatthecrown.com/events/?ical=1",
+        "kind": "ics",
+        "role": "feed",
+        "rowsReturned": 17,
+        "truthFlag": "17 VEVENTs — the Tribe iCal export caps the list view's page",
+        "note": "A second door with the same rows minus two; the REST route is the configured reader's door because it states its own completeness (total_pages)."
+      }
+    ],
+    "notes": "Recon 2026-10-30 (four reads, 4 s apart: robots, /events/, the REST route twice — unbounded and windowed). The site publishes exactly the Spooky Bear weekend ahead (Oct 30 – Nov 1, 2026): the Vault on three nights, two seatings each of the HalloQueen Burner Brunch (Fri), Crown Ghouls drag brunch (Sat) and Tryster Act brunch (Sun), Witch Perfect on two nights, Motherdisco, Death Becomes Them, Sirens, Mixtape, Rest in Piano, Drop Dead to the Grave, Scarlett Strauss' Booo-b Bash and the weekly SHOWTUNES. Nothing is dated after Nov 1 (the season's end). Before this source, Fat Slut, Motherdisco, Death Becomes Them and Witch Perfect reached the calendar only as Gathr rows pointing at tryst.events ticket pages."
+  },
+  "coverage": {
+    "confidence": "high",
+    "basis": "The REST feed answers total 19 / total_pages 1 for the window from today; the /events/ list page shows the same 19 cards; the iCal export carries 17 of them. All singles (two seatings of one brunch are two Event rows with their own ids; the Vault's three nights are three dated rows under one slug).",
+    "publishedEventCount": 19,
+    "documentedEventCount": 19,
+    "occurrenceWindow": {
+      "start": "2026-10-30",
+      "end": "2027-01-28"
+    },
+    "pastListingsPresent": false,
+    "knownGaps": []
+  },
+  "defaults": {
+    "city": "ptown",
+    "timezone": "America/New_York",
+    "bar": "Crown & Anchor",
+    "address": "247 Commercial St, Provincetown, MA 02657",
+    "location": null,
+    "website": "https://onlyatthecrown.com",
+    "instagram": null
+  },
+  "events": [
+    {
+      "id": "halloqueen-burner-brunch-10-30-am-spooky-bear-2026-10-30",
+      "kind": "single",
+      "title": "HalloQueen Burner Brunch – 10:30 AM – Spooky Bear",
+      "description": "HALLOQUEEN BURNER BRUNCH with Tina Burner This Halloween, turn up the heat at HalloQueen Burner Brunch, starring RuPaul’s Drag Race All Star Tina Burner! Get ready for a hilarious Halloween brunch packed with fierce live performances, comedy, camp, tricks, treats, and plenty of signature Tina Burner attitude. Come dressed to slay, grab your ghouls, order a cocktail, and kick off your Halloween wee",
+      "startDate": "2026-10-30",
+      "startTime": "10:30",
+      "endDate": null,
+      "endTime": "12:30",
+      "website": "https://onlyatthecrown.com/event/burner-brunch-1030-am-seating/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/HALLO-QUEENGRID_Final_stillGRID.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2643)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2643; start_date \"2026-10-30 10:30:00\" in America/New_York (the feed's timezone field), end \"2026-10-30 12:30:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "halloqueen-burner-brunch-1pm-spooky-bear-2026-10-30",
+      "kind": "single",
+      "title": "HalloQueen Burner Brunch – 1PM – Spooky Bear",
+      "description": "HALLOQUEEN BURNER BRUNCH with Tina Burner This Halloween, turn up the heat at HalloQueen Burner Brunch, starring RuPaul’s Drag Race All Star Tina Burner! Get ready for a hilarious Halloween brunch packed with fierce live performances, comedy, camp, tricks, treats, and plenty of signature Tina Burner attitude. Come dressed to slay, grab your ghouls, order a cocktail, and kick off your Halloween wee",
+      "startDate": "2026-10-30",
+      "startTime": "13:00",
+      "endDate": null,
+      "endTime": "14:30",
+      "website": "https://onlyatthecrown.com/event/burner-brunch-1pm-seating-2/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/HALLO-QUEENGRID_Final_stillGRID.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2645)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2645; start_date \"2026-10-30 13:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-30 14:30:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "witch-perfect-oct-30th-show-2026-10-30",
+      "kind": "single",
+      "title": "WITCH PERFECT – Oct. 30th Show",
+      "description": "Doors @ 6:30PM | OCTOBER 30TH Show @ 7:00PM Witch Perfect, is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul’s Drag Race: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8’s Alexis Michelle as Mary.",
+      "startDate": "2026-10-30",
+      "startTime": "19:00",
+      "endDate": null,
+      "endTime": "20:30",
+      "website": "https://onlyatthecrown.com/event/witch-perfect-oct-30th-show/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2658)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2658; start_date \"2026-10-30 19:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-30 20:30:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "sirens-live-music-spooky-bear-2026-10-30",
+      "kind": "single",
+      "title": "SIRENS: Live Music – Spooky Bear",
+      "description": "SIRENS: A SPOOKY BEAR SAPPHIC NIGHT! Calling all witches, sirens, sapphic sweethearts, and creatures of the night! This Spooky Bear, the Crown & Anchor is turning up the magic with SIRENS , a fabulous night of live music, fierce vocals, and unapologetic sapphic fun! Join the sensational Marissa, Darlene, and Lily Mae for an evening of killer music! Grab your girlfriends, your crush, your ex (we kn",
+      "startDate": "2026-10-30",
+      "startTime": "19:00",
+      "endDate": null,
+      "endTime": "21:00",
+      "website": "https://onlyatthecrown.com/event/sirens-live-music-spooky-bear/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/Sirens-HalloweenGRID.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2860)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2860; start_date \"2026-10-30 19:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-30 21:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "the-vault-spooky-bear-2026-10-30",
+      "kind": "single",
+      "title": "THE VAULT – Spooky Bear",
+      "description": "THE VAULT: SPOOKY BEAR 2026 Step inside Provincetown’s most famous leather bar, THE VAULT, for a dark and devilishly good time this Spooky Bear Weekend! Get ready for three nights of leather, bears, beats, and late-night mischief. DJ Chris Racine brings the music while the hottest crowd in town takes over THE VAULT. Whether you’re dressed in leather, harnesses, or something wicked, come ready to l",
+      "startDate": "2026-10-30",
+      "startTime": "20:00",
+      "endDate": "2026-10-31",
+      "endTime": "01:00",
+      "website": "https://onlyatthecrown.com/event/the-vault-spooky-bear/2026-10-30/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/THEVAULTGRID.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==10008408)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 10008408; start_date \"2026-10-30 20:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-31 01:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "motherdisco-spooky-bear-2026-10-30",
+      "kind": "single",
+      "title": "Motherdisco – SPOOKY BEAR",
+      "description": "Motherdisco returns to Provincetown for a special Spooky Bear takeover at the Crown & Anchor. Dead Disco Prom is your invitation to dress up, get down, and dance all night to a high-energy mix of disco, house, and queer nightlife favorites. Expect killer looks, sweaty dancing, spooky glamour, and a packed dance floor as Motherdisco brings its signature NYC energy back to Ptown for Halloween.",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": "2026-10-31",
+      "endTime": "01:00",
+      "website": "https://onlyatthecrown.com/event/mother-disco-spooky-bear/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2608)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2608; start_date \"2026-10-30 21:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-31 01:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "mixtape-james-jackson-jr-piano-night-spooky-bear-2026-10-30",
+      "kind": "single",
+      "title": "Mixtape: James Jackson Jr. Piano Night – Spooky Bear",
+      "description": "MIXTAPE: SPOOKY BEAR PIANO NIGHT WITH JAMES JACKSON JR.! This Spooky Bear, we’re bringing the tricks, the treats, and the tunes to the Crown & Anchor! Join the incredible James Jackson Jr. for a special Halloween edition of MIXTAPE , a piano night packed with stunning vocals, your favorite throwback hits, Broadway classics, pop anthems, and plenty of spooky surprises! Grab a cocktail, sing your he",
+      "startDate": "2026-10-30",
+      "startTime": "21:00",
+      "endDate": null,
+      "endTime": "23:00",
+      "website": "https://onlyatthecrown.com/event/mixtape-james-jackson-jr-piano-night-spooky-bear/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/Halloween-Mixtape-CrownAnchor-Template-1Grid.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2848)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2848; start_date \"2026-10-30 21:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-30 23:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "crown-ghouls-drag-brunch-10-30am-spooky-bear-2026-10-31",
+      "kind": "single",
+      "title": "CROWN GHOULS: Drag Brunch – 10:30AM – Spooky Bear",
+      "description": "CROWN GHOULS All Singing, All Dancing Drag HALLOWEEN Brunch! Something wicked this way comes to the Crown & Anchor! This Halloween, we’re raising the dead and raising the roof with CROWN GHOULS , a frightfully fabulous drag brunch starring Delta Miles, Roxy Pops, and Qya Cristal! Our three glamorous ghouls are crawling out of their crypts to serve up spine-tingling vocals, killer choreography, wic",
+      "startDate": "2026-10-31",
+      "startTime": "10:30",
+      "endDate": null,
+      "endTime": "12:30",
+      "website": "https://onlyatthecrown.com/event/crown-ghouls-drag-brunch-1030am-spooky-bear/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/GRID_Ghouls_31.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2823)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2823; start_date \"2026-10-31 10:30:00\" in America/New_York (the feed's timezone field), end \"2026-10-31 12:30:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "crown-ghouls-drag-brunch-1pm-spooky-bear-2026-10-31",
+      "kind": "single",
+      "title": "CROWN GHOULS: Drag Brunch – 1PM – Spooky Bear",
+      "description": "CROWN GHOULS All Singing, All Dancing Drag HALLOWEEN Brunch! Something wicked this way comes to the Crown & Anchor! This Halloween, we’re raising the dead and raising the roof with CROWN GHOULS , a frightfully fabulous drag brunch starring Delta Miles, Roxy Pops, and Qya Cristal! Our three glamorous ghouls are crawling out of their crypts to serve up spine-tingling vocals, killer choreography, wic",
+      "startDate": "2026-10-31",
+      "startTime": "13:00",
+      "endDate": null,
+      "endTime": "14:30",
+      "website": "https://onlyatthecrown.com/event/crown-ghouls-drag-brunch-1pm-spooky-bear/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/GRID_Ghouls_31.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2825)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2825; start_date \"2026-10-31 13:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-31 14:30:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "rest-in-piano-spooky-bear-piano-lounge-with-lily-mae-2026-10-31",
+      "kind": "single",
+      "title": "REST IN PIANO: SPOOKY BEAR PIANO LOUNGE WITH LILY MAE!",
+      "description": "REST IN PIANO: SPOOKY BEAR PIANO LOUNGE WITH LILY MAE! This Halloween, the piano is haunted, the spirits are flowing, and the music is to die for! Join Ptown super star Lily Mae for REST IN PIANO at the Crown & Anchor! Get ready for an evening of hauntingly beautiful vocals, piano favorites, sing-along classics, and a little Halloween fun. Whether you’re looking to belt out your favorite tunes or ",
+      "startDate": "2026-10-31",
+      "startTime": "18:00",
+      "endDate": null,
+      "endTime": "20:00",
+      "website": "https://onlyatthecrown.com/event/rest-in-piano-spooky-bear-piano-lounge-with-lily-mae/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/GRID-2.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2854)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2854; start_date \"2026-10-31 18:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-31 20:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "witch-perfect-oct-31st-show-2026-10-31",
+      "kind": "single",
+      "title": "WITCH PERFECT – Oct. 31st Show",
+      "description": "Doors @ 6:30PM | OCTOBER 31st Show @ 7:00PM Witch Perfect, is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul’s Drag Race: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8’s Alexis Michelle as Mary.",
+      "startDate": "2026-10-31",
+      "startTime": "19:00",
+      "endDate": null,
+      "endTime": "20:30",
+      "website": "https://onlyatthecrown.com/event/witch-perfect-oct-31st-show/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2662)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2662; start_date \"2026-10-31 19:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-31 20:30:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "drop-dead-to-the-grave-live-music-spooky-bear-2026-10-31",
+      "kind": "single",
+      "title": "Drop Dead to the Grave: Live Music – Spooky Bear",
+      "description": "DROP DEAD TO THE GRAVE: A SPOOKY BEAR HALLOWEEN CABARET! This Halloween, the dead are rising, the spirits are restless, and the Crown & Anchor is bringing the graveyard to life! Join us for DROP DEAD TO THE GRAVE , a Halloween cabaret hosted by the incomparable Jarvis Derrell , featuring Alexander Zenoz, the Birds of Paradise, and special guests! Get ready for a hauntingly fabulous evening of live",
+      "startDate": "2026-10-31",
+      "startTime": "20:00",
+      "endDate": null,
+      "endTime": "22:00",
+      "website": "https://onlyatthecrown.com/event/drop-dead-to-the-grave-live-music-spooky-bear/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/Grid.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2845)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2845; start_date \"2026-10-31 20:00:00\" in America/New_York (the feed's timezone field), end \"2026-10-31 22:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "the-vault-spooky-bear-2026-10-31",
+      "kind": "single",
+      "title": "THE VAULT – Spooky Bear",
+      "description": "THE VAULT: SPOOKY BEAR 2026 Step inside Provincetown’s most famous leather bar, THE VAULT, for a dark and devilishly good time this Spooky Bear Weekend! Get ready for three nights of leather, bears, beats, and late-night mischief. DJ Chris Racine brings the music while the hottest crowd in town takes over THE VAULT. Whether you’re dressed in leather, harnesses, or something wicked, come ready to l",
+      "startDate": "2026-10-31",
+      "startTime": "20:00",
+      "endDate": "2026-11-01",
+      "endTime": "01:00",
+      "website": "https://onlyatthecrown.com/event/the-vault-spooky-bear/2026-10-31/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/THEVAULTGRID.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==10008409)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 10008409; start_date \"2026-10-31 20:00:00\" in America/New_York (the feed's timezone field), end \"2026-11-01 01:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "death-becomes-them-costume-ball-spooky-bear-2026-10-31",
+      "kind": "single",
+      "title": "DEATH BECOMES THEM COSTUME BALL – SPOOKY BEAR",
+      "description": "DEATH BECOMES THEM A Roaring Twenties Halloween Costume Ball This Halloween, death never looked so good. Step into a decadent night of glamour, drag, dancing, and deliciously dark surprises at Death Becomes Them, a Roaring Twenties Halloween Costume Ball at the Crown & Anchor. Featuring killer performances by Jan Sport & Tina Burner with music by Jake Glass and VJ Tom Yaz keeping the party alive a",
+      "startDate": "2026-10-31",
+      "startTime": "21:00",
+      "endDate": "2026-11-01",
+      "endTime": "01:00",
+      "website": "https://onlyatthecrown.com/event/death-becomes-them-spooky-bear/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2787)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2787; start_date \"2026-10-31 21:00:00\" in America/New_York (the feed's timezone field), end \"2026-11-01 01:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "tryster-act-brunch-of-the-dead-10-30am-spooky-bear-2026-11-01",
+      "kind": "single",
+      "title": "TRYSTER ACT: BRUNCH OF THE DEAD 10:30AM – Spooky Bear",
+      "description": "TRYSTER ACT! A NOT SO HOLY BRUNCH Sunday brunch just got a little sinful. Good things are never late—they arrive right on time! We’re thrilled to announce that the kitchen at The Crown & Anchor is officially opening, and we’re kicking things off with TRYSTER ACT! A NOT SO HOLY BRUNCH, the first of three fabulous new brunches coming to the Crown. Join RuPaul’s Drag Race All Stars Jan Sport, Tina Bu",
+      "startDate": "2026-11-01",
+      "startTime": "10:30",
+      "endDate": null,
+      "endTime": "12:30",
+      "website": "https://onlyatthecrown.com/event/tryster-act-a-not-so-holy-brunch-1030am-seating-3/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/09/GRID-copy.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2702)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2702; start_date \"2026-11-01 10:30:00\" in America/New_York (the feed's timezone field), end \"2026-11-01 12:30:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "tryster-act-brunch-of-the-dead-1pm-spooky-bear-2026-11-01",
+      "kind": "single",
+      "title": "TRYSTER ACT: BRUNCH OF THE DEAD 1PM – Spooky Bear",
+      "description": "TRYSTER ACT! A NOT SO HOLY BRUNCH Sunday brunch just got a little sinful. Good things are never late—they arrive right on time! We’re thrilled to announce that the kitchen at The Crown & Anchor is officially opening, and we’re kicking things off with TRYSTER ACT! A NOT SO HOLY BRUNCH, the first of three fabulous new brunches coming to the Crown. Join RuPaul’s Drag Race All Stars Jan Sport, Tina Bu",
+      "startDate": "2026-11-01",
+      "startTime": "13:00",
+      "endDate": null,
+      "endTime": "14:30",
+      "website": "https://onlyatthecrown.com/event/tryster-act-a-not-so-holy-brunch-1pm-seating-2/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/09/GRID-copy.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2700)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2700; start_date \"2026-11-01 13:00:00\" in America/New_York (the feed's timezone field), end \"2026-11-01 14:30:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "showtunes-2026-11-01",
+      "kind": "single",
+      "title": "SHOWTUNES",
+      "description": "Calling all Broadway lovers! Spend your Sunday and Wednesday nights singing along to the biggest Broadway hits, classic movie musicals, and show-stopping favorites with VJ Tom Yaz at the Wave Bar. Whether you know every word or just love a great performance, Showtunes is the perfect place to grab a cocktail, make a request, and celebrate the music of the stage. Every Sunday & Wednesday 8 PM Wave B",
+      "startDate": "2026-11-01",
+      "startTime": "20:00",
+      "endDate": "2026-11-02",
+      "endTime": "01:00",
+      "website": "https://onlyatthecrown.com/event/showtunes/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/New_ShowtunesShowtunes-1350.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2375)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2375; start_date \"2026-11-01 20:00:00\" in America/New_York (the feed's timezone field), end \"2026-11-02 01:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "scarlett-strauss-booo-b-bash-spooky-bear-2026-11-01",
+      "kind": "single",
+      "title": "Scarlett Strauss' Booo-b Bash! – Spooky Bear",
+      "description": "SCARLETT STRAUSS’ BOOO-B BASH! Fundraiser for Scarlett’s Boobs! Get ready for a night of boobs, boos, and booze! Join us for SCARLETT STRAUSS’ BOOO-B BASH , an outrageous fundraiser to help Scarlett get the boobs of her dreams! Hosted by the fabulous Tina Burner and Mackenzie , this unforgettable night brings together an incredible lineup of drag performers, including Tammie Brown, Jackie Cox, Mar",
+      "startDate": "2026-11-01",
+      "startTime": "20:00",
+      "endDate": null,
+      "endTime": "21:00",
+      "website": "https://onlyatthecrown.com/event/scarlett-strauss-booo-b-bash-spooky-bear/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/849379402_18634010353063121_247209399416065046_n-scaled.jpg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==2870)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 2870; start_date \"2026-11-01 20:00:00\" in America/New_York (the feed's timezone field), end \"2026-11-01 21:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    },
+    {
+      "id": "the-vault-spooky-bear-2026-11-01",
+      "kind": "single",
+      "title": "THE VAULT – Spooky Bear",
+      "description": "THE VAULT: SPOOKY BEAR 2026 Step inside Provincetown’s most famous leather bar, THE VAULT, for a dark and devilishly good time this Spooky Bear Weekend! Get ready for three nights of leather, bears, beats, and late-night mischief. DJ Chris Racine brings the music while the hottest crowd in town takes over THE VAULT. Whether you’re dressed in leather, harnesses, or something wicked, come ready to l",
+      "startDate": "2026-11-01",
+      "startTime": "20:00",
+      "endDate": "2026-11-02",
+      "endTime": "01:00",
+      "website": "https://onlyatthecrown.com/event/the-vault-spooky-bear/2026-11-01/",
+      "ticketUrl": null,
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/10/THEVAULTGRID.jpeg",
+      "sourceRung": "feed",
+      "confidence": "high",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/wp-json/tribe/events/v1/events?per_page=50&start_date=2026-10-30&end_date=2027-02-28",
+        "jsonPath": "$.events[?(@.id==10008410)].start_date"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "bearVerdict": null,
+      "note": "Tribe REST id 10008410; start_date \"2026-11-01 20:00:00\" in America/New_York (the feed's timezone field), end \"2026-11-02 01:00:00\". The feed's venue list is empty: the curated bar supplies 247 Commercial St."
+    }
+  ],
+  "traps": [
+    {
+      "label": "SHOWTUNES is the house's weekly piano-bar night",
+      "kind": "recurring-blurb",
+      "why": "A general-audience weekly (every Sunday at the Wave bar) that the feed dates only as the one Sunday in the window; not a bear night. The bear check decides, as for every Crown row.",
+      "evidence": {
+        "url": "https://onlyatthecrown.com/event/showtunes/",
+        "quote": "SHOWTUNES"
+      },
+      "expect": {
+        "extracted": true
+      },
+      "seenInRun": null,
+      "id": "showtunes-weekly-piano-night"
+    }
+  ],
+  "openQuestions": []
+}

@@ -11392,6 +11392,64 @@ test('executeReviewedSavedRun re-analyzes ONLY the approved cards, writes them, 
   assert.ok(last.message.includes('Created 1') && last.message.includes('Approved 1') && last.message.includes('3 not approved (skipped)'), last.message);
 });
 
+test('executeReviewedSavedRun carries a notes-only heal along with an approval in the same city, and leaves other cities and real changes alone', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  // The saved plan: one approved NEW in nyc, a notes-only merge in nyc (a
+  // chip the brand rule renamed — no card, nothing to decide), a notes-only
+  // merge in another city, and a merge with a real field change (a card,
+  // unreviewed).
+  const approved = reviewedNew('Approved Party');
+  // A notes-only heal: every calendar field equal, only the notes (the
+  // chip) differ — the shape the Mac run saves for a chip-rule rewrite.
+  const notesOnlyHeal = (title, city) => {
+    const base = reviewedHousekeepingMerge();
+    // url is the output view of website: the merged url equals the saved
+    // website, so the only difference left is the chip in the notes.
+    const calendar = { ...base._original.calendar, title, website: base.url, notes: 'bar: Royal Vauxhall Tavern\nshortName: SPOOKY BEAR' };
+    return { ...base, title, city, notes: 'bar: Royal Vauxhall Tavern\nshortName: FAT SLUT', _existingEvent: calendar, _original: { scraper: {}, calendar }, _changes: ['notes'], _mergeNoOp: false };
+  };
+  const chipHeal = notesOnlyHeal('Fat Slut: Spooky Bear', 'nyc');
+  const elsewhere = notesOnlyHeal('Riptide', 'ptown');
+  const realChange = { ...reviewedHousekeepingMerge(), title: 'Death Becomes Them', _changes: ['url', 'notes'], _mergeNoOp: false };
+  const freshPlan = [approved, chipHeal, elsewhere, realChange];
+  const core = instrumentReviewedRunAdapter(adapter, freshPlan, captured);
+  core.prepareEventsForCalendar = async (events, calendarAdapter, globalConfig) => {
+    captured.analyzed = events;
+    captured.globalConfig = globalConfig;
+    return events.map((event) => ({ ...freshPlan.find((fresh) => fresh.title === event.title), _savedRunSourceIndex: event._savedRunSourceIndex }));
+  };
+  const decisions = [
+    { key: core.getOwnerReviewKey(approved), verdict: 'approve', stampedAt: '2030-01-01T00:00:00.000Z', snapshot: {} }
+  ];
+  const results = buildReviewedRunResults(freshPlan.map((event) => ({ ...event })));
+
+  const summary = await adapter.executeReviewedSavedRun(results, decisions);
+
+  assert.deepEqual(captured.analyzed.map((event) => event.title), ['Approved Party', 'Fat Slut: Spooky Bear'],
+    'the approval and the notes-only heal beside it are re-analyzed; the other city and the unreviewed real change are not');
+  assert.equal(summary.housekeepingSelected, 1);
+  assert.equal(summary.skipped, 2);
+  assert.deepEqual(captured.executed.map((event) => event.title).sort(), ['Approved Party', 'Fat Slut: Spooky Bear'], 'the heal writes without a swipe');
+  assert.equal(summary.approved, 1);
+  assert.equal(summary.housekeeping, 1);
+  assert.equal(summary.awaiting, 0);
+  const last = captured.notices[captured.notices.length - 1];
+  assert.equal(last.title, 'Calendar Updated');
+});
+
+test('executeReviewedSavedRun carries no housekeeping when nothing is approved — the heal waits for a curated execute', async () => {
+  const adapter = buildAdapter();
+  const captured = { notices: [] };
+  const chipHeal = { ...reviewedHousekeepingMerge(), title: 'Fat Slut: Spooky Bear', _changes: ['notes'], _mergeNoOp: false, city: 'nyc' };
+  instrumentReviewedRunAdapter(adapter, [chipHeal], captured);
+  const results = buildReviewedRunResults([{ ...chipHeal }]);
+  const summary = await adapter.executeReviewedSavedRun(results, []);
+  assert.equal(captured.analyzed, undefined, 'nothing re-analyzed');
+  assert.equal(summary.housekeepingSelected, 0);
+  assert.equal(captured.notices[captured.notices.length - 1].title, 'Nothing Approved');
+});
+
 test('executeReviewedSavedRun with nothing approved analyzes nothing, writes nothing and says so', async () => {
   const adapter = buildAdapter();
   const captured = { notices: [] };
