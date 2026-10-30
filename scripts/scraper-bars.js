@@ -1126,6 +1126,12 @@ const scraperBars = {
       "city": "ptown",
       "address": "149 Commercial Street, Provincetown, Massachusetts",
       "coordinates": "42.0464374, -70.1910464"
+    },
+    {
+      "name": "ART'S DUNE TOURS",
+      "city": "ptown",
+      "address": "308 Commercial Street, Provincetown, Massachusetts",
+      "coordinates": "42.0521768, -70.1860137"
     }
   ],
   "pv": [
