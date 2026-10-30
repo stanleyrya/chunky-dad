@@ -249,8 +249,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 257140,
-      "eventCount": 228
+      "dataLength": 258393,
+      "eventCount": 229
     },
     "orlando": {
       "name": "Orlando",
