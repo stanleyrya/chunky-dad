@@ -10,9 +10,13 @@
       "time": null,
       "eventType": "routine",
       "recurring": false,
+      "coordinates": {
+        "lat": 40.055991998473,
+        "lng": -86.142671496384
+      },
       "startDate": "2026-12-10T00:00:00",
       "endDate": "2026-12-15T00:00:00",
-      "unprocessedDescription": "bar: Wyndham Westfield\naddress: Westfield, IN\nwebsite: https\r://midwestbearfest.com/\nticketUrl: https://www.eventbrite.com/e/midwest-bearfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registration-1978842438001?aff=ebdssbdestsearch\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg\nimageSource: json-api\ncover: $169-$199\ntimezone: America/Indiana/Indianapolis\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Wyndham%20Westfield%2C%20Westfield%2C%20IN\nkey: midwest-bearfest-2026|2026-12-10|wyndham westfield\nallDay: true\nbearSource: keyword\nshortName: MIDWEST BEARFEST",
+      "unprocessedDescription": "description: Midwest Bearfest is our premier December event of \rthe Midwest Bearpack. Founded in 1996, we will celebrate our 30th anniversary!\nbar: Wyndham Westfield\naddress: Westfield, IN\nticketUrl: https://www.eventbrite.com/e/midwest-bearfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registration-1978842438001\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg\ncover: $169-$199\ntimezone: America/Indiana/Indianapolis\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg\nwebsite: https://midwestbearfest.com/\nkey: midwest-bearfest-2026|2026-12-10|wyndham westfield\nbearSource: keyword\nshortName: MIDWEST BEARFEST\nallDay: true\npinSource: geocoded-exact\naddressSource: page\nimageSource: json-api\ngmaps: https://www.google.com/maps/search/?api=1&query=40.055991998473%2C-86.142671496384",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Indiana/Indianapolis",
@@ -27,11 +31,12 @@
       "cover": "$169-$199",
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg",
       "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/2c910c6b3682697c.jpg",
+      "tea": "Midwest Bearfest is our premier December event of the Midwest Bearpack. Founded in 1996, we will celebrate our 30th anniversary!",
       "cadence": null,
       "address": "Westfield, IN",
       "website": "https://midwestbearfest.com/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Wyndham%20Westfield%2C%20Westfield%2C%20IN",
-      "ticketUrl": "https://www.eventbrite.com/e/midwest-bearfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registration-1978842438001?aff=ebdssbdestsearch",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=40.055991998473%2C-86.142671496384",
+      "ticketUrl": "https://www.eventbrite.com/e/midwest-bearfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registration-1978842438001",
       "shortName": "MIDWEST BEARFEST",
       "bearReview": null,
       "links": [
@@ -42,12 +47,12 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Wyndham%20Westfield%2C%20Westfield%2C%20IN",
+          "url": "https://www.google.com/maps/search/?api=1&query=40.055991998473%2C-86.142671496384",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/midwest-bearfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registration-1978842438001?aff=ebdssbdestsearch",
+          "url": "https://www.eventbrite.com/e/midwest-bearfest-2026-our-30-year-celebration-with-4-nights-of-pool-parties-registration-1978842438001",
           "label": "🎫 Tickets"
         }
       ],

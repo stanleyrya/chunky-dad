@@ -5,84 +5,6 @@
   },
   "events": [
     {
-      "name": "Touch-A-Mister — Official Folsom Welcome Party",
-      "day": "Thursday",
-      "time": "8PM-12AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 52.5036649,
-        "lng": 13.3516814
-      },
-      "startDate": "2026-09-10T20:00:00",
-      "endDate": "2026-09-11T00:00:00",
-      "unprocessedDescription": "description: Official welcome party of Folsom Europe\\: meet th\re titleholders, DJ, smokers' lounge, raffle — 'everyone's invited', so the easy first-night stop for bear travellers before the club parties.\nbar: Lütze Bar, Hotel Berlin, Berlin\naddress: Lützowplatz 17, 10785 Berlin\nwebsite: https://folsomeurope.berlin/program/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/eb692dfb-041c-4745-aad5-08ddd835ade3/74406636-1cc0-4dd3-e820-08ddd835ade8.png\ntimezone: Europe/Berlin\nkey: touch-a-mister-official-folsom-welcome-party|2026-09-10|l-tze-bar-hotel-berlin-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown, no-ticket-link",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/Berlin",
-      "wasUTC": true,
-      "sourceUid": "folsom-europe-touch-a-mister-official-folsom-welcome-party-2026-09-10@c\rhunky.dad",
-      "uid": "folsom-europe-touch-a-mister-official-folsom-welcome-party-2026-09-10@c\rhunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Lütze Bar, Hotel Berlin, Berlin",
-      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/eb692dfb-041c-4745-aad5-08ddd835ade3/74406636-1cc0-4dd3-e820-08ddd835ade8.png",
-      "tea": "Official welcome party of Folsom Europe: meet the titleholders, DJ, smokers' lounge, raffle — 'everyone's invited', so the easy first-night stop for bear travellers before the club parties.",
-      "cadence": null,
-      "address": "Lützowplatz 17, 10785 Berlin",
-      "website": "https://folsomeurope.berlin/program/",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://folsomeurope.berlin/program/",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "touch-a-mister-official-folsom-welcome-party-65a99f5e"
-    },
-    {
-      "name": "Woof's Folsom Welcome",
-      "day": "Wednesday",
-      "time": "6PM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 52.4990874,
-        "lng": 13.3416676
-      },
-      "startDate": "2026-09-09T18:00:00",
-      "endDate": "2026-09-09T22:00:00",
-      "unprocessedDescription": "description: Folsom-week welcome night at Woof, Berlin's dedic\rated bear bar (bears, cubs, chasers, leathermen). Listed in the official Folsom Europe programme; bar events at Woof are no-cover.\nbar: Woof Berlin\naddress: Fuggerstraße 37, 10777 Berlin\nwebsite: https://www.woof-berlin.com/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/87d30969-5ab1-46de-dc55-08dd7b5a063c/3817f31a-3a19-45f0-99cb-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: woof-s-folsom-welcome|2026-09-09|woof-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/Berlin",
-      "wasUTC": true,
-      "sourceUid": "folsom-europe-woof-s-folsom-welcome-2026-09-09@chunky.dad",
-      "uid": "folsom-europe-woof-s-folsom-welcome-2026-09-09@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Woof Berlin",
-      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/87d30969-5ab1-46de-dc55-08dd7b5a063c/3817f31a-3a19-45f0-99cb-08dd7b59458c.png",
-      "tea": "Folsom-week welcome night at Woof, Berlin's dedicated bear bar (bears, cubs, chasers, leathermen). Listed in the official Folsom Europe programme; bar events at Woof are no-cover.",
-      "cadence": null,
-      "address": "Fuggerstraße 37, 10777 Berlin",
-      "website": "https://www.woof-berlin.com/",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.woof-berlin.com/",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "woofs-folsom-welcome-6ec04245"
-    },
-    {
       "name": "Fetish in the Mix 2026 @ Woof Berlin",
       "day": "Friday",
       "time": "6PM-10PM",
@@ -122,45 +44,6 @@
       "slug": "fetish-in-the-mix-2026-woof-berlin-41568f8f"
     },
     {
-      "name": "Fetish in the Mix 2026 @ Woof Berlin",
-      "day": "Sunday",
-      "time": "6PM-10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 52.4990874,
-        "lng": 13.3416676
-      },
-      "startDate": "2026-09-13T18:00:00",
-      "endDate": "2026-09-13T22:00:00",
-      "unprocessedDescription": "description: Official-programme night at Woof, Berlin's bear b\rar\\: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.\nbar: Woof Berlin\naddress: Fuggerstraße 37, 10777 Berlin\nwebsite: https://www.woof-berlin.com/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/31cb4e72-1a5e-4ffb-dc8b-08dd7b5a063c/0fea62af-2cca-4b22-9a09-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: fetish-in-the-mix-2026-woof-berlin|2026-09-13|woof-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/Berlin",
-      "wasUTC": true,
-      "sourceUid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-13@chunky.dad",
-      "uid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-13@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Woof Berlin",
-      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/31cb4e72-1a5e-4ffb-dc8b-08dd7b5a063c/0fea62af-2cca-4b22-9a09-08dd7b59458c.png",
-      "tea": "Official-programme night at Woof, Berlin's bear bar: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.",
-      "cadence": null,
-      "address": "Fuggerstraße 37, 10777 Berlin",
-      "website": "https://www.woof-berlin.com/",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.woof-berlin.com/",
-          "label": "🌐 Website"
-        }
-      ],
-      "slug": "fetish-in-the-mix-2026-woof-berlin-31f344d1"
-    },
-    {
       "name": "Woof's Fetish Beer Garden (Street Fair day)",
       "day": "Saturday",
       "time": "12PM-4PM",
@@ -198,6 +81,290 @@
         }
       ],
       "slug": "woofs-fetish-beer-garden-street-fair-day-3bf2638d"
+    },
+    {
+      "name": "Touch-A-Mister — Official Folsom Welcome Party",
+      "day": "Thursday",
+      "time": "8PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.5036649,
+        "lng": 13.3516814
+      },
+      "startDate": "2026-09-10T20:00:00",
+      "endDate": "2026-09-11T00:00:00",
+      "unprocessedDescription": "description: Official welcome party of Folsom Europe\\: meet th\re titleholders, DJ, smokers' lounge, raffle — 'everyone's invited', so the easy first-night stop for bear travellers before the club parties.\nbar: Lütze Bar, Hotel Berlin, Berlin\naddress: Lützowplatz 17, 10785 Berlin\nwebsite: https://folsomeurope.berlin/program/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/eb692dfb-041c-4745-aad5-08ddd835ade3/74406636-1cc0-4dd3-e820-08ddd835ade8.png\ntimezone: Europe/Berlin\nkey: touch-a-mister-official-folsom-welcome-party|2026-09-10|l-tze-bar-hotel-berlin-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown, no-ticket-link",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-touch-a-mister-official-folsom-welcome-party-2026-09-10@c\rhunky.dad",
+      "uid": "folsom-europe-touch-a-mister-official-folsom-welcome-party-2026-09-10@c\rhunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Lütze Bar, Hotel Berlin, Berlin",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/eb692dfb-041c-4745-aad5-08ddd835ade3/74406636-1cc0-4dd3-e820-08ddd835ade8.png",
+      "tea": "Official welcome party of Folsom Europe: meet the titleholders, DJ, smokers' lounge, raffle — 'everyone's invited', so the easy first-night stop for bear travellers before the club parties.",
+      "cadence": null,
+      "address": "Lützowplatz 17, 10785 Berlin",
+      "website": "https://folsomeurope.berlin/program/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://folsomeurope.berlin/program/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "touch-a-mister-official-folsom-welcome-party-65a99f5e"
+    },
+    {
+      "name": "Kake's Sunday Service (Folsom Closing Party)",
+      "day": "Sunday",
+      "time": "9PM-3AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4989988,
+        "lng": 13.3527268
+      },
+      "startDate": "2026-09-13T21:00:00",
+      "endDate": "2026-09-14T03:00:00",
+      "unprocessedDescription": "description: Official Folsom Europe closing party at Metropol b\ry Recon, TUFF and Tom of Finland Foundation — 'loud, sweaty, and in full leather'. Headline closer; not bear-specific. Listed as \"Kake's Sunday Service — Official Folsom Europe Closing Party\".\nbar: Metropol\naddress: Nollendorfplatz 5, 10777 Berlin\nwebsite: https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets\nticketUrl: https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/3321a1d4-05ef-4a1c-a850-08dec6bee0d0/7a0183c6-cd8d-4aab-d8eb-08dec6bee0d1.png\ntimezone: Europe/Berlin\nkey: kake-s-sunday-service-folsom-closing-party|2026-09-13|metropol\nfestival: Folsom Europe\nnote: price-not-extracted",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-kake-s-sunday-service-folsom-closing-party-2026-09-13@chu\rnky.dad",
+      "uid": "folsom-europe-kake-s-sunday-service-folsom-closing-party-2026-09-13@chu\rnky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Metropol",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/3321a1d4-05ef-4a1c-a850-08dec6bee0d0/7a0183c6-cd8d-4aab-d8eb-08dec6bee0d1.png",
+      "tea": "Official Folsom Europe closing party at Metropol by Recon, TUFF and Tom of Finland Foundation — 'loud, sweaty, and in full leather'. Headline closer; not bear-specific. Listed as \"Kake's Sunday Service — Official Folsom Europe Closing Party\".",
+      "cadence": null,
+      "address": "Nollendorfplatz 5, 10777 Berlin",
+      "website": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
+      "ticketUrl": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "kakes-sunday-service-folsom-closing-party-52d86787"
+    },
+    {
+      "name": "Bearhood Monster Bash",
+      "day": "Saturday",
+      "time": "10PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4989787,
+        "lng": 13.352977
+      },
+      "startDate": "2026-10-31T22:00:00",
+      "endDate": "2026-11-01T00:00:00",
+      "unprocessedDescription": "description: Eine bärig-schaurige Halloween Party.\nbar: Mikrop\rol\naddress: Nollendorfplatz 5, 10777 Berlin, BE\nticketUrl: https://www.eventbrite.de/e/bearhood-monster-bash-tickets-1997262789769\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1190608081%2F933617451913%2F1%2Foriginal.20260808-151032?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.112&fp-y=0.347&s=aa1408b79110c6ddd8ca51bb0c103f72\nimageSource: jsonld\ncover: 15.99 EUR\ntimezone: Europe/Berlin\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1190608081%2F933617451913%2F1%2Foriginal.20260808-151032?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.112&fp-y=0.347&s=aa1408b79110c6ddd8ca51bb0c103f72\naddressSource: page\nwebsite: https://bearhood.de\ngmaps: https://www.google.com/maps/search/?api=1&query=Mikropol%2C%20Nollendorfplatz%205%2C%2010777%20Berlin%2C%20BE\npinSource: geocoded-exact\nbarSource: geo-poi\nshortName: BEAR­HOOD\ninstagram: https://www.instagram.com/bearhoodberlin\nfacebook: https://www.facebook.com/bearhoodberlin\nfavicon: https://bearhood.de\nkey: bearhood-monster-bash|2026-10-31|mikropol\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "8A3DE8B2-6C89-4498-9308-F01C612B859E",
+      "uid": "8A3DE8B2-6C89-4498-9308-F01C612B859E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Mikropol",
+      "cover": "15.99 EUR",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1190608081%2F933617451913%2F1%2Foriginal.20260808-151032?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.112&fp-y=0.347&s=aa1408b79110c6ddd8ca51bb0c103f72",
+      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1190608081%2F933617451913%2F1%2Foriginal.20260808-151032?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.112&fp-y=0.347&s=aa1408b79110c6ddd8ca51bb0c103f72",
+      "favicon": "https://bearhood.de",
+      "tea": "Eine bärig-schaurige Halloween Party.",
+      "cadence": null,
+      "address": "Nollendorfplatz 5, 10777 Berlin, BE",
+      "website": "https://bearhood.de",
+      "instagram": "https://www.instagram.com/bearhoodberlin",
+      "facebook": "https://www.facebook.com/bearhoodberlin",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Mikropol%2C%20Nollendorfplatz%205%2C%2010777%20Berlin%2C%20BE",
+      "ticketUrl": "https://www.eventbrite.de/e/bearhood-monster-bash-tickets-1997262789769",
+      "shortName": "BEAR­HOOD",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://bearhood.de",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/bearhoodberlin",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/bearhoodberlin",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Mikropol%2C%20Nollendorfplatz%205%2C%2010777%20Berlin%2C%20BE",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.de/e/bearhood-monster-bash-tickets-1997262789769",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bearhood-monster-bash-4e4e94c4"
+    },
+    {
+      "name": "UNSHAVED Winter Edition 2026",
+      "day": "Saturday",
+      "time": "10PM-12AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4960649,
+        "lng": 13.3874738
+      },
+      "startDate": "2026-12-12T22:00:00",
+      "endDate": "2026-12-13T00:00:00",
+      "unprocessedDescription": "description: Winterzeit – UNSHAVED Zeit! Es ist endlich wieder \rsoweit. Winter time – UNSHAVED time! Finally again.\nbar: Gretchen\naddress: Obentrautstraße 19-21, 10963 Berlin\nticketUrl: https://www.eventbrite.de/e/unshaved-winter-edition-2026-tickets-2003421444471\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1195800696%2F246456361113%2F1%2Foriginal.20261014-174654?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.032&fp-y=0.537&s=2a21efc96f95003444b8d592d10ca98c\nimageSource: jsonld\ncover: 10.65 EUR\ntimezone: Europe/Berlin\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1195800696%2F246456361113%2F1%2Foriginal.20261014-174654?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.032&fp-y=0.537&s=2a21efc96f95003444b8d592d10ca98c\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Gretchen%2C%20Obentrautstra%C3%9Fe%2019-21%2C%2010963%20Berlin\npinSource: geocoded-exact\nbarSource: geo-poi\nkey: unshaved-winter-edition-2026|2026-12-12|gretchen\nbearSource: ai\nshortName: UNSHAVED WINTER",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "8D1E6BD8-AF9F-4780-ABAC-428E73229B7B",
+      "uid": "8D1E6BD8-AF9F-4780-ABAC-428E73229B7B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Gretchen",
+      "cover": "10.65 EUR",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1195800696%2F246456361113%2F1%2Foriginal.20261014-174654?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.032&fp-y=0.537&s=2a21efc96f95003444b8d592d10ca98c",
+      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1195800696%2F246456361113%2F1%2Foriginal.20261014-174654?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.032&fp-y=0.537&s=2a21efc96f95003444b8d592d10ca98c",
+      "tea": "Winterzeit – UNSHAVED Zeit! Es ist endlich wieder soweit. Winter time – UNSHAVED time! Finally again.",
+      "cadence": null,
+      "address": "Obentrautstraße 19-21, 10963 Berlin",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Gretchen%2C%20Obentrautstra%C3%9Fe%2019-21%2C%2010963%20Berlin",
+      "ticketUrl": "https://www.eventbrite.de/e/unshaved-winter-edition-2026-tickets-2003421444471",
+      "shortName": "UNSHAVED WINTER",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Gretchen%2C%20Obentrautstra%C3%9Fe%2019-21%2C%2010963%20Berlin",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.de/e/unshaved-winter-edition-2026-tickets-2003421444471",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "unshaved-winter-edition-2026-060b1441"
+    },
+    {
+      "name": "PiG — Official Folsom Europe Main Party",
+      "day": "Saturday",
+      "time": "11PM-8AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.5161294,
+        "lng": 13.4090769
+      },
+      "startDate": "2026-09-12T23:00:00",
+      "endDate": "2026-09-13T08:00:00",
+      "unprocessedDescription": "description: The official Folsom Europe main party — men-only,\r ~3,000 guests, multiple dance floors and playgrounds in the vaults of Alte Münze. Not bear-specific but the Saturday-night headline.\nbar: Alte Münze\naddress: Molkenmarkt 2, 10179 Berlin\nwebsite: https://pigberlin.de/folsom-berlin-2026/\nticketUrl: https://pigberlin.de/shop/\nimage: https://pigberlin.de/wp-content/uploads/2026/05/Pig-Berlin_Folsom-Europa-Berlin-2026-September-e1778604374547.webp\ntimezone: Europe/Berlin\nkey: pig-official-folsom-europe-main-party|2026-09-12|alte-m-nze\nfestival: Folsom Europe\nnote: time-conflict\\: folsomeurope.berlin says 23\\:00, pigberlin.de says 22\\:00, end-time-estimated (open end), ticket link is the promoter's shop, not an event page",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-pig-official-folsom-europe-main-party-2026-09-12@chunky.d\rad",
+      "uid": "folsom-europe-pig-official-folsom-europe-main-party-2026-09-12@chunky.d\rad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Alte Münze",
+      "image": "https://pigberlin.de/wp-content/uploads/2026/05/Pig-Berlin_Folsom-Europa-Berlin-2026-September-e1778604374547.webp",
+      "tea": "The official Folsom Europe main party — men-only, ~3,000 guests, multiple dance floors and playgrounds in the vaults of Alte Münze. Not bear-specific but the Saturday-night headline.",
+      "cadence": null,
+      "address": "Molkenmarkt 2, 10179 Berlin",
+      "website": "https://pigberlin.de/folsom-berlin-2026/",
+      "ticketUrl": "https://pigberlin.de/shop/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://pigberlin.de/folsom-berlin-2026/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "tickets",
+          "url": "https://pigberlin.de/shop/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "pig-official-folsom-europe-main-party-03534e00"
+    },
+    {
+      "name": "Fetish in the Mix 2026 @ Woof Berlin",
+      "day": "Sunday",
+      "time": "6PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 52.4990874,
+        "lng": 13.3416676
+      },
+      "startDate": "2026-09-13T18:00:00",
+      "endDate": "2026-09-13T22:00:00",
+      "unprocessedDescription": "description: Official-programme night at Woof, Berlin's bear b\rar\\: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.\nbar: Woof Berlin\naddress: Fuggerstraße 37, 10777 Berlin\nwebsite: https://www.woof-berlin.com/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/31cb4e72-1a5e-4ffb-dc8b-08dd7b5a063c/0fea62af-2cca-4b22-9a09-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: fetish-in-the-mix-2026-woof-berlin|2026-09-13|woof-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": true,
+      "sourceUid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-13@chunky.dad",
+      "uid": "folsom-europe-fetish-in-the-mix-2026-woof-berlin-2026-09-13@chunky.dad",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Woof Berlin",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/31cb4e72-1a5e-4ffb-dc8b-08dd7b5a063c/0fea62af-2cca-4b22-9a09-08dd7b59458c.png",
+      "tea": "Official-programme night at Woof, Berlin's bear bar: 'meet hairy leather guys in the mix with all kinds of fetish' — the bear/leather crowd's nightly Folsom meeting point.",
+      "cadence": null,
+      "address": "Fuggerstraße 37, 10777 Berlin",
+      "website": "https://www.woof-berlin.com/",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.woof-berlin.com/",
+          "label": "🌐 Website"
+        }
+      ],
+      "slug": "fetish-in-the-mix-2026-woof-berlin-31f344d1"
     },
     {
       "name": "ADAM — Berlin Edition (Folsom Opening Party)",
@@ -244,51 +411,6 @@
         }
       ],
       "slug": "adam-berlin-edition-folsom-opening-party-76657223"
-    },
-    {
-      "name": "Kake's Sunday Service (Folsom Closing Party)",
-      "day": "Sunday",
-      "time": "9PM-3AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 52.4989988,
-        "lng": 13.3527268
-      },
-      "startDate": "2026-09-13T21:00:00",
-      "endDate": "2026-09-14T03:00:00",
-      "unprocessedDescription": "description: Official Folsom Europe closing party at Metropol b\ry Recon, TUFF and Tom of Finland Foundation — 'loud, sweaty, and in full leather'. Headline closer; not bear-specific. Listed as \"Kake's Sunday Service — Official Folsom Europe Closing Party\".\nbar: Metropol\naddress: Nollendorfplatz 5, 10777 Berlin\nwebsite: https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets\nticketUrl: https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/3321a1d4-05ef-4a1c-a850-08dec6bee0d0/7a0183c6-cd8d-4aab-d8eb-08dec6bee0d1.png\ntimezone: Europe/Berlin\nkey: kake-s-sunday-service-folsom-closing-party|2026-09-13|metropol\nfestival: Folsom Europe\nnote: price-not-extracted",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/Berlin",
-      "wasUTC": true,
-      "sourceUid": "folsom-europe-kake-s-sunday-service-folsom-closing-party-2026-09-13@chu\rnky.dad",
-      "uid": "folsom-europe-kake-s-sunday-service-folsom-closing-party-2026-09-13@chu\rnky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Metropol",
-      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/3321a1d4-05ef-4a1c-a850-08dec6bee0d0/7a0183c6-cd8d-4aab-d8eb-08dec6bee0d1.png",
-      "tea": "Official Folsom Europe closing party at Metropol by Recon, TUFF and Tom of Finland Foundation — 'loud, sweaty, and in full leather'. Headline closer; not bear-specific. Listed as \"Kake's Sunday Service — Official Folsom Europe Closing Party\".",
-      "cadence": null,
-      "address": "Nollendorfplatz 5, 10777 Berlin",
-      "website": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
-      "ticketUrl": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "tickets",
-          "url": "https://dice.fm/partner/tickets/event/k6yyx8-kakes-sunday-service-13th-sep-metropol-berlin-tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "kakes-sunday-service-folsom-closing-party-52d86787"
     },
     {
       "name": "Folsom Europe Street Fair — Friday Opening Evening",
@@ -369,51 +491,6 @@
         }
       ],
       "slug": "folsom-europe-street-fair-2026-2d77dcc9"
-    },
-    {
-      "name": "PiG — Official Folsom Europe Main Party",
-      "day": "Saturday",
-      "time": "11PM-8AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 52.5161294,
-        "lng": 13.4090769
-      },
-      "startDate": "2026-09-12T23:00:00",
-      "endDate": "2026-09-13T08:00:00",
-      "unprocessedDescription": "description: The official Folsom Europe main party — men-only,\r ~3,000 guests, multiple dance floors and playgrounds in the vaults of Alte Münze. Not bear-specific but the Saturday-night headline.\nbar: Alte Münze\naddress: Molkenmarkt 2, 10179 Berlin\nwebsite: https://pigberlin.de/folsom-berlin-2026/\nticketUrl: https://pigberlin.de/shop/\nimage: https://pigberlin.de/wp-content/uploads/2026/05/Pig-Berlin_Folsom-Europa-Berlin-2026-September-e1778604374547.webp\ntimezone: Europe/Berlin\nkey: pig-official-folsom-europe-main-party|2026-09-12|alte-m-nze\nfestival: Folsom Europe\nnote: time-conflict\\: folsomeurope.berlin says 23\\:00, pigberlin.de says 22\\:00, end-time-estimated (open end), ticket link is the promoter's shop, not an event page",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "Europe/Berlin",
-      "wasUTC": true,
-      "sourceUid": "folsom-europe-pig-official-folsom-europe-main-party-2026-09-12@chunky.d\rad",
-      "uid": "folsom-europe-pig-official-folsom-europe-main-party-2026-09-12@chunky.d\rad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Alte Münze",
-      "image": "https://pigberlin.de/wp-content/uploads/2026/05/Pig-Berlin_Folsom-Europa-Berlin-2026-September-e1778604374547.webp",
-      "tea": "The official Folsom Europe main party — men-only, ~3,000 guests, multiple dance floors and playgrounds in the vaults of Alte Münze. Not bear-specific but the Saturday-night headline.",
-      "cadence": null,
-      "address": "Molkenmarkt 2, 10179 Berlin",
-      "website": "https://pigberlin.de/folsom-berlin-2026/",
-      "ticketUrl": "https://pigberlin.de/shop/",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://pigberlin.de/folsom-berlin-2026/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "tickets",
-          "url": "https://pigberlin.de/shop/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "pig-official-folsom-europe-main-party-03534e00"
     },
     {
       "name": "BearDance Folsom Berlin 2026",
@@ -501,71 +578,43 @@
       "slug": "fetish-in-the-mix-2026-woof-berlin-490834ee"
     },
     {
-      "name": "Bearhood Monster Bash",
-      "day": "Saturday",
-      "time": "10PM-12AM",
+      "name": "Woof's Folsom Welcome",
+      "day": "Wednesday",
+      "time": "6PM-10PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 52.4989787,
-        "lng": 13.352977
+        "lat": 52.4990874,
+        "lng": 13.3416676
       },
-      "startDate": "2026-10-31T22:00:00",
-      "endDate": "2026-11-01T00:00:00",
-      "unprocessedDescription": "description: Eine bärig-schaurige Halloween Party.\nbar: Mikrop\rol\naddress: Nollendorfplatz 5, 10777 Berlin, BE\nticketUrl: https://www.eventbrite.de/e/bearhood-monster-bash-tickets-1997262789769\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1190608081%2F933617451913%2F1%2Foriginal.20260808-151032?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.112&fp-y=0.347&s=aa1408b79110c6ddd8ca51bb0c103f72\nimageSource: jsonld\ncover: 15.99 EUR\ntimezone: Europe/Berlin\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1190608081%2F933617451913%2F1%2Foriginal.20260808-151032?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.112&fp-y=0.347&s=aa1408b79110c6ddd8ca51bb0c103f72\naddressSource: page\nwebsite: https://bearhood.de\ngmaps: https://www.google.com/maps/search/?api=1&query=Mikropol%2C%20Nollendorfplatz%205%2C%2010777%20Berlin%2C%20BE\npinSource: geocoded-exact\nbarSource: geo-poi\nshortName: BEAR­HOOD\ninstagram: https://www.instagram.com/bearhoodberlin\nfacebook: https://www.facebook.com/bearhoodberlin\nfavicon: https://bearhood.de\nkey: bearhood-monster-bash|2026-10-31|mikropol\nbearSource: keyword",
+      "startDate": "2026-09-09T18:00:00",
+      "endDate": "2026-09-09T22:00:00",
+      "unprocessedDescription": "description: Folsom-week welcome night at Woof, Berlin's dedic\rated bear bar (bears, cubs, chasers, leathermen). Listed in the official Folsom Europe programme; bar events at Woof are no-cover.\nbar: Woof Berlin\naddress: Fuggerstraße 37, 10777 Berlin\nwebsite: https://www.woof-berlin.com/\nimage: https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/87d30969-5ab1-46de-dc55-08dd7b5a063c/3817f31a-3a19-45f0-99cb-08dd7b59458c.png\ntimezone: Europe/Berlin\nkey: woof-s-folsom-welcome|2026-09-09|woof-berlin\nfestival: Folsom Europe\nnote: end time not published — 4h default; open-ended, end-time-unknown",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "Europe/Berlin",
       "wasUTC": true,
-      "sourceUid": "8A3DE8B2-6C89-4498-9308-F01C612B859E",
-      "uid": "8A3DE8B2-6C89-4498-9308-F01C612B859E",
+      "sourceUid": "folsom-europe-woof-s-folsom-welcome-2026-09-09@chunky.dad",
+      "uid": "folsom-europe-woof-s-folsom-welcome-2026-09-09@chunky.dad",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Mikropol",
-      "cover": "15.99 EUR",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1190608081%2F933617451913%2F1%2Foriginal.20260808-151032?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.112&fp-y=0.347&s=aa1408b79110c6ddd8ca51bb0c103f72",
-      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1190608081%2F933617451913%2F1%2Foriginal.20260808-151032?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.112&fp-y=0.347&s=aa1408b79110c6ddd8ca51bb0c103f72",
-      "favicon": "https://bearhood.de",
-      "tea": "Eine bärig-schaurige Halloween Party.",
+      "bar": "Woof Berlin",
+      "image": "https://eventcontrol146156798b6b.blob.core.windows.net/ecx/c758f49d-3f18-4cfb-95ef-08dc9a112bdd/7d5cdc19-f095-4044-fffc-08dcdbeb6c13/87d30969-5ab1-46de-dc55-08dd7b5a063c/3817f31a-3a19-45f0-99cb-08dd7b59458c.png",
+      "tea": "Folsom-week welcome night at Woof, Berlin's dedicated bear bar (bears, cubs, chasers, leathermen). Listed in the official Folsom Europe programme; bar events at Woof are no-cover.",
       "cadence": null,
-      "address": "Nollendorfplatz 5, 10777 Berlin, BE",
-      "website": "https://bearhood.de",
-      "instagram": "https://www.instagram.com/bearhoodberlin",
-      "facebook": "https://www.facebook.com/bearhoodberlin",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Mikropol%2C%20Nollendorfplatz%205%2C%2010777%20Berlin%2C%20BE",
-      "ticketUrl": "https://www.eventbrite.de/e/bearhood-monster-bash-tickets-1997262789769",
-      "shortName": "BEAR­HOOD",
+      "address": "Fuggerstraße 37, 10777 Berlin",
+      "website": "https://www.woof-berlin.com/",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://bearhood.de",
+          "url": "https://www.woof-berlin.com/",
           "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/bearhoodberlin",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/bearhoodberlin",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Mikropol%2C%20Nollendorfplatz%205%2C%2010777%20Berlin%2C%20BE",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.de/e/bearhood-monster-bash-tickets-1997262789769",
-          "label": "🎫 Tickets"
         }
       ],
-      "slug": "bearhood-monster-bash-4e4e94c4"
+      "slug": "woofs-folsom-welcome-6ec04245"
     }
   ]
 }

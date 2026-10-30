@@ -52,6 +52,47 @@
       "slug": "thick-n-juicy-brisbane-31ee2f02"
     },
     {
+      "name": "The Night Before Halloween Masquerade Ball",
+      "day": "Friday",
+      "time": "6:30PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": -27.4766249,
+        "lng": 153.0085875
+      },
+      "startDate": "2026-10-30T18:30:00",
+      "endDate": "2026-10-30T22:00:00",
+      "unprocessedDescription": "bar: Come to Daddy\nimage: https://cdn.whereto.party/media/even\rts/fcacaa24-d567-4036-bee7-a3b84309dda6.png\ntimezone: Australia/Brisbane\nimageVertical: https://cdn.whereto.party/media/events/fcacaa24-d567-4036-bee7-a3b84309dda6.png\ngmaps: https://www.google.com/maps/search/?api=1&query=Come%20to%20Daddy%2C%20208%20Montague%20Road%2C%20Brisbane%2C%20Queensland\naddress: 208 Montague Road, Brisbane, Queensland\naddressSource: geo-poi\npinSource: geocoded-exact\nkey: the-night-before-halloween-masquerade-ball|2026-10-30|come to daddy\nimageSource: json-api\nbarSource: geo-poi\nbearSource: keyword\nshortName: NIGHT BEFORE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Australia/Brisbane",
+      "wasUTC": true,
+      "sourceUid": "96228A12-0429-498B-9642-5AFA79DA07F3",
+      "uid": "96228A12-0429-498B-9642-5AFA79DA07F3",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Come to Daddy",
+      "image": "https://cdn.whereto.party/media/events/fcacaa24-d567-4036-bee7-a3b84309dda6.png",
+      "imageVertical": "https://cdn.whereto.party/media/events/fcacaa24-d567-4036-bee7-a3b84309dda6.png",
+      "cadence": null,
+      "address": "208 Montague Road, Brisbane, Queensland",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Come%20to%20Daddy%2C%20208%20Montague%20Road%2C%20Brisbane%2C%20Queensland",
+      "shortName": "NIGHT BEFORE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Come%20to%20Daddy%2C%20208%20Montague%20Road%2C%20Brisbane%2C%20Queensland",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "the-night-before-halloween-masquerade-ball-6e62ec6a"
+    },
+    {
       "name": "Come Aboard To Daddy",
       "day": "Saturday",
       "time": "3:30PM-6PM",

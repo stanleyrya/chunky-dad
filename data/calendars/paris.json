@@ -45,6 +45,50 @@
         }
       ],
       "slug": "bears-paname-bonbon-5638fa42"
+    },
+    {
+      "name": "Bears Paname — BONBON",
+      "day": "Saturday",
+      "time": "11PM-6AM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-11-14T23:00:00",
+      "endDate": "2026-11-15T06:00:00",
+      "unprocessedDescription": "bar: Workshow — 173 rue Saint-Martin, 75003\naddress: Paris, \rÎle-de-France\nticketUrl: https://shotgun.live/events/bonbon-de-bears-paname\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/19b06d323f87127e.jpg\nimageSource: json-api\ncover: 10.99-18 €\ntimezone: Europe/Paris\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/19b06d323f87127e.jpg\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Workshow%20%E2%80%94%20173%20rue%20Saint-Martin%2C%2075003%2C%20Paris%2C%20%C3%8Ele-de-France\nkey: bears-paname-—-bonbon|2026-11-14|workshow — 173 rue saint-martin, 75003\nbearSource: keyword\nshortName: BEARS PANAME",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Paris",
+      "wasUTC": true,
+      "sourceUid": "D6ABFD01-54C9-4F11-A435-D6DF93603D8F",
+      "uid": "D6ABFD01-54C9-4F11-A435-D6DF93603D8F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Workshow — 173 rue Saint-Martin, 75003",
+      "cover": "10.99-18 €",
+      "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/19b06d323f87127e.jpg",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/19b06d323f87127e.jpg",
+      "cadence": null,
+      "address": "Paris, Île-de-France",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Workshow%20%E2%80%94%20173%20rue%20Saint-Martin%2C%2075003%2C%20Paris%2C%20%C3%8Ele-de-France",
+      "ticketUrl": "https://shotgun.live/events/bonbon-de-bears-paname",
+      "shortName": "BEARS PANAME",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Workshow%20%E2%80%94%20173%20rue%20Saint-Martin%2C%2075003%2C%20Paris%2C%20%C3%8Ele-de-France",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://shotgun.live/events/bonbon-de-bears-paname",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "bears-paname-bonbon-7b8e089f"
     }
   ]
 }

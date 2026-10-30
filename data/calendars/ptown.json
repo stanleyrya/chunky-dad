@@ -5,6 +5,531 @@
   },
   "events": [
     {
+      "name": "SAINTS & SINNERS PARTY",
+      "day": "Friday",
+      "time": "10PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2026-10-30T22:00:00",
+      "endDate": "2026-10-31T01:00:00",
+      "unprocessedDescription": "description: Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR \rROARING TWENTIES\nbar: Boatslip\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\naddress: 161 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SAINTS & SINNERS\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: saints-sinners-party|2026-10-31|boatslip\nbearSource: keyword\nbarSource: curated",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "F29870A4-14BE-44E4-AB12-2FA671D77B21",
+      "uid": "F29870A4-14BE-44E4-AB12-2FA671D77B21",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES",
+      "cadence": null,
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+      "shortName": "SAINTS & SINNERS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "saints-sinners-party-6c1412fe"
+    },
+    {
+      "name": "Loving Our Bear Bodies at Spooky Bear in Provincetown",
+      "day": "Saturday",
+      "time": "1:30PM-3:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.049632,
+        "lng": -70.1900238
+      },
+      "startDate": "2026-10-31T13:30:00",
+      "endDate": "2026-10-31T15:30:00",
+      "unprocessedDescription": "bar: Wilde Playhouse at the Gifford House\naddress: 9 Carver St\rreet Provincetown, MA, 02657 United States\nimage: http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w\nimageSource: jsonld\ntimezone: America/New_York\ncover: $20–$60\nimageHorizontal: http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w\naddressSource: page\nwebsite: https://www.bearyoursoul.org/events/spookylobb\ngmaps: https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238\npinSource: geocoded-exact\nshortName: LOVING OUR BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: loving-our-bear-bodies-at-spooky-bear-in-provincetown|2026-10-31|wilde playhouse at the gifford house--2\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "CDEA7FD6-434A-4857-AC9A-A48EE071EC75",
+      "uid": "CDEA7FD6-434A-4857-AC9A-A48EE071EC75",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Wilde Playhouse at the Gifford House",
+      "cover": "$20–$60",
+      "image": "http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w",
+      "imageHorizontal": "http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "cadence": null,
+      "address": "9 Carver Street Provincetown, MA, 02657 United States",
+      "website": "https://www.bearyoursoul.org/events/spookylobb",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238",
+      "shortName": "LOVING OUR BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearyoursoul.org/events/spookylobb",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "loving-our-bear-bodies-at-spooky-bear-in-provincetown-45e29511"
+    },
+    {
+      "name": "Loving Our Bear Bodies at Spooky Bear in Provincetown",
+      "day": "Friday",
+      "time": "1:30PM-3:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.049632,
+        "lng": -70.1900238
+      },
+      "startDate": "2026-10-30T13:30:00",
+      "endDate": "2026-10-30T15:30:00",
+      "unprocessedDescription": "bar: Wilde Playhouse at the Gifford House\naddress: 9 Carver St\rreet Provincetown, MA, 02657 United States\nimage: http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w\nimageSource: jsonld\ntimezone: America/New_York\ncover: $20–$60\nimageHorizontal: http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w\naddressSource: page\nwebsite: https://www.bearyoursoul.org/events/spookylobb\ngmaps: https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238\npinSource: geocoded-exact\nshortName: LOVING OUR BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: loving-our-bear-bodies-at-spooky-bear-in-provincetown|2026-10-30|wilde playhouse at the gifford house--2\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "8CF798F0-9797-4E7A-9BB9-AB5D6684DED6",
+      "uid": "8CF798F0-9797-4E7A-9BB9-AB5D6684DED6",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Wilde Playhouse at the Gifford House",
+      "cover": "$20–$60",
+      "image": "http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w",
+      "imageHorizontal": "http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "cadence": null,
+      "address": "9 Carver Street Provincetown, MA, 02657 United States",
+      "website": "https://www.bearyoursoul.org/events/spookylobb",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238",
+      "shortName": "LOVING OUR BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearyoursoul.org/events/spookylobb",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "loving-our-bear-bodies-at-spooky-bear-in-provincetown-75b92e1d"
+    },
+    {
+      "name": "SPOOKY BEAR EARLY BEAR MEET UP",
+      "day": "Thursday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0496268,
+        "lng": -70.1900224
+      },
+      "startDate": "2026-10-29T20:00:00",
+      "endDate": "2026-10-29T22:00:00",
+      "unprocessedDescription": "description: PORCH BAR Part of THE NORTHEAST URSAMEN PRESENT SP\rOOKY BEAR ROARING TWENTIES\nbar: GIFFORD HOUSE\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\naddress: 11 Carver St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: EARLY BEAR MEET UP\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: spooky-bear-early-bear-meet-up|2026-10-30|gifford house\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "8F384B1A-4848-40DF-B5BA-C4361830CA9D",
+      "uid": "8F384B1A-4848-40DF-B5BA-C4361830CA9D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "GIFFORD HOUSE",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "PORCH BAR Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES",
+      "cadence": null,
+      "address": "11 Carver St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+      "shortName": "EARLY BEAR MEET UP",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "spooky-bear-early-bear-meet-up-45a07eb6"
+    },
+    {
+      "name": "SOLID GOLD TEA - Spooky Bear Wknd",
+      "day": "Sunday",
+      "time": "4PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2026-11-01T16:00:00",
+      "endDate": "2026-11-01T19:00:00",
+      "unprocessedDescription": "bar: Boatslip\nticketUrl: https://theboatslip.com/pages/events\\\rnimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg\nimageSource: json-api\ntimezone: America/New_York\nimageHorizontal: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20provincetown\naddress: 161 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\ninstagram: https://www.instagram.com/boatslipresort",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "E8EC079B-DDAA-447F-8FD8-8567B7175A74",
+      "uid": "E8EC079B-DDAA-447F-8FD8-8567B7175A74",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "imageHorizontal": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "cadence": null,
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": null,
+      "instagram": "https://www.instagram.com/boatslipresort",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20provincetown",
+      "ticketUrl": "https://theboatslip.com/pages/events",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/boatslipresort",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20provincetown",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://theboatslip.com/pages/events",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "solid-gold-tea-spooky-bear-wknd-0cbab510"
+    },
+    {
+      "name": "SANCTUM PARANORMAL GHOST TOUR",
+      "day": "Saturday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-31T20:00:00",
+      "endDate": "2026-10-31T22:00:00",
+      "unprocessedDescription": "description: Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR \rROARING TWENTIES\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/search/?api=1&query=provincetown\nshortName: SANCTUM\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: sanctum-paranormal-ghost-tour|2026-11-01|\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "4431CF64-9ED7-4ABD-AF9A-256000B0466E",
+      "uid": "4431CF64-9ED7-4ABD-AF9A-256000B0466E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES",
+      "cadence": null,
+      "address": null,
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=provincetown",
+      "shortName": "SANCTUM",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=provincetown",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "sanctum-paranormal-ghost-tour-145e7762"
+    },
+    {
+      "name": "GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT",
+      "day": "Saturday",
+      "time": "12PM-5PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0496268,
+        "lng": -70.1900224
+      },
+      "startDate": "2026-10-31T12:00:00",
+      "endDate": "2026-10-31T17:00:00",
+      "unprocessedDescription": "description: GOLDILOXX PTOWN SPOOKYBEAR Daytime Delight 12-5pm \rDJ Dropo After 3 years in a row of Goldiloxx Ptown Bear Week, we are doing are first Spooky Bear event on Halloween! Oct 31st GOLDILOXX is an NYC based monthly bear party for bears and their admirers. When you arrive you get to select a color coded cup for whatever your mood is. Follow us on instagram for more updates ! @goldiloxx Blue Cup=DTF Pink Cup=Kiss Orange Cup=Side Green Cup=Watch Club Purgatory is open 21+\nbar: Purgatory Gifford House\naddress: 9 Carver Street, Provincetown, MA 02657\nticketUrl: https://www.sickening.events/e/spookygoldiloxx/tickets\nimage: https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1791851747/saas/logos/image_1791850884526_m5dm6ykr3.webp\ncover: $10\ntimezone: America/New_York\naddressSource: page\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJE9zxSn6n_IkRbOMJFiVbw_k\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house\nkey: goldiloxx-spooky-bear-daytime-delight|2026-10-31|purgatory gifford house\nshortName: GOLDILOXX\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nimageSource: jsonld\nbarSource: curated\nbearSource: keyword\nimageHorizontal: https://i.imgur.com/8RF9W2D.png",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "0314C03F-900E-4AFC-80E3-B44B77E5C16F",
+      "uid": "0314C03F-900E-4AFC-80E3-B44B77E5C16F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Purgatory Gifford House",
+      "cover": "$10",
+      "image": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1791851747/saas/logos/image_1791850884526_m5dm6ykr3.webp",
+      "imageHorizontal": "https://i.imgur.com/8RF9W2D.png",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "GOLDILOXX PTOWN SPOOKYBEAR Daytime Delight 12-5pm DJ Dropo After 3 years in a row of Goldiloxx Ptown Bear Week, we are doing are first Spooky Bear event on Halloween! Oct 31st GOLDILOXX is an NYC based monthly bear party for bears and their admirers. When you arrive you get to select a color coded cup for whatever your mood is. Follow us on instagram for more updates ! @goldiloxx Blue Cup=DTF Pink Cup=Kiss Orange Cup=Side Green Cup=Watch Club Purgatory is open 21+",
+      "cadence": null,
+      "address": "9 Carver Street, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/gifford_house",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJE9zxSn6n_IkRbOMJFiVbw_k",
+      "ticketUrl": "https://www.sickening.events/e/spookygoldiloxx/tickets",
+      "shortName": "GOLDILOXX",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/gifford_house",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJE9zxSn6n_IkRbOMJFiVbw_k",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.sickening.events/e/spookygoldiloxx/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "goldiloxx-spooky-bear-daytime-delight-47fb994c"
+    },
+    {
+      "name": "SPOOKY BEAR MARKETPLACE",
+      "day": "Saturday",
+      "time": "10AM-2:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2026-10-31T10:00:00",
+      "endDate": "2026-10-31T14:30:00",
+      "unprocessedDescription": "description: Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR \rROARING TWENTIES\nbar: Boatslip\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\naddress: 161 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: MARKETPLACE\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: spooky-bear-marketplace|2026-10-31|boatslip\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "D73169DA-2BF6-4E74-9B42-DA9DC154C32C",
+      "uid": "D73169DA-2BF6-4E74-9B42-DA9DC154C32C",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES",
+      "cadence": null,
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+      "shortName": "MARKETPLACE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "spooky-bear-marketplace-28f86b6e"
+    },
+    {
+      "name": "FURBALL",
+      "day": "Saturday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2026-07-11T22:00:00",
+      "unprocessedDescription": "description: PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY O\rPENING PARTY\nbar: Boatslip\naddress: 161 Commercial St, Provincetown, MA 02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg/v1/fill/w_560,h_700,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg\ncover: FREE FOR BEAR WEEK PACKAGE REGISTRANTS\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St\nkey: furball|2026-07-12|boatslip",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "D0D6C7F9-24C0-48F2-B9AB-8F785BF13389",
+      "uid": "D0D6C7F9-24C0-48F2-B9AB-8F785BF13389",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "cover": "FREE FOR BEAR WEEK PACKAGE REGISTRANTS",
+      "image": "https://static.wixstatic.com/media/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg/v1/fill/w_560,h_700,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY OPENING PARTY",
+      "cadence": null,
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026",
+      "shortName": "FUR-BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-51be4236"
+    },
+    {
       "name": "Riptide",
       "day": "Thursday",
       "time": "10PM",
@@ -62,6 +587,230 @@
         }
       ],
       "slug": "riptide-3342cdd1"
+    },
+    {
+      "name": "HIMBO / Jockstrap (Night 1 of 2)",
+      "day": "Thursday",
+      "time": "10PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0496268,
+        "lng": -70.1900224
+      },
+      "startDate": "2026-10-29T22:00:00",
+      "endDate": "2026-10-30T01:00:00",
+      "unprocessedDescription": "description: Night one of HIMBO / Jockstrap at Purgatory.\nbar:\r Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house\nkey: himbo-jockstrap-night-1-of-2)|2026-10-30|purgatory\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "B294E101-C461-4F2A-B6F1-5B50CC22078F",
+      "uid": "B294E101-C461-4F2A-B6F1-5B50CC22078F",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Purgatory",
+      "tea": "Night one of HIMBO / Jockstrap at Purgatory.",
+      "cadence": null,
+      "address": "SB",
+      "website": null,
+      "instagram": "https://www.instagram.com/gifford_house",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/gifford_house",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "himbo-jockstrap-night-1-of-2-75bc0deb"
+    },
+    {
+      "name": "Spooky Tea",
+      "day": "Saturday",
+      "time": "4PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2026-10-31T16:00:00",
+      "endDate": "2026-10-31T21:00:00",
+      "unprocessedDescription": "timezone: America/New_York\nwebsite: https://www.ursamen.org/sp\rookybear\nimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\nbar: Boatslip\naddress: 161 Commercial St, Provincetown, MA 02657\ninstagram: https://www.instagram.com/boatslipresort\nshortName: SPOOKY TEA\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: spooky-tea-spooky-bear-wknd|2026-10-31|boatslip\nbearSource: keyword\nimageHorizontal: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\ndescription: It's Spooky Bear Weekend's biggest Tea Dance. Special extended hours from 4p - 9p. Time enough for a couple of costume changes! Attire \\: It's Halloween. You know what to do.\npinSource: curated\naddressSource: curated\nimageSource: json-api\nbarSource: venue-site-identity\ngmaps: https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St%2C%20Provincetown%2C%20MA%2002657",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "A6FDC452-F814-4A77-A628-B03B0E6691D7",
+      "uid": "A6FDC452-F814-4A77-A628-B03B0E6691D7",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg",
+      "imageHorizontal": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "It's Spooky Bear Weekend's biggest Tea Dance. Special extended hours from 4p - 9p. Time enough for a couple of costume changes! Attire : It's Halloween. You know what to do.",
+      "cadence": null,
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/boatslipresort",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St%2C%20Provincetown%2C%20MA%2002657",
+      "shortName": "SPOOKY TEA",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/boatslipresort",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St%2C%20Provincetown%2C%20MA%2002657",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "spooky-tea-4387dbfb"
+    },
+    {
+      "name": "Loving Our Bear Bodies at Spooky Bear in Provincetown",
+      "day": "Friday",
+      "time": "11AM-1PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.049632,
+        "lng": -70.1900238
+      },
+      "startDate": "2026-10-30T11:00:00",
+      "endDate": "2026-10-30T13:00:00",
+      "unprocessedDescription": "bar: Wilde Playhouse at the Gifford House\naddress: 9 Carver St\rreet Provincetown, MA, 02657 United States\nimage: http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w\nimageSource: jsonld\ntimezone: America/New_York\ncover: $20–$60\nimageHorizontal: http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w\naddressSource: page\nwebsite: https://www.bearyoursoul.org/events/spookylobb\ngmaps: https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238\npinSource: geocoded-exact\nshortName: LOVING OUR BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: loving-our-bear-bodies-at-spooky-bear-in-provincetown|2026-10-30|wilde playhouse at the gifford house\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "BD0C5F62-DE60-4401-9A5E-38C6AD90598E",
+      "uid": "BD0C5F62-DE60-4401-9A5E-38C6AD90598E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Wilde Playhouse at the Gifford House",
+      "cover": "$20–$60",
+      "image": "http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w",
+      "imageHorizontal": "http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "cadence": null,
+      "address": "9 Carver Street Provincetown, MA, 02657 United States",
+      "website": "https://www.bearyoursoul.org/events/spookylobb",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238",
+      "shortName": "LOVING OUR BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearyoursoul.org/events/spookylobb",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "loving-our-bear-bodies-at-spooky-bear-in-provincetown-0b58d973"
+    },
+    {
+      "name": "The Belly Party (Bear Week)",
+      "day": "Friday",
+      "time": "10PM-11PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0510351,
+        "lng": -70.1876798
+      },
+      "startDate": "2026-07-17T22:00:00",
+      "endDate": "2026-07-17T23:00:00",
+      "unprocessedDescription": "description: ✨ BELLY is more than a party—it’s a MOVEMENT. ✨We \rcelebrate big bodies and the people who love them, creating nightlife where size isn’t a side note—it’s the spotlight. BELLY\\: Thick, Juicy, and Unapologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please email Members@massbearsandcubs.org‍\nbar: Red Room\naddress: 258 Commercial Street, Provincetown, MA, 02657\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg\nimageSource: json-api\nticketUrl: https://redroom.club/shows/376078\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\ninstagram: https://www.instagram.com/redroomptown\nkey: the-belly-party-bear-week|2026-07-18|red room\nbearSource: keyword\nshortName: THE BELLY PARTY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "A648996C-FBF3-4F80-B009-64E0FB665858",
+      "uid": "A648996C-FBF3-4F80-B009-64E0FB665858",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Red Room",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg",
+      "imageVertical": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg",
+      "tea": "✨ BELLY is more than a party—it’s a MOVEMENT. ✨We celebrate big bodies and the people who love them, creating nightlife where size isn’t a side note—it’s the spotlight. BELLY: Thick, Juicy, and Unapologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please email Members@massbearsandcubs.org‍",
+      "cadence": null,
+      "address": "258 Commercial Street, Provincetown, MA, 02657",
+      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw",
+      "instagram": "https://www.instagram.com/redroomptown",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "ticketUrl": "https://redroom.club/shows/376078",
+      "shortName": "THE BELLY PARTY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/redroomptown",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://redroom.club/shows/376078",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "the-belly-party-bear-week-68204385"
     },
     {
       "name": "Fat Slut: Spooky Bear",
@@ -128,6 +877,759 @@
         }
       ],
       "slug": "fat-slut-spooky-bear-1efd445e"
+    },
+    {
+      "name": "HALLOWEEN UNIFORM TEA - Spooky Bear Wknd",
+      "day": "Friday",
+      "time": "4PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2026-10-30T16:00:00",
+      "endDate": "2026-10-30T19:00:00",
+      "unprocessedDescription": "description: We love a man in uniform! Grab your gear and repor\rt for dance floor duty! Get your souvenir Dog Tag at the door. Extended Hours! ATTIRE\\: Camo, combat cool, or dog tag chic!\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\nimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg\nimageSource: page\nbar: Boatslip\nbarSource: venue-site-identity\naddress: 161 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: HALLOWEEN\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: halloween-uniform-tea-spooky-bear-wknd|2026-10-30|boatslip\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "E7B96007-26D6-47B4-A02F-1936820EC207",
+      "uid": "E7B96007-26D6-47B4-A02F-1936820EC207",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "We love a man in uniform! Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. Extended Hours! ATTIRE: Camo, combat cool, or dog tag chic!",
+      "cadence": null,
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+      "shortName": "HALLOWEEN",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "halloween-uniform-tea-spooky-bear-wknd-218c36f6"
+    },
+    {
+      "name": "SOLID GOLD TEA - Spooky Bear Wknd",
+      "day": "Thursday",
+      "time": "4PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2027-10-28T16:00:00",
+      "endDate": "2027-10-28T19:00:00",
+      "unprocessedDescription": "description: Provincetown’s ultimate disco revival! Classic 70s\r and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE\\: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\nimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg\nimageSource: page\nimageHorizontal: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg\nbar: Boatslip\nbarSource: venue-site-identity\naddress: 161 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: solid-gold-tea-spooky-bear-wknd|2027-10-28|boatslip\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "B11931C6-DF1A-4D4F-921A-95B70C8446F2",
+      "uid": "B11931C6-DF1A-4D4F-921A-95B70C8446F2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "imageHorizontal": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
+      "cadence": null,
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "solid-gold-tea-spooky-bear-wknd-20bdcce3"
+    },
+    {
+      "name": "URSAMEN MEET & GREET",
+      "day": "Friday",
+      "time": "5PM-8PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0502291,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-30T17:00:00",
+      "endDate": "2026-10-30T20:00:00",
+      "unprocessedDescription": "description: Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR \rROARING TWENTIES\nbar: Crown & Anchor\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0502291%2C-70.1876737\naddress: 247 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\nshortName: URSAMEN MEET & GREET\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: ursamen-meet-greet|2026-10-30|crown & anchor\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "ECFA7CBE-DB12-40F1-B977-59FD33783F92",
+      "uid": "ECFA7CBE-DB12-40F1-B977-59FD33783F92",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crown & Anchor",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES",
+      "cadence": null,
+      "address": "247 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0502291%2C-70.1876737",
+      "shortName": "URSAMEN MEET & GREET",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0502291%2C-70.1876737",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "ursamen-meet-greet-30b279d8"
+    },
+    {
+      "name": "Witch Perfect",
+      "day": "Saturday",
+      "time": "7PM-8:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0502291,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-31T19:00:00",
+      "endDate": "2026-10-31T20:30:00",
+      "unprocessedDescription": "description: Doors @ 6\\:30PM | Show @ 7\\:00PM Witch Perfect,\r is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul's Drag Race\\: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8's Alexis Michelle as Mary. The show features hits from such pop icons as Lady Gaga, Madonna and Cher, as well as Disney classics Little Mermaid and The Lion King.\nbar: Crown & Anchor\naddress: 247 Commercial St, Provencetown, MA 02657\nticketUrl: https://www.tryst.events/e/witch-perfect-10-31-2026/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png\ncover: $45-$75\naddressSource: page\nwebsite: https://tryst.events/e/witch-perfect-10-31-2026\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: witch-perfect|2026-10-31|crown & anchor\ntimezone: America/New_York\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png\nimageSource: json-api\nbarSource: curated\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "9E8225F7-D8D2-4C51-87AE-E0AAA848F382",
+      "uid": "9E8225F7-D8D2-4C51-87AE-E0AAA848F382",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crown & Anchor",
+      "cover": "$45-$75",
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png",
+      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Doors @ 6:30PM | Show @ 7:00PM Witch Perfect, is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul's Drag Race: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8's Alexis Michelle as Mary. The show features hits from such pop icons as Lady Gaga, Madonna and Cher, as well as Disney classics Little Mermaid and The Lion King.",
+      "cadence": null,
+      "address": "247 Commercial St, Provencetown, MA 02657",
+      "website": "https://tryst.events/e/witch-perfect-10-31-2026",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657",
+      "ticketUrl": "https://www.tryst.events/e/witch-perfect-10-31-2026/tickets",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://tryst.events/e/witch-perfect-10-31-2026",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tryst.events/e/witch-perfect-10-31-2026/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "witch-perfect-117cd24d"
+    },
+    {
+      "name": "FURBALL P'Town",
+      "day": "Tuesday",
+      "time": "10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0510476,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-08-18T22:00:00",
+      "unprocessedDescription": "description: Carnival Deep Sea Disco\nbar: Red Room\naddress: 2\r58 Commercial St, Provincetown, MA 02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week\nimage: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-p'town|2026-08-19|red room\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "42DA779D-6393-4D26-B639-49FBB415029D",
+      "uid": "42DA779D-6393-4D26-B639-49FBB415029D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Red Room",
+      "image": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
+      "imageVertical": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
+      "favicon": "https://linktr.ee/furballnyc",
+      "tea": "Carnival Deep Sea Disco",
+      "cadence": null,
+      "address": "258 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
+      "shortName": "FUR-BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-ptown-2d335fcd"
+    },
+    {
+      "name": "Motherdisco",
+      "day": "Friday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0502291,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-30T21:00:00",
+      "endDate": "2026-10-31T01:00:00",
+      "unprocessedDescription": "description: Motherdisco returns to Provincetown for a special \rSpooky Bear takeover at the Crown & Anchor. Dead Disco Prom is your invitation to dress up, get down, and dance all night to a high-energy mix of disco, house, and queer nightlife favorites. Expect killer looks, sweaty dancing, spooky glamour, and a packed dance floor as Motherdisco brings its signature NYC energy back to Ptown for Halloween.\nbar: Crown & Anchor\naddress: 247 Commercial Street, Provincetown, MA 02657\nticketUrl: https://www.tryst.events/e/mother-disco-spooky-bear/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png\ncover: $38\ntimezone: America/New_York\naddressSource: page\nwebsite: https://tryst.events/e/mother-disco-spooky-bear\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: motherdisco|2026-10-31|crown & anchor\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "A846A338-A48E-4DFF-A6AD-AD9CD5F73D58",
+      "uid": "A846A338-A48E-4DFF-A6AD-AD9CD5F73D58",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crown & Anchor",
+      "cover": "$38",
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png",
+      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Motherdisco returns to Provincetown for a special Spooky Bear takeover at the Crown & Anchor. Dead Disco Prom is your invitation to dress up, get down, and dance all night to a high-energy mix of disco, house, and queer nightlife favorites. Expect killer looks, sweaty dancing, spooky glamour, and a packed dance floor as Motherdisco brings its signature NYC energy back to Ptown for Halloween.",
+      "cadence": null,
+      "address": "247 Commercial Street, Provincetown, MA 02657",
+      "website": "https://tryst.events/e/mother-disco-spooky-bear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+      "ticketUrl": "https://www.tryst.events/e/mother-disco-spooky-bear/tickets",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://tryst.events/e/mother-disco-spooky-bear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tryst.events/e/mother-disco-spooky-bear/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "motherdisco-5a1935cb"
+    },
+    {
+      "name": "Dark Rooms:Jackie Cox",
+      "day": "Saturday",
+      "time": "7PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0510476,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-31T19:00:00",
+      "endDate": "2026-10-31T22:00:00",
+      "unprocessedDescription": "description: Back at the Red Room for her third Spooky Bear (an\rd somehow still allowed back), Jackie Cox invites you to DARKROOMS her filthiest adults-only cabaret yet! Loosely inspired (and we cannot emphasize loosely enough) by the hit horror film Backrooms , Jackie slips through the wrong door (which, historically, is how most of her best nights begin) and plunges headfirst into a shadowy labyrinth of sex, camp, strange men, and stains best left unidentified. But don’t worry, scaredy-cats\\: DARKROOMS is only as scary as your clinic checkup will be the week after Halloween...\nbar: Red Room\naddress: 258 Commercial St, Provincetown, MA 02657\nimage: https://files.seatengine.com/talent/headshots/photos/95664/full/data\ntimezone: America/New_York\naddressSource: curated\nwebsite: https://redroom.club/shows/386124\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://www.instagram.com/redroomptown\nkey: dark-rooms-jackie-cox|2026-10-31|red room\nimageSource: jsonld\nbarSource: curated\nbearSource: keyword\nshortName: DARK ROOMS\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "8DEABFD1-F6CA-4770-B812-7D8DC86FA487",
+      "uid": "8DEABFD1-F6CA-4770-B812-7D8DC86FA487",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Red Room",
+      "image": "https://files.seatengine.com/talent/headshots/photos/95664/full/data",
+      "tea": "Back at the Red Room for her third Spooky Bear (and somehow still allowed back), Jackie Cox invites you to DARKROOMS her filthiest adults-only cabaret yet! Loosely inspired (and we cannot emphasize loosely enough) by the hit horror film Backrooms , Jackie slips through the wrong door (which, historically, is how most of her best nights begin) and plunges headfirst into a shadowy labyrinth of sex, camp, strange men, and stains best left unidentified. But don’t worry, scaredy-cats: DARKROOMS is only as scary as your clinic checkup will be the week after Halloween...",
+      "cadence": null,
+      "address": "258 Commercial St, Provincetown, MA 02657",
+      "website": "https://redroom.club/shows/386124",
+      "instagram": "https://www.instagram.com/redroomptown",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "shortName": "DARK ROOMS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://redroom.club/shows/386124",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/redroomptown",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "dark-roomsjackie-cox-717efe20"
+    },
+    {
+      "name": "HIMBO / Jockstrap (Night 2 of 2)",
+      "day": "Friday",
+      "time": "10PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0496268,
+        "lng": -70.1900224
+      },
+      "startDate": "2026-10-30T22:00:00",
+      "endDate": "2026-10-31T01:00:00",
+      "unprocessedDescription": "description: Night two of HIMBO / Jockstrap at Purgatory.\nbar:\r Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house\nkey: himbo-jockstrap-night-2-of-2)|2026-10-31|purgatory\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "02D26467-021B-44C5-AA44-004F9BA89370",
+      "uid": "02D26467-021B-44C5-AA44-004F9BA89370",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Purgatory",
+      "tea": "Night two of HIMBO / Jockstrap at Purgatory.",
+      "cadence": null,
+      "address": "SB",
+      "website": null,
+      "instagram": "https://www.instagram.com/gifford_house",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/gifford_house",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "himbo-jockstrap-night-2-of-2-5eb156ad"
+    },
+    {
+      "name": "Death Becomes Them",
+      "day": "Saturday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0502291,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-31T21:00:00",
+      "endDate": "2026-11-01T01:00:00",
+      "unprocessedDescription": "bar: Crown & Anchor\nticketUrl: https://www.tryst.events/e/deat\rh-becomes-them-spooky-bear/tickets\ntimezone: America/New_York\nshortName: DEATH BECOMES THEM\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: death-becomes-them|2026-11-01|crown & anchor\nbearSource: keyword\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg\ncover: $20-$25\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg\ndescription: Step into a decadent night of glamour, drag, dancing, and deliciously dark surprises at Death Becomes Them, a Roaring Twenties Halloween Costume Ball at the Crown & Anchor. Featuring killer performances by Jan Sport & Tina Burner with music by Jake Glass and VJ Tom Yaz keeping the party alive all night long. Dress to impress, because we’re searching for the most drop dead gorgeous look of the night. Enter the Costume Contest for your chance to take home the $500 Grand Prize. October 31 at 9 PMCrown & Anchor, Provincetown Come glamorous.\naddress: 247 Commercial Street, Provincetown, MA 02657\nwebsite: https://tryst.events/e/death-becomes-them-spooky-bear\npinSource: curated\naddressSource: page\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "3896CDD2-87E1-4BD0-9B28-30AAC665BA5A",
+      "uid": "3896CDD2-87E1-4BD0-9B28-30AAC665BA5A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Crown & Anchor",
+      "cover": "$20-$25",
+      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg",
+      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Step into a decadent night of glamour, drag, dancing, and deliciously dark surprises at Death Becomes Them, a Roaring Twenties Halloween Costume Ball at the Crown & Anchor. Featuring killer performances by Jan Sport & Tina Burner with music by Jake Glass and VJ Tom Yaz keeping the party alive all night long. Dress to impress, because we’re searching for the most drop dead gorgeous look of the night. Enter the Costume Contest for your chance to take home the $500 Grand Prize. October 31 at 9 PMCrown & Anchor, Provincetown Come glamorous.",
+      "cadence": null,
+      "address": "247 Commercial Street, Provincetown, MA 02657",
+      "website": "https://tryst.events/e/death-becomes-them-spooky-bear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+      "ticketUrl": "https://www.tryst.events/e/death-becomes-them-spooky-bear/tickets",
+      "shortName": "DEATH BECOMES THEM",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://tryst.events/e/death-becomes-them-spooky-bear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.tryst.events/e/death-becomes-them-spooky-bear/tickets",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "death-becomes-them-7bb47d4b"
+    },
+    {
+      "name": "BEARS IN THE DUNES",
+      "day": "Saturday",
+      "time": "9:30AM-12:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0521768,
+        "lng": -70.1860137
+      },
+      "startDate": "2026-10-31T09:30:00",
+      "endDate": "2026-10-31T12:30:00",
+      "unprocessedDescription": "description: Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR \rROARING TWENTIES\nbar: ART'S DUNE TOURS\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0521768%2C-70.1860137\naddress: 308 Commercial Street, Provincetown, Massachusetts\naddressSource: curated\npinSource: curated\nshortName: BEARS IN THE DUNES\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: bears-in-the-dunes|2026-10-31|art's dune tours\nbearSource: keyword\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "86B52218-77B4-4A88-B7D4-92EDC6CE01F5",
+      "uid": "86B52218-77B4-4A88-B7D4-92EDC6CE01F5",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "ART'S DUNE TOURS",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES",
+      "cadence": null,
+      "address": "308 Commercial Street, Provincetown, Massachusetts",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0521768%2C-70.1860137",
+      "shortName": "BEARS IN THE DUNES",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0521768%2C-70.1860137",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bears-in-the-dunes-5e1eb455"
+    },
+    {
+      "name": "Goldiloxx: Tricks & Treat",
+      "day": "Saturday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0496268,
+        "lng": -70.1900224
+      },
+      "startDate": "2026-10-31T00:00:00",
+      "endDate": "2026-11-01T00:00:00",
+      "unprocessedDescription": "description: Goldiloxx brings Tricks & Treat to Purgatory for H\ralloween night.\nbar: Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instagram.com/goldiloxx__\nshortName: GOLDI­LOXX\nshorterName: GLX\nfavicon: https://linktr.ee/goldiloxx\nkey: goldiloxx-tricks-treat|2026-10-31|purgatory\ntimeUnknown: true\nbearSource: ai",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": false,
+      "sourceUid": "C2CA8263-B167-4BC8-9AF6-87738E966BCA",
+      "uid": "C2CA8263-B167-4BC8-9AF6-87738E966BCA",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Purgatory",
+      "favicon": "https://linktr.ee/goldiloxx",
+      "tea": "Goldiloxx brings Tricks & Treat to Purgatory for Halloween night.",
+      "cadence": null,
+      "address": "SB",
+      "website": null,
+      "instagram": "https://www.instagram.com/goldiloxx__",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+      "shortName": "GOLDI­LOXX",
+      "shorterName": "GLX",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/goldiloxx__",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "goldiloxx-tricks-treat-6a67edae"
+    },
+    {
+      "name": "SANCTUM PARANORMAL GHOST TOUR",
+      "day": "Friday",
+      "time": "8PM-10PM",
+      "eventType": "routine",
+      "recurring": false,
+      "startDate": "2026-10-30T20:00:00",
+      "endDate": "2026-10-30T22:00:00",
+      "unprocessedDescription": "description: Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR \rROARING TWENTIES\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/search/?api=1&query=provincetown\nshortName: SANCTUM\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: sanctum-paranormal-ghost-tour|2026-10-31|\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "5A7FFAB9-2DD1-49E5-B1D7-4314AE28AF5B",
+      "uid": "5A7FFAB9-2DD1-49E5-B1D7-4314AE28AF5B",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES",
+      "cadence": null,
+      "address": null,
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=provincetown",
+      "shortName": "SANCTUM",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=provincetown",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "sanctum-paranormal-ghost-tour-1d7b42bf"
+    },
+    {
+      "name": "The Belly Party - SPOOKY BEAR!",
+      "day": "Friday",
+      "time": "9PM-1AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0510476,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-30T21:00:00",
+      "endDate": "2026-10-31T01:00:00",
+      "unprocessedDescription": "bar: Red Room\naddress: 258 Commercial Street Provincetown, Ma\rssachusetts, 02657 United States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\ntimezone: America/New_York\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\naddressSource: page\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: the-belly-party-spooky-bear|2026-10-31|red room\ndescription: BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "34E17B66-94AA-4026-AC08-441617D79F1E",
+      "uid": "34E17B66-94AA-4026-AC08-441617D79F1E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Red Room",
+      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
+      "imageVertical": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.",
+      "cadence": null,
+      "address": "258 Commercial Street Provincetown, Massachusetts, 02657 United States",
+      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "the-belly-party-spooky-bear-4b3e1332"
     },
     {
       "name": "FURBALL:Howl Underwear and Gear Party",
@@ -257,44 +1759,221 @@
       "slug": "witch-perfect-6321d1bb"
     },
     {
-      "name": "The Belly Party (Bear Week)",
-      "day": "Friday",
-      "time": "10PM-11PM",
+      "name": "SPOOKY TEA - Spooky Bear Wknd",
+      "day": "Saturday",
+      "time": "4PM-9PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 42.0510351,
-        "lng": -70.1876798
+        "lat": 42.0470329,
+        "lng": -70.1901852
       },
-      "startDate": "2026-07-17T22:00:00",
-      "endDate": "2026-07-17T23:00:00",
-      "unprocessedDescription": "description: ✨ BELLY is more than a party—it’s a MOVEMENT. ✨We \rcelebrate big bodies and the people who love them, creating nightlife where size isn’t a side note—it’s the spotlight. BELLY\\: Thick, Juicy, and Unapologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please email Members@massbearsandcubs.org‍\nbar: Red Room\naddress: 258 Commercial Street, Provincetown, MA, 02657\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg\nimageSource: json-api\nticketUrl: https://redroom.club/shows/376078\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg\npinSource: page\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\ninstagram: https://www.instagram.com/redroomptown\nkey: the-belly-party-bear-week|2026-07-18|red room\nbearSource: keyword\nshortName: THE BELLY PARTY",
+      "startDate": "2027-10-30T16:00:00",
+      "endDate": "2027-10-30T21:00:00",
+      "unprocessedDescription": "description: It's Spooky Bear Weekend's biggest Tea Dance. Spec\rial extended hours from 4p - 9p. Time enough for a couple of costume changes! Attire \\: It's Halloween. You know what to do.\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\nimage: https://files.elfsight.com/storage/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\nimageSource: page\nimageHorizontal: https://files.elfsight.com/storage/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\nbar: Boatslip\nbarSource: venue-site-identity\naddress: 161 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: spooky-tea-spooky-bear-wknd|2027-10-30|boatslip\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "A648996C-FBF3-4F80-B009-64E0FB665858",
-      "uid": "A648996C-FBF3-4F80-B009-64E0FB665858",
+      "sourceUid": "F077976E-F0FE-44B4-A289-B9BF086C20CC",
+      "uid": "F077976E-F0FE-44B4-A289-B9BF086C20CC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "image": "https://files.elfsight.com/storage/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg",
+      "imageHorizontal": "https://files.elfsight.com/storage/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "It's Spooky Bear Weekend's biggest Tea Dance. Special extended hours from 4p - 9p. Time enough for a couple of costume changes! Attire : It's Halloween. You know what to do.",
+      "cadence": null,
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "spooky-tea-spooky-bear-wknd-36ef28fc"
+    },
+    {
+      "name": "HALLOWEEN UNIFORM TEA - Spooky Bear Wknd",
+      "day": "Friday",
+      "time": "4PM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0470329,
+        "lng": -70.1901852
+      },
+      "startDate": "2027-10-29T16:00:00",
+      "endDate": "2027-10-29T19:00:00",
+      "unprocessedDescription": "description: We love a man in uniform! Grab your gear and repor\rt for dance floor duty! Get your souvenir Dog Tag at the door. Extended Hours! ATTIRE\\: Camo, combat cool, or dog tag chic!\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\nimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg\nimageSource: page\nbar: Boatslip\nbarSource: venue-site-identity\naddress: 161 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: halloween-uniform-tea-spooky-bear-wknd|2027-10-29|boatslip\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "F636F271-D756-4983-A2D9-BE86CA32E7E0",
+      "uid": "F636F271-D756-4983-A2D9-BE86CA32E7E0",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Boatslip",
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/0a322652-9738-471a-8ba0-87821f0cf7d3/DogTagTea.jpg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "We love a man in uniform! Grab your gear and report for dance floor duty! Get your souvenir Dog Tag at the door. Extended Hours! ATTIRE: Camo, combat cool, or dog tag chic!",
+      "cadence": null,
+      "address": "161 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+      "shortName": "SPOOKY BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.ursamen.org/spookybear",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "halloween-uniform-tea-spooky-bear-wknd-28553d66"
+    },
+    {
+      "name": "Loving Our Bear Bodies at Spooky Bear in Provincetown",
+      "day": "Saturday",
+      "time": "11AM-1PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.049632,
+        "lng": -70.1900238
+      },
+      "startDate": "2026-10-31T11:00:00",
+      "endDate": "2026-10-31T13:00:00",
+      "unprocessedDescription": "bar: Wilde Playhouse at the Gifford House\naddress: 9 Carver St\rreet Provincetown, MA, 02657 United States\nimage: http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w\nimageSource: jsonld\ntimezone: America/New_York\ncover: $20–$60\nimageHorizontal: http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w\naddressSource: page\nwebsite: https://www.bearyoursoul.org/events/spookylobb\ngmaps: https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238\npinSource: geocoded-exact\nshortName: LOVING OUR BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: loving-our-bear-bodies-at-spooky-bear-in-provincetown|2026-10-31|wilde playhouse at the gifford house\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "1065C652-75CD-452D-85F5-5BDE7DEC811E",
+      "uid": "1065C652-75CD-452D-85F5-5BDE7DEC811E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Wilde Playhouse at the Gifford House",
+      "cover": "$20–$60",
+      "image": "http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w",
+      "imageHorizontal": "http://static1.squarespace.com/static/59b83821f14aa11bc991b53e/t/6aba57171442a177e7641d9f/1790596887819/SPOOKYLOBBSOCIAL2.jpg?format=1500w",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "cadence": null,
+      "address": "9 Carver Street Provincetown, MA, 02657 United States",
+      "website": "https://www.bearyoursoul.org/events/spookylobb",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238",
+      "shortName": "LOVING OUR BEAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.bearyoursoul.org/events/spookylobb",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/ne.ursamen",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.049632%2C-70.1900238",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "loving-our-bear-bodies-at-spooky-bear-in-provincetown-047b8a84"
+    },
+    {
+      "name": "Thirsty Burlington in Spooky Cher",
+      "day": "Friday",
+      "time": "8:30PM-11:30PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 42.0510476,
+        "lng": -70.1876737
+      },
+      "startDate": "2026-10-30T20:30:00",
+      "endDate": "2026-10-30T23:30:00",
+      "unprocessedDescription": "description: Thirsty is back for one night only in Spooky Cher \rfor Spooky Bear!\nbar: Red Room\naddress: 258 Commercial St, Provincetown, MA 02657\nimage: https://files.seatengine.com/talent/headshots/photos/95187/full/data\ntimezone: America/New_York\naddressSource: curated\nwebsite: https://redroom.club/shows/385716\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://www.instagram.com/redroomptown\nkey: thirsty-burlington-in-spooky-cher|2026-10-31|red room\nimageSource: jsonld\nbarSource: curated\nbearSource: keyword\nshortName: THIRSTY\nendUnknown: true",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/New_York",
+      "wasUTC": true,
+      "sourceUid": "072E66C2-5D02-4DF6-865C-EBCFC942B84C",
+      "uid": "072E66C2-5D02-4DF6-865C-EBCFC942B84C",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Red Room",
-      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg",
-      "imageVertical": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1781036514761-J0R00UEEWE66FZXFBH0P/BELLY+INSTGRAM+SIZE.jpg",
-      "tea": "✨ BELLY is more than a party—it’s a MOVEMENT. ✨We celebrate big bodies and the people who love them, creating nightlife where size isn’t a side note—it’s the spotlight. BELLY: Thick, Juicy, and Unapologetic. 🍑 MBC Members get one Free entry to BELLY per year. Please email Members@massbearsandcubs.org‍",
+      "image": "https://files.seatengine.com/talent/headshots/photos/95187/full/data",
+      "tea": "Thirsty is back for one night only in Spooky Cher for Spooky Bear!",
       "cadence": null,
-      "address": "258 Commercial Street, Provincetown, MA, 02657",
-      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw",
+      "address": "258 Commercial St, Provincetown, MA 02657",
+      "website": "https://redroom.club/shows/385716",
       "instagram": "https://www.instagram.com/redroomptown",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
-      "ticketUrl": "https://redroom.club/shows/376078",
-      "shortName": "THE BELLY PARTY",
+      "shortName": "THIRSTY",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-gfpnw",
+          "url": "https://redroom.club/shows/385716",
           "label": "🌐 Website"
         },
         {
@@ -306,117 +1985,48 @@
           "type": "gmaps",
           "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
           "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://redroom.club/shows/376078",
-          "label": "🎫 Tickets"
         }
       ],
-      "slug": "the-belly-party-bear-week-68204385"
+      "slug": "thirsty-burlington-in-spooky-cher-0f2e7fbb"
     },
     {
-      "name": "The Belly Party - SPOOKY BEAR!",
-      "day": "Friday",
-      "time": "9PM-1AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 42.0510476,
-        "lng": -70.1876737
-      },
-      "startDate": "2026-10-30T21:00:00",
-      "endDate": "2026-10-31T01:00:00",
-      "unprocessedDescription": "bar: Red Room\naddress: 258 Commercial Street Provincetown, Ma\rssachusetts, 02657 United States\nimage: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\ntimezone: America/New_York\nimageVertical: https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg\naddressSource: page\nwebsite: https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak\npinSource: curated\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: the-belly-party-spooky-bear|2026-10-31|red room\ndescription: BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "34E17B66-94AA-4026-AC08-441617D79F1E",
-      "uid": "34E17B66-94AA-4026-AC08-441617D79F1E",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Red Room",
-      "image": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
-      "imageVertical": "https://images.squarespace-cdn.com/content/v1/6631a0e7f9603f6ecaf1e6c7/1789074941406-7ODIATQ69FMKX6E1MXX5/BELLY+INSTGRAM+SIZE.jpg",
-      "favicon": "https://www.ursamen.org/spookybear",
-      "tea": "BOSTON’S hottest chubby party is coming to PTOWN for Spooky Bear Weekend—and we’re bringing the HEAT.",
-      "cadence": null,
-      "address": "258 Commercial Street Provincetown, Massachusetts, 02657 United States",
-      "website": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
-      "instagram": "https://www.instagram.com/ne.ursamen",
-      "facebook": "https://www.facebook.com/NEUrsamen",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
-      "shortName": "SPOOKY BEAR",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/ne.ursamen",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/NEUrsamen",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "the-belly-party-spooky-bear-4b3e1332"
-    },
-    {
-      "name": "Motherdisco",
-      "day": "Friday",
-      "time": "9PM-1AM",
+      "name": "SPOOKY BEAR BINGO",
+      "day": "Saturday",
+      "time": "2PM-4:30PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 42.0502291,
         "lng": -70.1876737
       },
-      "startDate": "2026-10-30T21:00:00",
-      "endDate": "2026-10-31T01:00:00",
-      "unprocessedDescription": "description: Motherdisco returns to Provincetown for a special \rSpooky Bear takeover at the Crown & Anchor. Dead Disco Prom is your invitation to dress up, get down, and dance all night to a high-energy mix of disco, house, and queer nightlife favorites. Expect killer looks, sweaty dancing, spooky glamour, and a packed dance floor as Motherdisco brings its signature NYC energy back to Ptown for Halloween.\nbar: Crown & Anchor\naddress: 247 Commercial Street, Provincetown, MA 02657\nticketUrl: https://www.tryst.events/e/mother-disco-spooky-bear/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png\ncover: $38\ntimezone: America/New_York\naddressSource: page\nwebsite: https://tryst.events/e/mother-disco-spooky-bear\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: motherdisco|2026-10-31|crown & anchor\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png\nimageSource: json-api\nbarSource: curated\nbearSource: keyword",
+      "startDate": "2026-10-31T14:00:00",
+      "endDate": "2026-10-31T16:30:00",
+      "unprocessedDescription": "description: DOORS OPEN AT 1\\:30 PM Part of THE NORTHEAST URSA\rMEN PRESENT SPOOKY BEAR ROARING TWENTIES\nbar: Crown & Anchor\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0502291%2C-70.1876737\naddress: 247 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\nshortName: BINGO\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: spooky-bear-bingo|2026-10-31|crown & anchor\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "A846A338-A48E-4DFF-A6AD-AD9CD5F73D58",
-      "uid": "A846A338-A48E-4DFF-A6AD-AD9CD5F73D58",
+      "sourceUid": "A1D476B4-CD9B-4754-9AA1-112B4382D18B",
+      "uid": "A1D476B4-CD9B-4754-9AA1-112B4382D18B",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Crown & Anchor",
-      "cover": "$38",
-      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png",
-      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/08/Untitled-design-14.png",
       "favicon": "https://www.ursamen.org/spookybear",
-      "tea": "Motherdisco returns to Provincetown for a special Spooky Bear takeover at the Crown & Anchor. Dead Disco Prom is your invitation to dress up, get down, and dance all night to a high-energy mix of disco, house, and queer nightlife favorites. Expect killer looks, sweaty dancing, spooky glamour, and a packed dance floor as Motherdisco brings its signature NYC energy back to Ptown for Halloween.",
+      "tea": "DOORS OPEN AT 1:30 PM Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES",
       "cadence": null,
-      "address": "247 Commercial Street, Provincetown, MA 02657",
-      "website": "https://tryst.events/e/mother-disco-spooky-bear",
+      "address": "247 Commercial St, Provincetown, MA 02657",
+      "website": "https://www.ursamen.org/spookybear",
       "instagram": "https://www.instagram.com/ne.ursamen",
       "facebook": "https://www.facebook.com/NEUrsamen",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
-      "ticketUrl": "https://www.tryst.events/e/mother-disco-spooky-bear/tickets",
-      "shortName": "SPOOKY BEAR",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0502291%2C-70.1876737",
+      "shortName": "BINGO",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://tryst.events/e/mother-disco-spooky-bear",
+          "url": "https://www.ursamen.org/spookybear",
           "label": "🌐 Website"
         },
         {
@@ -431,182 +2041,63 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0502291%2C-70.1876737",
           "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.tryst.events/e/mother-disco-spooky-bear/tickets",
-          "label": "🎫 Tickets"
         }
       ],
-      "slug": "motherdisco-5a1935cb"
+      "slug": "spooky-bear-bingo-0ac9266f"
     },
     {
-      "name": "Death Becomes Them",
-      "day": "Saturday",
-      "time": "9PM-1AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 42.0502291,
-        "lng": -70.1876737
-      },
-      "startDate": "2026-10-31T21:00:00",
-      "endDate": "2026-11-01T01:00:00",
-      "unprocessedDescription": "description: Step into a decadent night of glamour, drag, dan\rcing, and deliciously dark surprises at Death Becomes Them, a Roaring Twenties Halloween Costume Ball at the Crown & Anchor. Featuring killer performances by Jan Sport & Tina Burner with music by Jake Glass and VJ Tom Yaz keeping the party alive all night long. Dress to impress, because we’re searching for the most drop dead gorgeous look of the night. Enter the Costume Contest for your chance to take home the $500 Grand Prize. October 31 at 9 PMCrown & Anchor, Provincetown Come glamorous.\nbar: Crown & Anchor\naddress: 247 Commercial Street, Provincetown, MA 02657\nticketUrl: https://www.tryst.events/e/death-becomes-them-spooky-bear/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg\ncover: $27\ntimezone: America/New_York\naddressSource: page\nwebsite: https://tryst.events/e/death-becomes-them-spooky-bear\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: death-becomes-them|2026-11-01|crown & anchor\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg\nimageSource: json-api\nbarSource: curated\nbearSource: ai",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "3896CDD2-87E1-4BD0-9B28-30AAC665BA5A",
-      "uid": "3896CDD2-87E1-4BD0-9B28-30AAC665BA5A",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Crown & Anchor",
-      "cover": "$27",
-      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg",
-      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/09/IMG_4263-819x1024.jpeg",
-      "favicon": "https://www.ursamen.org/spookybear",
-      "tea": "Step into a decadent night of glamour, drag, dancing, and deliciously dark surprises at Death Becomes Them, a Roaring Twenties Halloween Costume Ball at the Crown & Anchor. Featuring killer performances by Jan Sport & Tina Burner with music by Jake Glass and VJ Tom Yaz keeping the party alive all night long. Dress to impress, because we’re searching for the most drop dead gorgeous look of the night. Enter the Costume Contest for your chance to take home the $500 Grand Prize. October 31 at 9 PMCrown & Anchor, Provincetown Come glamorous.",
-      "cadence": null,
-      "address": "247 Commercial Street, Provincetown, MA 02657",
-      "website": "https://tryst.events/e/death-becomes-them-spooky-bear",
-      "instagram": "https://www.instagram.com/ne.ursamen",
-      "facebook": "https://www.facebook.com/NEUrsamen",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
-      "ticketUrl": "https://www.tryst.events/e/death-becomes-them-spooky-bear/tickets",
-      "shortName": "SPOOKY BEAR",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://tryst.events/e/death-becomes-them-spooky-bear",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/ne.ursamen",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/NEUrsamen",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20Street%2C%20Provincetown%2C%20MA%2002657",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.tryst.events/e/death-becomes-them-spooky-bear/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "death-becomes-them-7bb47d4b"
-    },
-    {
-      "name": "FURBALL",
-      "day": "Saturday",
-      "time": "10PM",
+      "name": "SOLID GOLD TEA - Spooky Bear Wknd",
+      "day": "Sunday",
+      "time": "4PM-7PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 42.0470329,
         "lng": -70.1901852
       },
-      "startDate": "2026-07-11T22:00:00",
-      "unprocessedDescription": "description: PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY O\rPENING PARTY\nbar: Boatslip\naddress: 161 Commercial St, Provincetown, MA 02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg/v1/fill/w_560,h_700,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg\ncover: FREE FOR BEAR WEEK PACKAGE REGISTRANTS\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St\nkey: furball|2026-07-12|boatslip",
+      "startDate": "2027-10-31T16:00:00",
+      "endDate": "2027-10-31T19:00:00",
+      "unprocessedDescription": "description: Provincetown’s ultimate disco revival! Classic 70s\r and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE\\: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\nimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg\nimageSource: page\nimageHorizontal: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg\nbar: Boatslip\nbarSource: venue-site-identity\naddress: 161 Commercial St, Provincetown, MA 02657\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\ninstagram: https://www.instagram.com/ne.ursamen\nshortName: SPOOKY BEAR\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: solid-gold-tea-spooky-bear-wknd|2027-10-31|boatslip\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "D0D6C7F9-24C0-48F2-B9AB-8F785BF13389",
-      "uid": "D0D6C7F9-24C0-48F2-B9AB-8F785BF13389",
+      "sourceUid": "41175FE6-E222-44E4-800B-EE162D0FDC2D",
+      "uid": "41175FE6-E222-44E4-800B-EE162D0FDC2D",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Boatslip",
-      "cover": "FREE FOR BEAR WEEK PACKAGE REGISTRANTS",
-      "image": "https://static.wixstatic.com/media/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg/v1/fill/w_560,h_700,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_4a9e61a8ba4b43bd857ed15af7901591~mv2.jpg",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "PROVINCETOWN BEAR WEEK OFFICIAL 26TH ANNIVERSARY OPENING PARTY",
+      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "imageHorizontal": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/fb36cc9b-d26a-4a52-8975-c3e6b43c062d/SolidGold.jpg",
+      "favicon": "https://www.ursamen.org/spookybear",
+      "tea": "Provincetown’s ultimate disco revival! Classic 70s and 80s dance hits remixed, remade and replayed by DJ Maryalice. Studio 54 meets Boogie Nights! ATTIRE: Sequins, satin, big hair, bell-bottoms, and bold accessories. Disco chic, gold dresses, or flashy jumpsuits—make it solid gold!",
       "cadence": null,
       "address": "161 Commercial St, Provincetown, MA 02657",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St",
-      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026",
-      "shortName": "FUR-BALL",
+      "website": "https://www.ursamen.org/spookybear",
+      "instagram": "https://www.instagram.com/ne.ursamen",
+      "facebook": "https://www.facebook.com/NEUrsamen",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
+      "shortName": "SPOOKY BEAR",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.furball.nyc",
+          "url": "https://www.ursamen.org/spookybear",
           "label": "🌐 Website"
         },
         {
           "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
+          "url": "https://www.instagram.com/ne.ursamen",
           "label": "📷 Instagram"
         },
         {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Boatslip%2C%20161%20Commercial%20St",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-official-bear-week-underwear-opening-party-2026",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "furball-51be4236"
-    },
-    {
-      "name": "Spooky Tea",
-      "day": "Saturday",
-      "time": "4PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 42.0470329,
-        "lng": -70.1901852
-      },
-      "startDate": "2026-10-31T16:00:00",
-      "endDate": "2026-10-31T21:00:00",
-      "unprocessedDescription": "description: Spooky Bear Weekend's biggest tea dance. Special e\rxtended hours from 4 to 9 PM, time enough for a couple of costume changes! Attire\\: it's Halloween, you know what to do.\nbar: Boatslip\naddress: SB\nimage: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\nimageSource: json-api\ntimezone: America/New_York\nimageHorizontal: https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc\npinSource: curated\ninstagram: https://www.instagram.com/boatslipresort\nkey: spooky-tea|2026-10-31|boatslip\nbearSource: keyword\nshortName: SPOOKY TEA",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "A6FDC452-F814-4A77-A628-B03B0E6691D7",
-      "uid": "A6FDC452-F814-4A77-A628-B03B0E6691D7",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Boatslip",
-      "image": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg",
-      "imageHorizontal": "https://files.elfsightcdn.com/a294b4f2-c73a-4124-83f8-b31fc72fe065/9fed54e3-0ca5-4585-a114-e0f6b03a618d/SpookyTea.jpg",
-      "tea": "Spooky Bear Weekend's biggest tea dance. Special extended hours from 4 to 9 PM, time enough for a couple of costume changes! Attire: it's Halloween, you know what to do.",
-      "cadence": null,
-      "address": "SB",
-      "website": null,
-      "instagram": "https://www.instagram.com/boatslipresort",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
-      "shortName": "SPOOKY TEA",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/boatslipresort",
-          "label": "📷 Instagram"
+          "type": "facebook",
+          "url": "https://www.facebook.com/NEUrsamen",
+          "label": "📘 Facebook"
         },
         {
           "type": "gmaps",
@@ -614,199 +2105,46 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "spooky-tea-4387dbfb"
+      "slug": "solid-gold-tea-spooky-bear-wknd-6eb5e545"
     },
     {
-      "name": "FURBALL P'Town",
-      "day": "Tuesday",
-      "time": "10PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 42.0510476,
-        "lng": -70.1876737
-      },
-      "startDate": "2026-08-18T22:00:00",
-      "unprocessedDescription": "description: Carnival Deep Sea Disco\nbar: Red Room\naddress: 2\r58 Commercial St, Provincetown, MA 02657\ntimezone: America/New_York\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week\nimage: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg\nwebsite: https://www.furball.nyc\ninstagram: https://instagram.com/furballnyc/\nshortName: FUR-BALL\nfavicon: https://linktr.ee/furballnyc\nkey: furball-p'town|2026-08-19|red room\nbearSource: keyword\npinSource: curated\naddressSource: curated\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "42DA779D-6393-4D26-B639-49FBB415029D",
-      "uid": "42DA779D-6393-4D26-B639-49FBB415029D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Red Room",
-      "image": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
-      "imageVertical": "https://static.wixstatic.com/media/238fae_67817ca3aad448c59fa804866d89bd92~mv2.jpg",
-      "favicon": "https://linktr.ee/furballnyc",
-      "tea": "Carnival Deep Sea Disco",
-      "cadence": null,
-      "address": "258 Commercial St, Provincetown, MA 02657",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
-      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
-      "shortName": "FUR-BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJqbgqyVOn_IkRIAI-jRz2eak",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-underwear-party-carnival-week",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "furball-ptown-2d335fcd"
-    },
-    {
-      "name": "HIMBO / Jockstrap (Night 1 of 2)",
-      "day": "Thursday",
-      "time": "10PM-1AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 42.0496268,
-        "lng": -70.1900224
-      },
-      "startDate": "2026-10-29T22:00:00",
-      "endDate": "2026-10-30T01:00:00",
-      "unprocessedDescription": "description: Night one of HIMBO / Jockstrap at Purgatory.\nbar:\r Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house\nkey: himbo-jockstrap-night-1-of-2)|2026-10-30|purgatory\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "B294E101-C461-4F2A-B6F1-5B50CC22078F",
-      "uid": "B294E101-C461-4F2A-B6F1-5B50CC22078F",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Purgatory",
-      "tea": "Night one of HIMBO / Jockstrap at Purgatory.",
-      "cadence": null,
-      "address": "SB",
-      "website": null,
-      "instagram": "https://www.instagram.com/gifford_house",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/gifford_house",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "himbo-jockstrap-night-1-of-2-75bc0deb"
-    },
-    {
-      "name": "HIMBO / Jockstrap (Night 2 of 2)",
-      "day": "Friday",
-      "time": "10PM-1AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 42.0496268,
-        "lng": -70.1900224
-      },
-      "startDate": "2026-10-30T22:00:00",
-      "endDate": "2026-10-31T01:00:00",
-      "unprocessedDescription": "description: Night two of HIMBO / Jockstrap at Purgatory.\nbar:\r Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instagram.com/gifford_house\nkey: himbo-jockstrap-night-2-of-2)|2026-10-31|purgatory\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": true,
-      "sourceUid": "02D26467-021B-44C5-AA44-004F9BA89370",
-      "uid": "02D26467-021B-44C5-AA44-004F9BA89370",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Purgatory",
-      "tea": "Night two of HIMBO / Jockstrap at Purgatory.",
-      "cadence": null,
-      "address": "SB",
-      "website": null,
-      "instagram": "https://www.instagram.com/gifford_house",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/gifford_house",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "himbo-jockstrap-night-2-of-2-5eb156ad"
-    },
-    {
-      "name": "Witch Perfect",
+      "name": "THE PROHIBITION PAWTY",
       "day": "Saturday",
-      "time": "7PM-8:30PM",
+      "time": "6PM-8PM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
-        "lat": 42.0502291,
-        "lng": -70.1876737
+        "lat": 42.0372527,
+        "lng": -70.1953862
       },
-      "startDate": "2026-10-31T19:00:00",
-      "endDate": "2026-10-31T20:30:00",
-      "unprocessedDescription": "description: Doors @ 6\\:30PM | Show @ 7\\:00PM Witch Perfect,\r is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul's Drag Race\\: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8's Alexis Michelle as Mary. The show features hits from such pop icons as Lady Gaga, Madonna and Cher, as well as Disney classics Little Mermaid and The Lion King.\nbar: Crown & Anchor\naddress: 247 Commercial St, Provencetown, MA 02657\nticketUrl: https://www.tryst.events/e/witch-perfect-10-31-2026/tickets\nimage: https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png\ncover: $45-$75\naddressSource: page\nwebsite: https://tryst.events/e/witch-perfect-10-31-2026\ngmaps: https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657\npinSource: curated\nshortName: SPOOKY BEAR\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: witch-perfect|2026-10-31|crown & anchor\ntimezone: America/New_York\nimageVertical: https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png\nimageSource: json-api\nbarSource: curated\nbearSource: ai",
+      "startDate": "2026-10-31T18:00:00",
+      "endDate": "2026-10-31T20:00:00",
+      "unprocessedDescription": "description: Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR \rROARING TWENTIES\nbar: Provincetown Inn\ntimezone: America/New_York\nwebsite: https://www.ursamen.org/spookybear\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0372527%2C-70.1953862\naddress: 1 Commercial Street, Provincetown, Massachusetts\naddressSource: curated\npinSource: curated\nshortName: PROHIBITION\ninstagram: https://www.instagram.com/ne.ursamen\nfacebook: https://www.facebook.com/NEUrsamen\nfavicon: https://www.ursamen.org/spookybear\nkey: the-prohibition-pawty|2026-10-31|provincetown inn\nbearSource: keyword",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
       "wasUTC": true,
-      "sourceUid": "9E8225F7-D8D2-4C51-87AE-E0AAA848F382",
-      "uid": "9E8225F7-D8D2-4C51-87AE-E0AAA848F382",
+      "sourceUid": "55F69B65-BFFC-4643-B254-25249BD1B796",
+      "uid": "55F69B65-BFFC-4643-B254-25249BD1B796",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "Crown & Anchor",
-      "cover": "$45-$75",
-      "image": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png",
-      "imageVertical": "https://onlyatthecrown.com/wp-content/uploads/2026/08/PROVINCETOWN.png",
+      "bar": "Provincetown Inn",
       "favicon": "https://www.ursamen.org/spookybear",
-      "tea": "Doors @ 6:30PM | Show @ 7:00PM Witch Perfect, is an all live-singing, comedy parody based on the cult-classic and audience favorite Disney film Hocus Pocus! It features Emmy-winning stars from RuPaul's Drag Race: All-Stars 10 and S13 Tina Burner as Winifred. Season 11, All-Stars S6, and UK vs the World S2’s Scarlet Envy as Sara, and Season 9 and All Stars S8's Alexis Michelle as Mary. The show features hits from such pop icons as Lady Gaga, Madonna and Cher, as well as Disney classics Little Mermaid and The Lion King.",
+      "tea": "Part of THE NORTHEAST URSAMEN PRESENT SPOOKY BEAR ROARING TWENTIES",
       "cadence": null,
-      "address": "247 Commercial St, Provencetown, MA 02657",
-      "website": "https://tryst.events/e/witch-perfect-10-31-2026",
+      "address": "1 Commercial Street, Provincetown, Massachusetts",
+      "website": "https://www.ursamen.org/spookybear",
       "instagram": "https://www.instagram.com/ne.ursamen",
       "facebook": "https://www.facebook.com/NEUrsamen",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657",
-      "ticketUrl": "https://www.tryst.events/e/witch-perfect-10-31-2026/tickets",
-      "shortName": "SPOOKY BEAR",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0372527%2C-70.1953862",
+      "shortName": "PROHIBITION",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://tryst.events/e/witch-perfect-10-31-2026",
+          "url": "https://www.ursamen.org/spookybear",
           "label": "🌐 Website"
         },
         {
@@ -821,64 +2159,11 @@
         },
         {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Crown%20%26%20Anchor%2C%20247%20Commercial%20St%2C%20Provencetown%2C%20MA%2002657",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.tryst.events/e/witch-perfect-10-31-2026/tickets",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "witch-perfect-117cd24d"
-    },
-    {
-      "name": "Goldiloxx: Tricks & Treat",
-      "day": "Saturday",
-      "time": null,
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 42.0496268,
-        "lng": -70.1900224
-      },
-      "startDate": "2026-10-31T00:00:00",
-      "endDate": "2026-11-01T00:00:00",
-      "unprocessedDescription": "description: Goldiloxx brings Tricks & Treat to Purgatory for H\ralloween night.\nbar: Purgatory\naddress: SB\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224\npinSource: curated\ninstagram: https://www.instagram.com/goldiloxx__\nshortName: GOLDI­LOXX\nshorterName: GLX\nfavicon: https://linktr.ee/goldiloxx\nkey: goldiloxx-tricks-treat|2026-10-31|purgatory\ntimeUnknown: true\nbearSource: ai",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/New_York",
-      "wasUTC": false,
-      "sourceUid": "C2CA8263-B167-4BC8-9AF6-87738E966BCA",
-      "uid": "C2CA8263-B167-4BC8-9AF6-87738E966BCA",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Purgatory",
-      "favicon": "https://linktr.ee/goldiloxx",
-      "tea": "Goldiloxx brings Tricks & Treat to Purgatory for Halloween night.",
-      "cadence": null,
-      "address": "SB",
-      "website": null,
-      "instagram": "https://www.instagram.com/goldiloxx__",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
-      "shortName": "GOLDI­LOXX",
-      "shorterName": "GLX",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/goldiloxx__",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=42.0496268%2C-70.1900224",
+          "url": "https://www.google.com/maps/search/?api=1&query=42.0372527%2C-70.1953862",
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "goldiloxx-tricks-treat-6a67edae"
+      "slug": "the-prohibition-pawty-02680aea"
     }
   ]
 }

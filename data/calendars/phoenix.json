@@ -64,6 +64,127 @@
       "slug": "megawoof-2f8a9cb8"
     },
     {
+      "name": "MEGAWOOF PHOENIX - BLACK OUT...",
+      "day": "Saturday",
+      "time": "9:30PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.5199151,
+        "lng": -112.0737137
+      },
+      "startDate": "2026-11-28T21:30:00",
+      "endDate": "2026-11-29T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF PHOENIX - BLACK OUT...\nbar: North Centra\rl Avenue\naddress: North Central Avenue, Phoenix, AZ 85012\nticketUrl: https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\nimageSource: jsonld\ncover: $11.58-$22.10\ntimezone: America/Phoenix\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\naddressSource: page\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.5199151%2C-112.0737137\npinSource: geocoded-approx\nshortName: MEGA­WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-phoenix-black-out|2026-11-29|north central avenue\nbearSource: keyword",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Phoenix",
+      "wasUTC": true,
+      "sourceUid": "80A14257-C100-4528-9AA2-30633F446B56",
+      "uid": "80A14257-C100-4528-9AA2-30633F446B56",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "North Central Avenue",
+      "cover": "$11.58-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972",
+      "imageVertical": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972",
+      "favicon": "https://linktr.ee/megawoof_america",
+      "tea": "MEGAWOOF PHOENIX - BLACK OUT...",
+      "cadence": null,
+      "address": "North Central Avenue, Phoenix, AZ 85012",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.5199151%2C-112.0737137",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802",
+      "shortName": "MEGA­WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.5199151%2C-112.0737137",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-phoenix-black-out-5030927e"
+    },
+    {
+      "name": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
+      "day": "Saturday",
+      "time": "9:30PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.4832996,
+        "lng": -112.0753159
+      },
+      "startDate": "2026-08-08T21:30:00",
+      "endDate": "2026-08-09T02:00:00",
+      "unprocessedDescription": "description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: \rKobalt\naddress: 3110 North Central Avenue, #175, Phoenix, AZ 85012\nticketUrl: https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61\ncover: $11.58-$22.10\ntimezone: America/Phoenix\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nbearSource: keyword\nkey: megawoof-america-phoenix-summer-woofers|2026-08-09|kobalt\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Phoenix",
+      "wasUTC": true,
+      "sourceUid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
+      "uid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Kobalt",
+      "cover": "$11.58-$22.10",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61",
+      "favicon": "https://linktr.ee/megawoof_america",
+      "tea": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
+      "cadence": null,
+      "address": "3110 North Central Avenue, #175, Phoenix, AZ 85012",
+      "website": "https://linktr.ee/megawoof_america",
+      "instagram": "https://www.instagram.com/megawoof_america",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
+      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
+      "shortName": "MEGA-WOOF",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://linktr.ee/megawoof_america",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/megawoof_america",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "megawoof-america-phoenix-summer-woofers-007d0b12"
+    },
+    {
       "name": "Bearracuda Phoenix RELAUNCH Party!",
       "day": "Saturday",
       "time": "9:30PM",
@@ -120,6 +241,59 @@
         }
       ],
       "slug": "bearracuda-phoenix-relaunch-party-320faa75"
+    },
+    {
+      "name": "TWISTED BEAR PHOENIX - MERRY THICKMAS!",
+      "day": "Saturday",
+      "time": "9:30PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.4834859,
+        "lng": -112.0757318
+      },
+      "startDate": "2026-12-12T21:30:00",
+      "endDate": "2026-12-13T02:00:00",
+      "unprocessedDescription": "description: On Sat, Dec 12th TWISTED BEAR is super excited to\r be making its long-awaited debut at Kobalt in Phoenix !!\nbar: Kobalt\naddress: 3110 North Central Avenue, #175, Phoenix, AZ 85012\nticketUrl: https://www.eventbrite.com/e/twisted-bear-phoenix-merry-thickmas-tickets-2003889099239\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196548071%2F1088207912863%2F1%2Foriginal.20261025-181348?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=37d024d6a7636f7a7fc675dbe68ac168\nimageSource: jsonld\ncover: $12.51-$23.18\ntimezone: America/Phoenix\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196548071%2F1088207912863%2F1%2Foriginal.20261025-181348?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=37d024d6a7636f7a7fc675dbe68ac168\nbarSource: curated\naddressSource: page\nwebsite: https://www.eventbrite.com/e/twisted-bear-phoenix-merry-thickmas-tickets-2003889099239\ngmaps: https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012\npinSource: curated",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Phoenix",
+      "wasUTC": true,
+      "sourceUid": "DF8E4101-C3DF-4DD7-8910-842FA269457E",
+      "uid": "DF8E4101-C3DF-4DD7-8910-842FA269457E",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Kobalt",
+      "cover": "$12.51-$23.18",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196548071%2F1088207912863%2F1%2Foriginal.20261025-181348?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=37d024d6a7636f7a7fc675dbe68ac168",
+      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196548071%2F1088207912863%2F1%2Foriginal.20261025-181348?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=37d024d6a7636f7a7fc675dbe68ac168",
+      "tea": "On Sat, Dec 12th TWISTED BEAR is super excited to be making its long-awaited debut at Kobalt in Phoenix !!",
+      "cadence": null,
+      "address": "3110 North Central Avenue, #175, Phoenix, AZ 85012",
+      "website": "https://www.eventbrite.com/e/twisted-bear-phoenix-merry-thickmas-tickets-2003889099239",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012",
+      "ticketUrl": "https://www.eventbrite.com/e/twisted-bear-phoenix-merry-thickmas-tickets-2003889099239",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.eventbrite.com/e/twisted-bear-phoenix-merry-thickmas-tickets-2003889099239",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C%20%23175%2C%20Phoenix%2C%20AZ%2085012",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/twisted-bear-phoenix-merry-thickmas-tickets-2003889099239",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "twisted-bear-phoenix-merry-thickmas-4b9539f1"
     },
     {
       "name": "Treasure Trail Phoenix: Wish Boned",
@@ -254,127 +428,6 @@
         }
       ],
       "slug": "bearracuda-phoenix-pride-16d08e9d"
-    },
-    {
-      "name": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
-      "day": "Saturday",
-      "time": "9:30PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.4832996,
-        "lng": -112.0753159
-      },
-      "startDate": "2026-08-08T21:30:00",
-      "endDate": "2026-08-09T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: \rKobalt\naddress: 3110 North Central Avenue, #175, Phoenix, AZ 85012\nticketUrl: https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61\ncover: $11.58-$22.10\ntimezone: America/Phoenix\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nbearSource: keyword\nkey: megawoof-america-phoenix-summer-woofers|2026-08-09|kobalt\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Phoenix",
-      "wasUTC": true,
-      "sourceUid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
-      "uid": "DBB2B903-E956-45AE-8645-08B4C4A8A455",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Kobalt",
-      "cover": "$11.58-$22.10",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61",
-      "favicon": "https://linktr.ee/megawoof_america",
-      "tea": "MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS",
-      "cadence": null,
-      "address": "3110 North Central Avenue, #175, Phoenix, AZ 85012",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
-      "shortName": "MEGA-WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.4832996%2C-112.0753159",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofers-tickets-1992064021112",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-america-phoenix-summer-woofers-007d0b12"
-    },
-    {
-      "name": "MEGAWOOF PHOENIX - BLACK OUT...",
-      "day": "Saturday",
-      "time": "9:30PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.5199151,
-        "lng": -112.0737137
-      },
-      "startDate": "2026-11-28T21:30:00",
-      "endDate": "2026-11-29T02:00:00",
-      "unprocessedDescription": "description: MEGAWOOF PHOENIX - BLACK OUT...\nbar: North Centra\rl Avenue\naddress: North Central Avenue, Phoenix, AZ 85012\nticketUrl: https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\nimageSource: jsonld\ncover: $11.58-$22.10\ntimezone: America/Phoenix\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\naddressSource: page\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.5199151%2C-112.0737137\npinSource: geocoded-approx\nshortName: MEGA­WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-phoenix-black-out|2026-11-29|north central avenue\nbearSource: keyword",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Phoenix",
-      "wasUTC": true,
-      "sourceUid": "80A14257-C100-4528-9AA2-30633F446B56",
-      "uid": "80A14257-C100-4528-9AA2-30633F446B56",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "North Central Avenue",
-      "cover": "$11.58-$22.10",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972",
-      "imageVertical": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972",
-      "favicon": "https://linktr.ee/megawoof_america",
-      "tea": "MEGAWOOF PHOENIX - BLACK OUT...",
-      "cadence": null,
-      "address": "North Central Avenue, Phoenix, AZ 85012",
-      "website": "https://linktr.ee/megawoof_america",
-      "instagram": "https://www.instagram.com/megawoof_america",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=33.5199151%2C-112.0737137",
-      "ticketUrl": "https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802",
-      "shortName": "MEGA­WOOF",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://linktr.ee/megawoof_america",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/megawoof_america",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=33.5199151%2C-112.0737137",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "megawoof-phoenix-black-out-5030927e"
     }
   ]
 }

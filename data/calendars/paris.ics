@@ -8,7 +8,7 @@ X-WR-TIMEZONE:Europe/Paris
 BEGIN:VEVENT
 DTSTART:20261024T210000Z
 DTEND:20261025T050000Z
-DTSTAMP:20261014T001801Z
+DTSTAMP:20261030T191530Z
 UID:3730A615-721D-44A5-A458-E3D131C66D86
 CREATED:20261013T224702Z
 DESCRIPTION:description: FURRWOODS DJ JOSHET\nbar: AU WORKSHOP\naddress: 17
@@ -25,6 +25,30 @@ LOCATION:48.8626210\, 2.3520602
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BEARS PANAME — BONBON
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261114T220000Z
+DTEND:20261115T050000Z
+DTSTAMP:20261030T191530Z
+UID:D6ABFD01-54C9-4F11-A435-D6DF93603D8F
+CREATED:20261030T190558Z
+DESCRIPTION:bar: Workshow — 173 rue Saint-Martin\, 75003\naddress: Paris\, 
+ Île-de-France\nticketUrl: https://shotgun.live/events/bonbon-de-bears-panam
+ e\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public
+ /event-images/19b06d323f87127e.jpg\nimageSource: json-api\ncover: 10.99-18 
+ €\ntimezone: Europe/Paris\nimageHorizontal: https://acqvlhciredwtlbpisso.su
+ pabase.co/storage/v1/object/public/event-images/19b06d323f87127e.jpg\naddre
+ ssSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Work
+ show%20%E2%80%94%20173%20rue%20Saint-Martin%2C%2075003%2C%20Paris%2C%20%C3%
+ 8Ele-de-France\nkey: bears-paname-—-bonbon|2026-11-14|workshow — 173 rue sa
+ int-martin\, 75003\nbearSource: keyword\nshortName: BEARS PANAME
+LAST-MODIFIED:20261030T190558Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Bears Paname — BONBON
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

@@ -5,65 +5,8 @@
   },
   "events": [
     {
-      "name": "Brewery Bears Happy Hour",
-      "day": "Friday",
-      "time": "5PM-9PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 32.7693483,
-        "lng": -96.8112576
-      },
-      "startDate": "2026-08-14T17:00:00",
-      "endDate": "2026-08-14T21:00:00",
-      "unprocessedDescription": "description: The Brewery Bears have a new home bar at the Dalla\rs Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyword\nshortName: BREWERY BEARS\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "21FF8507-F5EF-4E34-8764-F47BF75FB118",
-      "uid": "21FF8507-F5EF-4E34-8764-F47BF75FB118",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Dallas Eagle",
-      "tea": "The Brewery Bears have a new home bar at the Dallas Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...",
-      "cadence": null,
-      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "website": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
-      "instagram": "https://www.instagram.com/thedallaseagle/",
-      "facebook": "https://www.facebook.com/lonestareagle",
-      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "shortName": "BREWERY BEARS",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/thedallaseagle/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/lonestareagle",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "brewery-bears-happy-hour-247d1b27"
-    },
-    {
-      "name": "Bear and Twink Night with DJ Level",
-      "day": "Friday",
+      "name": "Gear Night with DJ Woolfie",
+      "day": "Saturday",
       "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
@@ -71,33 +14,36 @@
         "lat": 32.7693483,
         "lng": -96.8112576
       },
-      "startDate": "2026-08-14T21:00:00",
-      "endDate": "2026-08-15T02:00:00",
-      "unprocessedDescription": "description: It’s time for another delicious combo, it’s BEAR \r& TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/bear-and-twink-night/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: bear-and-twink-night-with-dj-level|2026-08-15|dallas eagle\nbearSource: keyword\nshortName: BEAR AND TWINK\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "startDate": "2026-10-03T21:00:00",
+      "endDate": "2026-10-04T02:00:00",
+      "unprocessedDescription": "description: Grab your gear, it's time for GEAR NIGHT! Put on \ryour favorite gear and get ready to dance the night away to pounding beats that will get your blood pu\nbar: Dallas Eagle\naddress: 125 S. KENDRICK BLVD\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nimage: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5dd38d1277337f0ddde4e53512e75fb7a56a0fe57cce7b9e63a99bba81b406c1/cf11af08f9e50d2239b6908a980db403ab476d2b620bdb8bde48f3e71f6b232f.webp?lossy=2&strip=1&webp=1\ncover: No cover!\nwebsite: https://www.thedallaseagle.com/events/gear-night-2026-10-03/\nmastodon: https://mastodon.social/@dallaseagle\nimageVertical: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/2e0a9dee597aef9d070d7295341a5a972d11c0555f99cfd88a6ae300496b2c24/3ca56898d945cb68c1c998d2b0ec2dc94d9e19e140f7879a90ab6a9915ba633b.webp?lossy=2&strip=1&webp=1\naddressSource: page\npinSource: curated\nkey: gear-night-with-dj-woolfie|2026-10-04|dallas eagle\nimageSource: page\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: GEAR NIGHT",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
-      "uid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
+      "sourceUid": "BDADC283-8E09-4D48-9378-CD0154CBF5DE",
+      "uid": "BDADC283-8E09-4D48-9378-CD0154CBF5DE",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Dallas Eagle",
-      "tea": "It’s time for another delicious combo, it’s BEAR & TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...",
+      "cover": "No cover!",
+      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5dd38d1277337f0ddde4e53512e75fb7a56a0fe57cce7b9e63a99bba81b406c1/cf11af08f9e50d2239b6908a980db403ab476d2b620bdb8bde48f3e71f6b232f.webp?lossy=2&strip=1&webp=1",
+      "imageVertical": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/2e0a9dee597aef9d070d7295341a5a972d11c0555f99cfd88a6ae300496b2c24/3ca56898d945cb68c1c998d2b0ec2dc94d9e19e140f7879a90ab6a9915ba633b.webp?lossy=2&strip=1&webp=1",
+      "tea": "Grab your gear, it's time for GEAR NIGHT! Put on your favorite gear and get ready to dance the night away to pounding beats that will get your blood pu",
       "cadence": null,
-      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "website": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
+      "address": "125 S. KENDRICK BLVD",
+      "website": "https://www.thedallaseagle.com/events/gear-night-2026-10-03/",
       "instagram": "https://www.instagram.com/thedallaseagle/",
       "facebook": "https://www.facebook.com/lonestareagle",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "shortName": "BEAR AND TWINK",
+      "shortName": "GEAR NIGHT",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
+          "url": "https://www.thedallaseagle.com/events/gear-night-2026-10-03/",
           "label": "🌐 Website"
         },
         {
@@ -116,7 +62,7 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "bear-and-twink-night-with-dj-level-36f7f7ac"
+      "slug": "gear-night-with-dj-woolfie-1810eb9e"
     },
     {
       "name": "Three Years",
@@ -178,7 +124,7 @@
       "slug": "three-years-31d21eb3"
     },
     {
-      "name": "Unity Night: Discipline Corps",
+      "name": "Bear and Twink Night with DJ Level",
       "day": "Friday",
       "time": "9PM-2AM",
       "eventType": "routine",
@@ -187,35 +133,33 @@
         "lat": 32.7693483,
         "lng": -96.8112576
       },
-      "startDate": "2026-10-09T21:00:00",
-      "endDate": "2026-10-10T02:00:00",
-      "unprocessedDescription": "description: Community looks good on you. Come together at the \rEagle every Friday for Unity Night 🦅 Unity Night celebrates the people who make the Dallas Eagle more than just a place to grab a drink. Whether you’re a longtime regular, visiting Dallas, or making your first appearance, come find your crowd and give someone a reason to say hello. This week, we welcome the Discipline Corps for an evening of community and connection. All are welcome! 🦅 No cover. Wear your leather and gear! Always encouraged…\nbar: Dallas Eagle\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nimage: https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/9e1ebba42f2ebf4403e8bdb5b2546c778ef77a421cfe436f0541b353b6078055/a1ed50ff1afba55fa21d0affb33c2590c0ae472772a8f5600cc5b5241e97c32d.webp\ntimezone: America/Chicago\ncover: No cover\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\naddressSource: page\nwebsite: https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-10-09/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\npinSource: curated\nkey: unity-night-discipline-corps|2026-10-10|dallas eagle\nimageSource: jsonld\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-06)\nshortName: UNITY NIGHT",
+      "startDate": "2026-08-14T21:00:00",
+      "endDate": "2026-08-15T02:00:00",
+      "unprocessedDescription": "description: It’s time for another delicious combo, it’s BEAR \r& TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/bear-and-twink-night/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: bear-and-twink-night-with-dj-level|2026-08-15|dallas eagle\nbearSource: keyword\nshortName: BEAR AND TWINK\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "EA84BC17-C16B-4496-ACBE-20288B73924A",
-      "uid": "EA84BC17-C16B-4496-ACBE-20288B73924A",
+      "sourceUid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
+      "uid": "13889125-C3DE-4D92-9227-86C5EE9B1005",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Dallas Eagle",
-      "cover": "No cover",
-      "image": "https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/9e1ebba42f2ebf4403e8bdb5b2546c778ef77a421cfe436f0541b353b6078055/a1ed50ff1afba55fa21d0affb33c2590c0ae472772a8f5600cc5b5241e97c32d.webp",
-      "tea": "Community looks good on you. Come together at the Eagle every Friday for Unity Night 🦅 Unity Night celebrates the people who make the Dallas Eagle more than just a place to grab a drink. Whether you’re a longtime regular, visiting Dallas, or making your first appearance, come find your crowd and give someone a reason to say hello. This week, we welcome the Discipline Corps for an evening of community and connection. All are welcome! 🦅 No cover. Wear your leather and gear! Always encouraged…",
+      "tea": "It’s time for another delicious combo, it’s BEAR & TWINK NIGHT at the Dallas Eagle!! 🐻🕺🦅 Opposites attract at this event, so come on out and enjoy the variety! Big or small, hirsute or svelte, here you’ll find all types to satisfy your desires. Mix it up on the dance floor with heart-pounding hous , ...",
       "cadence": null,
       "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "website": "https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-10-09/",
+      "website": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
       "instagram": "https://www.instagram.com/thedallaseagle/",
       "facebook": "https://www.facebook.com/lonestareagle",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "shortName": "UNITY NIGHT",
+      "shortName": "BEAR AND TWINK",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-10-09/",
+          "url": "https://www.thedallaseagle.com/events/bear-and-twink-night/",
           "label": "🌐 Website"
         },
         {
@@ -234,7 +178,355 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "unity-night-discipline-corps-43e83cf3"
+      "slug": "bear-and-twink-night-with-dj-level-36f7f7ac"
+    },
+    {
+      "name": "Gear Night with DJ Tristan Jaxx",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-10-10T21:00:00",
+      "endDate": "2026-10-11T02:00:00",
+      "unprocessedDescription": "description: Grab your gear, it's time for GEAR NIGHT! Put on \ryour favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It's time to indulge yourself. Come see why this is the hottest night of the week! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🍻 Get here early for Happy Hour from 5pm - 8pm 🧢 Our Leather Shop is Now Open! ⭐…\nbar: Dallas Eagle\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nimage: https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/e998242451f1e5d96873531dffe2eeb619f47660a2152c58ac63d7da95b66938/baf27d366fbd4e3845c006fe614234d7e8c03756375981b4a33d5b7f38ba58bd.webp\ntimezone: America/Chicago\ncover: No cover\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\naddressSource: page\nwebsite: https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\npinSource: curated\nkey: gear-night-with-dj-tristan-jaxx|2026-10-11|dallas eagle\nimageSource: jsonld\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: GEAR NIGHT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "18200B99-F2B2-4AC0-98C7-8B4111B902FB",
+      "uid": "18200B99-F2B2-4AC0-98C7-8B4111B902FB",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "No cover",
+      "image": "https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/e998242451f1e5d96873531dffe2eeb619f47660a2152c58ac63d7da95b66938/baf27d366fbd4e3845c006fe614234d7e8c03756375981b4a33d5b7f38ba58bd.webp",
+      "tea": "Grab your gear, it's time for GEAR NIGHT! Put on your favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It's time to indulge yourself. Come see why this is the hottest night of the week! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🍻 Get here early for Happy Hour from 5pm - 8pm 🧢 Our Leather Shop is Now Open! ⭐…",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "GEAR NIGHT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "gear-night-with-dj-tristan-jaxx-53ef889e"
+    },
+    {
+      "name": "Sunday Funday: Rewind",
+      "day": "Sunday",
+      "time": "5PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-10-11T17:00:00",
+      "endDate": "2026-10-12T02:00:00",
+      "unprocessedDescription": "description: Turn back time and turn up the dance floor at Rewi\rnd! A new Sunday Funday retro event featuring the biggest dance hits of the ’80s, ’90s, and ’00s. From synth-pop and disco-inspired favorites to house classics and Y2K club anthems, all your favorite decades collide for one nonstop night of dancing. 😎🦅 🦅 No dress code, take off your shirt and have fun. Lockers available for $5. Legal clothing coverage required at all times. 🍻 Get here early for Happy Hour 🧢 Our Leather Shop is Now Open! ⭐ No…\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/sunday-tea-rewind/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: sunday-funday-rewind|2026-10-11|dallas eagle\ncover: No cover\nbearSource: manual-bear (verdict store 2026-10-06)\nshortName: SUNDAY\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/search/?api=1&query=Dallas%20Eagle%2C%20525%20S%20Riverfront%20Blvd%2C%20Dallas%2C%20TX%2075207",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "6479A40B-A1CA-4D74-9741-38E8884EF6DB",
+      "uid": "6479A40B-A1CA-4D74-9741-38E8884EF6DB",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "No cover",
+      "tea": "Turn back time and turn up the dance floor at Rewind! A new Sunday Funday retro event featuring the biggest dance hits of the ’80s, ’90s, and ’00s. From synth-pop and disco-inspired favorites to house classics and Y2K club anthems, all your favorite decades collide for one nonstop night of dancing. 😎🦅 🦅 No dress code, take off your shirt and have fun. Lockers available for $5. Legal clothing coverage required at all times. 🍻 Get here early for Happy Hour 🧢 Our Leather Shop is Now Open! ⭐ No…",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/sunday-tea-rewind/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Dallas%20Eagle%2C%20525%20S%20Riverfront%20Blvd%2C%20Dallas%2C%20TX%2075207",
+      "shortName": "SUNDAY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/sunday-tea-rewind/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=Dallas%20Eagle%2C%20525%20S%20Riverfront%20Blvd%2C%20Dallas%2C%20TX%2075207",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "sunday-funday-rewind-56199400"
+    },
+    {
+      "name": "Gear Night",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-11-21T21:00:00",
+      "endDate": "2026-11-22T02:00:00",
+      "unprocessedDescription": "description: Grab your gear, it's time for GEAR NIGHT! Put on \ryour favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It's time to indulge yourself. Come see why this is the hottest night of the week! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🍻 Get here early for Happy Hour from 5pm - 8pm 🧢 Our Leather Shop is Now Open! ⭐…\nbar: Dallas Eagle\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nimage: https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/97cd3e4666535962843897c6c13eb60860f314261e0eac157b80a69eb5b1181a/081c713ee211b10dcb5593bd86a2935a850e50c07d5507bbdfbff72f5bae50ea.webp\ntimezone: America/Chicago\ncover: No cover\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\naddressSource: page\nwebsite: https://www.thedallaseagle.com/events/gear-night-2026-11-21/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\npinSource: curated\nkey: gear-night|2026-11-22|dallas eagle\nimageSource: jsonld\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: GEAR NIGHT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "D4F5FB53-5EA0-4E2C-87AB-DC03D6E9FF41",
+      "uid": "D4F5FB53-5EA0-4E2C-87AB-DC03D6E9FF41",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "No cover",
+      "image": "https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/97cd3e4666535962843897c6c13eb60860f314261e0eac157b80a69eb5b1181a/081c713ee211b10dcb5593bd86a2935a850e50c07d5507bbdfbff72f5bae50ea.webp",
+      "tea": "Grab your gear, it's time for GEAR NIGHT! Put on your favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It's time to indulge yourself. Come see why this is the hottest night of the week! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🍻 Get here early for Happy Hour from 5pm - 8pm 🧢 Our Leather Shop is Now Open! ⭐…",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/gear-night-2026-11-21/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "GEAR NIGHT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/gear-night-2026-11-21/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "gear-night-15e79f61"
+    },
+    {
+      "name": "FURBALL",
+      "day": "Sunday",
+      "time": "5PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.810535,
+        "lng": -96.8110709
+      },
+      "startDate": "2026-07-05T17:00:00",
+      "unprocessedDescription": "bar: STATION 4\naddress: 3911 Cedar Springs Rd, Dallas, TX 75\r219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
+      "uid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "STATION 4",
+      "image": "https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg",
+      "cadence": null,
+      "address": "3911 Cedar Springs Rd, Dallas, TX 75219",
+      "website": "https://www.furball.nyc",
+      "instagram": "https://instagram.com/furballnyc/",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
+      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
+      "shortName": "FUR-BALL",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.furball.nyc",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://instagram.com/furballnyc/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "furball-442f8415"
+    },
+    {
+      "name": "Brewery Bears Happy Hour",
+      "day": "Friday",
+      "time": "5PM-9PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-08-14T17:00:00",
+      "endDate": "2026-08-14T21:00:00",
+      "unprocessedDescription": "description: The Brewery Bears have a new home bar at the Dalla\rs Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: brewery-bears-happy-hour|2026-08-14|dallas eagle\nbearSource: keyword\nshortName: BREWERY BEARS\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "21FF8507-F5EF-4E34-8764-F47BF75FB118",
+      "uid": "21FF8507-F5EF-4E34-8764-F47BF75FB118",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "tea": "The Brewery Bears have a new home bar at the Dallas Eagle! 🐻🍻🦅 Join us for an all new monthly Happy Hour event with the biggest beer drinking crowd in town! Enjoy discount ice cold craft and draft beers, and our rotating Brewery Bears Reserve selections. Bears gotta eat, so we’re serving up fresh and delicious sc , ...",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "BREWERY BEARS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "brewery-bears-happy-hour-247d1b27"
+    },
+    {
+      "name": "Sunday Funday: Rewind",
+      "day": "Sunday",
+      "time": "5PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-11-15T17:00:00",
+      "endDate": "2026-11-16T02:00:00",
+      "unprocessedDescription": "description: Turn back time and turn up the dance floor at Rewi\rnd! A new Sunday Funday retro event featuring the biggest dance hits of the ’80s, ’90s, and ’00s. From synth-pop and disco-inspired favorites to house classics and Y2K club anthems, all your favorite decades collide for one nonstop night of dancing. 😎🦅 🦅 No dress code, take off your shirt and have fun. Lockers available for $5. Legal clothing coverage required at all times. 🍻 Get here early for Happy Hour 🧢 Our Leather Shop is Now Open! ⭐ No…\nbar: Dallas Eagle\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nimage: https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/c76e111c0fdc641a3a69ad44d8babb262320722c51fdd83b4c01fb7b8fb5a02d/e2fee93192ff89512240f3ed63eceb0cad29530a9db7c8c73d6334179d8eef89.webp\ntimezone: America/Chicago\ncover: No cover\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\naddressSource: page\nwebsite: https://www.thedallaseagle.com/events/sunday-funday-rewind-2026-11-15/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\npinSource: curated\nkey: sunday-funday-rewind|2026-11-15|dallas eagle\nimageSource: jsonld\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-06)\nshortName: SUNDAY",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "D460ED3D-26F4-4498-8F95-D0FB4D3F8B50",
+      "uid": "D460ED3D-26F4-4498-8F95-D0FB4D3F8B50",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "No cover",
+      "image": "https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/c76e111c0fdc641a3a69ad44d8babb262320722c51fdd83b4c01fb7b8fb5a02d/e2fee93192ff89512240f3ed63eceb0cad29530a9db7c8c73d6334179d8eef89.webp",
+      "tea": "Turn back time and turn up the dance floor at Rewind! A new Sunday Funday retro event featuring the biggest dance hits of the ’80s, ’90s, and ’00s. From synth-pop and disco-inspired favorites to house classics and Y2K club anthems, all your favorite decades collide for one nonstop night of dancing. 😎🦅 🦅 No dress code, take off your shirt and have fun. Lockers available for $5. Legal clothing coverage required at all times. 🍻 Get here early for Happy Hour 🧢 Our Leather Shop is Now Open! ⭐ No…",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/sunday-funday-rewind-2026-11-15/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "SUNDAY",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/sunday-funday-rewind-2026-11-15/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "sunday-funday-rewind-6dca3ecd"
     },
     {
       "name": "FURBALL Dallas Underwear + Gear Party featuring DJ GSP",
@@ -297,8 +589,8 @@
       "slug": "furball-dallas-underwear-gear-party-featuring-dj-gsp-56af9376"
     },
     {
-      "name": "Gear Night with DJ Woolfie",
-      "day": "Saturday",
+      "name": "Unity Night: Discipline Corps",
+      "day": "Friday",
       "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
@@ -306,36 +598,33 @@
         "lat": 32.7693483,
         "lng": -96.8112576
       },
-      "startDate": "2026-10-03T21:00:00",
-      "endDate": "2026-10-04T02:00:00",
-      "unprocessedDescription": "description: Grab your gear, it's time for GEAR NIGHT! Put on \ryour favorite gear and get ready to dance the night away to pounding beats that will get your blood pu\nbar: Dallas Eagle\naddress: 125 S. KENDRICK BLVD\ntimezone: America/Chicago\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nimage: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5dd38d1277337f0ddde4e53512e75fb7a56a0fe57cce7b9e63a99bba81b406c1/cf11af08f9e50d2239b6908a980db403ab476d2b620bdb8bde48f3e71f6b232f.webp?lossy=2&strip=1&webp=1\ncover: No cover!\nwebsite: https://www.thedallaseagle.com/events/gear-night-2026-10-03/\nmastodon: https://mastodon.social/@dallaseagle\nimageVertical: https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/2e0a9dee597aef9d070d7295341a5a972d11c0555f99cfd88a6ae300496b2c24/3ca56898d945cb68c1c998d2b0ec2dc94d9e19e140f7879a90ab6a9915ba633b.webp?lossy=2&strip=1&webp=1\naddressSource: page\npinSource: curated\nkey: gear-night-with-dj-woolfie|2026-10-04|dallas eagle\nimageSource: page\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: GEAR NIGHT",
+      "startDate": "2026-11-06T21:00:00",
+      "endDate": "2026-11-07T02:00:00",
+      "unprocessedDescription": "description: Community looks good on you. Come together at the \rEagle every Friday for Unity Night 🦅 Unity Night celebrates the people who make the Dallas Eagle more than just a place to grab a drink. Whether you’re a longtime regular, visiting Dallas, or making your first appearance, come find your crowd and give someone a reason t , ...\ntimezone: America/Chicago\nwebsite: https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-11-06/\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\nbar: Dallas Eagle\nbarSource: venue-site-identity\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nkey: unity-night-discipline-corps|2026-11-07|dallas eagle\nbearSource: manual-bear (verdict store 2026-10-06)\nshortName: UNITY NIGHT",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "BDADC283-8E09-4D48-9378-CD0154CBF5DE",
-      "uid": "BDADC283-8E09-4D48-9378-CD0154CBF5DE",
+      "sourceUid": "C4A88B7A-2EA4-4E4C-9592-7EFB206DB940",
+      "uid": "C4A88B7A-2EA4-4E4C-9592-7EFB206DB940",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Dallas Eagle",
-      "cover": "No cover!",
-      "image": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/5dd38d1277337f0ddde4e53512e75fb7a56a0fe57cce7b9e63a99bba81b406c1/cf11af08f9e50d2239b6908a980db403ab476d2b620bdb8bde48f3e71f6b232f.webp?lossy=2&strip=1&webp=1",
-      "imageVertical": "https://b3335593.assetcdn.net/2.0/3335593/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/2e0a9dee597aef9d070d7295341a5a972d11c0555f99cfd88a6ae300496b2c24/3ca56898d945cb68c1c998d2b0ec2dc94d9e19e140f7879a90ab6a9915ba633b.webp?lossy=2&strip=1&webp=1",
-      "tea": "Grab your gear, it's time for GEAR NIGHT! Put on your favorite gear and get ready to dance the night away to pounding beats that will get your blood pu",
+      "tea": "Community looks good on you. Come together at the Eagle every Friday for Unity Night 🦅 Unity Night celebrates the people who make the Dallas Eagle more than just a place to grab a drink. Whether you’re a longtime regular, visiting Dallas, or making your first appearance, come find your crowd and give someone a reason t , ...",
       "cadence": null,
-      "address": "125 S. KENDRICK BLVD",
-      "website": "https://www.thedallaseagle.com/events/gear-night-2026-10-03/",
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-11-06/",
       "instagram": "https://www.instagram.com/thedallaseagle/",
       "facebook": "https://www.facebook.com/lonestareagle",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "shortName": "GEAR NIGHT",
+      "shortName": "UNITY NIGHT",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.thedallaseagle.com/events/gear-night-2026-10-03/",
+          "url": "https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-11-06/",
           "label": "🌐 Website"
         },
         {
@@ -354,125 +643,11 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "gear-night-with-dj-woolfie-1810eb9e"
+      "slug": "unity-night-discipline-corps-3ea607ea"
     },
     {
-      "name": "FURBALL",
-      "day": "Sunday",
-      "time": "5PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 32.810535,
-        "lng": -96.8110709
-      },
-      "startDate": "2026-07-05T17:00:00",
-      "unprocessedDescription": "bar: STATION 4\naddress: 3911 Cedar Springs Rd, Dallas, TX 75\r219\ntimezone: America/Chicago\nticketUrl: https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026\ninstagram: https://instagram.com/furballnyc/\nimage: https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg\nshortName: FUR-BALL\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
-      "uid": "53B4DABD-D3AE-47EC-AE4A-7D8C33A7652D",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "STATION 4",
-      "image": "https://static.wixstatic.com/media/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg/v1/fill/w_296,h_525,al_c,q_80,usm_0.66_1.00_0.01,enc_avif,quality_auto/238fae_335eacf0ca204c35bff2a6a6b4994fc5~mv2.jpg",
-      "cadence": null,
-      "address": "3911 Cedar Springs Rd, Dallas, TX 75219",
-      "website": "https://www.furball.nyc",
-      "instagram": "https://instagram.com/furballnyc/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
-      "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
-      "shortName": "FUR-BALL",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.furball.nyc",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://instagram.com/furballnyc/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=STATION%204%2C%20391%20Cedar%20Springs%20Rd",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://events.ticketleap.com/tickets/furballnyc/furball-dallas-freedom-tea-2026",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "furball-442f8415"
-    },
-    {
-      "name": "Sunday Funday: Rewind",
-      "day": "Sunday",
-      "time": "5PM-2AM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 32.7693483,
-        "lng": -96.8112576
-      },
-      "startDate": "2026-10-11T17:00:00",
-      "endDate": "2026-10-12T02:00:00",
-      "unprocessedDescription": "description: Turn back time and turn up the dance floor at Rewi\rnd! A new Sunday Funday retro event featuring the biggest dance hits of the ’80s, ’90s, and ’00s. From synth-pop and disco-inspired favorites to house classics and Y2K club anthems, all your favorite decades collide for one nonstop night of dancing. 😎🦅 🦅 No dress code, take off your shirt and have fun. Lockers available for $5. Legal clothing coverage required at all times. 🍻 Get here early for Happy Hour 🧢 Our Leather Shop is Now Open! ⭐ No…\nbar: Dallas Eagle\ninstagram: https://www.instagram.com/thedallaseagle/\nfacebook: https://www.facebook.com/lonestareagle\nwebsite: https://www.thedallaseagle.com/events/sunday-tea-rewind/\nmastodon: https://mastodon.social/@dallaseagle\ntimezone: America/Chicago\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nkey: sunday-funday-rewind|2026-10-11|dallas eagle\ncover: No cover\nbearSource: manual-bear (verdict store 2026-10-06)\nshortName: SUNDAY\npinSource: curated\naddressSource: curated\nbarSource: venue-site\ngmaps: https://www.google.com/maps/search/?api=1&query=Dallas%20Eagle%2C%20525%20S%20Riverfront%20Blvd%2C%20Dallas%2C%20TX%2075207",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Chicago",
-      "wasUTC": true,
-      "sourceUid": "6479A40B-A1CA-4D74-9741-38E8884EF6DB",
-      "uid": "6479A40B-A1CA-4D74-9741-38E8884EF6DB",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Dallas Eagle",
-      "cover": "No cover",
-      "tea": "Turn back time and turn up the dance floor at Rewind! A new Sunday Funday retro event featuring the biggest dance hits of the ’80s, ’90s, and ’00s. From synth-pop and disco-inspired favorites to house classics and Y2K club anthems, all your favorite decades collide for one nonstop night of dancing. 😎🦅 🦅 No dress code, take off your shirt and have fun. Lockers available for $5. Legal clothing coverage required at all times. 🍻 Get here early for Happy Hour 🧢 Our Leather Shop is Now Open! ⭐ No…",
-      "cadence": null,
-      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "website": "https://www.thedallaseagle.com/events/sunday-tea-rewind/",
-      "instagram": "https://www.instagram.com/thedallaseagle/",
-      "facebook": "https://www.facebook.com/lonestareagle",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Dallas%20Eagle%2C%20525%20S%20Riverfront%20Blvd%2C%20Dallas%2C%20TX%2075207",
-      "shortName": "SUNDAY",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.thedallaseagle.com/events/sunday-tea-rewind/",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/thedallaseagle/",
-          "label": "📷 Instagram"
-        },
-        {
-          "type": "facebook",
-          "url": "https://www.facebook.com/lonestareagle",
-          "label": "📘 Facebook"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Dallas%20Eagle%2C%20525%20S%20Riverfront%20Blvd%2C%20Dallas%2C%20TX%2075207",
-          "label": "🗺️ Google Maps"
-        }
-      ],
-      "slug": "sunday-funday-rewind-56199400"
-    },
-    {
-      "name": "Gear Night with DJ Tristan Jaxx",
-      "day": "Saturday",
+      "name": "RGV Bears presents Morbo",
+      "day": "Thursday",
       "time": "9PM-2AM",
       "eventType": "routine",
       "recurring": false,
@@ -480,35 +655,32 @@
         "lat": 32.7693483,
         "lng": -96.8112576
       },
-      "startDate": "2026-10-10T21:00:00",
-      "endDate": "2026-10-11T02:00:00",
-      "unprocessedDescription": "description: Grab your gear, it's time for GEAR NIGHT! Put on \ryour favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It's time to indulge yourself. Come see why this is the hottest night of the week! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🍻 Get here early for Happy Hour from 5pm - 8pm 🧢 Our Leather Shop is Now Open! ⭐…\nbar: Dallas Eagle\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nimage: https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/e998242451f1e5d96873531dffe2eeb619f47660a2152c58ac63d7da95b66938/baf27d366fbd4e3845c006fe614234d7e8c03756375981b4a33d5b7f38ba58bd.webp\ntimezone: America/Chicago\ncover: No cover\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\naddressSource: page\nwebsite: https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\npinSource: curated\nkey: gear-night-with-dj-tristan-jaxx|2026-10-11|dallas eagle\nimageSource: jsonld\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: GEAR NIGHT",
+      "startDate": "2026-11-12T21:00:00",
+      "endDate": "2026-11-13T02:00:00",
+      "unprocessedDescription": "timezone: America/Chicago\nwebsite: https://www.thedallaseagle.\rcom/events/rgv-bears-presents-morbo-2026-11-12/\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\nbar: Dallas Eagle\nbarSource: venue-site-identity\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nkey: rgv-bears-presents-morbo|2026-11-13|dallas eagle\nbearSource: keyword\nshortName: RGV BEARS",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Chicago",
       "wasUTC": true,
-      "sourceUid": "18200B99-F2B2-4AC0-98C7-8B4111B902FB",
-      "uid": "18200B99-F2B2-4AC0-98C7-8B4111B902FB",
+      "sourceUid": "9123E883-FCF4-44F0-A53C-F709600A96F1",
+      "uid": "9123E883-FCF4-44F0-A53C-F709600A96F1",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
       "bar": "Dallas Eagle",
-      "cover": "No cover",
-      "image": "https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/e998242451f1e5d96873531dffe2eeb619f47660a2152c58ac63d7da95b66938/baf27d366fbd4e3845c006fe614234d7e8c03756375981b4a33d5b7f38ba58bd.webp",
-      "tea": "Grab your gear, it's time for GEAR NIGHT! Put on your favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It's time to indulge yourself. Come see why this is the hottest night of the week! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🍻 Get here early for Happy Hour from 5pm - 8pm 🧢 Our Leather Shop is Now Open! ⭐…",
       "cadence": null,
       "address": "525 S Riverfront Blvd, Dallas, TX 75207",
-      "website": "https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/",
+      "website": "https://www.thedallaseagle.com/events/rgv-bears-presents-morbo-2026-11-12/",
       "instagram": "https://www.instagram.com/thedallaseagle/",
       "facebook": "https://www.facebook.com/lonestareagle",
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
-      "shortName": "GEAR NIGHT",
+      "shortName": "RGV BEARS",
       "bearReview": null,
       "links": [
         {
           "type": "website",
-          "url": "https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/",
+          "url": "https://www.thedallaseagle.com/events/rgv-bears-presents-morbo-2026-11-12/",
           "label": "🌐 Website"
         },
         {
@@ -527,7 +699,123 @@
           "label": "🗺️ Google Maps"
         }
       ],
-      "slug": "gear-night-with-dj-tristan-jaxx-53ef889e"
+      "slug": "rgv-bears-presents-morbo-5e70f5b1"
+    },
+    {
+      "name": "Unity Night: Discipline Corps",
+      "day": "Friday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-10-09T21:00:00",
+      "endDate": "2026-10-10T02:00:00",
+      "unprocessedDescription": "description: Community looks good on you. Come together at the \rEagle every Friday for Unity Night 🦅 Unity Night celebrates the people who make the Dallas Eagle more than just a place to grab a drink. Whether you’re a longtime regular, visiting Dallas, or making your first appearance, come find your crowd and give someone a reason to say hello. This week, we welcome the Discipline Corps for an evening of community and connection. All are welcome! 🦅 No cover. Wear your leather and gear! Always encouraged…\nbar: Dallas Eagle\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\nimage: https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/9e1ebba42f2ebf4403e8bdb5b2546c778ef77a421cfe436f0541b353b6078055/a1ed50ff1afba55fa21d0affb33c2590c0ae472772a8f5600cc5b5241e97c32d.webp\ntimezone: America/Chicago\ncover: No cover\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\naddressSource: page\nwebsite: https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-10-09/\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\npinSource: curated\nkey: unity-night-discipline-corps|2026-10-10|dallas eagle\nimageSource: jsonld\nbarSource: curated\nbearSource: manual-bear (verdict store 2026-10-06)\nshortName: UNITY NIGHT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "EA84BC17-C16B-4496-ACBE-20288B73924A",
+      "uid": "EA84BC17-C16B-4496-ACBE-20288B73924A",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "cover": "No cover",
+      "image": "https://www.thedallaseagle.com/wp-content/uploads/birdbrain/39382cf8e418e004639a8afca5ad524c5f50183b4b49e2cdcdf0a96673739e14/9e1ebba42f2ebf4403e8bdb5b2546c778ef77a421cfe436f0541b353b6078055/a1ed50ff1afba55fa21d0affb33c2590c0ae472772a8f5600cc5b5241e97c32d.webp",
+      "tea": "Community looks good on you. Come together at the Eagle every Friday for Unity Night 🦅 Unity Night celebrates the people who make the Dallas Eagle more than just a place to grab a drink. Whether you’re a longtime regular, visiting Dallas, or making your first appearance, come find your crowd and give someone a reason to say hello. This week, we welcome the Discipline Corps for an evening of community and connection. All are welcome! 🦅 No cover. Wear your leather and gear! Always encouraged…",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-10-09/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "UNITY NIGHT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-10-09/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "unity-night-discipline-corps-43e83cf3"
+    },
+    {
+      "name": "Gear Night with DJ Philip Webb",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-11-07T21:00:00",
+      "endDate": "2026-11-08T02:00:00",
+      "unprocessedDescription": "description: Grab your gear, it’s time for GEAR NIGHT! Put on \ryour favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It’s time to indulge yourself. Come see why this is the h , ...\ntimezone: America/Chicago\nwebsite: https://www.thedallaseagle.com/events/gear-night-with-dj-philip-webb-2026-11-07/\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\nbar: Dallas Eagle\nbarSource: venue-site-identity\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nkey: gear-night-with-dj-philip-webb|2026-11-08|dallas eagle\nbearSource: manual-bear (verdict store 2026-10-01)\nshortName: GEAR NIGHT",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "C41BA129-C0FC-4129-BE6B-EF7527EC35F7",
+      "uid": "C41BA129-C0FC-4129-BE6B-EF7527EC35F7",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "tea": "Grab your gear, it’s time for GEAR NIGHT! Put on your favorite gear and get ready to dance the night away to pounding beats that will get your blood pumping. Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! It’s time to indulge yourself. Come see why this is the h , ...",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/gear-night-with-dj-philip-webb-2026-11-07/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "GEAR NIGHT",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/gear-night-with-dj-philip-webb-2026-11-07/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "gear-night-with-dj-philip-webb-5032ecd9"
     },
     {
       "name": "Sunday Tea: Disco with DJ Apthout",
@@ -588,6 +876,63 @@
         }
       ],
       "slug": "sunday-tea-disco-with-dj-apthout-61dc7e46"
+    },
+    {
+      "name": "Lone Star Leather with DJ TDon",
+      "day": "Saturday",
+      "time": "9PM-2AM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 32.7693483,
+        "lng": -96.8112576
+      },
+      "startDate": "2026-11-28T21:00:00",
+      "endDate": "2026-11-29T02:00:00",
+      "unprocessedDescription": "description: Gear up for our signature Lone Star Leather event!\r ⭐🦅 Don your finest leather gear and join us for a night celebrating our love for leather! Whether you’re a leather veteran or exploring for the first time, this is the perfect night to embrace your passion and connect with the leather community. 🦅 Leather and fet , ...\ntimezone: America/Chicago\nwebsite: https://www.thedallaseagle.com/events/lone-star-leather-with-dj-tdon-2026-11-28/\nfacebook: https://www.facebook.com/lonestareagle\ninstagram: https://www.instagram.com/thedallaseagle/\nmastodon: https://mastodon.social/@dallaseagle\nbar: Dallas Eagle\naddress: 525 S Riverfront Blvd, Dallas, TX 75207\naddressSource: curated\npinSource: curated\ngmaps: https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I\nkey: lone-star-leather-with-dj-tdon|2026-11-29|dallas eagle\nbarSource: venue-site-identity\nbearSource: keyword\nshortName: LONE STAR",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Chicago",
+      "wasUTC": true,
+      "sourceUid": "52685AAA-0F93-4435-9F64-AE1D9ABA3A32",
+      "uid": "52685AAA-0F93-4435-9F64-AE1D9ABA3A32",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "Dallas Eagle",
+      "tea": "Gear up for our signature Lone Star Leather event! ⭐🦅 Don your finest leather gear and join us for a night celebrating our love for leather! Whether you’re a leather veteran or exploring for the first time, this is the perfect night to embrace your passion and connect with the leather community. 🦅 Leather and fet , ...",
+      "cadence": null,
+      "address": "525 S Riverfront Blvd, Dallas, TX 75207",
+      "website": "https://www.thedallaseagle.com/events/lone-star-leather-with-dj-tdon-2026-11-28/",
+      "instagram": "https://www.instagram.com/thedallaseagle/",
+      "facebook": "https://www.facebook.com/lonestareagle",
+      "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+      "shortName": "LONE STAR",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.thedallaseagle.com/events/lone-star-leather-with-dj-tdon-2026-11-28/",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/thedallaseagle/",
+          "label": "📷 Instagram"
+        },
+        {
+          "type": "facebook",
+          "url": "https://www.facebook.com/lonestareagle",
+          "label": "📘 Facebook"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/place/?q=place_id:ChIJU843NR6cToYROpJZCM8p4-I",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "lone-star-leather-with-dj-tdon-31f99c63"
     }
   ]
 }

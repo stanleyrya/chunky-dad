@@ -5,4 +5,25 @@ CALSCALE:GREGORIAN
 METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-manila
 X-WR-TIMEZONE:Asia/Manila
+BEGIN:VEVENT
+DTSTART:20261029T160000Z
+DTEND:20261030T160000Z
+DTSTAMP:20261030T191530Z
+UID:3F7FF54C-1D92-4B6A-B203-6F20F16673C6
+CREATED:20261030T190611Z
+DESCRIPTION:bar: Hey Teddy Manila\nimage: https://cdn.whereto.party/media/e
+ vents/1808c9dc-aaab-4b62-99e6-81743d6b6c3f.jpeg\ncover: $1-$899\ntimezone: 
+ Asia/Manila\nimageVertical: https://cdn.whereto.party/media/events/1808c9dc
+ -aaab-4b62-99e6-81743d6b6c3f.jpeg\ngmaps: https://www.google.com/maps/searc
+ h/?api=1&query=Hey%20Teddy%20Manila\nkey: poblacion-bear-halloween-party|20
+ 26-10-29|hey teddy manila\nimageSource: json-api\nwebsite: https://heyteddy
+ manila.com/\nbearSource: keyword\nshortName: POBLACION BEAR
+LAST-MODIFIED:20261030T190612Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Poblacion Bear Halloween Party
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
 END:VCALENDAR

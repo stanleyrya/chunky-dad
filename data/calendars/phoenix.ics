@@ -8,7 +8,7 @@ X-WR-TIMEZONE:America/Phoenix
 BEGIN:VEVENT
 DTSTART:20251005T040000Z
 DTEND:20251005T090000Z
-DTSTAMP:20261029T100517Z
+DTSTAMP:20261030T191530Z
 UID:F6548399-1DB6-4C62-9F75-A6045BF3884F
 CREATED:20251001T000958Z
 DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
@@ -33,8 +33,67 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261129T043000Z
+DTEND:20261129T090000Z
+DTSTAMP:20261030T191530Z
+UID:80A14257-C100-4528-9AA2-30633F446B56
+CREATED:20261029T100447Z
+DESCRIPTION:description: MEGAWOOF PHOENIX - BLACK OUT...\nbar: North Centra
+ l Avenue\naddress: North Central Avenue\, Phoenix\, AZ 85012\nticketUrl: ht
+ tps://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802
+ \nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11963
+ 29446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=cro
+ p&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7
+ adb668cd161b1accf9e972\nimageSource: jsonld\ncover: $11.58-$22.10\ntimezone
+ : America/Phoenix\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.e
+ vbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-01043
+ 8?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=
+ 0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\naddressSource: page\nwebsi
+ te: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/
+ search/?api=1&query=33.5199151%2C-112.0737137\npinSource: geocoded-approx\n
+ shortName: MEGA­WOOF\ninstagram: https://www.instagram.com/megawoof_america
+ \nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-phoenix-black-
+ out|2026-11-29|north central avenue\nbearSource: keyword
+LAST-MODIFIED:20261029T100447Z
+LOCATION:33.5199151\, -112.0737137
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF PHOENIX - BLACK OUT...
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260809T043000Z
+DTEND:20260809T090000Z
+DTSTAMP:20261030T191530Z
+UID:DBB2B903-E956-45AE-8645-08B4C4A8A455
+CREATED:20260712T004132Z
+DESCRIPTION:description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: 
+ Kobalt\naddress: 3110 North Central Avenue\, #175\, Phoenix\, AZ 85012\ntic
+ ketUrl: https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofer
+ s-tickets-1992064021112\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evb
+ uc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?
+ crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.
+ 5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61\ncover: $11.58-$22.10\ntimezo
+ ne: America/Phoenix\nwebsite: https://linktr.ee/megawoof_america\nshortName
+ : MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon
+ : https://linktr.ee/megawoof_america\nbearSource: keyword\nkey: megawoof-am
+ erica-phoenix-summer-woofers|2026-08-09|kobalt\naddressSource: page\nimageS
+ ource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/searc
+ h/?api=1&query=33.4832996%2C-112.0753159
+LAST-MODIFIED:20260731T165256Z
+LOCATION:33.4832996\, -112.0753159
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260524T043000Z
-DTSTAMP:20261029T100517Z
+DTSTAMP:20261030T191530Z
 UID:9165A83C-32B2-497F-A522-7C5ADF7B9A2A
 CREATED:20260507T001637Z
 DESCRIPTION:description: Bearracuda PhoenixRELAUNCH PARTYSaturday\, May 23t
@@ -60,9 +119,40 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261213T043000Z
+DTEND:20261213T090000Z
+DTSTAMP:20261030T191530Z
+UID:DF8E4101-C3DF-4DD7-8910-842FA269457E
+CREATED:20261030T190603Z
+DESCRIPTION:description: On Sat\, Dec 12th TWISTED BEAR is super excited to
+  be making its long-awaited debut at Kobalt in Phoenix !!\nbar: Kobalt\nadd
+ ress: 3110 North Central Avenue\, #175\, Phoenix\, AZ 85012\nticketUrl: htt
+ ps://www.eventbrite.com/e/twisted-bear-phoenix-merry-thickmas-tickets-20038
+ 89099239\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages
+ %2F1196548071%2F1088207912863%2F1%2Foriginal.20261025-181348?crop=focalpoin
+ t&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3
+ 7d024d6a7636f7a7fc675dbe68ac168\nimageSource: jsonld\ncover: $12.51-$23.18\
+ ntimezone: America/Phoenix\nimageHorizontal: https://img.evbuc.com/https%3A
+ %2F%2Fcdn.evbuc.com%2Fimages%2F1196548071%2F1088207912863%2F1%2Foriginal.20
+ 261025-181348?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sh
+ arp=10&fp-x=0.5&fp-y=0.5&s=37d024d6a7636f7a7fc675dbe68ac168\nbarSource: cur
+ ated\naddressSource: page\nwebsite: https://www.eventbrite.com/e/twisted-be
+ ar-phoenix-merry-thickmas-tickets-2003889099239\ngmaps: https://www.google.
+ com/maps/search/?api=1&query=Kobalt%2C%203110%20North%20Central%20Avenue%2C
+ %20%23175%2C%20Phoenix%2C%20AZ%2085012\npinSource: curated
+LAST-MODIFIED:20261030T190603Z
+LOCATION:33.4834859\, -112.0757318
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TWISTED BEAR PHOENIX - MERRY THICKMAS!
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261122T043000Z
 DTEND:20261122T090000Z
-DTSTAMP:20261029T100517Z
+DTSTAMP:20261030T191530Z
 UID:B74122C0-789A-4EC5-AB41-9FB1B22BD8D1
 CREATED:20261029T100448Z
 DESCRIPTION:description: Treasure Trail makes it debut in Phoenix and we in
@@ -95,7 +185,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261011T043000Z
 DTEND:20261011T090000Z
-DTSTAMP:20261029T100517Z
+DTSTAMP:20261030T191530Z
 UID:9FF35A8A-3A10-4BCB-BE7F-FDFC8B6187BC
 CREATED:20260815T022623Z
 DESCRIPTION:description: Bearracuda PhoenixPRIDE SATURDAYSaturday\, Oct. 10
@@ -121,65 +211,6 @@ LOCATION:33.497757\, -112.077333
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BEARRACUDA: PHOENIX PRIDE
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20260809T043000Z
-DTEND:20260809T090000Z
-DTSTAMP:20261029T100517Z
-UID:DBB2B903-E956-45AE-8645-08B4C4A8A455
-CREATED:20260712T004132Z
-DESCRIPTION:description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: 
- Kobalt\naddress: 3110 North Central Avenue\, #175\, Phoenix\, AZ 85012\ntic
- ketUrl: https://www.eventbrite.com/e/megawoof-america-phoenix-summer-woofer
- s-tickets-1992064021112\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evb
- uc.com%2Fimages%2F1187117356%2F185013722403%2F1%2Foriginal.20260617-155633?
- crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.
- 5&fp-y=0.5&s=1c3fca6f7a04cb401339bb4a31cace61\ncover: $11.58-$22.10\ntimezo
- ne: America/Phoenix\nwebsite: https://linktr.ee/megawoof_america\nshortName
- : MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon
- : https://linktr.ee/megawoof_america\nbearSource: keyword\nkey: megawoof-am
- erica-phoenix-summer-woofers|2026-08-09|kobalt\naddressSource: page\nimageS
- ource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/searc
- h/?api=1&query=33.4832996%2C-112.0753159
-LAST-MODIFIED:20260731T165256Z
-LOCATION:33.4832996\, -112.0753159
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261129T043000Z
-DTEND:20261129T090000Z
-DTSTAMP:20261029T100517Z
-UID:80A14257-C100-4528-9AA2-30633F446B56
-CREATED:20261029T100447Z
-DESCRIPTION:description: MEGAWOOF PHOENIX - BLACK OUT...\nbar: North Centra
- l Avenue\naddress: North Central Avenue\, Phoenix\, AZ 85012\nticketUrl: ht
- tps://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802
- \nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11963
- 29446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=cro
- p&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7
- adb668cd161b1accf9e972\nimageSource: jsonld\ncover: $11.58-$22.10\ntimezone
- : America/Phoenix\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.e
- vbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-01043
- 8?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=
- 0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\naddressSource: page\nwebsi
- te: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/
- search/?api=1&query=33.5199151%2C-112.0737137\npinSource: geocoded-approx\n
- shortName: MEGA­WOOF\ninstagram: https://www.instagram.com/megawoof_america
- \nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-phoenix-black-
- out|2026-11-29|north central avenue\nbearSource: keyword
-LAST-MODIFIED:20261029T100447Z
-LOCATION:33.5199151\, -112.0737137
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF PHOENIX - BLACK OUT...
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

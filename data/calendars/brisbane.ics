@@ -8,7 +8,7 @@ X-WR-TIMEZONE:Australia/Brisbane
 BEGIN:VEVENT
 DTSTART:20261113T110000Z
 DTEND:20261113T170000Z
-DTSTAMP:20261002T200730Z
+DTSTAMP:20261030T191530Z
 UID:8972EE3F-354F-4583-A8C5-BB39945D69EF
 CREATED:20261002T200641Z
 DESCRIPTION:bar: Wonderland Brisbane\nticketUrl: https://events.humanitix.c
@@ -30,9 +30,33 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261030T083000Z
+DTEND:20261030T120000Z
+DTSTAMP:20261030T191530Z
+UID:96228A12-0429-498B-9642-5AFA79DA07F3
+CREATED:20261030T190616Z
+DESCRIPTION:bar: Come to Daddy\nimage: https://cdn.whereto.party/media/even
+ ts/fcacaa24-d567-4036-bee7-a3b84309dda6.png\ntimezone: Australia/Brisbane\n
+ imageVertical: https://cdn.whereto.party/media/events/fcacaa24-d567-4036-be
+ e7-a3b84309dda6.png\ngmaps: https://www.google.com/maps/search/?api=1&query
+ =Come%20to%20Daddy%2C%20208%20Montague%20Road%2C%20Brisbane%2C%20Queensland
+ \naddress: 208 Montague Road\, Brisbane\, Queensland\naddressSource: geo-po
+ i\npinSource: geocoded-exact\nkey: the-night-before-halloween-masquerade-ba
+ ll|2026-10-30|come to daddy\nimageSource: json-api\nbarSource: geo-poi\nbea
+ rSource: keyword\nshortName: NIGHT BEFORE
+LAST-MODIFIED:20261030T190616Z
+LOCATION:-27.4766249\, 153.0085875
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:The Night Before Halloween Masquerade Ball
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261024T053000Z
 DTEND:20261024T080000Z
-DTSTAMP:20261002T200730Z
+DTSTAMP:20261030T191530Z
 UID:AA7DC755-D1A9-47D0-9723-96221D2DEDDD
 CREATED:20261002T200640Z
 DESCRIPTION:bar: West End Recreation Hub\nticketUrl: https://events.humanit
