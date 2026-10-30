@@ -150,8 +150,13 @@ class SavedRunDisplay {
             this.note(`📱 Display: Path components - fileName: ${fileName}`);
             this.note(`📱 Display: Loading run from: ${runFilePath}`);
             if (!fm.fileExists(runFilePath)) {
-                this.note(`📱 Display: Run file does not exist: ${runFilePath}`);
-                return null;
+                // Not an error in the run: iCloud has not delivered the Mac's
+                // file to this phone yet (2026-10-29, twice: "Could not load
+                // saved run" within 15 minutes of the Mac writing it, the
+                // Mac reporting every upload done). The caller may fetch it
+                // from the Mac instead (fetchRunFromMac).
+                this.note(`📱 Display: Run file is not on this phone yet (iCloud has not delivered it): ${runFilePath}`);
+                return { __icloudSyncPending: true, notOnPhone: true, runId };
             }
 
             // DOWNLOAD ON OPEN, BOUNDED: fetch just this run's file with a
@@ -382,6 +387,56 @@ class SavedRunDisplay {
     // scriptable:///run?scriptName=<this>&runId=<id>&reviewExecute=1 — the
     // Mac server's "Execute on phone" link. Loads the named run, the owner's
     // decisions, and executes without presenting the results sheet.
+    // iCloud is not the only road to the Mac's run file. The deck's execute
+    // link carries runUrl, the Mac server's own copy of the run over the
+    // tailnet (/review/run/<id>.json, https only): when iCloud has not
+    // delivered the file to this phone, fetch it from there, keep it in the
+    // runs folder like a synced one, and carry on. Returns the parsed run or
+    // null (the note says why).
+    async fetchRunFromMac(runId, runUrl) {
+        const url = typeof runUrl === 'string' ? runUrl.trim() : '';
+        if (!url || !/^https:\/\//i.test(url)) return null;
+        try {
+            this.note(`📱 Display: iCloud has not delivered run ${runId} — fetching it from the Mac: ${url}`);
+            const startedAt = Date.now();
+            const request = new Request(url);
+            request.timeoutInterval = 120;
+            const text = await request.loadString();
+            const status = request.response && typeof request.response.statusCode === 'number' ? request.response.statusCode : 200;
+            if (status !== 200 || typeof text !== 'string' || !text.trim()) {
+                this.note(`📱 Display: Mac answered ${status} with ${typeof text === 'string' ? text.length : 0} characters — not a run`);
+                return null;
+            }
+            const parsed = JSON.parse(text);
+            const fetchedRunId = parsed && parsed.summary && typeof parsed.summary.runId === 'string' ? parsed.summary.runId : '';
+            if (fetchedRunId !== runId) {
+                this.note(`📱 Display: the Mac's file names run "${fetchedRunId}", not ${runId} — ignored`);
+                return null;
+            }
+            const fm = FileManager.iCloud();
+            const runsDir = fm.joinPath(this.resolveDataRoot(fm), 'runs');
+            const runFilePath = fm.joinPath(runsDir, `${runId}.json`);
+            try {
+                if (!fm.fileExists(runsDir)) fm.createDirectory(runsDir, true);
+                if (!fm.fileExists(runFilePath)) fm.writeString(runFilePath, text);
+            } catch (writeError) {
+                this.note(`📱 Display: could not keep the fetched run in iCloud (${writeError.message}) — using it for this execute only`);
+            }
+            this.note(`📱 Display: run ${runId} fetched from the Mac in ${Date.now() - startedAt}ms (${text.length} characters)`);
+            return parsed;
+        } catch (error) {
+            this.note(`📱 Display: fetching run ${runId} from the Mac failed: ${error.message}`);
+            return null;
+        }
+    }
+
+    // One sentence for a run iCloud has not delivered or finished syncing.
+    describeSyncPending(saved, runId) {
+        return saved && saved.notOnPhone
+            ? `Run ${runId} has not reached this phone from iCloud yet — the Mac's upload or this phone's sync is still in flight. Try the link again in a few minutes, or open the file in Files › iCloud Drive › chunky-dad-data › runs to pull it.`
+            : `Run ${runId} is still syncing from iCloud — try the link again shortly.`;
+    }
+
     async executeReviewedRun(options = {}) {
         const runId = typeof options.runId === 'string' ? options.runId.trim() : '';
         if (!runId) {
@@ -392,10 +447,14 @@ class SavedRunDisplay {
         // a number per phase (iCloud download + read + parse of the run
         // file, adapter + decisions load) before anything can be sped up.
         const startedAt = Date.now();
-        const saved = await this.loadSavedRun(runId);
+        let saved = await this.loadSavedRun(runId);
+        if (saved && saved.__icloudSyncPending === true && options.runUrl) {
+            const fetched = await this.fetchRunFromMac(runId, options.runUrl);
+            if (fetched) saved = fetched;
+        }
         const loadedAt = Date.now();
         if (saved && saved.__icloudSyncPending === true) {
-            await this.failLoud('Still syncing from iCloud', `Run ${runId} is still syncing from iCloud — try the link again shortly.`, { runId });
+            await this.failLoud('Still syncing from iCloud', this.describeSyncPending(saved, runId), { runId, runUrl: options.runUrl || null });
             return null;
         }
         if (!saved) {
@@ -462,7 +521,7 @@ class SavedRunDisplay {
 
                 saved = await this.loadSavedRun(runIdString);
                 if (saved && saved.__icloudSyncPending === true) {
-                    await this.showError('Still syncing from iCloud', `Run ${runIdString} is still syncing from iCloud — try again shortly.`);
+                    await this.showError('Still syncing from iCloud', this.describeSyncPending(saved, runIdString));
                     if (interactive) {
                         saved = null;
                         continue; // back to the run list
@@ -519,6 +578,10 @@ function parseLaunchOptions(query = {}, widgetParam = null) {
     const last = runId ? false : (toBool(params.last, false) || lastFromParam);
     const presentHistoryDefault = !runId && !last;
     const reviewExecute = Boolean(runId) && toBool(params.reviewExecute, false);
+    // The Mac server's own copy of the run (https only — the tailnet name),
+    // for when iCloud has not delivered the file to this phone.
+    const runUrlRaw = typeof params.runUrl === 'string' ? params.runUrl.trim() : '';
+    const runUrl = reviewExecute && /^https:\/\//i.test(runUrlRaw) ? runUrlRaw : null;
     // scriptable:///run?scriptName=<this>&snapshot=1 (or the widget/shortcut
     // parameter "snapshot"): read the calendars and write the snapshot files
     // the Mac analyses against — no scrape, no run, no calendar write.
@@ -530,7 +593,8 @@ function parseLaunchOptions(query = {}, widgetParam = null) {
         runId,                                  // a specific runId like "20250101-120000"
         presentHistory: toBool(params.presentHistory, presentHistoryDefault),
         readOnly: toBool(params.readOnly, true), // TOTAL OVERRIDE: forces isDryRun=true, set false for calendar updates
-        reviewExecute                           // execute the owner-reviewed plan, no results sheet
+        reviewExecute,                          // execute the owner-reviewed plan, no results sheet
+        runUrl                                  // where the Mac serves this run when iCloud lags
     };
 }
 

@@ -2464,7 +2464,11 @@ window.__startDeck = function () {
       ? '<small>🖼️ ' + picturesWaiting.length + ' of these wait' + (picturesWaiting.length === 1 ? 's' : '') + ' for the pictures PR' + (picturesWaiting[0].picture.pr && picturesWaiting[0].picture.pr.url ? ' <a href="' + escapeHtml(picturesWaiting[0].picture.pr.url) + '">#' + escapeHtml(String(picturesWaiting[0].picture.pr.number || '')) + '</a>' : '') + ' — merge it first, or they are written without their flyer.</small>'
       : '';
     if (approved > 0 && deck.executeLink) {
-      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
+      // The link also names this server's copy of the run (runUrl): when
+      // iCloud has not delivered the file to the phone, the phone fetches it
+      // from here over the tailnet instead of failing.
+      var executeHref = deck.executeLink + '&runUrl=' + encodeURIComponent(location.origin + '/review/run/' + deck.runId + '.json');
+      el.innerHTML = '<a href="' + executeHref.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
     } else {
       el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
     }
@@ -3920,6 +3924,22 @@ async function handleRequest(state, req, res) {
             console.error(`Review render failed: ${error.stack || error}`);
             return sendText(res, 500, `Review render failed: ${error.message}`);
         }
+    }
+
+    // The run file itself, for the phone: iCloud delivered the Mac's run to
+    // the phone late twice on 2026-10-29 ("Could not load saved run"), so the
+    // deck's execute link also names this copy (runUrl) and the phone fetches
+    // it over the tailnet when its own iCloud folder lacks the file.
+    const runFileMatch = /^\/review\/run\/(\d{8}-\d{6})\.json$/.exec(pathname);
+    if (runFileMatch && req.method === 'GET') {
+        const runPath = path.join(reviewQueue.resolveSharedRoot(), 'runs', `${runFileMatch[1]}.json`);
+        let stat = null;
+        try { stat = fs.statSync(runPath); } catch (_) { stat = null; }
+        if (!stat || !stat.isFile()) return sendJson(res, 404, { ok: false, error: 'no such run' });
+        let body;
+        try { body = fs.readFileSync(runPath); } catch (error) { return sendJson(res, 500, { ok: false, error: error.message }); }
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': body.length, 'Cache-Control': 'no-store' });
+        return res.end(body);
     }
 
     if (pathname === '/review/deck.json' && req.method === 'GET') {

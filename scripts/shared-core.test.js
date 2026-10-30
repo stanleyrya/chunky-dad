@@ -15908,7 +15908,12 @@ test('promoter chip rule: the brand comes off a programme row\'s title, the umbr
     ['BEEFDIP ON ALL 4’s – ATV ADVENTURE', beefDip, 'ON ALL 4’s – ATV ADVENTURE', false],
     ['Urban Bear NYC', urban, '', true],
     ['The 18th Annual Urban Bear NYC Street Fair', urban, 'The 18th Annual Street Fair', false],
-    ['Urban Bear Weekend: Burgers, Bangles & Beer', urban, 'Burgers, Bangles & Beer', false]
+    ['Urban Bear Weekend: Burgers, Bangles & Beer', urban, 'Burgers, Bangles & Beer', false],
+    // Run 20261029-205035: what the brand left behind on real titles.
+    ['Loving Our Bear Bodies at Spooky Bear in Provincetown', spooky, 'Loving Our Bear Bodies in Provincetown', false],
+    ['The Belly Party - SPOOKY BEAR!', spooky, 'The Belly Party', false],
+    ['HALLOWEEN UNIFORM TEA - Spooky Bear Wknd', spooky, 'HALLOWEEN UNIFORM TEA', false],
+    ['Belly: Spooky Bear Edition', spooky, 'Belly', false]
   ];
   for (const [title, entry, remainder, isBrand] of cases) {
     assert.equal(core.stripPromoterBrandFromTitle(title, entry), remainder, `strip: ${title}`);
@@ -15922,7 +15927,7 @@ test('promoter chip rule: same-day siblings of one promoter are named from their
   const batch = buildSpookyBearBatch();
   core._preparingBatch = Object.values(batch);
   const adapter = createShortNameAdapter('{"shortName": {"value": "MONSTER MASH", "reason": "the party name"}}');
-  const config = { ai: { shortNameDeriveMaxChars: 20 } };
+  const config = { ai: {} }; // the default 16-char derive cap; a remainder up to 20 (the grid's width) still stands as it is
   const lines = [];
   const restore = captureFinalBuildLogs(lines);
   const built = {};

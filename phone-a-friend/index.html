@@ -798,7 +798,11 @@ window.__startDeck = function () {
       ? '<small>🖼️ ' + picturesWaiting.length + ' of these wait' + (picturesWaiting.length === 1 ? 's' : '') + ' for the pictures PR' + (picturesWaiting[0].picture.pr && picturesWaiting[0].picture.pr.url ? ' <a href="' + escapeHtml(picturesWaiting[0].picture.pr.url) + '">#' + escapeHtml(String(picturesWaiting[0].picture.pr.number || '')) + '</a>' : '') + ' — merge it first, or they are written without their flyer.</small>'
       : '';
     if (approved > 0 && deck.executeLink) {
-      el.innerHTML = '<a href="' + deck.executeLink.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
+      // The link also names this server's copy of the run (runUrl): when
+      // iCloud has not delivered the file to the phone, the phone fetches it
+      // from here over the tailnet instead of failing.
+      var executeHref = deck.executeLink + '&runUrl=' + encodeURIComponent(location.origin + '/review/run/' + deck.runId + '.json');
+      el.innerHTML = '<a href="' + executeHref.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
     } else {
       el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
     }
