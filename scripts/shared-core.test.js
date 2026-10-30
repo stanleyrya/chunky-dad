@@ -15862,6 +15862,135 @@ test('shortName prompt: identical across builds, title only — no volatile cont
   assert.ok(first.includes('16 characters'), 'max chars stated');
 });
 
+const SPOOKY_BEAR_REGISTRY = [
+  { name: 'Northeast Ursamen', shortName: 'URSA­MEN', website: 'https://www.ursamen.org' },
+  { name: 'Spooky Bear', parent: 'Northeast Ursamen', keywords: ['spooky bear', 'spookybear'], shortName: 'SPOOKY BEAR', website: 'https://www.ursamen.org/spookybear' },
+  { name: 'BeefDip', aliases: ['BeefDip Bear Week'], shortName: 'BEEF­DIP' },
+  { name: 'Urban Bear', aliases: ['Urban Bear NYC'], shortName: 'URBAN BEAR' }
+];
+
+function buildSpookyBearBatch(overrides = {}) {
+  const base = (title, startDate, extra = {}) => ({
+    title,
+    startDate: new Date(startDate),
+    city: 'dallas',
+    timezone: 'America/Chicago',
+    bar: 'Crown & Anchor',
+    shortName: 'SPOOKY BEAR',
+    _promoter: 'Spooky Bear',
+    _staticFields: { shortName: 'SPOOKY BEAR' },
+    ...extra
+  });
+  return {
+    meetUp: base('SPOOKY BEAR EARLY BEAR MEET UP', '2026-10-31T20:00:00.000Z', overrides.meetUp),
+    monsterMash: base('MONSTER MASH DANCE PARTY & FUNDRAISER', '2026-11-01T02:00:00.000Z', overrides.monsterMash),
+    umbrella: base('Spooky Bear', '2026-10-31T18:00:00.000Z', overrides.umbrella),
+    fridayAlone: base('HALLOQUEEN BURNER BRUNCH', '2026-10-30T16:00:00.000Z', overrides.fridayAlone)
+  };
+}
+
+test('promoter chip rule: the brand comes off a programme row\'s title, the umbrella keeps it', () => {
+  const core = createFinalBuildCore({ promoters: SPOOKY_BEAR_REGISTRY });
+  const spooky = core.getPromoterEntryByName('Spooky Bear');
+  const beefDip = core.getPromoterEntryByName('BeefDip');
+  const urban = core.getPromoterEntryByName('Urban Bear');
+  const cases = [
+    ['SPOOKY BEAR EARLY BEAR MEET UP', spooky, 'EARLY BEAR MEET UP', false],
+    ['GOLDILOXX - SPOOKY BEAR DAYTIME DELIGHT', spooky, 'GOLDILOXX - DAYTIME DELIGHT', false],
+    ['Spooky Bear: Monster Mash', spooky, 'Monster Mash', false],
+    ['Fat Slut: Spooky Bear', spooky, 'Fat Slut', false],
+    ['HALLOQUEEN BURNER BRUNCH', spooky, 'HALLOQUEEN BURNER BRUNCH', false],
+    ['Spooky Bear', spooky, '', true],
+    ['Spooky Bear 2026', spooky, '', true],
+    ['SpookyBear Weekend', spooky, '', true],
+    ['Spooky Bear Weekend 2026: Monster Mash', spooky, 'Monster Mash', false],
+    ['BeefDip Bear Week', beefDip, '', true],
+    ['BEEFDIP ON ALL 4’s – ATV ADVENTURE', beefDip, 'ON ALL 4’s – ATV ADVENTURE', false],
+    ['Urban Bear NYC', urban, '', true],
+    ['The 18th Annual Urban Bear NYC Street Fair', urban, 'The 18th Annual Street Fair', false],
+    ['Urban Bear Weekend: Burgers, Bangles & Beer', urban, 'Burgers, Bangles & Beer', false]
+  ];
+  for (const [title, entry, remainder, isBrand] of cases) {
+    assert.equal(core.stripPromoterBrandFromTitle(title, entry), remainder, `strip: ${title}`);
+    assert.equal(core.isPromoterBrandTitle(title, entry), isBrand, `brand title: ${title}`);
+  }
+  assert.equal(core.stripPromoterBrandFromTitle('Spookybearish night', spooky), 'Spookybearish night', 'word boundaries: a longer word is not the brand');
+});
+
+test('promoter chip rule: same-day siblings of one promoter are named from their own titles, a lone day and the umbrella keep the brand chip', async () => {
+  const core = createFinalBuildCore({ promoters: SPOOKY_BEAR_REGISTRY });
+  const batch = buildSpookyBearBatch();
+  core._preparingBatch = Object.values(batch);
+  const adapter = createShortNameAdapter('{"shortName": {"value": "MONSTER MASH", "reason": "the party name"}}');
+  const config = { ai: { shortNameDeriveMaxChars: 20 } };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  const built = {};
+  try {
+    for (const [key, event] of Object.entries(batch)) {
+      built[key] = await core.buildAnalyzedCalendarEvent(event, NEW_ACTION_ANALYSIS, adapter, config);
+    }
+  } finally {
+    restore();
+  }
+
+  // Saturday holds three Spooky Bear events: the meet-up's remainder fits
+  // the chip, Monster Mash's does not and is derived over the remainder.
+  assert.equal(built.meetUp.shortName, 'EARLY BEAR MEET UP');
+  assert.equal(core.parseNotesIntoFields(built.meetUp.notes || '').shortName, 'EARLY BEAR MEET UP', 'notes carry the new chip');
+  assert.ok(!Object.prototype.hasOwnProperty.call(built.meetUp._staticFields || {}, 'shortName'), 'the static brand stamp is gone');
+  assert.equal(built.monsterMash.shortName, 'MONSTER MASH');
+  assert.equal(adapter.calls.length, 1, 'one AI call — only the title that did not fit');
+  const prompt = adapter.calls[0].messages[0].content;
+  assert.ok(prompt.includes('MONSTER MASH DANCE PARTY & FUNDRAISER'), 'the prompt carries the remainder');
+  // The umbrella's title IS the brand; Friday's brunch is alone on its day.
+  assert.equal(built.umbrella.shortName, 'SPOOKY BEAR');
+  assert.equal(built.fridayAlone.shortName, 'SPOOKY BEAR');
+
+  const chipLines = lines.filter(line => line.startsWith('🏷️ CHIP:'));
+  assert.deepEqual(chipLines, [
+    '🏷️ CHIP: "SPOOKY BEAR EARLY BEAR MEET UP" shares 2026-10-31 with 2 other Spooky Bear event(s) ("MONSTER MASH DANCE PARTY & FUNDRAISER", "Spooky Bear") — SPOOKY BEAR is the day\'s branding, not this event\'s chip; named from its own title: "EARLY BEAR MEET UP"',
+    '🏷️ CHIP: "MONSTER MASH DANCE PARTY & FUNDRAISER" shares 2026-10-31 with 2 other Spooky Bear event(s) ("SPOOKY BEAR EARLY BEAR MEET UP", "Spooky Bear") — SPOOKY BEAR is the day\'s branding, not this event\'s chip; named from its own title ("MONSTER MASH DANCE PARTY & FUNDRAISER"): "MONSTER MASH"'
+  ]);
+});
+
+test('promoter chip rule: a saved event wearing the brand heals, recorded as a rule rewrite; an owner-typed chip is left alone', async () => {
+  const core = createFinalBuildCore({ promoters: SPOOKY_BEAR_REGISTRY });
+  const batch = buildSpookyBearBatch();
+  core._preparingBatch = Object.values(batch);
+  const config = { ai: { shortNameDeriveMaxChars: 20 } };
+
+  // The merged record carries the calendar's brand chip (static upsert) and
+  // the scraped side's promoter stamp.
+  const merged = { ...batch.meetUp, _original: { calendar: { shortName: 'SPOOKY BEAR' }, scraper: { shortName: 'SPOOKY BEAR' } } };
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let changed;
+  try {
+    changed = await core.applyPromoterChipRule(merged, batch.meetUp, config, {});
+  } finally {
+    restore();
+  }
+  assert.equal(changed, true);
+  assert.equal(merged.shortName, 'EARLY BEAR MEET UP');
+  const decision = (merged._mergeDecisions || []).find(record => record.field === 'shortName');
+  assert.ok(decision, 'the rewrite is recorded for the card');
+  assert.equal(decision.existingValue, 'SPOOKY BEAR');
+  assert.equal(decision.chosenValue, 'EARLY BEAR MEET UP');
+  assert.equal(decision.source, 'deterministic');
+  assert.ok(decision.reason.includes("SPOOKY BEAR is Spooky Bear's branding on a day with 2 other Spooky Bear event(s)"), decision.reason);
+
+  // A chip that is not the registry's brand is the event's own, whatever the day holds.
+  const typed = { ...batch.monsterMash, shortName: 'MONSTER MASH' };
+  assert.equal(await core.applyPromoterChipRule(typed, batch.monsterMash, config, {}), false);
+  assert.equal(typed.shortName, 'MONSTER MASH');
+
+  // No promoter stamp, no rule.
+  const unmatched = { ...batch.meetUp, _promoter: undefined };
+  assert.equal(await core.applyPromoterChipRule(unmatched, { ...batch.meetUp, _promoter: undefined }, config, {}), false);
+  assert.equal(unmatched.shortName, 'SPOOKY BEAR');
+});
+
 test('final build derives a shortName via AI for an event lacking one', async () => {
   const core = createFinalBuildCore();
   const adapter = createShortNameAdapter('{"shortName": {"value": "BEEFMINCE", "reason": "recognizable brand"}}');
