@@ -1352,6 +1352,13 @@ test('review routes: deck → decide → decided → undo, over a temp shared di
     assert.ok(page.body.includes('id="word"'), 'the word filter');
     // One city at a time (owner, 2026-10-29: "approve/deny spooky bear events for provincetown").
     assert.ok(page.body.includes('<select id="city"'), 'the city select');
+    // The phone fetches the run from here when iCloud lags (2026-10-29).
+    assert.ok(page.body.includes("'&runUrl=' + encodeURIComponent(location.origin + '/review/run/' + deck.runId + '.json')"), 'the execute link names this server\'s copy of the run');
+    const runFile = await request(state, 'GET', '/review/run/20300101-051500.json');
+    assert.equal(runFile.status, 200);
+    assert.equal(JSON.parse(runFile.body).summary.runId, '20300101-051500', 'the run file itself');
+    assert.equal((await request(state, 'GET', '/review/run/20300101-999999.json')).status, 404, 'an unknown run');
+    assert.equal((await request(state, 'GET', '/review/run/../owner-decisions.json')).status, 404, 'only a run id shape is served');
     assert.ok(page.body.includes('function renderCities(') && page.body.includes('function matchesCity('), 'the city narrows the stack, list and counts');
     assert.ok(/"cityNames":\{[^}]*"nyc":"New York"/.test(page.body), `the deck names its cities from the site's config: ${(page.body.match(/"cityNames":\{[^}]*\}/) || [''])[0]}`);
     assert.ok(page.body.includes('id="views"') && page.body.includes('id="list"') && page.body.includes('id="sources"'), 'stack / list / sources views');

@@ -15806,15 +15806,21 @@ class SharedCore {
             if (tokens.length === 0) continue;
             // A festival word or a year riding on the brand ("Spooky Bear
             // Weekend: …", "Urban Bear 2026 …") is part of the branding too.
-            const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${tokens.join('[\\s\\-_.]*')}(?:[\\s\\-_.]*(?:week|weekend|festival|fest|edition|(?:19|20)\\d\\d)(?![\\p{L}\\p{N}]))*(?![\\p{L}\\p{N}])`, 'giu');
-            text = text.replace(pattern, ' ');
+            const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${tokens.join('[\\s\\-_.]*')}(?:[\\s\\-_.]*(?:week|weekend|wknd|festival|fest|edition|(?:19|20)\\d\\d)(?![\\p{L}\\p{N}]))*(?![\\p{L}\\p{N}])`, 'giu');
+            // The brand's place is marked, so what it left behind can be
+            // tidied: an orphaned preposition before it ("Bodies at <brand>
+            // in Provincetown"), the separators around it, an exclamation
+            // that was the brand's.
+            text = text.replace(pattern, ' \u0000 ');
         }
+        text = text.replace(/\b(?:at|with|by|for|from|of|in|on|to|presents|presented\s+by)\s+\u0000/giu, '\u0000');
         text = text.replace(/\s+/g, ' ');
         // An orphaned run of separators where the brand stood ("GOLDILOXX -  -
-        // DAYTIME", ": Monster Mash") collapses to one, and none survives at
-        // either end.
-        text = text.replace(/(?:\s*[-–—|:/•·,]\s*){2,}/g, ' - ');
-        text = text.replace(/^[\s\-–—|:/•·,]+|[\s\-–—|:/•·,]+$/g, '').trim();
+        // DAYTIME", ": Monster Mash", "The Belly Party - !") collapses to
+        // one, and none survives at either end.
+        text = text.replace(/(?:\s*[-–—|:/•·,!?\u0000]\s*){2,}/g, ' - ');
+        text = text.replace(/^[\s\-–—|:/•·,!?\u0000]+|[\s\-–—|:/•·,!?\u0000]+$/g, '').trim();
+        text = text.replace(/\s*\u0000\s*/g, ' ').replace(/\s+/g, ' ').trim();
         return /\p{L}/u.test(text) ? text : '';
     }
 
@@ -15871,7 +15877,9 @@ class SharedCore {
         }
         let chip = '';
         let how = '';
-        if (remainder.length <= maxChars) {
+        // A remainder the grid can hold (the site's chips wrap at 20) is the
+        // chip as it stands — "BEARS IN THE DUNES" beats the model's "BEARS".
+        if (remainder.length <= Math.max(maxChars, 20)) {
             chip = remainder.toUpperCase();
             how = 'its own title';
         } else if (await this.deriveShortNameForEvent(analyzedEvent, parserConfig, httpAdapter, { title: remainder })) {

@@ -17,7 +17,12 @@ test('parseLaunchOptions: reviewExecute needs a runId; the display defaults are 
 
   assert.equal(parseLaunchOptions({ reviewExecute: '1' }).reviewExecute, false, 'no runId → a plain display launch');
   const plain = parseLaunchOptions({});
-  assert.deepEqual(plain, { snapshot: false, last: false, runId: null, presentHistory: true, readOnly: true, reviewExecute: false });
+  assert.deepEqual(plain, { snapshot: false, last: false, runId: null, presentHistory: true, readOnly: true, reviewExecute: false, runUrl: null });
+  // The Mac's own copy of the run rides along, https only, and only for an execute.
+  assert.equal(parseLaunchOptions({ runId: '20261029-205035', reviewExecute: '1', runUrl: 'https://mac.example.ts.net/review/run/20261029-205035.json' }).runUrl,
+    'https://mac.example.ts.net/review/run/20261029-205035.json');
+  assert.equal(parseLaunchOptions({ runId: '20261029-205035', reviewExecute: '1', runUrl: 'http://mac.local:8734/review/run/20261029-205035.json' }).runUrl, null, 'plain http is not trusted');
+  assert.equal(parseLaunchOptions({ runId: '20261029-205035', runUrl: 'https://mac.example.ts.net/review/run/x.json' }).runUrl, null, 'a display launch never fetches');
   assert.equal(parseLaunchOptions({}, 'last').last, true);
   assert.equal(parseLaunchOptions({}, 'runid:20260101-000000').runId, '20260101-000000');
   assert.equal(parseLaunchOptions({ runid: '20260101-000000', readOnly: 'false' }).readOnly, false);
@@ -88,6 +93,55 @@ test('executeReviewedRun degrades with an alert when the run is missing, syncing
   assert.equal(await display.executeReviewedRun({ runId: '20260913-051750' }), null);
   assert.equal(await display.executeReviewedRun({}), null);
   assert.deepEqual(errors, ['Load failed', 'Still syncing from iCloud', 'No run named']);
+});
+
+test('a run iCloud has not delivered is fetched from the Mac when the link names it; without a copy the alert says what to do', async () => {
+  const files = {};
+  global.FileManager = fakeFileManager(files);
+  const previousRequest = global.Request;
+  const runPayload = { summary: { runId: '20261029-205035' }, analyzedEvents: [] };
+  const requested = [];
+  global.Request = function (url) {
+    requested.push(url);
+    this.response = { statusCode: 200 };
+    this.loadString = async () => JSON.stringify(runPayload);
+  };
+  try {
+    const display = new SavedRunDisplay();
+    display.resolveDataRoot = () => '/icloud/chunky-dad-data';
+    const notes = [];
+    display.note = (line) => { notes.push(line); };
+
+    // Missing on the phone: loadSavedRun says so instead of failing.
+    const pending = await display.loadSavedRun('20261029-205035');
+    assert.deepEqual(pending, { __icloudSyncPending: true, notOnPhone: true, runId: '20261029-205035' });
+
+    // The Mac's copy fills the gap and is kept where iCloud would have put it.
+    const fetched = await display.fetchRunFromMac('20261029-205035', 'https://mac.example.ts.net/review/run/20261029-205035.json');
+    assert.deepEqual(fetched, runPayload);
+    assert.deepEqual(requested, ['https://mac.example.ts.net/review/run/20261029-205035.json']);
+    assert.equal(files['/icloud/chunky-dad-data/runs/20261029-205035.json'], JSON.stringify(runPayload), 'kept in the runs folder');
+    assert.ok(notes.some((line) => /fetched from the Mac in \d+ms/.test(line)), notes.join('\n'));
+
+    // A copy that names another run, a plain-http link: never used.
+    global.Request = function () { this.response = { statusCode: 200 }; this.loadString = async () => JSON.stringify({ summary: { runId: '20261029-203750' } }); };
+    assert.equal(await display.fetchRunFromMac('20261029-205035', 'https://mac.example.ts.net/review/run/20261029-205035.json'), null);
+    assert.equal(await display.fetchRunFromMac('20261029-205035', 'http://mac.local/review/run/20261029-205035.json'), null);
+
+    // The execute path: pending + runUrl → the fetch; no copy → the alert names the folder to pull from.
+    const errors = [];
+    display.showError = async (title, message) => { errors.push({ title, message }); };
+    const asked = [];
+    display.fetchRunFromMac = async (runId, runUrl) => { asked.push([runId, runUrl]); return null; };
+    display.loadSavedRun = async (runId) => ({ __icloudSyncPending: true, notOnPhone: true, runId });
+    assert.equal(await display.executeReviewedRun({ runId: '20261029-205035', runUrl: 'https://mac.example.ts.net/review/run/20261029-205035.json' }), null);
+    assert.deepEqual(asked, [['20261029-205035', 'https://mac.example.ts.net/review/run/20261029-205035.json']]);
+    assert.equal(errors[0].title, 'Still syncing from iCloud');
+    assert.ok(errors[0].message.includes('has not reached this phone from iCloud yet') && errors[0].message.includes('Files › iCloud Drive › chunky-dad-data › runs'), errors[0].message);
+  } finally {
+    global.Request = previousRequest;
+    delete global.FileManager;
+  }
 });
 
 // A failed load leaves a note the Mac can read (2026-10-27: "Could not load
