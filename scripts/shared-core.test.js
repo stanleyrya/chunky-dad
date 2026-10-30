@@ -25100,6 +25100,20 @@ test('withholdSharedFlyerImages: one flyer on differently named events at differ
     }
     assert.equal(events[4].imageSource, 'page');
     assert.deepEqual(core.withholdSharedFlyerImages([events[11]]), []);
+
+    // Programme rows wear their programme's poster on purpose: the reader
+    // stamped _programmeImage. They keep it; a stranger wearing the same
+    // poster at another place still loses it.
+    const programme = 'https://static.wixstatic.com/media/bc384a_schedule~mv2.jpg';
+    const rows = [
+      { title: 'SPOOKY BEAR EARLY BEAR MEET UP', bar: 'Gifford House', image: programme, _programmeImage: programme },
+      { title: 'SPOOKY BEAR BINGO', bar: 'Crown & Anchor', image: programme, _programmeImage: programme },
+      { title: 'SAINTS & SINNERS PARTY', bar: 'Boatslip', image: programme, _programmeImage: programme },
+      { title: 'Some Gathr Copy', bar: 'A-House', image: programme }
+    ];
+    assert.deepEqual(core.withholdSharedFlyerImages(rows).map(event => event.title), ['Some Gathr Copy']);
+    for (const row of rows.slice(0, 3)) assert.equal(row.image, programme, `${row.title} keeps the poster`);
+    assert.equal(rows[3].image, undefined);
   } finally { restore(); }
 });
 
@@ -25114,6 +25128,34 @@ test('deduplicateEvents withholds a multi-event poster before any twin can inher
     ], null);
     assert.equal(result.length, 2);
     for (const event of result) assert.equal(event.image, undefined);
+  } finally { restore(); }
+});
+
+test('deduplicateEvents: a promoter\'s placeless programme row folds into the venue\'s own listing of the same slot; another promoter, another clock, or two placed records stay apart', async () => {
+  const core = createCore();
+  const restore = silenceConsole();
+  try {
+    const slot = new Date('2026-10-30T14:30:00Z');
+    const programmeRow = (extra = {}) => ({ title: 'HALLOQUEEN BURNER BRUNCH', city: 'dallas', startDate: slot, endDate: new Date('2026-10-30T17:30:00Z'), _promoter: 'Spooky Bear', url: 'https://www.ursamen.org/spookybear', ...extra });
+    const crownRow = (extra = {}) => ({ title: 'HalloQueen Burner Brunch – 10:30 AM – Spooky Bear', bar: 'Crown & Anchor', address: '247 Commercial St, Provincetown, MA 02657', city: 'dallas', startDate: slot, endDate: new Date('2026-10-30T16:30:00Z'), _promoter: 'Spooky Bear', url: 'https://onlyatthecrown.com/event/burner-brunch-1030-am-seating/', image: 'https://onlyatthecrown.com/wp-content/uploads/2026/08/HALLO-QUEEN.jpg', ...extra });
+
+    const folded = await core.deduplicateEvents([programmeRow(), crownRow()], null);
+    assert.equal(folded.length, 1, 'one brunch seating');
+    assert.equal(folded[0].bar, 'Crown & Anchor', 'the venue\'s row gives the place');
+    assert.ok(folded[0].image, 'and the poster');
+
+    // Another promoter's placeless row in the same slot is not this event.
+    const otherPromoter = await core.deduplicateEvents([programmeRow({ _promoter: 'Bears of San Francisco', title: 'HALLOQUEEN BRUNCH BY BOSF' }), crownRow()], null);
+    assert.equal(otherPromoter.length, 2);
+    // The second seating is another clock.
+    const otherClock = await core.deduplicateEvents([programmeRow({ startDate: new Date('2026-10-30T17:00:00Z'), endDate: new Date('2026-10-30T20:00:00Z') }), crownRow()], null);
+    assert.equal(otherClock.length, 2);
+    // Two PLACED records disagreeing on the bar are two rooms, as before.
+    const twoRooms = await core.deduplicateEvents([programmeRow({ bar: 'Gifford House', address: '11 Carver St, Provincetown, MA 02657' }), crownRow()], null);
+    assert.equal(twoRooms.length, 2);
+    // Names that share no distinctive word never fold on the slot alone.
+    const strangers = await core.deduplicateEvents([programmeRow({ title: 'SANCTUM PARANORMAL GHOST TOUR' }), crownRow()], null);
+    assert.equal(strangers.length, 2);
   } finally { restore(); }
 });
 

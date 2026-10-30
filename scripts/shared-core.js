@@ -16003,11 +16003,22 @@ class SharedCore {
             // several — then nobody keeps it.
             const owners = group.filter(event => this.imageFilenameNamesEvent(key, event));
             const owner = owners.length === 1 ? owners[0] : null;
+            // A programme row wears its programme's poster ON PURPOSE (the
+            // programme-image reader stamps _programmeImage and sets the
+            // picture — the owner's call, 2026-10-30: nine bare Spooky Bear
+            // rows on the site). That poster IS a multi-event graphic, and
+            // this rule exists for a poster cross-paired by accident; the
+            // reader's rows keep it, anyone else wearing it still loses it.
+            const programmeRows = group.filter(event => imageKey(event._programmeImage) === key);
+            if (programmeRows.length > 0) {
+                console.log(`🖼️ IMAGE: ${programmeRows.length} programme row(s) keep their programme's poster ${programmeRows[0].image || programmeRows[0].imageVertical || programmeRows[0].imageHorizontal} — the reader put it there, it is not a cross-paired flyer`);
+            }
             for (const event of group) {
                 if (event === owner) {
                     console.log(`🖼️ IMAGE: ${event.title || 'event'} keeps ${event.image || event.imageVertical || event.imageHorizontal} — the flyer's filename names this event, not the ${group.length - 1} other(s) wearing it`);
                     continue;
                 }
+                if (programmeRows.includes(event)) continue;
                 const cleared = [];
                 let url = '';
                 for (const field of IMAGE_MERGE_FIELDS) {
@@ -27630,6 +27641,26 @@ class SharedCore {
                 || this.recordsShareImageFile(newEvent, existingEvent))) {
             return 'place-exact-start';
         }
+        // A PROMOTER's programme row with no place beside the venue's own
+        // listing of the same slot: one event. The festival's schedule
+        // picture says "10:30 AM & 1:00PM — HALLOQUEEN BURNER BRUNCH" and
+        // names no room; the Crown's own feed says "HalloQueen Burner
+        // Brunch – 10:30 AM – Spooky Bear" at the Crown (run
+        // 20261030-181225: four cards for two seatings). Both records carry
+        // the same curated promoter (the registry stamped _promoter on each
+        // from its own text), start at the same instant with real times, and
+        // their names share a distinctive word — and ONE side has no place
+        // evidence at all, so there is nothing for the place rungs to agree
+        // or contradict on. A placeless row of another promoter, a different
+        // clock, or two placed records never reach this; the gate's
+        // contradiction check still runs after it.
+        if (this.areDatesEqual(incoming.startDate, existing.startDate, 15)
+            && !this.hasMissingTimeStartPlaceholder(newEvent, existingEvent)
+            && this.recordsSharePromoter(newEvent, existingEvent)
+            && (this.isPlacelessRecord(incoming) !== this.isPlacelessRecord(existing))
+            && this.namesHaveAffinity(newEvent, existingEvent)) {
+            return 'promoter-exact-start';
+        }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
         // and any pair of name-ish fields (title/name/shortName) similar — a
         // one-word shortName only by being the other name, never by sitting
@@ -28011,6 +28042,20 @@ class SharedCore {
     // TRUE when the two names share a distinctive word (5+ letters, not
     // generic event vocabulary) or a pair of such words one OCR slip apart
     // ("GOLDII.OXX" / "GOLDILOXX Chicago").
+    // Both records stamped with the same curated promoter (the registry's
+    // _promoter, stamped from each record's own text or link).
+    recordsSharePromoter(eventA, eventB) {
+        const key = (event) => this.normalizeIdentityText(String((event && event._promoter) || ''));
+        const a = key(eventA);
+        return Boolean(a) && a === key(eventB);
+    }
+
+    // No place evidence at all: no bar, no address, no coordinates.
+    isPlacelessRecord(record) {
+        if (!record || typeof record !== 'object') return true;
+        return !(String(record.bar || '').trim() || String(record.address || '').trim() || String(record.location || '').trim());
+    }
+
     namesHaveAffinity(eventA, eventB) {
         const generic = new Set(['party', 'night', 'nights', 'weekend', 'event', 'events', 'bears', 'presents', 'annual',
             'friday', 'saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'tickets', 'dance', 'social', 'happy', 'hour']);
