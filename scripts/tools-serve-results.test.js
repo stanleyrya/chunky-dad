@@ -1350,6 +1350,10 @@ test('review routes: deck → decide → decided → undo, over a temp shared di
     assert.ok(page.body.includes('href="scriptable:///run?scriptName=display-saved-run&amp;snapshot=1"'), 'the snapshot refresh is always on the page, whether or not a calendar is missing');
     // Words, views, list and sources (owner, 2026-10-01).
     assert.ok(page.body.includes('id="word"'), 'the word filter');
+    // One city at a time (owner, 2026-10-29: "approve/deny spooky bear events for provincetown").
+    assert.ok(page.body.includes('<select id="city"'), 'the city select');
+    assert.ok(page.body.includes('function renderCities(') && page.body.includes('function matchesCity('), 'the city narrows the stack, list and counts');
+    assert.ok(/"cityNames":\{[^}]*"nyc":"New York"/.test(page.body), `the deck names its cities from the site's config: ${(page.body.match(/"cityNames":\{[^}]*\}/) || [''])[0]}`);
     assert.ok(page.body.includes('id="views"') && page.body.includes('id="list"') && page.body.includes('id="sources"'), 'stack / list / sources views');
     assert.ok(page.body.includes('id="bulk"'), 'bulk decisions for whatever the filter shows');
     assert.ok(page.body.includes('function jumpTo(') && page.body.includes('function decideMany('), 'jump from the list to the stack; decide a set at once');
