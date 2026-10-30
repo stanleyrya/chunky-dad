@@ -1608,6 +1608,7 @@ function renderReviewPage(deck, options = {}) {
         runId: deck.runId,
         savedAt: deck.savedAt,
         environment: deck.environment,
+        cityNames: deck.cityNames && typeof deck.cityNames === 'object' ? deck.cityNames : {},
         cards,
         decided,
         waitingGone: Array.isArray(deck.waitingGone) ? deck.waitingGone : [],
@@ -1966,6 +1967,8 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
    "filter by words … remove items by words"). */
 .tools { display:flex; gap:8px; align-items:center; flex-wrap:wrap; max-width:560px; margin:10px auto 0; padding:0 14px; }
 .tools input { flex:1 1 160px; min-width:0; font:inherit; font-size:16px; padding:7px 10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+.tools select { flex:0 1 auto; max-width:46%; min-width:0; font:inherit; font-size:16px; padding:7px 10px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+.tools select.on { border-color:var(--accent); color:var(--ink); font-weight:600; }
 .tools .views { display:flex; gap:6px; }
 .tools .bulk { display:flex; gap:6px; flex-wrap:wrap; width:100%; }
 .tools .bulk button, .lrow button, .src button { font:inherit; font-size:12px; font-weight:600; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:4px 10px; cursor:pointer; white-space:nowrap; }
@@ -2011,6 +2014,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 ${missingCalendarNotice}
 <div class="tools">
   <input id="word" type="search" placeholder="filter by words (-word excludes)" autocapitalize="none" autocorrect="off">
+  <select id="city" title="Show one city's cards" aria-label="City"></select>
   <div class="views pills" id="views"></div>
   <div class="bulk hidden" id="bulk"></div>
 </div>
@@ -2154,6 +2158,8 @@ window.__startDeck = function () {
   var view = 'stack'; // stack | list | sources
   var words = ''; // the word filter, as typed
   var sourceOnly = ''; // a source chosen on the sources view ('' = every source)
+  var cityOnly = ''; // a city chosen in the city select ('' = every city) — owner 2026-10-29: "approve/deny spooky bear events for provincetown"
+
   var pending = null; // stack item awaiting the reject sheet, or { bulk: [items] }
   var solo = {}; // series the owner chose to decide night by night
   var lastTouchAt = 0; // when a finger last touched a card (see attachDrag)
@@ -2177,7 +2183,10 @@ window.__startDeck = function () {
     return [p.title, p.name, p.source, p.bar, p.address, p.city, p.url, p.ticketUrl, p.website, p.description, c.kind, dayOf(c.key)]
       .map(function (v) { return String(v || ''); }).join(' | ').toLowerCase();
   }
+  function cityOf(c) { return String((c.proposal || {}).city || ''); }
+  function matchesCity(c) { return !cityOnly || cityOf(c) === cityOnly; }
   function matchesWords(c) {
+    if (!matchesCity(c)) return false;
     if (sourceOnly && String((c.proposal || {}).source || '') !== sourceOnly) return false;
     var terms = words.toLowerCase().split(' ').filter(Boolean);
     if (terms.length === 0) return true;
@@ -2322,8 +2331,31 @@ window.__startDeck = function () {
   }
   function counts() {
     var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, gone: 0, dropped: 0, 'verdict-conflict': 0 };
-    queue.forEach(function (c) { out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
+    queue.forEach(function (c) { if (!matchesCity(c)) return; out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
     return out;
+  }
+  // ---- the city select: every city on the queue with its pending count,
+  // busiest first; the chosen city narrows the stack, the list, the tab
+  // counts and the bulk buttons alike. Options are rebuilt only when the
+  // set changes, so an open select is never yanked shut by a swipe. ----
+  var cityOptionsHtml = '';
+  function renderCities() {
+    var select = document.getElementById('city');
+    if (!select) return;
+    var tally = {};
+    queue.forEach(function (c) { if (c.kind === 'dropped') return; var key = cityOf(c); tally[key] = (tally[key] || 0) + 1; });
+    var names = deck.cityNames || {};
+    var keys = Object.keys(tally).sort(function (a, b) { return tally[b] - tally[a] || String(names[a] || a).localeCompare(String(names[b] || b)); });
+    var total = keys.reduce(function (sum, key) { return sum + tally[key]; }, 0);
+    var html = '<option value="">All cities · ' + total + '</option>';
+    keys.forEach(function (key) {
+      html += '<option value="' + escapeHtml(key) + '">' + escapeHtml(key ? (names[key] || key) : '(no city)') + ' · ' + tally[key] + '</option>';
+    });
+    if (cityOnly && !tally[cityOnly]) html += '<option value="' + escapeHtml(cityOnly) + '">' + escapeHtml(names[cityOnly] || cityOnly) + ' · 0</option>';
+    if (html !== cityOptionsHtml) { select.innerHTML = html; cityOptionsHtml = html; }
+    select.value = cityOnly;
+    select.classList.toggle('on', Boolean(cityOnly));
+    select.onchange = function () { cityOnly = select.value; render(); window.scrollTo(0, 0); };
   }
   // A verdict-conflict card is a bear verdict either way (see saveOne):
   // right = bear, left = not bear, no sheet, no "later".
@@ -2564,7 +2596,7 @@ window.__startDeck = function () {
   }
   window.addEventListener('resize', refitIfNewScreen);
   window.addEventListener('orientationchange', function () { fitted = { w: 0, h: 0 }; fitStage(); });
-  function render() { renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderOutbox(); renderWaiting(); renderFriends(); renderDecided(); fitStage(); }
+  function render() { renderCities(); renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderOutbox(); renderWaiting(); renderFriends(); renderDecided(); fitStage(); }
 
   // ---- views: the stack, the same cards as a list, or the sources ----
   function renderViews() {

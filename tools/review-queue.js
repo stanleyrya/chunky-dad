@@ -1785,6 +1785,31 @@ function knownFriends(store) {
     return [...seen.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
 }
 
+// Display names for the deck's city filter: the site's own city config
+// (js/city-config.js — "Provincetown" for ptown) over the run's scraper
+// cities, which carry keys, patterns and timezones but no names.
+let siteCityConfig = null;
+function loadSiteCityConfig() {
+    if (siteCityConfig) return siteCityConfig;
+    try {
+        siteCityConfig = require(path.join(__dirname, '..', 'js', 'city-config')).CITY_CONFIG || {};
+    } catch (_) {
+        siteCityConfig = {};
+    }
+    return siteCityConfig;
+}
+function buildCityNames(payload) {
+    const site = loadSiteCityConfig();
+    const runCities = (payload && payload.config && payload.config.cities) || {};
+    const names = {};
+    for (const key of Object.keys(runCities)) {
+        const fromSite = site[key] && typeof site[key].name === 'string' ? site[key].name.trim() : '';
+        const fromRun = runCities[key] && typeof runCities[key].name === 'string' ? runCities[key].name.trim() : '';
+        names[key] = fromSite || fromRun || key;
+    }
+    return names;
+}
+
 function buildDeck(runPayload, store, options = {}) {
     const payload = runPayload && typeof runPayload === 'object' ? runPayload : {};
     const now = Number.isFinite(options.now) ? options.now : Date.now();
@@ -2240,6 +2265,8 @@ function buildDeck(runPayload, store, options = {}) {
     }
     return {
         runId,
+        // Display names for the deck's city filter, keyed like proposal.city.
+        cityNames: buildCityNames(payload),
         waitingGone,
         answeredNoteKeys,
         // Approvals the deck made itself (a fix arrived exactly as asked) —
