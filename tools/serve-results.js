@@ -53,13 +53,24 @@ const os = require('os');
 const path = require('path');
 const http = require('http');
 const zlib = require('zlib');
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 
 const reviewQueue = require('./review-queue');
 
 const repoRoot = path.resolve(__dirname, '..');
-const serverDir = path.join(os.homedir(), '.chunky-dad-scraper', 'server');
+const serverDir = process.env.CHUNKY_SERVER_DIR && String(process.env.CHUNKY_SERVER_DIR).trim()
+    ? path.resolve(String(process.env.CHUNKY_SERVER_DIR).trim())
+    : path.join(os.homedir(), '.chunky-dad-scraper', 'server');
 const latestRunPath = path.join(serverDir, 'latest-run.json');
+// What the phone tells this server (POST /review/phone-note): executes it
+// finished, alerts it showed. Local to the Mac — iCloud's sync of the phone's
+// logs/ ran hours behind on 2026-10-30, which is the point of the file.
+function resolvePhoneNotesPath(env = process.env) {
+    const dir = env && env.CHUNKY_SERVER_DIR && String(env.CHUNKY_SERVER_DIR).trim() ? path.resolve(String(env.CHUNKY_SERVER_DIR).trim()) : serverDir;
+    return path.join(dir, 'phone-notes.ndjson');
+}
+const PHONE_NOTES_KEPT = 200;
+const PHONE_NOTE_MAX_BYTES = 64 * 1024;
 
 const DEFAULT_PORT = 8734;
 const LOG_TAIL_LINES = 500;
@@ -475,15 +486,87 @@ function resolveReviewScriptName(env = process.env) {
 
 // The "Execute on phone" link: opens display-saved-run.js in Scriptable with
 // the run id; the phone does the rest (see the file header).
-function buildScriptableExecuteLink(runId, scriptName = resolveReviewScriptName()) {
+function buildScriptableExecuteLink(runId, scriptName = resolveReviewScriptName(), runUrl = '') {
     if (!runId) return '';
-    return `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}&runId=${encodeURIComponent(runId)}&reviewExecute=1`;
+    const base = `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}&runId=${encodeURIComponent(runId)}&reviewExecute=1`;
+    // runUrl: this server's https copy of the run (buildRunUrl) — the phone
+    // takes the run from there before waiting on iCloud.
+    return runUrl ? `${base}&runUrl=${encodeURIComponent(runUrl)}` : base;
 }
 
 // The same script, asked only to read the calendars and write the snapshot
 // files (display-saved-run.js refreshCalendarSnapshots): no scrape, no write.
 function buildScriptableSnapshotLink(scriptName = resolveReviewScriptName()) {
     return `scriptable:///run?scriptName=${encodeURIComponent(scriptName)}&snapshot=1`;
+}
+
+// This server's https address on the tailnet, for the phone. The execute link
+// used to take it from the page's own origin — a deck opened over plain http
+// (http://rybook:8734) then handed the phone nothing it would trust, and the
+// phone waited on iCloud instead (2026-10-30, three executes). So the server
+// names itself: CHUNKY_REVIEW_PUBLIC_ORIGIN, else the tailscale CLI's own
+// view of this machine (Self.DNSName, only when it holds an https cert).
+function parsePublicOriginFromTailscaleStatus(statusJson) {
+    let status;
+    try { status = typeof statusJson === 'string' ? JSON.parse(statusJson) : statusJson; } catch (_) { return ''; }
+    const name = status && status.Self && typeof status.Self.DNSName === 'string' ? status.Self.DNSName.trim().replace(/\.$/, '') : '';
+    if (!name) return '';
+    const certDomains = Array.isArray(status.CertDomains) ? status.CertDomains.map((d) => String(d).replace(/\.$/, '')) : [];
+    return certDomains.includes(name) ? `https://${name}` : '';
+}
+
+const TAILSCALE_BINARIES = ['tailscale', '/Applications/Tailscale.app/Contents/MacOS/Tailscale'];
+
+function resolvePublicOrigin(env = process.env) {
+    const configured = env && env.CHUNKY_REVIEW_PUBLIC_ORIGIN ? String(env.CHUNKY_REVIEW_PUBLIC_ORIGIN).trim().replace(/\/+$/, '') : '';
+    if (configured) return /^https:\/\/[^/?#]+$/i.test(configured) ? configured : '';
+    for (const binary of TAILSCALE_BINARIES) {
+        try {
+            const out = execFileSync(binary, ['status', '--json'], { encoding: 'utf8', timeout: 4000, stdio: ['ignore', 'pipe', 'ignore'] });
+            const origin = parsePublicOriginFromTailscaleStatus(out);
+            if (origin) return origin;
+        } catch (_) { /* not installed here, or not running — try the next */ }
+    }
+    return '';
+}
+
+function buildRunUrl(publicOrigin, runId) {
+    const origin = typeof publicOrigin === 'string' ? publicOrigin.trim().replace(/\/+$/, '') : '';
+    return origin && runId ? `${origin}/review/run/${encodeURIComponent(runId)}.json` : '';
+}
+
+// ---- phone notes (what the phone reports back) ------------------------------
+
+function readPhoneNotes(limit = 5, filePath = resolvePhoneNotesPath()) {
+    let text = '';
+    try { text = fs.readFileSync(filePath, 'utf8'); } catch (_) { return []; }
+    const notes = [];
+    for (const line of text.split('\n')) {
+        if (!line.trim()) continue;
+        try { notes.push(JSON.parse(line)); } catch (_) { /* a torn line */ }
+    }
+    return notes.slice(-Math.max(1, limit)).reverse();
+}
+
+// One line appended; the file is trimmed to the last PHONE_NOTES_KEPT.
+function appendPhoneNote(body, filePath = resolvePhoneNotesPath()) {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return null;
+    const note = {
+        receivedAt: new Date().toISOString(),
+        at: typeof body.at === 'string' ? body.at : null,
+        title: typeof body.title === 'string' ? body.title.slice(0, 200) : '',
+        message: typeof body.message === 'string' ? body.message.slice(0, 4000) : '',
+        runId: typeof body.runId === 'string' ? body.runId : null,
+        summary: body.summary && typeof body.summary === 'object' ? body.summary : null,
+        macNote: typeof body.macNote === 'string' ? body.macNote : null,
+        trace: Array.isArray(body.trace) ? body.trace.slice(-30).map((line) => String(line).slice(0, 500)) : []
+    };
+    if (!note.title && !note.message) return null;
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    const existing = readPhoneNotes(PHONE_NOTES_KEPT - 1, filePath).reverse();
+    existing.push(note);
+    fs.writeFileSync(filePath, existing.map((entry) => JSON.stringify(entry)).join('\n') + '\n');
+    return note;
 }
 
 // ---- dates -----------------------------------------------------------------
@@ -1567,7 +1650,7 @@ function renderFriendPage() {
 
 function renderReviewPage(deck, options = {}) {
     const runs = Array.isArray(options.runs) ? options.runs : [];
-    const scriptLink = buildScriptableExecuteLink(deck.runId, options.scriptName);
+    const scriptLink = buildScriptableExecuteLink(deck.runId, options.scriptName, deck.runUrl || '');
     const ctx = options.ctx || {};
     const cards = deck.cards.map((entry) => ({
         id: entry.id,
@@ -1614,6 +1697,8 @@ function renderReviewPage(deck, options = {}) {
         waitingGone: Array.isArray(deck.waitingGone) ? deck.waitingGone : [],
         counts: deck.counts,
         lastExecution: deck.lastExecution || null,
+        runUrl: deck.runUrl || null,
+        phoneNotes: Array.isArray(deck.phoneNotes) ? deck.phoneNotes.map((note) => ({ at: note.at || note.receivedAt || null, title: note.title || '', message: note.message || '', runId: note.runId || null, summary: note.summary || null })) : [],
         tags: reviewQueue.REVIEW_REASON_TAGS,
         goneTags: reviewQueue.GONE_REASON_TAGS,
         manualTags: reviewQueue.MANUAL_REASON_TAGS,
@@ -2454,6 +2539,15 @@ window.__startDeck = function () {
       Number(review.withheld) > 0 ? review.withheld + ' approved but withheld by the checks on the phone' : '',
       Number(review.awaiting) > 0 ? review.awaiting + ' back for review' : ''
     ].filter(Boolean).join(', ') : '';
+    // What the phone itself last reported to this server (POST /review/phone-note):
+    // the execute it finished or the alert it showed, readable here at once.
+    var phone = deck.phoneNotes && deck.phoneNotes.length ? deck.phoneNotes[0] : null;
+    var phoneSummary = phone && phone.summary && typeof phone.summary === 'object'
+      ? ['created', 'updated', 'withheld', 'failed'].filter(function (k) { return typeof phone.summary[k] === 'number'; }).map(function (k) { return phone.summary[k] + ' ' + k; }).join(', ')
+      : '';
+    var phoneLine = phone
+      ? '<small>📱 The phone, ' + escapeHtml(String(phone.at || '').replace('T', ' ').slice(0, 16)) + ' UTC' + (phone.runId && phone.runId !== deck.runId ? ' (run ' + escapeHtml(phone.runId) + ')' : '') + ': ' + escapeHtml(phone.title || '') + (phoneSummary ? ' — ' + escapeHtml(phoneSummary) : (phone.message ? ' — ' + escapeHtml(String(phone.message).slice(0, 240)) : '')) + '</small>'
+      : '';
     var lastLine = last && last.at
       ? '<small>Last execution ' + escapeHtml(String(last.at).replace('T', ' ').slice(0, 16)) + ' UTC' + (last.runId && last.runId !== deck.runId ? ' (from run ' + escapeHtml(last.runId) + ')' : '') + ': ' + last.processed + ' written' + (last.created !== null ? ' (' + last.created + ' created, ' + last.updated + ' updated)' : '') + (last.failed ? ', ' + last.failed + ' failed' : '') + (held ? ' · ' + escapeHtml(held) : '') + '.</small>'
       : '';
@@ -2467,10 +2561,14 @@ window.__startDeck = function () {
       // The link also names this server's copy of the run (runUrl): when
       // iCloud has not delivered the file to the phone, the phone fetches it
       // from here over the tailnet instead of failing.
-      var executeHref = deck.executeLink + '&runUrl=' + encodeURIComponent(location.origin + '/review/run/' + deck.runId + '.json');
-      el.innerHTML = '<a href="' + executeHref.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
+      // The server names its own https address (deck.runUrl); the page's
+      // origin is only a fallback, and plain http is nothing the phone trusts.
+      var runUrl = deck.runUrl || (location.protocol === 'https:' ? location.origin + '/review/run/' + deck.runId + '.json' : '');
+      var executeHref = deck.executeLink.indexOf('&runUrl=') >= 0 ? deck.executeLink : deck.executeLink + (runUrl ? '&runUrl=' + encodeURIComponent(runUrl) : '');
+      var noRoadLine = runUrl ? '' : '<small>⚠️ This server has no https tailnet address, so the phone must wait for iCloud to deliver the run.</small>';
+      el.innerHTML = '<a href="' + executeHref.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + noRoadLine + pictureLine + lastLine + phoneLine;
     } else {
-      el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
+      el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + phoneLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
     }
   }
   function renderDecided() {
@@ -3519,8 +3617,10 @@ function findLatestLogPath() {
     }
 }
 
-function createServerState() {
+function createServerState(options = {}) {
     return {
+        // https origin the phone is told to fetch runs from (resolvePublicOrigin)
+        publicOrigin: typeof options.publicOrigin === 'string' ? options.publicOrigin.trim().replace(/\/+$/, '') : '',
         lock: createRunLock(),
         icsRegistry: {}, // id → event, captured from the adapter per render
         icsBatchRegistry: {}, // id → { calendarName, events }, same capture
@@ -3591,7 +3691,7 @@ function resolveReviewRun(query) {
 // { deck, ctx } — ctx carries the adapter (maps URL builders, link labels,
 // calendar names; the same stubbed adapter the results render uses) and the
 // deck's SharedCore (distances, notes parsing) for the card renderers.
-function buildReviewDeckForRun(sharedRoot, run) {
+function buildReviewDeckForRun(sharedRoot, run, options = {}) {
     const store = reviewQueue.loadDecisions(reviewQueue.getDecisionsPath(sharedRoot));
     const bearVerdicts = reviewQueue.loadBearVerdicts(reviewQueue.getBearVerdictsPath(sharedRoot));
     const curatedBars = reviewQueue.loadCuratedBars(repoRoot);
@@ -3635,6 +3735,10 @@ function buildReviewDeckForRun(sharedRoot, run) {
     }
     deck.friends = reviewQueue.knownFriends(friendAdvice);
     deck.adviceBase = resolveAdvicePageBase();
+    // The phone's road to this run that does not go through iCloud, and
+    // what the phone last said (renderExecute shows both).
+    deck.runUrl = buildRunUrl(options.publicOrigin, run.runId);
+    deck.phoneNotes = readPhoneNotes(5);
     const { ScriptableAdapter } = requireScriptableAdapterWithStubs();
     return { deck, ctx: { adapter: new ScriptableAdapter({ cities }), core } };
 }
@@ -3930,7 +4034,7 @@ async function handleRequest(state, req, res) {
             ));
         }
         try {
-            const { deck, ctx } = buildReviewDeckForRun(sharedRoot, run);
+            const { deck, ctx } = buildReviewDeckForRun(sharedRoot, run, { publicOrigin: state.publicOrigin });
             return sendHtml(res, 200, renderReviewPage(deck, { runs, scriptName: resolveReviewScriptName(), ctx, phoneCalendarListCapturedAt: reviewQueue.getPhoneCalendarListCapturedAt(sharedRoot), sourceAuditOpen: countSourceAuditOpen(sharedRoot) }));
         } catch (error) {
             console.error(`Review render failed: ${error.stack || error}`);
@@ -3954,11 +4058,32 @@ async function handleRequest(state, req, res) {
         return res.end(body);
     }
 
+    // The phone reports back (display-saved-run.js postPhoneNote): the
+    // execute it finished, the alert it showed. Appended locally, shown on
+    // the deck under the execute button.
+    if (pathname === '/review/phone-note' && req.method === 'POST') {
+        const raw = await readRequestBody(req);
+        if (typeof raw === 'string' && Buffer.byteLength(raw) > PHONE_NOTE_MAX_BYTES) return sendJson(res, 413, { ok: false, error: 'note too large' });
+        let body;
+        try { body = JSON.parse(raw || '{}'); } catch (_) { return sendJson(res, 400, { ok: false, error: 'body must be JSON' }); }
+        try {
+            const note = appendPhoneNote(body);
+            if (!note) return sendJson(res, 400, { ok: false, error: 'a note needs a title or a message' });
+            console.log(`Phone: ${note.title}${note.runId ? ` (run ${note.runId})` : ''}${note.summary ? ` ${JSON.stringify(note.summary).slice(0, 200)}` : note.message ? ` — ${note.message.slice(0, 200)}` : ''}`);
+            return sendJson(res, 200, { ok: true });
+        } catch (error) {
+            return sendJson(res, 500, { ok: false, error: error.message });
+        }
+    }
+    if (pathname === '/review/phone-notes.json' && req.method === 'GET') {
+        return sendJson(res, 200, { ok: true, notes: readPhoneNotes(20) });
+    }
+
     if (pathname === '/review/deck.json' && req.method === 'GET') {
         const { sharedRoot, run } = resolveReviewRun(query);
         if (!run) return sendJson(res, 404, { ok: false, error: 'no run' });
         try {
-            const { deck } = buildReviewDeckForRun(sharedRoot, run);
+            const { deck } = buildReviewDeckForRun(sharedRoot, run, { publicOrigin: state.publicOrigin });
             return sendJson(res, 200, { ok: true, ...deck });
         } catch (error) {
             return sendJson(res, 500, { ok: false, error: error.message });
@@ -4314,7 +4439,8 @@ function parsePortFromArgv(argv) {
 
 function startServer(port = DEFAULT_PORT) {
     fs.mkdirSync(serverDir, { recursive: true });
-    const state = createServerState();
+    const publicOrigin = resolvePublicOrigin();
+    const state = createServerState({ publicOrigin });
     const server = http.createServer((req, res) => {
         handleRequest(state, req, res).catch((error) => {
             console.error(`Request failed: ${error.stack || error}`);
@@ -4332,6 +4458,9 @@ function startServer(port = DEFAULT_PORT) {
         console.log(`    tailscale serve --bg ${port}`);
         console.log(`  Results dump + run logs: ${serverDir}`);
         console.log(`  Review deck: http://localhost:${port}/review  (shared dir: ${reviewQueue.resolveSharedRoot()})`);
+        console.log(publicOrigin
+            ? `  Phone fetches runs from: ${publicOrigin}/review/run/<runId>.json`
+            : '  ⚠️ No https tailnet address found (tailscale status / CHUNKY_REVIEW_PUBLIC_ORIGIN) — the phone can only take runs from iCloud.');
     });
     return { server, state };
 }
@@ -4362,6 +4491,12 @@ module.exports = {
     resolveReviewScriptName,
     buildScriptableExecuteLink,
     buildScriptableSnapshotLink,
+    parsePublicOriginFromTailscaleStatus,
+    resolvePublicOrigin,
+    buildRunUrl,
+    resolvePhoneNotesPath,
+    readPhoneNotes,
+    appendPhoneNote,
     formatReviewDateLine,
     formatReviewUtcLine,
     describeReviewTimeDelta,

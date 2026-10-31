@@ -19,6 +19,8 @@ class SavedRunDisplay {
     constructor() {
         this.adapter = null;
         this.trace = [];
+        this.macOrigin = '';     // the Mac server's https origin, from the execute link
+        this.macFetchNote = '';  // why the Mac's copy of a run was not used
     }
 
     // Every "📱 Display:" line goes to the console AND to a short trace, so
@@ -72,6 +74,7 @@ class SavedRunDisplay {
     // read what happened without the phone's console.
     async failLoud(title, message, extra = {}) {
         const file = this.recordFailure(title, message, extra);
+        await this.postPhoneNote(title, message, extra);
         const where = file ? `logs/${SavedRunDisplay.FAILURE_NOTE_FILE}` : '';
         await this.showError(title, where ? `${message}\n\nWhat happened is noted in ${where} in iCloud, so the Mac can read it.` : message);
     }
@@ -395,7 +398,12 @@ class SavedRunDisplay {
     // null (the note says why).
     async fetchRunFromMac(runId, runUrl) {
         const url = typeof runUrl === 'string' ? runUrl.trim() : '';
-        if (!url || !/^https:\/\//i.test(url)) return null;
+        // Why the Mac's copy was not used — the alert repeats it
+        // (describeSyncPending), so "still syncing" never hides a dead link.
+        this.macFetchNote = '';
+        const fail = (why) => { this.macFetchNote = why; this.note(`📱 Display: ${why}`); return null; };
+        if (!url) return fail('the execute link carried no Mac address for the run (open the deck over its https tailnet name)');
+        if (!/^https:\/\//i.test(url)) return fail(`the Mac address is not https (${url}) — not trusted`);
         try {
             this.note(`📱 Display: iCloud has not delivered run ${runId} — fetching it from the Mac: ${url}`);
             const startedAt = Date.now();
@@ -404,14 +412,12 @@ class SavedRunDisplay {
             const text = await request.loadString();
             const status = request.response && typeof request.response.statusCode === 'number' ? request.response.statusCode : 200;
             if (status !== 200 || typeof text !== 'string' || !text.trim()) {
-                this.note(`📱 Display: Mac answered ${status} with ${typeof text === 'string' ? text.length : 0} characters — not a run`);
-                return null;
+                return fail(`the Mac answered ${status} with ${typeof text === 'string' ? text.length : 0} characters — not a run`);
             }
             const parsed = JSON.parse(text);
             const fetchedRunId = parsed && parsed.summary && typeof parsed.summary.runId === 'string' ? parsed.summary.runId : '';
             if (fetchedRunId !== runId) {
-                this.note(`📱 Display: the Mac's file names run "${fetchedRunId}", not ${runId} — ignored`);
-                return null;
+                return fail(`the Mac's file names run "${fetchedRunId}", not ${runId} — ignored`);
             }
             const fm = FileManager.iCloud();
             const runsDir = fm.joinPath(this.resolveDataRoot(fm), 'runs');
@@ -425,16 +431,78 @@ class SavedRunDisplay {
             this.note(`📱 Display: run ${runId} fetched from the Mac in ${Date.now() - startedAt}ms (${text.length} characters)`);
             return parsed;
         } catch (error) {
-            this.note(`📱 Display: fetching run ${runId} from the Mac failed: ${error.message}`);
+            return fail(`fetching run ${runId} from the Mac (${url}) failed: ${error.message}`);
+        }
+    }
+
+    // The run file when iCloud has already delivered it to this phone: a
+    // metadata check (isFileDownloaded) and a read, no download wait. Null
+    // when the file is missing, still a cloud placeholder, or unreadable.
+    readRunAlreadyOnPhone(runId) {
+        try {
+            const fm = FileManager.iCloud();
+            const runFilePath = fm.joinPath(fm.joinPath(this.resolveDataRoot(fm), 'runs'), `${runId}.json`);
+            if (!fm.fileExists(runFilePath)) return null;
+            if (typeof fm.isFileDownloaded === 'function' && fm.isFileDownloaded(runFilePath) !== true) {
+                this.note(`📱 Display: run ${runId} is on this phone as an iCloud placeholder only — not downloaded yet`);
+                return null;
+            }
+            const content = fm.readString(runFilePath);
+            if (typeof content !== 'string' || !content.trim()) return null;
+            const parsed = JSON.parse(content);
+            this.note(`📱 Display: run ${runId} was already on this phone (${content.length} characters)`);
+            return parsed;
+        } catch (error) {
+            this.note(`📱 Display: reading the phone's copy of run ${runId} failed: ${error.message}`);
             return null;
         }
     }
 
+    // The Mac server's https origin, from the execute link's runUrl.
+    resolveMacOrigin(runUrl) {
+        const match = /^(https:\/\/[^/?#]+)/i.exec(typeof runUrl === 'string' ? runUrl.trim() : '');
+        return match ? match[1] : '';
+    }
+
+    // One line to the Mac server (POST /review/phone-note) so what the phone
+    // did or hit reads on the deck at once, instead of after iCloud syncs
+    // logs/ back to the Mac (hours on 2026-10-30: three executes, no trace).
+    // Best effort: nothing without an https Mac origin, never throws, 10 s.
+    async postPhoneNote(title, message, extra = {}) {
+        if (!this.macOrigin || typeof Request === 'undefined') return false;
+        try {
+            const request = new Request(`${this.macOrigin}/review/phone-note`);
+            request.method = 'POST';
+            request.headers = { 'Content-Type': 'application/json' };
+            request.timeoutInterval = 10;
+            request.body = JSON.stringify({ at: new Date().toISOString(), title, message, ...SavedRunDisplay.compactForNote(extra), trace: this.trace.slice(-30) });
+            await request.loadString();
+            return true;
+        } catch (error) {
+            this.note(`📱 Display: could not tell the Mac (${error.message})`);
+            return false;
+        }
+    }
+
+    // Keep a note small: top-level values whose JSON stays short.
+    static compactForNote(value) {
+        if (!value || typeof value !== 'object') return {};
+        const out = {};
+        for (const [key, entry] of Object.entries(value)) {
+            try {
+                const json = JSON.stringify(entry);
+                if (typeof json === 'string' && json.length <= 4000) out[key] = JSON.parse(json);
+            } catch (_) { /* unserialisable — left out */ }
+        }
+        return out;
+    }
+
     // One sentence for a run iCloud has not delivered or finished syncing.
-    describeSyncPending(saved, runId) {
-        return saved && saved.notOnPhone
+    describeSyncPending(saved, runId, macNote = '') {
+        const base = saved && saved.notOnPhone
             ? `Run ${runId} has not reached this phone from iCloud yet — the Mac's upload or this phone's sync is still in flight. Try the link again in a few minutes, or open the file in Files › iCloud Drive › chunky-dad-data › runs to pull it.`
             : `Run ${runId} is still syncing from iCloud — try the link again shortly.`;
+        return macNote ? `${base}\n\nThe Mac could not hand it over either: ${macNote}.` : base;
     }
 
     async executeReviewedRun(options = {}) {
@@ -447,14 +515,23 @@ class SavedRunDisplay {
         // a number per phase (iCloud download + read + parse of the run
         // file, adapter + decisions load) before anything can be sped up.
         const startedAt = Date.now();
-        let saved = await this.loadSavedRun(runId);
-        if (saved && saved.__icloudSyncPending === true && options.runUrl) {
-            const fetched = await this.fetchRunFromMac(runId, options.runUrl);
-            if (fetched) saved = fetched;
+        // The Mac is one request away over the tailnet; iCloud is minutes to
+        // hours behind it (2026-10-30: three executes in a row ended at
+        // "Still syncing from iCloud" while the Mac served the same 20 MB
+        // file in a third of a second). So: the phone's own copy when iCloud
+        // has already delivered it, else the Mac, and iCloud's download only
+        // when the link named no Mac or the Mac did not answer.
+        this.macOrigin = this.resolveMacOrigin(options.runUrl);
+        let saved = options.runUrl ? this.readRunAlreadyOnPhone(runId) : null;
+        let macNote = options.runUrl ? '' : 'the execute link carried no Mac address for the run';
+        if (!saved && options.runUrl) {
+            saved = await this.fetchRunFromMac(runId, options.runUrl);
+            if (!saved) macNote = this.macFetchNote || 'the Mac did not answer';
         }
+        if (!saved) saved = await this.loadSavedRun(runId);
         const loadedAt = Date.now();
         if (saved && saved.__icloudSyncPending === true) {
-            await this.failLoud('Still syncing from iCloud', this.describeSyncPending(saved, runId), { runId, runUrl: options.runUrl || null });
+            await this.failLoud('Still syncing from iCloud', this.describeSyncPending(saved, runId, macNote), { runId, runUrl: options.runUrl || null, macNote });
             return null;
         }
         if (!saved) {
@@ -471,7 +548,9 @@ class SavedRunDisplay {
             await this.showError('Adapter too old', 'This adapter has no executeReviewedSavedRun — update scripts/adapters/scriptable-adapter.js.');
             return null;
         }
-        return adapter.executeReviewedSavedRun(resultsLike, decisions);
+        const summary = await adapter.executeReviewedSavedRun(resultsLike, decisions);
+        await this.postPhoneNote('Executed', `Run ${runId} executed on the phone`, { runId, summary });
+        return summary;
     }
 
     async displaySavedRun(options = {}) {
@@ -620,6 +699,7 @@ if (!isNodeEnvironment) {
         } catch (e) {
             console.error(`Display Saved Run failed: ${e.message}`);
             try { display.recordFailure('Display Saved Run Error', e.message, { stack: String(e.stack || '') }); } catch (_) { /* the alert still shows */ }
+            try { await display.postPhoneNote('Display Saved Run Error', e.message, { stack: String(e.stack || '') }); } catch (_) { /* best effort */ }
             const alert = new Alert();
             alert.title = 'Display Saved Run Error';
             alert.message = `${e.message}`;

@@ -411,7 +411,7 @@ function closeFlyer() {
 function toggleDesc(el) { if (el) el.classList.toggle('clamped'); }
 </script>
 <script>
-window.__reviewDeck = {"runId":"","savedAt":null,"environment":null,"cityNames":{},"cards":[],"decided":[],"waitingGone":[],"counts":{},"lastExecution":null,"tags":["wrong link","wrong image","wrong title","wrong venue","should merge","recurring","wrong date or time","not bear","other"],"goneTags":["still happening","renamed on the site","moved venue","date moved","source is wrong","not sure"],"manualTags":["not right","later","already done by hand","not sure"],"twinTags":["both are real events","keep the other one instead","not the same night","not sure"],"executeLink":"","friends":[],"adviceBase":"https://chunky.dad/phone-a-friend/","friendMode":true};
+window.__reviewDeck = {"runId":"","savedAt":null,"environment":null,"cityNames":{},"cards":[],"decided":[],"waitingGone":[],"counts":{},"lastExecution":null,"runUrl":null,"phoneNotes":[],"tags":["wrong link","wrong image","wrong title","wrong venue","should merge","recurring","wrong date or time","not bear","other"],"goneTags":["still happening","renamed on the site","moved venue","date moved","source is wrong","not sure"],"manualTags":["not right","later","already done by hand","not sure"],"twinTags":["both are real events","keep the other one instead","not the same night","not sure"],"executeLink":"","friends":[],"adviceBase":"https://chunky.dad/phone-a-friend/","friendMode":true};
 // FRIEND MODE: the cards ride in the link as #j2.<base64url(deflate-raw
 // JSON)> — the deck's own card HTML, so a friend sees exactly the card
 // the owner sees (tools/review-queue buildFriendLink). Decoded here, then
@@ -788,6 +788,15 @@ window.__startDeck = function () {
       Number(review.withheld) > 0 ? review.withheld + ' approved but withheld by the checks on the phone' : '',
       Number(review.awaiting) > 0 ? review.awaiting + ' back for review' : ''
     ].filter(Boolean).join(', ') : '';
+    // What the phone itself last reported to this server (POST /review/phone-note):
+    // the execute it finished or the alert it showed, readable here at once.
+    var phone = deck.phoneNotes && deck.phoneNotes.length ? deck.phoneNotes[0] : null;
+    var phoneSummary = phone && phone.summary && typeof phone.summary === 'object'
+      ? ['created', 'updated', 'withheld', 'failed'].filter(function (k) { return typeof phone.summary[k] === 'number'; }).map(function (k) { return phone.summary[k] + ' ' + k; }).join(', ')
+      : '';
+    var phoneLine = phone
+      ? '<small>📱 The phone, ' + escapeHtml(String(phone.at || '').replace('T', ' ').slice(0, 16)) + ' UTC' + (phone.runId && phone.runId !== deck.runId ? ' (run ' + escapeHtml(phone.runId) + ')' : '') + ': ' + escapeHtml(phone.title || '') + (phoneSummary ? ' — ' + escapeHtml(phoneSummary) : (phone.message ? ' — ' + escapeHtml(String(phone.message).slice(0, 240)) : '')) + '</small>'
+      : '';
     var lastLine = last && last.at
       ? '<small>Last execution ' + escapeHtml(String(last.at).replace('T', ' ').slice(0, 16)) + ' UTC' + (last.runId && last.runId !== deck.runId ? ' (from run ' + escapeHtml(last.runId) + ')' : '') + ': ' + last.processed + ' written' + (last.created !== null ? ' (' + last.created + ' created, ' + last.updated + ' updated)' : '') + (last.failed ? ', ' + last.failed + ' failed' : '') + (held ? ' · ' + escapeHtml(held) : '') + '.</small>'
       : '';
@@ -801,10 +810,14 @@ window.__startDeck = function () {
       // The link also names this server's copy of the run (runUrl): when
       // iCloud has not delivered the file to the phone, the phone fetches it
       // from here over the tailnet instead of failing.
-      var executeHref = deck.executeLink + '&runUrl=' + encodeURIComponent(location.origin + '/review/run/' + deck.runId + '.json');
-      el.innerHTML = '<a href="' + executeHref.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + pictureLine + lastLine;
+      // The server names its own https address (deck.runUrl); the page's
+      // origin is only a fallback, and plain http is nothing the phone trusts.
+      var runUrl = deck.runUrl || (location.protocol === 'https:' ? location.origin + '/review/run/' + deck.runId + '.json' : '');
+      var executeHref = deck.executeLink.indexOf('&runUrl=') >= 0 ? deck.executeLink : deck.executeLink + (runUrl ? '&runUrl=' + encodeURIComponent(runUrl) : '');
+      var noRoadLine = runUrl ? '' : '<small>⚠️ This server has no https tailnet address, so the phone must wait for iCloud to deliver the run.</small>';
+      el.innerHTML = '<a href="' + executeHref.replace(/&/g, '&amp;') + '">📱 Execute ' + approved + ' new approval' + (approved === 1 ? '' : 's') + (removals ? ' (' + removals + ' removal' + (removals === 1 ? '' : 's') + ')' : '') + ' on phone</a><small>Opens Scriptable: the phone re-checks the live calendar, writes only these approvals' + (removals ? ', removes only the approved gone cards it can still verify' : '') + ', and records the run.' + (bars ? ' ' + bars + ' approved bar(s) become a PR after the next daily run.' : '') + '</small>' + noRoadLine + pictureLine + lastLine + phoneLine;
     } else {
-      el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
+      el.innerHTML = '<span>' + (last && last.at ? 'Nothing new to execute — approve more cards to enable it' : 'Approve something to enable "Execute on phone"') + '</span>' + lastLine + phoneLine + (bars ? '<small>' + bars + ' approved bar(s) become a PR after the next daily run.</small>' : '');
     }
   }
   function renderDecided() {
