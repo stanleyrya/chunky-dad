@@ -1353,7 +1353,7 @@ test('review routes: deck → decide → decided → undo, over a temp shared di
     // One city at a time (owner, 2026-10-29: "approve/deny spooky bear events for provincetown").
     assert.ok(page.body.includes('<select id="city"'), 'the city select');
     // The phone fetches the run from here when iCloud lags (2026-10-29).
-    assert.ok(page.body.includes("'&runUrl=' + encodeURIComponent(location.origin + '/review/run/' + deck.runId + '.json')"), 'the execute link names this server\'s copy of the run');
+    assert.ok(page.body.includes("var runUrl = deck.runUrl || (location.protocol === 'https:' ? location.origin + '/review/run/' + deck.runId + '.json' : '');"), 'the execute link names this server\'s https copy of the run, the page origin only as an https fallback');
     const runFile = await request(state, 'GET', '/review/run/20300101-051500.json');
     assert.equal(runFile.status, 200);
     assert.equal(JSON.parse(runFile.body).summary.runId, '20300101-051500', 'the run file itself');
@@ -2354,4 +2354,70 @@ test('phone fit: at phone width the header links are their icons (titles kept) a
   assert.ok(html.includes('title="Source audit" aria-label="Source audit"') && html.includes('title="Metrics" aria-label="Metrics"') && html.includes('title="Results" aria-label="Results"'));
   assert.ok(html.includes("if (w === fitted.w && Math.abs(h - fitted.h) < 160) return;"), 'a toolbar collapse is not a new screen');
   assert.ok(html.includes("window.addEventListener('resize', refitIfNewScreen);") && !html.includes("window.addEventListener('resize', fitStage);"));
+});
+
+test('the server names its own https address for the phone: from CHUNKY_REVIEW_PUBLIC_ORIGIN or the tailscale status, never plain http', () => {
+  const { parsePublicOriginFromTailscaleStatus, resolvePublicOrigin, buildRunUrl, buildScriptableExecuteLink } = require('../tools/serve-results');
+  assert.equal(parsePublicOriginFromTailscaleStatus({ Self: { DNSName: 'rybook.example.ts.net.' }, CertDomains: ['rybook.example.ts.net'] }), 'https://rybook.example.ts.net');
+  assert.equal(parsePublicOriginFromTailscaleStatus({ Self: { DNSName: 'rybook.example.ts.net.' } }), '', 'no https cert → no origin the phone would trust');
+  assert.equal(parsePublicOriginFromTailscaleStatus('not json'), '');
+  assert.equal(resolvePublicOrigin({ CHUNKY_REVIEW_PUBLIC_ORIGIN: 'https://mac.example.ts.net/' }), 'https://mac.example.ts.net');
+  assert.equal(resolvePublicOrigin({ CHUNKY_REVIEW_PUBLIC_ORIGIN: 'http://rybook:8734' }), '', 'a configured plain-http origin is refused, not passed on');
+  assert.equal(buildRunUrl('https://mac.example.ts.net', '20300101-051500'), 'https://mac.example.ts.net/review/run/20300101-051500.json');
+  assert.equal(buildRunUrl('', '20300101-051500'), '');
+  assert.equal(buildScriptableExecuteLink('20300101-051500', 'display-saved-run', 'https://mac.example.ts.net/review/run/20300101-051500.json'),
+    'scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1&runUrl=https%3A%2F%2Fmac.example.ts.net%2Freview%2Frun%2F20300101-051500.json');
+  assert.equal(buildScriptableExecuteLink('20300101-051500', 'display-saved-run'), 'scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1', 'no address → the link as before');
+});
+
+test('review routes: the deck carries the run URL the phone fetches from, and the phone\'s own notes come back to the deck (POST /review/phone-note)', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-server-'));
+  const serverTmp = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-server-dir-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  const previousServerDir = process.env.CHUNKY_SERVER_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  process.env.CHUNKY_SERVER_DIR = serverTmp;
+  const state = createServerState({ publicOrigin: 'https://mac.example.ts.net/' });
+  try {
+    const page = await request(state, 'GET', '/review');
+    assert.equal(page.status, 200);
+    assert.ok(page.body.includes('"runUrl":"https://mac.example.ts.net/review/run/20300101-051500.json"'), 'the deck names the server\'s https copy of the run');
+    assert.ok(page.body.includes('scriptable:///run?scriptName=display-saved-run&runId=20300101-051500&reviewExecute=1&runUrl=https%3A%2F%2Fmac.example.ts.net%2Freview%2Frun%2F20300101-051500.json'), 'the execute link itself carries it — whatever origin the page was opened from');
+    assert.ok(page.body.includes('"phoneNotes":[]'), 'nothing from the phone yet');
+    const deck = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(deck.runUrl, 'https://mac.example.ts.net/review/run/20300101-051500.json');
+
+    // The phone reports an execute…
+    const note = { at: '2030-01-01T06:00:00.000Z', title: 'Executed', message: 'Run 20300101-051500 executed on the phone', runId: '20300101-051500', summary: { created: 13, updated: 1, failed: 0 }, trace: ['📱 Display: run 20300101-051500 fetched from the Mac in 412ms (20371430 characters)'] };
+    const posted = await request(state, 'POST', '/review/phone-note', JSON.stringify(note));
+    assert.equal(posted.status, 200, posted.body);
+    const file = path.join(serverTmp, 'phone-notes.ndjson');
+    assert.ok(fs.existsSync(file), 'kept locally on the Mac, not in the shared (iCloud) dir');
+    assert.ok(!fs.existsSync(path.join(dir, 'phone-notes.ndjson')));
+    // …and a failure.
+    assert.equal((await request(state, 'POST', '/review/phone-note', JSON.stringify({ at: '2030-01-01T06:05:00.000Z', title: 'Still syncing from iCloud', message: 'Run x is still syncing', runId: '20300101-051500', macNote: 'the Mac answered 500 with 4 characters — not a run' }))).status, 200);
+    const list = JSON.parse((await request(state, 'GET', '/review/phone-notes.json')).body);
+    assert.equal(list.notes.length, 2);
+    assert.equal(list.notes[0].title, 'Still syncing from iCloud', 'newest first');
+    assert.equal(list.notes[0].macNote, 'the Mac answered 500 with 4 characters — not a run');
+    assert.deepEqual(list.notes[1].summary, { created: 13, updated: 1, failed: 0 });
+    assert.deepEqual(list.notes[1].trace, note.trace);
+    const after = JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    assert.equal(after.phoneNotes.length, 2);
+    assert.equal(after.phoneNotes[0].title, 'Still syncing from iCloud');
+    const pageAfter = await request(state, 'GET', '/review');
+    assert.ok(pageAfter.body.includes('"phoneNotes":[{"at":"2030-01-01T06:05:00.000Z","title":"Still syncing from iCloud"'), 'the deck page carries the phone\'s notes for renderExecute');
+    assert.ok(pageAfter.body.includes("'<small>📱 The phone, '"), 'renderExecute shows the latest one');
+
+    assert.equal((await request(state, 'POST', '/review/phone-note', 'not json')).status, 400);
+    assert.equal((await request(state, 'POST', '/review/phone-note', JSON.stringify({ runId: 'x' }))).status, 400, 'a note needs a title or a message');
+    assert.equal((await request(state, 'POST', '/review/phone-note', JSON.stringify({ title: 'big', message: 'x'.repeat(70 * 1024) }))).status, 413);
+  } finally {
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR; else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    if (previousServerDir === undefined) delete process.env.CHUNKY_SERVER_DIR; else process.env.CHUNKY_SERVER_DIR = previousServerDir;
+    fs.rmSync(dir, { recursive: true, force: true });
+    fs.rmSync(serverTmp, { recursive: true, force: true });
+  }
 });

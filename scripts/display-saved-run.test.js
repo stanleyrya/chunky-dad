@@ -128,16 +128,20 @@ test('a run iCloud has not delivered is fetched from the Mac when the link names
     assert.equal(await display.fetchRunFromMac('20261029-205035', 'https://mac.example.ts.net/review/run/20261029-205035.json'), null);
     assert.equal(await display.fetchRunFromMac('20261029-205035', 'http://mac.local/review/run/20261029-205035.json'), null);
 
-    // The execute path: pending + runUrl → the fetch; no copy → the alert names the folder to pull from.
+    // The execute path: no copy on the phone + runUrl → the Mac is asked
+    // first; when it does not answer either, the alert names the folder to
+    // pull from AND the Mac's reason.
+    delete files['/icloud/chunky-dad-data/runs/20261029-205035.json'];
     const errors = [];
     display.showError = async (title, message) => { errors.push({ title, message }); };
     const asked = [];
-    display.fetchRunFromMac = async (runId, runUrl) => { asked.push([runId, runUrl]); return null; };
+    display.fetchRunFromMac = async (runId, runUrl) => { asked.push([runId, runUrl]); display.macFetchNote = 'fetching run 20261029-205035 from the Mac failed: The request timed out'; return null; };
     display.loadSavedRun = async (runId) => ({ __icloudSyncPending: true, notOnPhone: true, runId });
     assert.equal(await display.executeReviewedRun({ runId: '20261029-205035', runUrl: 'https://mac.example.ts.net/review/run/20261029-205035.json' }), null);
     assert.deepEqual(asked, [['20261029-205035', 'https://mac.example.ts.net/review/run/20261029-205035.json']]);
     assert.equal(errors[0].title, 'Still syncing from iCloud');
     assert.ok(errors[0].message.includes('has not reached this phone from iCloud yet') && errors[0].message.includes('Files › iCloud Drive › chunky-dad-data › runs'), errors[0].message);
+    assert.ok(errors[0].message.includes('The Mac could not hand it over either: fetching run 20261029-205035 from the Mac failed: The request timed out.'), errors[0].message);
   } finally {
     global.Request = previousRequest;
     delete global.FileManager;
@@ -262,4 +266,96 @@ test('buildResultsLike threads the run\'s gone-from-source cards through so the 
   const gone = { candidates: [{ key: 'gone|nyc|UID1', kind: 'gone', title: 'Gone Party' }], state: { nyc: { UID1: { misses: 2 } } }, summary: { candidates: 1 } };
   assert.deepEqual(display.buildResultsLike({ ...savedPayload(), goneFromSource: gone }, { readOnly: false }).goneFromSource, gone);
   assert.equal(display.buildResultsLike(savedPayload(), { readOnly: false }).goneFromSource, null, 'older runs have none');
+});
+
+test('a reviewed execute takes the run from the Mac before waiting on iCloud, and reads the phone\'s own copy only once iCloud has downloaded it', async () => {
+  const files = {};
+  const fm = fakeFileManager(files);
+  global.FileManager = fm;
+  const previousRequest = global.Request;
+  const runPayload = { summary: { runId: '20261030-190641' }, analyzedEvents: [] };
+  const requests = [];
+  global.Request = function (url) {
+    const self = this;
+    requests.push(self);
+    self.url = url;
+    self.response = { statusCode: 200 };
+    self.loadString = async () => (self.method === 'POST' ? '{"ok":true}' : JSON.stringify(runPayload));
+  };
+  try {
+    const display = new SavedRunDisplay();
+    display.resolveDataRoot = () => '/icloud/chunky-dad-data';
+    display.showError = async () => {};
+    const handed = [];
+    display.createAdapter = () => ({
+      loadOwnerDecisions: async () => [],
+      executeReviewedSavedRun: async (results) => { handed.push(results.sourceRunId); return { created: 3, updated: 1, failed: 0 }; }
+    });
+    let icloudAsked = 0;
+    display.loadSavedRun = async (runId) => { icloudAsked += 1; return { __icloudSyncPending: true, runId }; };
+
+    // 1. Nothing on the phone: the Mac's copy, no iCloud wait at all.
+    const runUrl = 'https://mac.example.ts.net/review/run/20261030-190641.json';
+    const summary = await display.executeReviewedRun({ runId: '20261030-190641', runUrl });
+    assert.deepEqual(summary, { created: 3, updated: 1, failed: 0 });
+    assert.equal(icloudAsked, 0, 'iCloud was never waited on');
+    assert.deepEqual(handed, ['20261030-190641']);
+    assert.equal(requests[0].url, runUrl, 'the run came from the Mac');
+    assert.equal(display.macOrigin, 'https://mac.example.ts.net');
+    // …and the phone told the Mac what it did (POST /review/phone-note).
+    const posted = requests.filter((r) => r.method === 'POST');
+    assert.equal(posted.length, 1);
+    assert.equal(posted[0].url, 'https://mac.example.ts.net/review/phone-note');
+    const note = JSON.parse(posted[0].body);
+    assert.equal(note.title, 'Executed');
+    assert.deepEqual(note.summary, { created: 3, updated: 1, failed: 0 });
+    assert.equal(note.runId, '20261030-190641');
+    assert.ok(Array.isArray(note.trace) && note.trace.some((line) => /fetched from the Mac/.test(line)), 'the Display trace rides along');
+
+    // 2. iCloud has delivered the file (downloaded): read it, no fetch.
+    requests.length = 0;
+    files['/icloud/chunky-dad-data/runs/20261030-190641.json'] = JSON.stringify(runPayload);
+    fm.iCloud().isFileDownloaded = () => true;
+    await display.executeReviewedRun({ runId: '20261030-190641', runUrl });
+    assert.equal(requests.filter((r) => r.method !== 'POST').length, 0, 'no fetch when the phone already has the run');
+    assert.equal(icloudAsked, 0);
+
+    // 3. A placeholder only (not downloaded) is not a copy: the Mac again.
+    requests.length = 0;
+    fm.iCloud().isFileDownloaded = () => false;
+    await display.executeReviewedRun({ runId: '20261030-190641', runUrl });
+    assert.equal(requests.filter((r) => r.method !== 'POST')[0].url, runUrl);
+    assert.equal(icloudAsked, 0);
+
+    // 4. No Mac address on the link: iCloud as before, and the alert says why the Mac was not an option.
+    requests.length = 0;
+    const errors = [];
+    display.showError = async (title, message) => { errors.push({ title, message }); };
+    assert.equal(await display.executeReviewedRun({ runId: '20261030-190641' }), null);
+    assert.equal(icloudAsked, 1);
+    assert.equal(errors[0].title, 'Still syncing from iCloud');
+    assert.ok(errors[0].message.includes('The Mac could not hand it over either: the execute link carried no Mac address for the run.'), errors[0].message);
+    assert.equal(requests.length, 0, 'without an https origin the phone posts nothing');
+
+    // 5. A failure with a Mac origin is posted to the Mac as well as noted in iCloud.
+    requests.length = 0;
+    global.Request = function (url) { const self = this; requests.push(self); self.url = url; self.response = { statusCode: 500 }; self.loadString = async () => (self.method === 'POST' ? '{"ok":true}' : 'nope'); };
+    assert.equal(await display.executeReviewedRun({ runId: '20261030-190641', runUrl }), null);
+    const failurePost = requests.find((r) => r.method === 'POST');
+    assert.ok(failurePost, 'the failure reached the Mac');
+    const failureNote = JSON.parse(failurePost.body);
+    assert.equal(failureNote.title, 'Still syncing from iCloud');
+    assert.equal(failureNote.macNote, 'the Mac answered 500 with 4 characters — not a run');
+    assert.ok(errors[1].message.includes('The Mac could not hand it over either: the Mac answered 500 with 4 characters — not a run.'), errors[1].message);
+  } finally {
+    global.Request = previousRequest;
+    delete global.FileManager;
+  }
+});
+
+test('compactForNote keeps a note small: short values stay, big or unserialisable ones are left out', () => {
+  const big = { events: new Array(2000).fill({ title: 'x'.repeat(10) }) };
+  const cyclic = {}; cyclic.self = cyclic;
+  assert.deepEqual(SavedRunDisplay.compactForNote({ runId: 'r', created: 2, big, cyclic, nested: { a: 1 } }), { runId: 'r', created: 2, nested: { a: 1 } });
+  assert.deepEqual(SavedRunDisplay.compactForNote(null), {});
 });
