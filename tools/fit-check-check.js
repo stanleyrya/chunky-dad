@@ -3,7 +3,8 @@
 // no overlaps, a shared link opened by a friend is kept the moment it is
 // changed (fractions of an inch included), duplicate and delete work, and
 // a screenshot of each plan lands next to this script's output dir. Dev
-// only (not in the test suite): needs Google Chrome.
+// only (not in the test suite): needs Google Chrome. At a phone width (--width 390) it also
+// drives a pinch and a touch drag, so pinch zoom and the loupe are checked for real.
 //
 //   node tools/fit-check-check.js [--out DIR] [--width 1200]
 const { spawn } = require('child_process');
@@ -89,6 +90,37 @@ function getJson(url) { return new Promise((resolve, reject) => http.get(url, (r
         const before = Number(await evalJs('apt().furniture.length'));
         await evalJs("document.querySelector('#list .row .x').click(); 1"); await sleep(300);
         check('× on a row removes the piece', Number(await evalJs('apt().furniture.length')) === before - 1);
+        // Phone handling: fingertip-sized grab areas, nudge arrows, new pieces in view, pinch zoom, the loupe.
+        await go(url);
+        const hits = JSON.parse(await evalJs("JSON.stringify((() => { const rs = [...document.querySelectorAll('g.item rect.hit')].map(r => r.getBoundingClientRect()); return { n: rs.length, pieces: document.querySelectorAll('g.item').length, small: rs.filter(r => r.width < 43 || r.height < 43).length }; })())"));
+        check('every piece has a grab area at least a fingertip wide', hits.n === hits.pieces && hits.small === 0, `${hits.n} areas, ${hits.small} under 43px`);
+        await evalJs("selected = apt().furniture[0]; renderStage(); renderPanel(); 1");
+        const nudged = JSON.parse(await evalJs("JSON.stringify((() => { const x0 = selected.x; const b = document.querySelector('.selbar .nudge button[data-nudge=\"1,0\"]'); b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerType: 'mouse' })); b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerType: 'mouse' })); return { moved: selected.x - x0, undo: !document.getElementById('undo').disabled, barPos: getComputedStyle(document.getElementById('selbar')).position, shown: document.getElementById('selbar').classList.contains('show') }; })())"));
+        check('the ▶ arrow nudges the selected piece one inch and can be undone', nudged.moved === 1 && nudged.undo, `moved ${nudged.moved}", bar ${nudged.barPos}`);
+        if (WIDTH < 600) check('the selected-piece bar rides along the bottom on a phone', nudged.shown && nudged.barPos === 'sticky', nudged.barPos);
+        const placed = JSON.parse(await evalJs("JSON.stringify((() => { setZoom(3); const st = document.querySelector('.stage'); st.scrollLeft = st.scrollWidth * 0.4; st.scrollTop = st.scrollHeight * 0.4; document.getElementById('fName').value = 'Nightstand'; document.getElementById('fW').value = '20'; document.getElementById('fD').value = '16'; document.getElementById('addForm').requestSubmit(); const it = apt().furniture[apt().furniture.length - 1]; const g = [...document.querySelectorAll('g.item')].find(x => x._item === it); const r = g.querySelector('rect:not(.hit)').getBoundingClientRect(), b = document.querySelector('.stage').getBoundingClientRect(); return { name: it.name, x: it.x, y: it.y, inView: r.left >= b.left && r.right <= b.right && r.top >= b.top && r.bottom <= b.bottom, zoom }; })())"));
+        check('a new piece lands inside the part of the plan on screen', placed.name === 'Nightstand' && placed.inView && placed.x > 12, `at ${placed.x}", ${placed.y}" with zoom ${placed.zoom}`);
+        await evalJs("setZoom(1); localStorage.clear(); 1");
+        if (WIDTH < 600) {
+            await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
+            await go(url);
+            const box = JSON.parse(await evalJs("JSON.stringify(document.querySelector('.stage').getBoundingClientRect())"));
+            await send('Input.synthesizePinchGesture', { x: box.x + box.width / 2, y: box.y + box.height / 2, scaleFactor: 2.2, relativeSpeed: 400, gestureSourceType: 'touch' });
+            await sleep(600);
+            const pinched = JSON.parse(await evalJs("JSON.stringify({ zoom, page: window.visualViewport ? window.visualViewport.scale : 1, slider: document.getElementById('zoom').value })"));
+            check('a pinch on the plan zooms the plan, not the page', pinched.zoom > 1.4 && Math.abs(pinched.page - 1) < 0.01, `zoom ${pinched.zoom.toFixed(2)}, page scale ${pinched.page}, slider ${pinched.slider}`);
+            await evalJs("setZoom(1); 1");
+            const piece = JSON.parse(await evalJs("JSON.stringify((() => { const r = document.querySelector('g.item rect:not(.hit)').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })())"));
+            await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: piece.x, y: piece.y, id: 1 }] });
+            for (let i = 1; i <= 6; i++) { await send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: piece.x + i * 6, y: piece.y + i * 5, id: 1 }] }); await sleep(30); }
+            const loupe = JSON.parse(await evalJs("JSON.stringify((() => { const l = document.getElementById('loupe'), r = l.getBoundingClientRect(); return { shown: l.classList.contains('show'), viewBox: (l.querySelector('svg') || {}).getAttribute ? l.querySelector('svg').getAttribute('viewBox') : '', above: r.bottom <= " + piece.y + ", dragging: !!drag }; })())"));
+            console.log('   screenshot', await shot('loupe'));
+            await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+            await sleep(200);
+            const after = JSON.parse(await evalJs("JSON.stringify({ shown: document.getElementById('loupe').classList.contains('show'), dragging: !!drag })"));
+            check('dragging a piece by touch shows the loupe above the finger, lifting hides it', loupe.shown && loupe.dragging && loupe.above && !!loupe.viewBox && !after.shown && !after.dragging, `during ${JSON.stringify(loupe)} after ${JSON.stringify(after)}`);
+            await send('Emulation.setTouchEmulationEnabled', { enabled: false });
+        }
         // Nothing wider than the screen: the widest elements past the viewport, by selector.
         const overflow = JSON.parse(await evalJs("JSON.stringify((() => { const vw = document.documentElement.clientWidth; const wide = []; for (const el of document.querySelectorAll('body *')) { const r = el.getBoundingClientRect(); if (r.right > vw + 1 && r.width > 0) wide.push([Math.round(r.right - vw), el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ').join('.') : '')]); } wide.sort((a, b) => b[0] - a[0]); return { scrollWidth: document.documentElement.scrollWidth, vw, wide: wide.slice(0, 6) }; })())"));
         check(`nothing wider than the ${WIDTH}px screen`, overflow.scrollWidth <= overflow.vw && overflow.wide.length === 0, overflow.wide.map(([px, sel]) => `${sel} +${px}px`).join(', ') || `scrollWidth ${overflow.scrollWidth}`);

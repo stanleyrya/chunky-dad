@@ -41,12 +41,16 @@ a { color:var(--accent); }
 .card { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:var(--shadow); min-width:0; }
 .card h2 { margin:0 0 10px; font:600 12px/1 Poppins, -apple-system, system-ui, sans-serif; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
 .stage { overflow:auto; max-height:76vh; border-radius:10px; background:#fff; border:1px solid var(--line); -webkit-overflow-scrolling:touch; }
-/* A finger on the plan pans it (the stage scrolls natively) and pinches the page; only a piece captures the touch. */
-svg { display:block; touch-action:pan-x pan-y pinch-zoom; user-select:none; -webkit-user-select:none; }
+/* The plan handles its own fingers (attachPlanGestures): one drags a piece or pans, two zoom the plan.
+   touch-action:none on the svg itself, because Chrome does not honour it on svg children and would
+   turn a piece drag into a scroll; it is also what keeps a pinch on the plan from zooming the page. */
+svg { display:block; touch-action:none; user-select:none; -webkit-user-select:none; }
 .item { touch-action:none; }
 .item rect { fill:var(--brand); fill-opacity:.32; stroke:#4a5fd6; stroke-width:2; cursor:grab; vector-effect:non-scaling-stroke; }
 .item.sel rect { stroke-width:3.5; fill-opacity:.5; stroke:#ff7b2f; }
 .item.bad rect { fill:var(--no); stroke:var(--no); }
+/* The grab area of a small piece is at least a fingertip wide (44 screen px) whatever the zoom. */
+.item rect.hit { fill:transparent; fill-opacity:1; stroke:none; }
 .item text { font-family:-apple-system, system-ui, sans-serif; fill:#0b0d13; pointer-events:none; text-anchor:middle; font-weight:600; paint-order:stroke; stroke:rgba(255,255,255,.85); stroke-width:3px; stroke-linejoin:round; }
 .item text.dim { font-weight:500; fill:#2a2f3a; }
 .cal line { stroke:var(--no); stroke-width:2; vector-effect:non-scaling-stroke; }
@@ -79,6 +83,15 @@ input[type=file] { padding:6px; }
 .selbar .who { flex:1 1 140px; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .selbar .who small { font-weight:500; color:var(--muted); font-family:ui-monospace, Menlo, monospace; margin-left:6px; }
 .selbar button { padding:7px 10px; min-height:32px; }
+.selbar .nudge { display:flex; gap:4px; }
+.selbar .nudge button { width:36px; padding:0; font-size:14px; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:none; }
+/* On a phone the plan is most of the screen, so the bar for the selected piece rides along the bottom edge instead of hiding under the fold. */
+@media (max-width: 959px) { .selbar.show { position:sticky; bottom:calc(8px + env(safe-area-inset-bottom)); z-index:4; background:#232a4a; box-shadow:var(--shadow); } }
+/* The loupe: a magnified live view of the plan under the finger while a piece is dragged by touch. */
+.loupe { position:fixed; width:160px; height:160px; border-radius:50%; overflow:hidden; border:2px solid #fff; box-shadow:0 10px 30px rgba(0,0,0,.5); background:#fff; pointer-events:none; z-index:8; display:none; }
+.loupe.show { display:block; }
+.loupe svg { display:block; width:100%; height:100%; }
+.loupe::after { content:''; position:absolute; left:50%; top:50%; width:12px; height:12px; margin:-6px; border:1.5px solid rgba(255,123,47,.95); border-radius:50%; }
 .status { font-family:ui-monospace, Menlo, monospace; font-size:12px; margin-top:6px; min-height:1.2em; }
 .status.ok { color:#6fcf97; } .status.bad { color:#f08575; } .status.warn { color:var(--warn); }
 .presets { display:flex; flex-wrap:wrap; gap:6px; }
@@ -122,7 +135,7 @@ input[type=file] { padding:6px; }
     <div id="shareBanner" class="banner" hidden></div>
     <div id="stageWrap"></div>
     <div class="toolbar">
-      <span class="zoom">Zoom <input id="zoom" type="range" min="0.5" max="4" step="0.05" value="1" aria-label="Zoom"> <button id="fit" type="button" title="Fit the whole plan in view">Fit</button></span>
+      <span class="zoom">Zoom <input id="zoom" type="range" min="0.5" max="6" step="0.05" value="1" aria-label="Zoom"> <button id="fit" type="button" title="Fit the whole plan in view">Fit</button></span>
       <button id="undo" type="button" title="Undo the last change (Cmd/Ctrl+Z)" disabled>↶ Undo</button>
       <button id="calBtn" type="button" title="Tap two points on the plan with a known distance between them">📏 Set scale</button>
       <span id="scaleInfo" class="save"></span>
@@ -135,8 +148,8 @@ input[type=file] { padding:6px; }
       <button id="calApply" class="go" type="button" disabled>Apply scale</button>
       <button id="calCancel" type="button">Cancel</button>
     </div>
-    <div id="selbar" class="selbar"><span class="who" id="selWho"></span><button id="rotate" type="button">⟳ Rotate</button><button id="dup" type="button">⧉ Duplicate</button><button id="remove" type="button">✕ Delete</button></div>
-    <p class="hint">Drag a piece to move it; double-tap it to rotate. Drag the plan itself to pan. Edges snap together when close; red means two pieces overlap. Undo takes back the last change. <span class="keys">Arrow keys nudge 1", Shift+arrow 1', R rotates, Delete removes.</span> The tool knows the scale, not the walls, so check those by eye.</p>
+    <div id="selbar" class="selbar"><span class="who" id="selWho"></span><span class="nudge" role="group" aria-label="Nudge one inch"><button type="button" data-nudge="-1,0" title="Left 1 inch (hold to keep going)" aria-label="Left 1 inch">◀</button><button type="button" data-nudge="0,-1" title="Up 1 inch (hold to keep going)" aria-label="Up 1 inch">▲</button><button type="button" data-nudge="0,1" title="Down 1 inch (hold to keep going)" aria-label="Down 1 inch">▼</button><button type="button" data-nudge="1,0" title="Right 1 inch (hold to keep going)" aria-label="Right 1 inch">▶</button></span><button id="rotate" type="button">⟳ Rotate</button><button id="dup" type="button">⧉ Duplicate</button><button id="remove" type="button">✕ Delete</button></div>
+    <p class="hint">Drag a piece to move it; double-tap it to rotate; the arrows nudge it an inch (hold to keep going). Drag the plan itself to pan, pinch to zoom. Edges snap together when close; red means two pieces overlap. Undo takes back the last change. <span class="keys">Arrow keys nudge 1", Shift+arrow 1', R rotates, Delete removes, Ctrl+scroll zooms.</span> The tool knows the scale, not the walls, so check those by eye.</p>
     <div id="status" class="status"></div>
   </div>
 
@@ -181,6 +194,7 @@ input[type=file] { padding:6px; }
   </div>
 </div>
 <div id="toast" class="toast" role="status"></div>
+<div id="loupe" class="loupe" aria-hidden="true"></div>
 
 <script>
 // ---------- Built-in apartments ----------
@@ -380,19 +394,26 @@ function renderSelect() {
   }
 }
 function renderStage() {
-  const W = $('stageWrap'); W.innerHTML = '';
+  const W = $('stageWrap');
   const a = apt();
   if (!a) { W.innerHTML = '<div class="empty"><b>No apartment loaded.</b><br>Tap “New”, give it a name and upload the floor plan image.</div>'; $('scaleInfo').textContent = ''; $('status').textContent = ''; return; }
   if (!a.img) { W.innerHTML = '<div class="empty"><b>New apartment.</b><br>Name it and upload the floor plan image below, then Save.</div>'; $('scaleInfo').textContent = ''; $('status').textContent = ''; return; }
+  // A re-render keeps the view where it was (zoom and nudges rebuild the stage).
+  const was = W.querySelector('.stage'), keep = was ? { left: was.scrollLeft, top: was.scrollTop } : null;
+  W.innerHTML = '';
   const stage = document.createElement('div'); stage.className = 'stage'; W.appendChild(stage);
   const avail = Math.max(240, stage.clientWidth - 2);
   fitScale = Math.min(avail / a.img.w, (window.innerHeight * 0.76) / a.img.h);
   const svg = el('svg', { id: 'plan', viewBox: `0 0 ${a.img.w} ${a.img.h}`, xmlns: NS }, stage);
   sizeSvg(svg, a);
-  el('image', { href: imgSrc(a), x: 0, y: 0, width: a.img.w, height: a.img.h }, svg);
+  if (keep) { stage.scrollLeft = keep.left; stage.scrollTop = keep.top; }
+  // Everything drawn on the plan sits in one group so the loupe can show a live copy of it.
+  const content = el('g', { id: 'planContent' }, svg);
+  el('image', { href: imgSrc(a), x: 0, y: 0, width: a.img.w, height: a.img.h }, content);
+  attachPlanGestures(stage, svg, a);
   const ppi = a.ppi;
   if (ppi) {
-    const layer = el('g', {}, svg);
+    const layer = el('g', {}, content);
     // Labels are sized for the screen (11 CSS px), not the plan: a piece
     // too small to hold its name on screen shows nothing, and the size
     // line only when there is room for both.
@@ -402,6 +423,8 @@ function renderStage() {
       const D = dims(it), bad = problems(it).length > 0;
       const g = el('g', { class: 'item' + (bad ? ' bad' : '') + (it === selected ? ' sel' : ''), transform: `translate(${it.x * ppi} ${it.y * ppi})` }, layer);
       g._item = it;
+      const hitW = Math.max(D.w * ppi, 44 / screen), hitH = Math.max(D.h * ppi, 44 / screen);
+      el('rect', { class: 'hit', x: (D.w * ppi - hitW) / 2, y: (D.h * ppi - hitH) / 2, width: hitW, height: hitH }, g);
       el('rect', { x: 0, y: 0, width: D.w * ppi, height: D.h * ppi }, g);
       const cx = D.w / 2 * ppi, cy = D.h / 2 * ppi, wPx = D.w * ppi, hPx = D.h * ppi;
       const nameFits = wPx >= fs * 0.6 * Math.min(it.name.length, 12) + fs * 0.4 && hPx >= fs * 1.2;
@@ -415,17 +438,15 @@ function renderStage() {
     }
   }
   if (cal) {
-    const g = el('g', { class: 'cal' }, svg);
+    const g = el('g', { class: 'cal' }, content);
     cal.pts.forEach(p => el('circle', { cx: p.x, cy: p.y, r: Math.max(4, a.img.w / 200) }, g));
     if (cal.pts.length === 2) el('line', { x1: cal.pts[0].x, y1: cal.pts[0].y, x2: cal.pts[1].x, y2: cal.pts[1].y }, g);
   }
   svg.addEventListener('pointerdown', e => {
-    if (cal) {
-      const p = pt(e, svg); if (cal.pts.length < 2) cal.pts.push(p); else cal.pts = [p];
-      $('calMsg').textContent = cal.pts.length < 2 ? 'Now tap the second point.' : 'Enter the real distance between the points, then apply.';
-      $('calApply').disabled = cal.pts.length < 2; renderStage(); return;
-    }
-    if (e.target.tagName === 'image' || e.target === svg) { selected = null; renderStage(); renderPanel(); }
+    if (!cal) return;
+    const p = pt(e, svg); if (cal.pts.length < 2) cal.pts.push(p); else cal.pts = [p];
+    $('calMsg').textContent = cal.pts.length < 2 ? 'Now tap the second point.' : 'Enter the real distance between the points, then apply.';
+    $('calApply').disabled = cal.pts.length < 2; renderStage();
   });
   svg.addEventListener('pointermove', e => {
     if (!drag) return; const p = pt(e, svg);
@@ -434,15 +455,108 @@ function renderStage() {
     drag.it.x = x; drag.it.y = y;
     drag.g.setAttribute('transform', `translate(${x * ppi} ${y * ppi})`);
     svg.querySelectorAll('.item').forEach(g => g.classList.toggle('bad', problems(g._item).length > 0));
+    showLoupe(e, svg);
   });
-  svg.addEventListener('pointerup', () => { if (drag) { drag = null; persist(a); renderStage(); renderPanel(); } });
-  if (selected && !cal) { requestAnimationFrame(() => { const g = [...svg.querySelectorAll('.item')].find(x => x._item === selected); if (g && typeof g.scrollIntoView === 'function' && !isVisibleIn(g, stage)) g.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }); }
-  svg.addEventListener('pointercancel', () => { if (drag) { drag = null; renderStage(); } });
+  svg.addEventListener('pointerup', () => { hideLoupe(); if (drag) { drag = null; persist(a); renderStage(); renderPanel(); } });
+  // A freshly selected piece is brought into view; a zoom or nudge re-render leaves the view alone.
+  if (selected && !cal && !keepView) { requestAnimationFrame(() => { const g = [...svg.querySelectorAll('.item')].find(x => x._item === selected); if (g && typeof g.scrollIntoView === 'function' && !isVisibleIn(g, stage)) g.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }); }
+  keepView = false;
+  svg.addEventListener('pointercancel', () => { hideLoupe(); if (drag) { drag = null; renderStage(); } });
   $('scaleInfo').textContent = ppi ? `${ppi.toFixed(2)} px per inch` : 'Scale not set';
   const n = a.furniture.filter(i => problems(i).length).length;
   const st = $('status');
   if (!ppi) { st.className = 'status warn'; st.textContent = 'Set the scale before placing furniture.'; }
   else { st.className = 'status ' + (n ? 'bad' : 'ok'); st.textContent = a.furniture.length ? (n ? `${n} piece${n > 1 ? 's' : ''} overlapping` : 'No overlaps') : 'No furniture on the plan'; }
+}
+let keepView = false;
+// Zoom to z keeping the plan point under `at` (a client point; default the middle of the stage) where it is.
+function setZoom(z, at) {
+  z = Math.min(6, Math.max(0.5, z));
+  const stage = document.querySelector('.stage'), a = apt();
+  if (!stage || !a) { zoom = z; $('zoom').value = String(z); renderStage(); return; }
+  const r = stage.getBoundingClientRect(); at = at || { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  const s0 = fitScale * zoom, px = (stage.scrollLeft + at.x - r.left) / s0, py = (stage.scrollTop + at.y - r.top) / s0;
+  zoom = z; $('zoom').value = String(z);
+  keepView = true; renderStage();
+  scrollPlanPointTo(document.querySelector('.stage'), px, py, at);
+}
+function scrollPlanPointTo(stage, px, py, at) {
+  const r = stage.getBoundingClientRect(), s = fitScale * zoom;
+  stage.scrollLeft = px * s - (at.x - r.left); stage.scrollTop = py * s - (at.y - r.top);
+}
+// Fingers on the plan: one on a piece drags it (startDrag), one on the plan pans the stage (and the
+// page, once the stage has no more to give), two zoom the plan around their midpoint; a tap on the
+// plan deselects. A trackpad pinch arrives as Ctrl+wheel. Pointer events throughout, so a second
+// finger landing mid-drag turns into a pinch instead of a second drag.
+function attachPlanGestures(stage, svg, a) {
+  const fingers = new Map(); let pan = null, pinch = null;
+  svg._fingers = fingers;
+  const pair = () => [...fingers.values()];
+  const dist = t => Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y);
+  const mid = t => ({ x: (t[0].x + t[1].x) / 2, y: (t[0].y + t[1].y) / 2 });
+  const planPoint = at => { const r = stage.getBoundingClientRect(), s = fitScale * zoom; return { px: (stage.scrollLeft + at.x - r.left) / s, py: (stage.scrollTop + at.y - r.top) / s }; };
+  const capture = id => { try { svg.setPointerCapture(id); } catch (_) { /* a pointer already gone */ } };
+  // Every finger is counted here first (capture phase), before a piece's own handler sees it.
+  svg.addEventListener('pointerdown', e => {
+    if (cal) return;
+    fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (fingers.size !== 2) return;
+    if (drag) { drag = null; hideLoupe(); persist(a); }
+    pan = null; const t = pair(); pinch = { d0: dist(t), z0: zoom, ...planPoint(mid(t)) };
+    capture(e.pointerId);
+  }, true);
+  // Only the plan itself gets here (a piece stops the event): one finger pans.
+  svg.addEventListener('pointerdown', e => {
+    if (cal || fingers.size !== 1) return;
+    e.preventDefault();
+    pan = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, moved: false };
+    capture(e.pointerId);
+  });
+  svg.addEventListener('pointermove', e => {
+    const f = fingers.get(e.pointerId); if (f) { f.x = e.clientX; f.y = e.clientY; }
+    if (pinch && fingers.size === 2) {
+      const t = pair(); zoom = Math.min(6, Math.max(0.5, pinch.z0 * dist(t) / pinch.d0));
+      sizeSvg(svg, a); $('zoom').value = String(zoom); scrollPlanPointTo(stage, pinch.px, pinch.py, mid(t));
+    } else if (pan && e.pointerId === pan.id) {
+      const dx = e.clientX - pan.x, dy = e.clientY - pan.y; pan.x = e.clientX; pan.y = e.clientY;
+      pan.moved = pan.moved || Math.hypot(e.clientX - pan.x0, e.clientY - pan.y0) > 6;
+      const wantL = stage.scrollLeft - dx, wantT = stage.scrollTop - dy;
+      stage.scrollLeft = wantL; stage.scrollTop = wantT;
+      const overL = wantL - stage.scrollLeft, overT = wantT - stage.scrollTop; // what the stage could not take goes to the page
+      if (overL || overT) window.scrollBy(overL, overT);
+    }
+  });
+  const lift = e => {
+    fingers.delete(e.pointerId);
+    if (pinch && fingers.size < 2) { pinch = null; keepView = true; renderStage(); return; }
+    if (pan && e.pointerId === pan.id) { const tap = !pan.moved && e.type === 'pointerup'; pan = null; if (tap) { selected = null; renderStage(); renderPanel(); } }
+  };
+  svg.addEventListener('pointerup', lift); svg.addEventListener('pointercancel', lift);
+  stage.addEventListener('wheel', e => { if (!e.ctrlKey && !e.metaKey) return; e.preventDefault(); setZoom(zoom * Math.exp(-e.deltaY * 0.01), { x: e.clientX, y: e.clientY }); }, { passive: false });
+}
+// The loupe follows a finger dragging a piece: 2.5× the screen scale, live (a <use> of the plan), above the finger.
+let loupeSvg = null;
+function showLoupe(e, svg) {
+  if (e.pointerType !== 'touch') return;
+  const loupe = $('loupe'), size = 160, span = size / (fitScale * zoom * 2.5), p = pt(e, svg);
+  if (!loupeSvg) { loupeSvg = el('svg', { xmlns: NS }, loupe); el('use', { href: '#planContent' }, loupeSvg); }
+  loupeSvg.setAttribute('viewBox', `${p.x - span / 2} ${p.y - span / 2} ${span} ${span}`);
+  let left = e.clientX - size / 2, top = e.clientY - size - 56;
+  left = Math.max(8, Math.min(window.innerWidth - size - 8, left));
+  if (top < 8) top = e.clientY + 56;
+  loupe.style.left = left + 'px'; loupe.style.top = top + 'px'; loupe.classList.add('show');
+}
+function hideLoupe() { $('loupe').classList.remove('show'); }
+// A new piece lands in the middle of the part of the plan that is on screen.
+function placeInView(it) {
+  const a = apt(), stage = document.querySelector('.stage'), D = dims(it);
+  it.x = 12; it.y = 12;
+  if (!stage || !a || !a.ppi) return;
+  const r = stage.getBoundingClientRect(), top = Math.max(r.top, 0), bottom = Math.min(r.bottom, window.innerHeight);
+  const vy = bottom > top ? (top + bottom) / 2 - r.top : stage.clientHeight / 2;
+  const s = fitScale * zoom * a.ppi;
+  it.x = Math.max(0, Math.round((stage.scrollLeft + stage.clientWidth / 2) / s - D.w / 2));
+  it.y = Math.max(0, Math.round((stage.scrollTop + vy) / s - D.h / 2));
 }
 function sizeSvg(svg, a) { svg.style.width = (a.img.w * fitScale * zoom) + 'px'; svg.style.height = (a.img.h * fitScale * zoom) + 'px'; }
 function isVisibleIn(node, box) { const r = node.getBoundingClientRect(), b = box.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right && r.top >= b.top && r.bottom <= b.bottom; }
@@ -488,6 +602,7 @@ function pt(e, svg) { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.c
 let lastTap = { it: null, t: 0 };
 function startDrag(e, it, svg, g) {
   if (cal) return; e.preventDefault(); e.stopPropagation();
+  if (svg._fingers && svg._fingers.size > 1) return; // a second finger is a pinch, not a second drag
   const a = apt(), p = pt(e, svg), now = Date.now();
   if (lastTap.it === it && now - lastTap.t < 350) { lastTap = { it: null, t: 0 }; selected = it; it.r = (it.r + 90) % 360; persist(a); renderStage(); renderPanel(); return; }
   lastTap = { it, t: now };
@@ -512,8 +627,17 @@ function snap(it, x, y) {
 
 // ---------- Controls ----------
 $('aptSel').onchange = e => { activeId = e.target.value; selected = null; if (activeId !== 'shared') ls('fitcheck-active', activeId); renderAll(); };
-$('zoom').oninput = e => { zoom = +e.target.value; renderStage(); };
-$('fit').onclick = () => { zoom = 1; $('zoom').value = '1'; renderStage(); };
+$('zoom').oninput = e => setZoom(+e.target.value);
+$('fit').onclick = () => { setZoom(1); const st = document.querySelector('.stage'); if (st) { st.scrollLeft = 0; st.scrollTop = 0; } };
+// Nudge buttons: an inch per tap, held = keeps going; one undo step per press.
+let nudging = null;
+for (const b of document.querySelectorAll('.selbar .nudge button')) {
+  const [dx, dy] = b.dataset.nudge.split(',').map(Number);
+  const step = () => { if (!selected) return; selected.x += dx; selected.y += dy; keepView = true; renderStage(); renderPanel(); };
+  const stop = () => { if (!nudging) return; clearTimeout(nudging.t); clearInterval(nudging.i); nudging = null; persist(apt()); renderStage(); };
+  b.addEventListener('pointerdown', e => { e.preventDefault(); if (!selected) return; step(); nudging = { t: setTimeout(() => { nudging.i = setInterval(step, 70); }, 400) }; });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, stop);
+}
 $('undo').onclick = undo;
 let resizeTimer = null;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!drag) renderStage(); }, 150); });
@@ -523,7 +647,7 @@ $('dup').onclick = () => { if (!selected) return; const a = apt(); const c = { .
 $('addForm').addEventListener('submit', e => {
   e.preventDefault(); const a = apt(); if (!a || !a.img) return;
   const name = $('fName').value.trim(), w = +$('fW').value, d = +$('fD').value; if (!name || !w || !d) return;
-  const it = { id: String(uid++), name, w, d, x: 12, y: 12, r: 0 }; a.furniture.push(it); selected = it; persist(a); renderStage(); renderPanel(); toast(`${name} added at the top-left corner — drag it into place`);
+  const it = { id: String(uid++), name, w, d, x: 12, y: 12, r: 0 }; placeInView(it); a.furniture.push(it); selected = it; persist(a); renderStage(); renderPanel(); toast(`${name} added — drag it into place`);
 });
 $('updatePiece').onclick = () => {
   const a = apt(); if (!a || !selected) return;
