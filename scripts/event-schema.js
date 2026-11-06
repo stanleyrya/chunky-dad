@@ -223,7 +223,16 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
 // `shown` is the site's call: today only leather earns a chip on a card.
 // ---------------------------------------------------------------------------
 const EVENT_TAGS = Object.freeze({
-    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine' }),
+    // who: 'machine' — keyword hit in the event's own text, confirmed by the
+    //                  AI inside the bear check (hint = the prompt's gloss)
+    //      'owner'   — only a deck swipe or the verdict store gives it
+    //      'derived' — computed at read time, never stored
+    // shown: the site draws a chip for it; the rest stay data.
+    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine', hint: 'a leather, gear or harness night, run, contest or club' }),
+    'kink': Object.freeze({ label: 'Kink', shown: true, who: 'machine', hint: 'a kink, fetish, BDSM or play event' }),
+    'rubber': Object.freeze({ label: 'Rubber', shown: true, who: 'machine', hint: 'a rubber or latex event' }),
+    'diaper': Object.freeze({ label: 'Diaper', shown: true, who: 'machine', hint: 'a diaper or ABDL event' }),
+    'drag': Object.freeze({ label: 'Drag', shown: true, who: 'machine', hint: 'a drag show, brunch, competition or drag-race viewing' }),
     'bear-crowd': Object.freeze({ label: 'Bear crowd', shown: false, who: 'owner' }),
     'bear-run': Object.freeze({ label: 'Bear run', shown: false, who: 'derived' })
 });

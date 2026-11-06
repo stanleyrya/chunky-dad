@@ -618,18 +618,26 @@ class SharedCore {
             'dad', 'dads', 'fat', 'fur', 'pup', 'pig', 'wolf', 'wolves',
             'thick', 'burly', 'stocky', 'husky', 'beard', 'bearded'
         ];
-        // Leather vocabulary is TAG evidence, not bear evidence (owner ruling
-        // 2026-11-05: leather is a tag; a leather night is on the calendar
-        // because it is leather, and whether it is also bear is the AI's
-        // call on the rest of the text). 'leather' and 'harness' moved here
-        // from the bear lists above — the event is still kept, it now says
-        // why. See EventSchema.EVENT_TAGS and collectMachineEventTags.
-        this.leatherTagSubstringKeywords = [
-            'leather', 'fetish', 'kink', 'rubber', 'latex', 'bootblack'
-        ];
-        this.leatherTagWordBoundaryKeywords = [
-            'harness', 'gear', 'flw'
-        ];
+        // Tag vocabulary is TAG evidence, not bear evidence (owner ruling
+        // 2026-11-05: a leather night is on the calendar because it is
+        // leather, and whether it is also bear is the AI's call on the rest
+        // of the text). 'leather' and 'harness' moved here from the bear
+        // lists above — the event is still kept, it now says why. One family
+        // per machine tag in EventSchema.EVENT_TAGS (a test holds the two in
+        // step), same two-list shape as the bear keywords: substrings for
+        // distinctive stems, word boundaries for common words ("gear",
+        // "drag", "pup"). Every hit is a CANDIDATE the AI confirms or
+        // declines — see collectMachineEventTags. Sweep of the 3,699 distinct
+        // events in the bear-check cache (2026-11-06): "queens" alone is a
+        // brass band and a horror night, "dungeon" is a D&D drag show as
+        // often as a play space — hence the AI confirmation.
+        this.tagKeywords = {
+            leather: { substring: ['leather', 'bootblack'], word: ['harness', 'harnesses', 'gear', 'flw'] },
+            kink: { substring: ['kink', 'fetish', 'bdsm', 'dungeon'], word: ['play party', 'cbt'] },
+            rubber: { substring: ['rubber', 'latex'], word: [] },
+            diaper: { substring: ['diaper', 'abdl'], word: ['nappy', 'nappies'] },
+            drag: { substring: ['dragula'], word: ['drag'] }
+        };
         
         // Store cities config for timezone assignment
         this.cities = cities;
@@ -14416,24 +14424,27 @@ class SharedCore {
             return decision;
         }
         const machine = this.collectMachineEventTags(event);
-        let tags = machine.confirmed.slice();
-        if (machine.confirmed.length > 0) {
-            console.log(`🏷️ TAGS: "${title}" — title names ${machine.hits.title.join(', ')} → ${machine.confirmed.join(', ')}`);
-        }
-        if (machine.pending.length > 0) {
+        let tags = [];
+        if (machine.candidates.length > 0) {
+            const describe = tag => {
+                const hit = machine.hits[tag] || { title: [], description: [] };
+                const where = hit.title.length > 0 ? `title: ${hit.title.join(', ')}` : `description: ${hit.description.join(', ')}`;
+                return `${tag} (${where})`;
+            };
+            const named = machine.candidates.map(describe).join('; ');
             // The keyword path may have skipped the AI; the call is memoized
             // per event, so a judged event costs nothing extra here.
             const ai = await this.getAiBearVerdict(event, parserConfig, httpAdapter);
-            const aiTags = ai && Array.isArray(ai.tags) ? ai.tags : [];
-            const confirmed = machine.pending.filter(tag => aiTags.includes(tag));
             if (!ai) {
-                console.log(`🏷️ TAGS: "${title}" — ${machine.hits.description.join(', ')} in the description only and no AI to confirm it → not tagged`);
-            } else if (confirmed.length > 0) {
-                console.log(`🏷️ TAGS: "${title}" — ${machine.hits.description.join(', ')} in the description, AI confirms → ${confirmed.join(', ')}`);
+                tags = machine.fromTitle.slice();
+                console.log(`🏷️ TAGS: "${title}" — ${named}; no AI to confirm → ${tags.length > 0 ? `title-named stand: ${tags.join(', ')}` : 'not tagged'}`);
             } else {
-                console.log(`🏷️ TAGS: "${title}" — ${machine.hits.description.join(', ')} in the description, AI declines (dress-code aside or similar) → not tagged`);
+                const aiTags = Array.isArray(ai.tags) ? ai.tags : [];
+                tags = machine.candidates.filter(tag => aiTags.includes(tag));
+                const declined = machine.candidates.filter(tag => !aiTags.includes(tag));
+                const volunteered = aiTags.filter(tag => !machine.candidates.includes(tag));
+                console.log(`🏷️ TAGS: "${title}" — ${named}; AI confirms ${tags.length > 0 ? tags.join(', ') : 'none'}${declined.length > 0 ? `, declines ${declined.join(', ')}` : ''}${volunteered.length > 0 ? ` (volunteered without a keyword, ignored: ${volunteered.join(', ')})` : ''}`);
             }
-            tags = schema.mergeEventTags(tags, confirmed);
         }
         decision.tags = tags;
         // Not bear, but tagged: kept. An allowlist miss is the source's own
@@ -14590,41 +14601,49 @@ class SharedCore {
         return matched;
     }
 
-    // Leather-family keyword hits in a text (same two-list shape as
+    // One tag family's keyword hits in a text (same two-list shape as
     // matchBearKeywords). Empty array = no hit.
-    matchLeatherTagKeywords(text) {
+    matchTagKeywords(text, tag) {
+        const family = this.tagKeywords && this.tagKeywords[tag];
         const source = String(text || '').toLowerCase();
-        if (!source) return [];
+        if (!family || !source) return [];
         const matched = [];
-        for (const keyword of this.leatherTagSubstringKeywords) {
+        for (const keyword of family.substring || []) {
             if (source.includes(keyword)) matched.push(keyword);
         }
-        for (const keyword of this.leatherTagWordBoundaryKeywords) {
+        for (const keyword of family.word || []) {
             const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             if (new RegExp(`\\b${escaped}\\b`, 'i').test(source)) matched.push(keyword);
         }
         return matched;
     }
 
-    // The machine-assignable tags an event's OWN text supports, split by
-    // how sure the text makes them:
-    //   confirmed — the TITLE names it ("Leather Night", "Gear Social"):
-    //               stamped without asking anyone
-    //   pending   — only the free-text description mentions it: a dress-code
-    //               aside ("leather or gear welcome") reads the same as a
-    //               leather night here, so the AI confirms or declines it
-    //               (attachEventTagsToBearDecision). Same lesson as the
-    //               keyword tier's description split: "Gear Night" was a
-    //               bear verdict off a dress-code sentence (2026-08-03).
+    // The machine-assignable tags an event's OWN text supports:
+    //   candidates — every tag with a keyword hit in the title or the
+    //                description; the AI confirms or declines each one
+    //                inside the bear-check answer (attachEventTagsToBearDecision)
+    //   fromTitle  — the subset the TITLE names ("Leather Night", "Drag
+    //                Brunch"): what stands when no AI is there to ask
+    //   hits       — per tag, the words that matched, by field
+    // A dress-code aside ("leather or gear welcome") reads the same as a
+    // leather night here, and "KiNK (live)" is a DJ, "Gym Gear Party" is
+    // gym wear, "Dungeons & Drag Queens" is a board game — the words alone
+    // cannot tell, so nothing is stamped without the AI while it is up.
     // The venue name is never evidence: a leather bar's trivia night is not
     // a leather event.
     collectMachineEventTags(event) {
-        const result = { confirmed: [], pending: [], hits: { title: [], description: [] } };
+        const result = { candidates: [], fromTitle: [], hits: {} };
         if (!event || typeof event !== 'object') return result;
-        result.hits.title = this.matchLeatherTagKeywords(event.title);
-        result.hits.description = this.matchLeatherTagKeywords(event.description);
-        if (result.hits.title.length > 0) result.confirmed.push('leather');
-        else if (result.hits.description.length > 0) result.pending.push('leather');
+        for (const tag of SharedCore.getAiConfirmableTags()) {
+            const title = this.matchTagKeywords(event.title, tag);
+            const description = this.matchTagKeywords(event.description, tag);
+            if (title.length === 0 && description.length === 0) continue;
+            result.candidates.push(tag);
+            if (title.length > 0) result.fromTitle.push(tag);
+            result.hits[tag] = { title, description };
+        }
+        result.candidates.sort();
+        result.fromTitle.sort();
         return result;
     }
 
@@ -14972,16 +14991,24 @@ class SharedCore {
             ''
         ];
 
+        // The tag vocabulary and its glosses come from EventSchema.EVENT_TAGS
+        // so a new machine tag is one schema line, not a prompt edit.
+        const vocabulary = SharedCore.eventTagsVocabulary();
+        const tagVocabulary = SharedCore.getAiConfirmableTags();
+        const tagGloss = tagVocabulary.map(tag => `${tag} (${vocabulary[tag].hint || vocabulary[tag].label || tag})`).join(', ');
         const outputContract = [
             'Respond with ONLY a JSON object, no other text:',
-            '{"verdict": "bear" | "not_bear" | "unsure", "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>", "tags": ["leather"] | []}',
+            `{"verdict": "bear" | "not_bear" | "unsure", "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>", "tags": [<zero or more of: ${tagVocabulary.map(tag => `"${tag}"`).join(', ')}>]}`,
             '',
             'eventEvidence is checked automatically against the text above:',
             '- Every string must be copied WORD FOR WORD from the Title or the Description. Never paraphrase, summarize or invent.',
             '- Never quote the Venue, City or Provenance lines. The venue name is not evidence.',
             '- Quote only wording that shows the EVENT ITSELF is aimed at the bear community. If there is none, return [].',
             '',
-            'tags is separate from the verdict: put "leather" in it when the event ITSELF is a leather, kink, fetish or gear night, run or contest — whatever the verdict. A dress-code aside ("leather or gear welcome", "harnesses encouraged") is not a leather event: leave tags empty.'
+            // Measured 2026-11-06 (470 cached cases): without the "never
+            // changes it" sentence the model read "drag" as "not bear" and
+            // demoted 14 drag shows put on by bear promoters.
+            `tags is separate from the verdict and NEVER changes it: decide "bear" exactly as you would without tags — a drag show, leather night or kink party put on by a bear promoter or aimed at bears is "bear" AND tagged. tags says what the event ITSELF is. Use only these, as many as fit: ${tagGloss}. A dress-code aside ("leather or gear welcome", "harnesses encouraged"), a drag host at a bar night, or gear meaning gym wear does not make it one: leave tags [] when none fits.`
         ];
 
         if (this.isBearCheckCurated(event, parserConfig)) {

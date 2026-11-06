@@ -2442,7 +2442,7 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // The chips a card shows for its tags: only the vocabulary entries the
-    // schema marks `shown` (leather today). bear-crowd and bear-run stay data.
+    // schema marks `shown` (the event-kind tags). bear-crowd and bear-run stay data.
     renderEventTagBadges(event) {
         const schema = typeof window !== 'undefined' ? window.EventSchema : null;
         const vocabulary = schema && schema.EVENT_TAGS ? schema.EVENT_TAGS : {};

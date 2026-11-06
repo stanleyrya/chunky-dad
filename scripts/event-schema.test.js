@@ -944,6 +944,12 @@ test('tags: any spelling folds to the canonical list; the notes line is the stor
   assert.equal(notes, 'tags: leather');
   assert.equal(EventSchema.parseNotesIntoFields(notes).tags, 'leather');
   assert.equal(EventSchema.EVENT_TAGS['bear-crowd'].who, 'owner');
+  // Every machine tag carries the gloss the bear-check prompt prints for it.
+  Object.keys(EventSchema.EVENT_TAGS).filter(tag => EventSchema.EVENT_TAGS[tag].who === 'machine').forEach(tag => {
+    assert.ok(EventSchema.EVENT_TAGS[tag].hint, `${tag} has a hint`);
+    assert.equal(EventSchema.EVENT_TAGS[tag].shown, true, `${tag} is an event-kind tag, shown on the card`);
+  });
+  assert.deepEqual(EventSchema.normalizeEventTags('drag, kink, Rubber, diaper, leather'), ['diaper', 'drag', 'kink', 'leather', 'rubber']);
   assert.equal(EventSchema.isDerivedEventTag('bear-run'), true);
 });
 
