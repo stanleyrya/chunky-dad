@@ -574,8 +574,24 @@ function normalizeBearVerdicts(parsed) {
     const list = parsed && !Array.isArray(parsed) && Array.isArray(parsed.verdicts)
         ? parsed.verdicts
         : Array.isArray(parsed) ? parsed : [];
-    return list.filter((entry) => entry && typeof entry === 'object'
-        && (entry.verdict === 'bear' || entry.verdict === 'not_bear'));
+    const SharedCore = loadSharedCore();
+    return list.filter((entry) => entry && typeof entry === 'object' && SharedCore.isBearVerdictValue(entry.verdict))
+        .map((entry) => {
+            // tags ride on bear and tagged entries (EventSchema.EVENT_TAGS);
+            // a not_bear entry carries none — it drops the event.
+            const tags = entry.verdict === 'not_bear' ? [] : normalizeVerdictTags(entry.tags);
+            if (tags.length === 0) {
+                if (!Object.prototype.hasOwnProperty.call(entry, 'tags')) return entry;
+                const { tags: _omit, ...rest } = entry;
+                return rest;
+            }
+            return { ...entry, tags };
+        });
+}
+
+function normalizeVerdictTags(value) {
+    const { EventSchema } = require(path.join(__dirname, '..', 'scripts', 'event-schema'));
+    return EventSchema.storableEventTags(value);
 }
 
 function loadBearVerdicts(verdictsPath) {
@@ -647,13 +663,20 @@ function coveredBearVerdicts(list, core, id) {
 // (coveredBearVerdicts). Returns { verdicts, entry, replaced, replacedAll }
 // (`replaced` = the first entry overwritten, `replacedAll` = all of them,
 // for the undo) or throws on a record with no title identity.
+// options.tags: the tags the owner gave with the verdict (EventSchema
+// .EVENT_TAGS) — required for `tagged` (that is what keeps the event),
+// optional on `bear` (a leather night that is also bear), ignored on
+// `not_bear`.
 function upsertBearVerdict(verdicts, core, identity, verdict, options = {}) {
-    if (verdict !== 'bear' && verdict !== 'not_bear') throw new Error('verdict must be bear or not_bear');
+    const SharedCore = loadSharedCore();
+    if (!SharedCore.isBearVerdictValue(verdict)) throw new Error('verdict must be bear, tagged or not_bear');
     const id = buildBearIdentity(identity);
     const key = core.getBearVerdictTitleKey(id.title, [id.bar]);
     if (!key) throw new Error('event carries no title identity');
+    const tags = verdict === 'not_bear' ? [] : normalizeVerdictTags(options.tags);
+    if (verdict === 'tagged' && tags.length === 0) throw new Error('a tagged verdict needs at least one tag');
     const now = options.now instanceof Date ? options.now : new Date();
-    const entry = { verdict, stampedAt: now.toISOString(), title: id.title, venue: id.bar, address: id.address, location: id.location, city: id.city };
+    const entry = { verdict, stampedAt: now.toISOString(), title: id.title, venue: id.bar, address: id.address, location: id.location, city: id.city, ...(tags.length > 0 ? { tags } : {}) };
     const list = normalizeBearVerdicts(verdicts).slice();
     const covered = coveredBearVerdicts(list, core, id);
     const index = covered.length > 0 ? list.indexOf(covered[0]) : -1;
@@ -941,7 +964,11 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         loneCrawl,
         imageReusedFrom,
         bearVerdict: storedVerdict ? storedVerdict.verdict : null,
+        bearVerdictTags: storedVerdict ? normalizeVerdictTags(storedVerdict.tags) : [],
         bearVerdictStampedAt: storedVerdict ? storedVerdict.stampedAt || null : null,
+        // The record's own tags (machine-stamped this run or carried on the
+        // calendar), the way the site will read them.
+        tags: normalizeVerdictTags(event.tags),
         bearVerdictOn: storedMatch && storedMatch.matchedBy === 'party' ? String(storedVerdict.title || '') : '',
         bearIdentity: buildBearIdentity(event),
         isBearEvent: event.isBearEvent === true,

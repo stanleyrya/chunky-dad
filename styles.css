@@ -2241,6 +2241,17 @@ body.index-page main {
     display: inline-block;
 }
 
+.tag-badge {
+    background: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    padding: calc(0.3rem - 1px) 0.8rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
 .date-badge {
     background: var(--primary-color);
     color: var(--text-inverse);

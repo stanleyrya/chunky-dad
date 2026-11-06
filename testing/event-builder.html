@@ -2404,6 +2404,11 @@
                   <input type="text" id="event-cover" autocomplete="off" placeholder="Free / $15 / Cover TBD">
                 </div>
                 <div class="field-group">
+                  <label for="event-tags">Tags</label>
+                  <input type="text" id="event-tags" autocomplete="off" autocapitalize="none" placeholder="leather, bear-crowd">
+                  <small>Comma-separated. <code>leather</code> shows on the card; <code>bear-crowd</code> keeps a not-bear event on the calendar. <code>bear-run</code> is worked out from the festival dates, so leave it off.</small>
+                </div>
+                <div class="field-group">
                   <label for="event-image">Promo Image URL</label>
                   <div class="input-with-action">
                     <input type="url" id="event-image" placeholder="https://chunky.dad/img/events/sample.jpg">
@@ -3186,6 +3191,7 @@
         dom.coordinatesInput = document.getElementById('event-coordinates');
         dom.descriptionInput = document.getElementById('event-description');
         dom.coverInput = document.getElementById('event-cover');
+        dom.tagsInput = document.getElementById('event-tags');
         dom.startInput = document.getElementById('event-start');
         dom.endInput = document.getElementById('event-end');
         dom.durationNote = document.getElementById('duration-note');
@@ -4447,6 +4453,7 @@
           tea: normalizeText(event.tea || event.description || ''),
           description: normalizeText(event.description || ''),
           cover: normalizeText(event.cover || ''),
+          tags: normalizeText(event.tags || ''),
           website: normalizeText(event.website || ''),
           instagram: normalizeText(event.instagram || ''),
           facebook: normalizeText(event.facebook || ''),
@@ -5918,6 +5925,7 @@
           location: normalizeCoordinatesValue(eventData.coordinates || eventData.location),
           description: normalizeText(eventData.tea || eventData.description || ''),
           cover: normalizeText(eventData.cover || ''),
+          tags: normalizeText(eventData.tags || ''),
           start: formatInputValue(startDate),
           end: formatInputValue(endDate),
           timezone,
@@ -6582,6 +6590,7 @@
         location: 'Coordinates',
         description: 'Description',
         cover: 'Cover',
+        tags: 'Tags',
         start: 'Start',
         end: 'End',
         recurrence: 'Recurrence',
@@ -7393,6 +7402,7 @@ Example output:
           location: '',
           description: 'Preview your chunky.dad event before it goes live.',
           cover: '',
+          tags: '',
           start: formatInputValue(start),
           end: formatInputValue(end),
           timezone: browserTimezone,
@@ -7661,6 +7671,7 @@ Example output:
         if (dom.coordinatesInput) dom.coordinatesInput.value = state.location || '';
         if (dom.descriptionInput) dom.descriptionInput.value = state.description || '';
         if (dom.coverInput) dom.coverInput.value = state.cover || '';
+        if (dom.tagsInput) dom.tagsInput.value = state.tags || '';
         if (dom.startInput) dom.startInput.value = state.start || '';
         if (dom.endInput) dom.endInput.value = state.end || '';
         if (dom.recurrenceInput) dom.recurrenceInput.value = state.recurrence || '';
@@ -7877,6 +7888,12 @@ Example output:
         if (dom.coverInput) {
           dom.coverInput.addEventListener('input', event => {
             state.cover = event.target.value;
+            refreshUi();
+          });
+        }
+        if (dom.tagsInput) {
+          dom.tagsInput.addEventListener('input', event => {
+            state.tags = event.target.value;
             refreshUi();
           });
         }
@@ -9645,6 +9662,7 @@ Example output:
         setTextParam('addr', state.address);
         setTextParam('desc', state.description);
         setTextParam('cover', state.cover);
+        setTextParam('tags', state.tags);
         setTextParam('start', state.start);
         setTextParam('end', state.end);
         setTextParam('rrule', state.recurrence);
@@ -9761,6 +9779,7 @@ Example output:
         setParam('shortName', state.shortName);
         setParam('description', state.description);
         setParam('cover', state.cover);
+        setParam('tags', state.tags);
         setParam('bar', state.venue);
         setParam('address', state.address);
         setParam('location', state.location);
@@ -10202,6 +10221,8 @@ Example output:
           shortName: (state.shortName || '').trim(),
           tea: (state.description || '').trim(),
           cover: (state.cover || '').trim(),
+          // Canonical on the way out: "Leather, bear crowd" → "bear-crowd, leather".
+          tags: getRequiredEventSchema().formatEventTags(state.tags || ""),
           bar: (state.venue || 'Venue TBA').trim(),
           address: (state.address || '').trim(),
           location: locationValue,
@@ -10250,6 +10271,7 @@ Example output:
           tea: event.tea,
           description: event.tea,
           cover: event.cover,
+          tags: event.tags,
           bar: event.bar,
           venue: event.bar,
           address: event.address,

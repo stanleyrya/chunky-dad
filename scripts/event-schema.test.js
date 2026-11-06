@@ -926,3 +926,47 @@ test('write paths: website is canonical — url is notes-excluded and the ICS UR
   assert.equal((ics.match(/^URL:/gm) || []).length, 1, 'one URL property per VEVENT');
   assert.equal(/DESCRIPTION:[^\r\n]*url:/.test(ics), false, 'no url: key leaks into the ICS description notes');
 });
+
+// ---------------------------------------------------------------------------
+// Event tags (2026-11-05): the vocabulary, the notes line, the derived bear-run
+// ---------------------------------------------------------------------------
+
+test('tags: any spelling folds to the canonical list; the notes line is the storable set; derived tags never land in a record', () => {
+  assert.deepEqual(EventSchema.normalizeEventTags('Leather, Bear Crowd; leather\nbear_run'), ['bear-crowd', 'bear-run', 'leather']);
+  assert.deepEqual(EventSchema.normalizeEventTags(['  LEATHER ', '', null, 'kink!']), ['kink', 'leather']);
+  assert.deepEqual(EventSchema.storableEventTags(['bear-run', 'leather']), ['leather']);
+  assert.equal(EventSchema.formatEventTags(['bear-run', 'Leather', 'bear-crowd']), 'bear-crowd, leather');
+  assert.equal(EventSchema.formatEventTags(['bear-run']), '', 'nothing storable → no line');
+  assert.deepEqual(EventSchema.mergeEventTags('leather', ['bear-crowd'], undefined), ['bear-crowd', 'leather']);
+  assert.equal(EventSchema.canonicalizeEventKey('tag', { context: 'notes' }), 'tags');
+  assert.equal(EventSchema.getEventBuilderStateKey('tags'), 'tags');
+  const notes = EventSchema.formatEventNotes({ title: 'Leather Night', tags: 'leather' });
+  assert.equal(notes, 'tags: leather');
+  assert.equal(EventSchema.parseNotesIntoFields(notes).tags, 'leather');
+  assert.equal(EventSchema.EVENT_TAGS['bear-crowd'].who, 'owner');
+  assert.equal(EventSchema.isDerivedEventTag('bear-run'), true);
+});
+
+test('deriveFestivalTags: a city-reach run tags every event in town inside its window (end inclusive, plus the night after); a venues-reach run tags only its bars; no reach tags nothing', () => {
+  const festivals = [
+    { key: 'spooky-bear', category: 'bear-run', cityKey: 'ptown', reach: 'city', nextDates: { start: '2026-10-29', end: '2026-11-01' } },
+    { key: 'urban-bear-nyc', category: 'bear-run', cityKey: 'nyc', reach: 'venues', venues: ['Eagle NYC', 'Rockbar'], nextDates: { start: '2026-09-17', end: '2026-09-20' } },
+    { key: 'mad-bear', category: 'bear-run', cityKey: 'madrid', nextDates: { start: '2026-12-03', end: '2026-12-09' } },
+    { key: 'folsom', category: 'kink', cityKey: 'sf', reach: 'city', nextDates: { start: '2026-09-27', end: '2026-09-27' } }
+  ];
+  const derive = (event, options) => EventSchema.deriveFestivalTags(event, festivals, options);
+  assert.deepEqual(derive({ city: 'ptown', startDate: '2026-10-30T22:00:00Z' }), ['bear-run']);
+  // The last night runs past midnight: 11 PM Eastern on the 1st is the 2nd in UTC, still inside.
+  assert.deepEqual(derive({ city: 'ptown', startDate: '2026-11-02T03:00:00Z' }), ['bear-run']);
+  assert.deepEqual(derive({ city: 'ptown', startDate: '2026-11-02T03:00:00Z', timezone: 'America/New_York' }), ['bear-run']);
+  assert.deepEqual(derive({ city: 'ptown', startDate: '2026-11-03T03:00:00Z' }), [], 'the night after the night after is outside');
+  assert.deepEqual(derive({ city: 'ptown', startDate: '2026-10-28T22:00:00Z' }), [], 'the day before is outside');
+  assert.deepEqual(derive({ startDate: '2026-10-30T22:00:00Z' }, { cityKey: 'ptown' }), ['bear-run'], 'the page\'s city stands in for a blank one');
+  assert.deepEqual(derive({ city: 'boston', startDate: '2026-10-30T22:00:00Z' }), [], 'another city is not in the run');
+  assert.deepEqual(derive({ city: 'nyc', bar: 'The Eagle NYC', startDate: '2026-09-18T23:00:00Z' }), ['bear-run']);
+  assert.deepEqual(derive({ city: 'nyc', bar: 'Club Cumming', startDate: '2026-09-18T23:00:00Z' }), [], 'a bar the run does not name');
+  assert.deepEqual(derive({ city: 'nyc', startDate: '2026-09-18T23:00:00Z' }), [], 'no venue, no venues-reach tag');
+  assert.deepEqual(derive({ city: 'madrid', bar: 'Eagle', startDate: '2026-12-05T23:00:00Z' }), [], 'no reach → the festival renders, nothing around it is tagged');
+  assert.deepEqual(derive({ city: 'sf', startDate: '2026-09-27T20:00:00Z' }), [], 'only bear runs derive bear-run');
+  assert.deepEqual(derive({ city: 'ptown' }), [], 'no date, no window');
+});

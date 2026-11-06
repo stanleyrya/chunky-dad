@@ -108,6 +108,8 @@ const EVENT_KEY_ALIASES = {
     imghorizontal: 'imageHorizontal',
     cover: 'cover',
     bearreview: 'bearReview',
+    tags: 'tags',
+    tag: 'tags',
 
     shortname: 'shortName',
     short: 'shortName',
@@ -162,7 +164,14 @@ const DEFAULT_NOTES_EXCLUDED_FIELDS = new Set([
     'matchKey',
     'links', 'durationMinutes',
     'time', 'day', 'recurring', 'recurrence', 'recurrenceRule',
-    'isDeletingOverride'
+    'isDeletingOverride',
+    // Event Builder plumbing. These say WHICH calendar record to edit and in
+    // WHAT window to look for it — they describe the edit, not the event, and
+    // must never be serialized into the record itself. Left in, a builder edit
+    // of a non-recurring event wrote `identifier: …`, `searchStartDate: …` and
+    // `searchEndDate: …` into the calendar notes (verified end-to-end; not yet
+    // present in any published calendar, so nothing needs cleaning up).
+    'identifier', 'searchStartDate', 'searchEndDate'
 ]);
 
 const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
@@ -189,8 +198,143 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
     image: 'image',
     imageVertical: 'imageVertical',
     imageHorizontal: 'imageHorizontal',
-    favicon: 'favicon'
+    favicon: 'favicon',
+    tags: 'tags'
 });
+
+// ---------------------------------------------------------------------------
+// EVENT TAGS — what an event is besides, or instead of, bear.
+//
+// The calendar used to answer one question per event (bear or not), and the
+// honest answer for a leather night at a bear bar, a Sunday beer bust the
+// bears happen to fill, or Provincetown tea during Spooky Bear was neither
+// "bear" nor "delete". Tags carry that answer. They ride in the notes as one
+// line, `tags: leather, bear-crowd`, so they flow calendar → ICS → site like
+// every other field, and the vocabulary is OPEN: an unknown tag is kept,
+// lower-cased, never dropped. The entries below say what the known ones mean
+// and who may assign them:
+//   machine  — the scraper stamps it from the event's own text (keyword tier
+//              for a title hit, the AI confirms a description-only hit)
+//   owner    — only a swipe on the deck can say it; nothing in the event's
+//              text can, by definition
+//   derived  — computed from other data at read time (festival windows) and
+//              NEVER written into the record, so a date change in
+//              festivals.json never leaves a stale tag behind
+// `shown` is the site's call: today only leather earns a chip on a card.
+// ---------------------------------------------------------------------------
+const EVENT_TAGS = Object.freeze({
+    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine' }),
+    'bear-crowd': Object.freeze({ label: 'Bear crowd', shown: false, who: 'owner' }),
+    'bear-run': Object.freeze({ label: 'Bear run', shown: false, who: 'derived' })
+});
+
+// One tag, canonical: lower-case, inner whitespace/underscores → hyphens,
+// anything but [a-z0-9-] dropped, hyphens collapsed and trimmed.
+function normalizeEventTag(raw) {
+    return String(raw == null ? '' : raw)
+        .toLowerCase()
+        .trim()
+        .replace(/[\s_]+/g, '-')
+        .replace(/[^a-z0-9-]+/g, '')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+// A tag list from any shape the pipeline meets: an array, a notes line
+// ("leather, bear-crowd"), or nothing. Unique, sorted, canonical.
+function normalizeEventTags(value) {
+    const raw = Array.isArray(value)
+        ? value
+        : typeof value === 'string' ? value.split(/[,;\n]/) : [];
+    const seen = new Set();
+    raw.forEach(item => {
+        const tag = normalizeEventTag(item);
+        if (tag) seen.add(tag);
+    });
+    return Array.from(seen).sort();
+}
+
+function isDerivedEventTag(tag) {
+    const entry = EVENT_TAGS[normalizeEventTag(tag)];
+    return Boolean(entry && entry.who === 'derived');
+}
+
+// The tags a record may carry in its notes: everything but the derived ones.
+function storableEventTags(value) {
+    return normalizeEventTags(value).filter(tag => !isDerivedEventTag(tag));
+}
+
+// The notes-line value: "bear-crowd, leather" — or '' when nothing is left,
+// which formatEventNotes reads as "no line at all".
+function formatEventTags(value) {
+    return storableEventTags(value).join(', ');
+}
+
+function mergeEventTags(...lists) {
+    return normalizeEventTags(lists.reduce((all, list) => all.concat(normalizeEventTags(list)), []));
+}
+
+// Local calendar day of a date-ish value, in a zone when one is known. The
+// Scriptable runtime has Intl, so the zone path works on the phone too.
+function eventTagLocalDay(value, timezone) {
+    const ms = value instanceof Date ? value.getTime() : Date.parse(String(value || ''));
+    if (!Number.isFinite(ms)) return '';
+    const date = new Date(ms);
+    if (timezone) {
+        try {
+            const day = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(day)) return day;
+        } catch (_) { /* unknown zone — UTC below */ }
+    }
+    return date.toISOString().slice(0, 10);
+}
+
+function eventTagVenueKey(value) {
+    return String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]+/g, '');
+}
+
+// The DERIVED tags of one event against the curated festivals: `bear-run`
+// when the event falls inside a bear run's window and the run reaches it.
+// A festival's `reach` says how far the run spreads:
+//   'city'   — the run takes the town over (Provincetown, Palm Springs,
+//              Guerneville): every event in that city inside the window
+//   'venues' — the run lives at one or two bars in a big city (Urban Bear
+//              in New York): only events at the bars its `venues` list names
+//   absent   — the festival itself renders, nothing around it is tagged
+// Day arithmetic: the festival's `end` is INCLUSIVE, and the last night
+// runs past midnight, so the window closes the day after `end`.
+// options: { cityKey } — the page's city when the event carries none.
+function deriveFestivalTags(event, festivals, options = {}) {
+    if (!event || typeof event !== 'object' || !Array.isArray(festivals)) return [];
+    const city = String(event.city || options.cityKey || '').trim().toLowerCase();
+    const start = event.startDate || event.start || event.date;
+    const day = eventTagLocalDay(start, event.timezone || options.timezone || '');
+    if (!day) return [];
+    const venueKey = eventTagVenueKey(event.bar || event.venue || '');
+    const tags = [];
+    festivals.forEach(festival => {
+        if (!festival || typeof festival !== 'object') return;
+        if (String(festival.category || '').toLowerCase() !== 'bear-run') return;
+        const reach = String(festival.reach || '').toLowerCase();
+        if (reach !== 'city' && reach !== 'venues') return;
+        const dates = festival.nextDates && typeof festival.nextDates === 'object' ? festival.nextDates : null;
+        const windowStart = dates && /^\d{4}-\d{2}-\d{2}$/.test(String(dates.start || '')) ? String(dates.start) : '';
+        const windowEnd = dates && /^\d{4}-\d{2}-\d{2}$/.test(String(dates.end || '')) ? String(dates.end) : windowStart;
+        if (!windowStart || !windowEnd) return;
+        const closes = new Date(`${windowEnd}T00:00:00Z`);
+        closes.setUTCDate(closes.getUTCDate() + 1);
+        const lastDay = closes.toISOString().slice(0, 10);
+        if (day < windowStart || day > lastDay) return;
+        const festivalCity = String(festival.cityKey || '').trim().toLowerCase();
+        if (!festivalCity || !city || festivalCity !== city) return;
+        if (reach === 'venues') {
+            const venues = Array.isArray(festival.venues) ? festival.venues.map(eventTagVenueKey).filter(Boolean) : [];
+            if (!venueKey || !venues.includes(venueKey)) return;
+        }
+        tags.push('bear-run');
+    });
+    return normalizeEventTags(tags);
+}
 
 function normalizeAliasKey(key) {
     return String(key || '').toLowerCase().replace(/[\s\-_]/g, '');
@@ -485,8 +629,8 @@ const AI_PROMPT_FIELDS = [
     { param: 'short',   desc: 'If the title is long, a shorter version to display as a reference. For long words, add - to help break them up). It will not show unless we need two lines. If you want a hyphen all the time, add \\- instead. The \\ will not show.' },
     { param: 'desc',    desc: 'Event description/tagline from source text; do not invent details.' },
     { param: 'city',    desc: 'City name (e.g. "new york", "los angeles"). Return lowercase city name only.' },
-    { param: 'venue',   desc: 'Venue or bar name exactly as stated. Do not infer using address or coordinates.' },
-    { param: 'addr',    desc: 'Street address exactly as shown. Do not infer using coordinates, bar/venue name, or other data.' },
+    { param: 'venue',   desc: 'Venue or bar name exactly as stated. Do not infer using address or coordinates. Never the event organizer, promoter, or website brand name.' },
+    { param: 'addr',    desc: 'Street address exactly as shown. Do not infer using coordinates, bar/venue name, or other data. If image OCR text and page text disagree on the address, prefer the page text (flyer OCR may contain typos).' },
     { param: 'coords',  desc: 'Coordinates if they are explicitly stored in the page on its own in the format "lat,lng", not using the address or bar/venue' },
     { param: 'startDate', desc: 'Start date only. Use YYYY-MM-DD format. If the source shows "May 12, 2026" or similar, convert to YYYY-MM-DD.' },
     { param: 'startTime', desc: 'Start time only. Use HH:MM 24-hour format (e.g. "22:30" for 10:30pm, "03:00" for 3am). Handle formats like "01H", "10PM", "3:30 AM", etc.' },
@@ -717,25 +861,49 @@ function slugifyIcsText(value) {
         .slice(0, 60);
 }
 
-// Build a complete VCALENDAR/VEVENT for one recurring event. DESCRIPTION is
-// the event's standard notes (EventSchema.formatEventNotes) PLUS an explicit
-// `recurrence: <rrule>` line — the notes key the merge machinery reads as a
-// series-detection signal once the owner has imported the ICS. (The default
-// notes-exclusion list applies to scraper CALENDAR writes; this ICS is the
-// deliberate, owner-driven channel, so the line is appended explicitly.)
-// options: { timezone, now } — now is injectable for deterministic tests.
-function buildRecurringEventIcs(event, options = {}) {
-    if (!event || typeof event !== 'object') return '';
+// Shared VCALENDAR envelope. Every export — single-event and batch — wraps
+// its VEVENTs in exactly this header (batch additionally slots X-WR-CALNAME
+// right after it) so the two channels can never drift apart.
+const ICS_VCALENDAR_HEADER_LINES = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//chunky.dad//Event Builder//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH'
+];
+
+// UID mint, event-builder style: <slug>-<utcstamp>@chunky.dad
+// (e.g. fuzzy-20260503T203532Z@chunky.dad). Exported so a caller that passes
+// an explicit `now` into buildRecurringEventIcs can compute the SAME uid the
+// export minted and record it (the run-JSON UID ledger) — the mint logic
+// lives here once, never re-derived by hand.
+function mintIcsUid(event, now) {
+    const title = String((event && (event.title || event.name)) || '').trim() || 'chunky-dad';
+    return `${slugifyIcsText(title) || 'chunky-dad'}-${formatIcsDateUtc(now)}@chunky.dad`;
+}
+
+// Emit the BEGIN:VEVENT..END:VEVENT lines (unfolded) for one event — the
+// single shared body behind buildRecurringEventIcs and buildCalendarBatchIcs.
+// DESCRIPTION is the event's standard notes (EventSchema.formatEventNotes)
+// PLUS an explicit `recurrence: <rrule>` line — the notes key the merge
+// machinery reads as a series-detection signal once the owner has imported
+// the ICS. (The default notes-exclusion list applies to scraper CALENDAR
+// writes; this ICS is the deliberate, owner-driven channel, so the line is
+// appended explicitly.)
+// options: { timezone, now, uid } — uid lets the batch builder pass a
+// collision-suffixed uid; absent, the standard mint applies.
+// Returns { lines, uid } or null for a non-object event.
+function buildEventVeventLines(event, options = {}) {
+    if (!event || typeof event !== 'object') return null;
     const rrule = String(event.recurrenceRule || event.recurrence || '')
         .replace(/^RRULE\s*:/i, '')
         .trim();
     const title = String(event.title || event.name || '').trim() || 'chunky-dad';
     const timezone = String(options.timezone || event.timezone || '').trim();
     const now = options.now instanceof Date ? options.now : new Date();
-
-    // UID matches the event-builder style: <slug>-<utcstamp>@chunky.dad
-    // (e.g. fuzzy-20260503T203532Z@chunky.dad).
-    const uid = `${slugifyIcsText(title) || 'chunky-dad'}-${formatIcsDateUtc(now)}@chunky.dad`;
+    const uid = typeof options.uid === 'string' && options.uid
+        ? options.uid
+        : mintIcsUid(event, now);
 
     const dateProperty = (name, date) => {
         const local = timezone ? formatIcsDateInTimezone(date, timezone) : '';
@@ -745,11 +913,6 @@ function buildRecurringEventIcs(event, options = {}) {
     };
 
     const lines = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//chunky.dad//Event Builder//EN',
-        'CALSCALE:GREGORIAN',
-        'METHOD:PUBLISH',
         'BEGIN:VEVENT',
         `UID:${uid}`,
         `DTSTAMP:${formatIcsDateUtc(now)}`
@@ -780,8 +943,80 @@ function buildRecurringEventIcs(event, options = {}) {
     if (location) {
         lines.push(`LOCATION:${escapeIcsText(location)}`);
     }
-    lines.push('END:VEVENT', 'END:VCALENDAR');
-    return lines.map(foldIcsLine).join('\r\n');
+    lines.push('END:VEVENT');
+    return { lines, uid };
+}
+
+// Build a complete VCALENDAR/VEVENT for one recurring event. Body emission is
+// shared with the batch builder (buildEventVeventLines) — output is
+// byte-identical to the pre-batch single-event builder, pinned by test.
+// options: { timezone, now } — now is injectable for deterministic tests.
+function buildRecurringEventIcs(event, options = {}) {
+    if (!event || typeof event !== 'object') return '';
+    const vevent = buildEventVeventLines(event, options);
+    if (!vevent) return '';
+    return [...ICS_VCALENDAR_HEADER_LINES, ...vevent.lines, 'END:VCALENDAR']
+        .map(foldIcsLine)
+        .join('\r\n');
+}
+
+// ONE VCALENDAR carrying a VEVENT per exportable event — the per-calendar
+// batch import file. iOS Safari's Calendar import previews the whole batch
+// with "Add All" and asks for the target calendar ONCE per file, so the
+// correct granularity is one ICS per city calendar; X-WR-CALNAME names that
+// target so the import sheet says where the events belong. File imports are
+// ADDS on iOS (same-UID re-import duplicates), so callers must only batch
+// records that are not in the calendar yet (the withheld series exports).
+//
+// options:
+//   calendarName — target calendar (X-WR-CALNAME; also echoed in the result)
+//   timezone     — one IANA zone applied to every event, OR
+//   getTimezone  — (event) => zone, for per-event resolution
+//   now          — injectable clock (deterministic tests; shared DTSTAMP/uid stamp)
+//
+// Every event in the batch shares this export's `now` stamp, so two
+// same-titled events would mint the SAME uid — collisions get a counter
+// suffixed onto the slug (<slug>-2-<utcstamp>@chunky.dad). Because of that,
+// callers must take uids from the returned manifest, never re-mint them.
+//
+// Returns { icsText, calendarName, events: [{ uid, title }] } (events in
+// input order — the UID-ledger manifest), or null when nothing is exportable.
+function buildCalendarBatchIcs(events, options = {}) {
+    const list = Array.isArray(events)
+        ? events.filter(event => event && typeof event === 'object')
+        : [];
+    if (list.length === 0) return null;
+    const calendarName = String(options.calendarName || '').trim();
+    const now = options.now instanceof Date ? options.now : new Date();
+
+    const lines = [...ICS_VCALENDAR_HEADER_LINES];
+    if (calendarName) {
+        lines.push(`X-WR-CALNAME:${escapeIcsText(calendarName)}`);
+    }
+    const usedUids = new Set();
+    const manifest = [];
+    for (const event of list) {
+        const timezone = typeof options.getTimezone === 'function'
+            ? options.getTimezone(event)
+            : options.timezone;
+        const title = String(event.title || event.name || '').trim() || 'chunky-dad';
+        let uid = mintIcsUid(event, now);
+        for (let n = 2; usedUids.has(uid); n++) {
+            uid = `${slugifyIcsText(title) || 'chunky-dad'}-${n}-${formatIcsDateUtc(now)}@chunky.dad`;
+        }
+        const vevent = buildEventVeventLines(event, { timezone, now, uid });
+        if (!vevent) continue;
+        usedUids.add(vevent.uid);
+        lines.push(...vevent.lines);
+        manifest.push({ uid: vevent.uid, title });
+    }
+    if (manifest.length === 0) return null;
+    lines.push('END:VCALENDAR');
+    return {
+        icsText: lines.map(foldIcsLine).join('\r\n'),
+        calendarName,
+        events: manifest
+    };
 }
 
 // Deterministic next-occurrence date for the practical RRULE subset a
@@ -887,6 +1122,14 @@ const EventSchema = {
     isUrlLikeField,
     parseNotesIntoFields,
     formatEventNotes,
+    EVENT_TAGS,
+    normalizeEventTag,
+    normalizeEventTags,
+    storableEventTags,
+    formatEventTags,
+    mergeEventTags,
+    isDerivedEventTag,
+    deriveFestivalTags,
     pickImageForOrientation,
     imageAssetKey,
     isSameImageAsset,
@@ -896,7 +1139,10 @@ const EventSchema = {
     formatIcsDateUtc,
     formatIcsDateInTimezone,
     slugifyIcsText,
+    mintIcsUid,
+    buildEventVeventLines,
     buildRecurringEventIcs,
+    buildCalendarBatchIcs,
     computeNextRruleOccurrence
 };
 

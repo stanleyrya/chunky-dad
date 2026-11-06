@@ -191,6 +191,11 @@ body { overscroll-behavior-y:none; }
 .sheet-modes .mode b { font-size:16px; }
 .sheet-modes .mode span { font-size:12px; color:var(--muted); }
 .sheet-modes .mode-fix { border-color:var(--accent, #ff6b35); }
+.sheet-modes .mode-tagged-wrap { padding:0; border:0; background:none; gap:6px; }
+.sheet-modes .mode-tagged { border-color:#2bb3a3; width:100%; }
+.sheet-modes .tag-chips { display:flex; flex-wrap:wrap; gap:6px; padding:0 2px; }
+.sheet-modes .tag-chips .chip.on { background:#2bb3a3; border-color:#2bb3a3; color:#fff; }
+.sheet.no-tags .mode-tagged-wrap { display:none; }
 .sheet.fix-first .sheet-modes .mode:not(.mode-fix) { opacity:.45; }
 .sheet.fix-first .sheet-modes .mode-fix { border-width:2px; }
 .sheet-fix-note, .waiting-note { font-size:12px; color:var(--muted); margin:0 0 6px; }
@@ -376,6 +381,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
     <div class="sheet-modes">
       <button type="button" class="mode mode-fix" id="sheet-fix"><b>🔧 Needs a fix</b><span>Good event, wrong card. It waits, and comes back by itself once the card changes.</span></button>
       <button type="button" class="mode mode-notbear" id="sheet-notbear"><b>🚫🐻 Not bear</b><span>Not ours. Final — every night of this party.</span></button>
+      <div class="mode mode-tagged-wrap"><div class="chips tag-chips" id="sheet-event-tags"></div><button type="button" class="mode mode-tagged" id="sheet-tagged"><b>🏷 Keep it — not bear, but…</b><span>Tap what it is, then this. It stays on the calendar, every night of this party; the next run writes the tags.</span></button></div>
       <button type="button" class="mode mode-never" id="sheet-never"><b>🗑 Not an event</b><span>A duplicate, a fragment, junk. Final, whatever it says later.</span></button>
       <button type="button" class="mode mode-ask" id="sheet-ask-mode"><b>🙋 Ask a friend</b><span>Not sure? A friend who knows the city answers from a page; their answer lands on this card, the swipe stays yours.</span></button>
     </div>
@@ -411,7 +417,7 @@ function closeFlyer() {
 function toggleDesc(el) { if (el) el.classList.toggle('clamped'); }
 </script>
 <script>
-window.__reviewDeck = {"runId":"","savedAt":null,"environment":null,"cityNames":{},"cards":[],"decided":[],"waitingGone":[],"counts":{},"lastExecution":null,"runUrl":null,"phoneNotes":[],"tags":["wrong link","wrong image","wrong title","wrong venue","should merge","recurring","wrong date or time","not bear","other"],"goneTags":["still happening","renamed on the site","moved venue","date moved","source is wrong","not sure"],"manualTags":["not right","later","already done by hand","not sure"],"twinTags":["both are real events","keep the other one instead","not the same night","not sure"],"executeLink":"","friends":[],"adviceBase":"https://chunky.dad/phone-a-friend/","friendMode":true};
+window.__reviewDeck = {"eventTagChoices":[{"tag":"leather","label":"Leather"},{"tag":"bear-crowd","label":"Bear crowd"}],"runId":"","savedAt":null,"environment":null,"cityNames":{},"cards":[],"decided":[],"waitingGone":[],"counts":{},"lastExecution":null,"runUrl":null,"phoneNotes":[],"tags":["wrong link","wrong image","wrong title","wrong venue","should merge","recurring","wrong date or time","not bear","other"],"goneTags":["still happening","renamed on the site","moved venue","date moved","source is wrong","not sure"],"manualTags":["not right","later","already done by hand","not sure"],"twinTags":["both are real events","keep the other one instead","not the same night","not sure"],"executeLink":"","friends":[],"adviceBase":"https://chunky.dad/phone-a-friend/","friendMode":true};
 // FRIEND MODE: the cards ride in the link as #j2.<base64url(deflate-raw
 // JSON)> — the deck's own card HTML, so a friend sees exactly the card
 // the owner sees (tools/review-queue buildFriendLink). Decoded here, then
@@ -1195,7 +1201,7 @@ window.__startDeck = function () {
     });
   }
   function post(body) { return postTo('/review/decide', body); }
-  function postBear(card, verdict, restore) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key, restore: restore || undefined }); }
+  function postBear(card, verdict, restore, tags) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key, restore: restore || undefined, tags: tags && tags.length ? tags : undefined }); }
   function topItem() { return items()[0] || null; }
   function removeFromQueue(item) {
     var keys = {};
@@ -1268,7 +1274,16 @@ window.__startDeck = function () {
     // A settle on a "you said both" card replaces every stored entry; the
     // undo needs them all back, so the whole set is kept when there is one.
     function keepBear(result) { replaced.bear = result && result.replacedAll && result.replacedAll.length > 1 ? result.replacedAll : (result && result.replaced ? result.replaced : null); return result; }
-    var request = droppedNote
+    // "Keep it, not bear, but…": a tagged verdict with its tags, then the
+    // approval — under the dropped card's fix target when it has one.
+    var taggedKeep = verdict === 'approve' && reason && reason.mode === 'tagged' && (reason.eventTags || []).length > 0;
+    var request = taggedKeep
+      ? postBear(card, 'tagged', null, reason.eventTags).then(keepBear).then(function () {
+          if (isConflict(card)) return null;
+          var target = card.fixTarget || null;
+          return post({ key: target ? target.key : card.key, kind: target ? 'new' : card.kind, verdict: 'approve', runId: deck.runId, snapshot: target || card.proposal, reason: null }).then(keepDecision);
+        })
+      : droppedNote
       ? postBear(card, droppedNote === 'fix' ? 'bear' : 'not_bear').then(keepBear).then(function () {
           return post({ key: card.fixTarget.key, kind: 'new', verdict: 'reject', runId: deck.runId, snapshot: card.fixTarget, reason: reason }).then(keepDecision);
         })
@@ -1382,6 +1397,15 @@ window.__startDeck = function () {
     var isGone = !item.bulk && card.kind === 'gone';
     var isManualCard = !item.bulk && isManual(card);
     sheet.classList.toggle('gone', isGone || isManualCard);
+    // "Keep it, not bear, but…" is for event cards only: a bar, a gone
+    // record, a manual card or a bulk answer has no tags to give.
+    sheet.classList.toggle('no-tags', Boolean(item.bulk) || isGone || isManualCard || card.kind === 'bar' || isChoose(card));
+    var tagChips = document.getElementById('sheet-event-tags');
+    var preset = (card.eventTags || []).concat(card.bearVerdictTags || []);
+    tagChips.innerHTML = (deck.eventTagChoices || []).map(function (choice) {
+      return '<span class="chip' + (preset.indexOf(choice.tag) !== -1 ? ' on' : '') + '" data-tag="' + choice.tag + '">' + choice.label + '</span>';
+    }).join('');
+    Array.prototype.forEach.call(tagChips.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-fix').querySelector('b').textContent = isManualCard ? '⏸ Not now' : isGone ? '✅ Keep it on the calendar' : isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
     document.getElementById('sheet-fix').querySelector('span').textContent = isManualCard
       ? 'Nothing changes on the calendar. Say why, so the card can be fixed or dropped.'
@@ -1566,6 +1590,17 @@ window.__startDeck = function () {
     var tags = Array.prototype.map.call(sheetTags.querySelectorAll('.chip.on'), function (el) { return el.getAttribute('data-tag'); });
     var text = document.getElementById('sheet-text').value.trim();
     var card = pending;
+    // Kept for what it is: the verdict store gets a tagged verdict + the tags, and
+    // the card is approved under its own key so Execute writes it. One
+    // gesture, both stores — the same shape as a bear swipe on a dropped card.
+    if (mode === 'tagged') {
+      var eventTags = Array.prototype.map.call(document.querySelectorAll('#sheet-event-tags .chip.on'), function (el) { return el.getAttribute('data-tag'); });
+      if (eventTags.length === 0) { toast('Tap at least one tag first'); return; }
+      sheet.classList.remove('open'); fitSheet(); pending = null;
+      decide(card, 'approve', { tags: [], text: text, mode: 'tagged', eventTags: eventTags }, 'gone-right');
+      toast('Kept — ' + eventTags.join(', ') + '. Final for every night of this party; the next run writes the tags.');
+      return;
+    }
     sheet.classList.remove('open'); fitSheet(); pending = null;
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
@@ -1590,6 +1625,7 @@ window.__startDeck = function () {
   }
   document.getElementById('sheet-fix').onclick = function () { answerSheet('fix'); };
   document.getElementById('sheet-notbear').onclick = function () { answerSheet('not-bear'); };
+  document.getElementById('sheet-tagged').onclick = function () { answerSheet('tagged'); };
   document.getElementById('sheet-never').onclick = function () { answerSheet('never'); };
   function notBearTop() {
     var c = topItem(); if (!c) return;

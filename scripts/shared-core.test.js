@@ -5976,14 +5976,21 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
       bar: 'Dallas Eagle',
       description: 'From buzzcut to bombshell, it’s time to Wig Out! 🦅 It’s the Eagle, you can always wear your regular leather or gear and never feel out of place.'
     }),
-    { shortCircuit: false, source: 'description-generic', brand: '' });
-  assert.deepEqual(
-    classify({
-      title: 'Gear Night',
-      bar: 'Dallas Eagle',
-      description: 'Grab your gear, it’s time for GEAR NIGHT! Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle!'
-    }),
-    { shortCircuit: false, source: 'description-generic', brand: '' });
+    // "leather or gear" is tag vocabulary since 2026-11-05, so no bear keyword hits at all.
+    { shortCircuit: false, source: 'none', brand: '' });
+  // Leather vocabulary left the bear lists on 2026-11-05 (it is TAG
+  // evidence now — see collectMachineEventTags): Gear Night carries no bear
+  // keyword at all, and its title earns the leather tag outright.
+  const gearNight = {
+    title: 'Gear Night',
+    bar: 'Dallas Eagle',
+    description: 'Grab your gear, it’s time for GEAR NIGHT! Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle!'
+  };
+  assert.deepEqual(classify(gearNight), { shortCircuit: false, source: 'none', brand: '' });
+  assert.deepEqual(core.collectMachineEventTags(gearNight).confirmed, ['leather']);
+  // The dress-code aside is a PENDING hit — only the AI may confirm it.
+  const wigOut = core.collectMachineEventTags({ title: 'Wig Out Wig Night', description: 'you can always wear your regular leather or gear' });
+  assert.deepEqual(wigOut, { confirmed: [], pending: ['leather'], hits: { title: [], description: ['leather', 'gear'] } });
 });
 
 test('bear keyword tier: a description-only hit that NAMES a registry brand keeps its short-circuit', () => {
@@ -29748,4 +29755,87 @@ test('aggregator pointers: a copy in the slot the site lists — same place, sam
   assert.equal(core.isAggregatorCopyInSiteEventSlot(copy(), copy({ title: 'x' })), false, 'an aggregator record is never the site\'s event');
   assert.equal(core.isAggregatorCopyInSiteEventSlot(copy({ _sourceRowFeed: 'f', _sourceRowId: '1' }), tea()), true);
   assert.equal(core.isAggregatorCopyInSiteEventSlot(copy({ _sourceRowFeed: 'f', _sourceRowId: '1' }), { ...tea(), _sourceRowFeed: 'f', _sourceRowId: '2' }), false, 'two rows of one feed');
+});
+
+// ---------------------------------------------------------------------------
+// Event tags (2026-11-05): leather is tag evidence; tagged events are kept
+// ---------------------------------------------------------------------------
+
+test('tags: a leather title is kept as tagged (not bear), the tag on the record, whatever the AI says or fails to say', async () => {
+  const answers = [
+    buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'a leather night, no bear wording' }),
+    buildBearVerdictAdapter({ verdict: 'unsure', reason: 'thin' }),
+    buildBearVerdictAdapter(null, { fail: true })
+  ];
+  for (const adapter of answers) {
+    const core = createCore();
+    const result = await core.filterBearEvents([{ title: 'Leather Night', bar: 'The Lodge', description: 'Gear up.' }], bearCheckConfig('enforce'), adapter);
+    assert.equal(result.length, 1, 'kept');
+    assert.equal(result[0].isBearEvent, true, 'on the calendar');
+    assert.equal(result[0].tags, 'leather');
+    assert.equal(result[0].bearReview, undefined, 'kept clean, not flagged');
+    assert.ok(String(result[0].bearSource).startsWith('tagged ('), result[0].bearSource);
+  }
+});
+
+test('tags: a bear title that is also leather is bear AND tagged; a description-only leather hit is the AI\'s to confirm, never to volunteer', async () => {
+  const both = await createCore().filterBearEvents([{ title: 'Bear Leather Night' }], bearCheckConfig('enforce'), buildBearVerdictAdapter(null, { fail: true }));
+  assert.equal(both[0].bearSource, 'keyword');
+  assert.equal(both[0].tags, 'leather');
+
+  const confirmed = await createCore().filterBearEvents(
+    [{ title: 'Sunday Social', description: 'Our monthly leather social — gear encouraged' }],
+    bearCheckConfig('enforce'), buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'leather social', tags: ['leather'] }));
+  assert.equal(confirmed.length, 1);
+  assert.equal(confirmed[0].tags, 'leather');
+
+  const declined = await createCore().filterBearEvents(
+    [{ title: 'Wig Night', description: 'wear your regular leather or gear' }],
+    bearCheckConfig('enforce'), buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'a drag night', tags: [] }));
+  assert.equal(declined.length, 0, 'a dress-code aside the AI declined drops with the not_bear verdict');
+
+  const volunteered = await createCore().filterBearEvents(
+    [{ title: 'Trivia Night', description: 'questions and beer' }],
+    bearCheckConfig('enforce'), buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'trivia', tags: ['leather'] }));
+  assert.equal(volunteered.length, 0, 'no keyword behind it → the AI\'s tag is ignored');
+});
+
+test('tags: a stored tagged verdict keeps the event with the owner\'s tags and a manual-tagged stamp; a stored bear verdict carries its tags too', async () => {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, bearVerdicts: [
+    { verdict: 'tagged', tags: ['bear-crowd'], stampedAt: '2030-01-01T00:00:00Z', title: 'Beer Bust', venue: 'Eagle NYC', city: 'nyc' },
+    { verdict: 'bear', tags: ['leather'], stampedAt: '2030-01-02T00:00:00Z', title: 'MEAT RACK', venue: 'Eagle NYC', city: 'nyc' }
+  ] });
+  const result = await core.filterBearEvents([
+    { title: 'Beer Bust', bar: 'Eagle NYC', city: 'nyc' },
+    { title: 'MEAT RACK', bar: 'Eagle NYC', city: 'nyc' }
+  ], bearCheckConfig('enforce'), buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'mixed crowd' }));
+  assert.equal(result.length, 2);
+  assert.equal(result[0].bearSource, 'manual-tagged (verdict store 2030-01-01)');
+  assert.equal(result[0].tags, 'bear-crowd');
+  assert.equal(result[0].bearReview, undefined);
+  assert.equal(result[1].bearSource, 'manual-bear (verdict store 2030-01-02)');
+  assert.equal(result[1].tags, 'leather');
+});
+
+test('tags: merge — an owner verdict\'s tags are exact, two automatic readings union, and tags never go to arbitration', async () => {
+  const core = createCore();
+  assert.equal(core.isArbitrationEligibleField('tags'), false);
+  const union = await core.createFinalEventObject(
+    buildCalendarEvent({}, 'bar: STATION 4\nbearSource: ai\ntags: bear-crowd'),
+    buildScrapedEvent({ bearSource: 'keyword', tags: 'leather' }), {});
+  assert.equal(union.tags, 'bear-crowd, leather');
+  assert.equal(core.parseNotesIntoFields(union.notes).tags, 'bear-crowd, leather');
+  const calendarManual = await core.createFinalEventObject(
+    buildCalendarEvent({}, 'bar: STATION 4\nbearSource: manual-tagged (verdict store 2030-01-01)\ntags: bear-crowd'),
+    buildScrapedEvent({ bearSource: 'keyword', tags: 'leather' }), {});
+  assert.equal(calendarManual.tags, 'bear-crowd', 'the calendar record carries the owner\'s word');
+  const scraperManual = await core.createFinalEventObject(
+    buildCalendarEvent({}, 'bar: STATION 4\nbearSource: ai\ntags: leather'),
+    buildScrapedEvent({ bearSource: 'manual-bear (verdict store 2030-01-01)' }), {});
+  assert.equal(scraperManual.tags, undefined, 'a fresh owner verdict with no tags clears the machine\'s');
+  assert.equal(core.parseNotesIntoFields(scraperManual.notes).tags, undefined);
+  assert.equal(core.getManualBearVerdictFromRecord({ notes: 'bearSource: manual-tagged (verdict store 2030-01-01)' }), 'manual-tagged');
+  assert.equal(SharedCore.getProvenanceTrustTier('bearSource', 'manual-tagged (verdict store 2030-01-01)'), 2);
+  assert.equal(SharedCore.getProvenanceTrustTier('bearSource', 'tagged (ai: leather social)'), 1);
+  assert.equal(SharedCore.buildTaggedBearSource('tagged: leather — ai: a leather social'), 'tagged (ai: a leather social)');
 });
