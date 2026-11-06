@@ -432,6 +432,14 @@ class CalendarCore {
                     eventData.shortName = additionalData.shortName;
                     eventData.shorterName = additionalData.shorterName;
                     eventData.bearReview = additionalData.bearReview || null;
+                    // tags: "leather, bear-crowd" → ['bear-crowd', 'leather'].
+                    // Derived tags (bear-run) are added at load from the
+                    // festival windows — see dynamic-calendar-loader
+                    // applyDerivedEventTags — never read from the record.
+                    const tagSchema = this.getEventSchema();
+                    eventData.tags = tagSchema && typeof tagSchema.normalizeEventTags === 'function'
+                        ? tagSchema.normalizeEventTags(additionalData.tags)
+                        : [];
                     eventData.links = this.parseLinks(additionalData);
                     
                     if (additionalData.type || additionalData.eventType) {

@@ -995,7 +995,9 @@ function renderReviewThumb(display = {}, fallbackImage = '') {
 // on a dropped card the swipe IS the verdict; on a kept card, rejecting with
 // the "not bear" chip records one (one gesture, both stores).
 function renderReviewBearRow(display = {}, proposal = {}) {
-    const stored = display.bearVerdict === 'bear' || display.bearVerdict === 'not_bear' ? display.bearVerdict : null;
+    const stored = display.bearVerdict === 'bear' || display.bearVerdict === 'tagged' || display.bearVerdict === 'not_bear' ? display.bearVerdict : null;
+    const storedTags = Array.isArray(display.bearVerdictTags) ? display.bearVerdictTags : [];
+    const eventTags = Array.isArray(display.tags) ? display.tags : [];
     let state;
     if (proposal.kind === 'dropped') {
         const reason = String(proposal.dropReason || '').replace(/^ai:\s*/i, 'AI: ');
@@ -1007,10 +1009,12 @@ function renderReviewBearRow(display = {}, proposal = {}) {
     } else {
         state = '🐻 bear (no check recorded)';
     }
+    const storedLabel = stored === 'bear' ? '🐻 bear' : stored === 'tagged' ? `🏷 kept for ${escapeHtmlText(storedTags.join(', ') || 'its tags')}` : '🚫 not bear';
+    const tagText = eventTags.length > 0 ? `<span class="bear-tags">🏷 ${escapeHtmlText(eventTags.join(', '))}</span>` : '';
     const storedText = stored
-        ? `<span class="bear-stored">you said: ${stored === 'bear' ? '🐻 bear' : '🚫 not bear'}${display.bearVerdictStampedAt ? ` (${escapeHtmlText(String(display.bearVerdictStampedAt).slice(0, 10))})` : ''}${display.bearVerdictOn ? ` — on the same party, listed as “${escapeHtmlText(display.bearVerdictOn)}”` : ''}</span>`
+        ? `<span class="bear-stored">you said: ${storedLabel}${display.bearVerdictStampedAt ? ` (${escapeHtmlText(String(display.bearVerdictStampedAt).slice(0, 10))})` : ''}${display.bearVerdictOn ? ` — on the same party, listed as “${escapeHtmlText(display.bearVerdictOn)}”` : ''}</span>`
         : '';
-    return `<div class="bear-row"><div class="bear-state">${escapeHtmlText(state)}${storedText ? ` ${storedText}` : ''}</div></div>`;
+    return `<div class="bear-row"><div class="bear-state">${escapeHtmlText(state)}${tagText ? ` ${tagText}` : ''}${storedText ? ` ${storedText}` : ''}</div></div>`;
 }
 
 function renderReviewBarCard(entry, ctx = {}) {
@@ -1171,10 +1175,11 @@ function renderReviewVerdictConflictCard(entry, ctx = {}) {
         calendarName ? `📱 ${calendarName}` : ''
     ].filter(Boolean);
     const tiles = (Array.isArray(p.hits) ? p.hits : []).map((hit) => {
-        const bear = hit.verdict === 'bear';
+        const bear = hit.verdict === 'bear' || hit.verdict === 'tagged';
+        const tileLabel = hit.verdict === 'bear' ? '🐻 bear' : hit.verdict === 'tagged' ? `🏷 kept for ${escapeHtmlText((Array.isArray(hit.tags) ? hit.tags : []).join(', ') || 'its tags')}` : '🚫 not bear';
         const when = hit.stampedAt ? String(hit.stampedAt).slice(0, 10) : '';
         const spelling = hit.title && hit.title !== p.title ? `as “${escapeHtmlText(hit.title)}”` : 'on this title';
-        return `<div class="verdict ${bear ? 'is-bear' : 'is-not-bear'}"><b>${bear ? '🐻 bear' : '🚫 not bear'}</b><small>you said${when ? ` on ${escapeHtmlText(when)}` : ''}<br>${spelling}${hit.venue && hit.venue !== p.bar ? `<br>at ${escapeHtmlText(hit.venue)}` : ''}</small></div>`;
+        return `<div class="verdict ${bear ? 'is-bear' : 'is-not-bear'}"><b>${tileLabel}</b><small>you said${when ? ` on ${escapeHtmlText(when)}` : ''}<br>${spelling}${hit.venue && hit.venue !== p.bar ? `<br>at ${escapeHtmlText(hit.venue)}` : ''}</small></div>`;
     }).join('');
     const how = p.matchedBy === 'party' ? 'the same party under different spellings' : 'the same title at this place';
     const chips = [
@@ -1659,6 +1664,8 @@ function renderReviewPage(deck, options = {}) {
         sourceIndex: entry.sourceIndex,
         proposal: entry.proposal,
         bearIdentity: entry.display && entry.display.bearIdentity ? entry.display.bearIdentity : null,
+        eventTags: entry.display && Array.isArray(entry.display.tags) ? entry.display.tags : [],
+        bearVerdictTags: entry.display && Array.isArray(entry.display.bearVerdictTags) ? entry.display.bearVerdictTags : [],
         fixTarget: entry.fixTarget || null,
         series: entry.series || null,
         asked: entry.asked || [],
@@ -1687,7 +1694,18 @@ function renderReviewPage(deck, options = {}) {
         picture: entry.picture || null,
         html: renderReviewCard(entry, ctx)
     }));
+    // The tags a swipe may give (EventSchema.EVENT_TAGS, minus the derived
+    // ones): the sheet's "keep it, not bear" chips.
+    const eventTagChoices = (() => {
+        try {
+            const { EventSchema } = require(path.join(repoRoot, 'scripts', 'event-schema'));
+            const vocabulary = EventSchema.EVENT_TAGS || {};
+            return Object.keys(vocabulary).filter((tag) => vocabulary[tag] && vocabulary[tag].who !== 'derived')
+                .map((tag) => ({ tag, label: vocabulary[tag].label || tag }));
+        } catch (_) { return []; }
+    })();
     const payload = {
+        eventTagChoices,
         runId: deck.runId,
         savedAt: deck.savedAt,
         environment: deck.environment,
@@ -1954,6 +1972,11 @@ body { overscroll-behavior-y:none; }
 .sheet-modes .mode b { font-size:16px; }
 .sheet-modes .mode span { font-size:12px; color:var(--muted); }
 .sheet-modes .mode-fix { border-color:var(--accent, #ff6b35); }
+.sheet-modes .mode-tagged-wrap { padding:0; border:0; background:none; gap:6px; }
+.sheet-modes .mode-tagged { border-color:#2bb3a3; width:100%; }
+.sheet-modes .tag-chips { display:flex; flex-wrap:wrap; gap:6px; padding:0 2px; }
+.sheet-modes .tag-chips .chip.on { background:#2bb3a3; border-color:#2bb3a3; color:#fff; }
+.sheet.no-tags .mode-tagged-wrap { display:none; }
 .sheet.fix-first .sheet-modes .mode:not(.mode-fix) { opacity:.45; }
 .sheet.fix-first .sheet-modes .mode-fix { border-width:2px; }
 .sheet-fix-note, .waiting-note { font-size:12px; color:var(--muted); margin:0 0 6px; }
@@ -2139,6 +2162,7 @@ ${snapshotBlock}
     <div class="sheet-modes">
       <button type="button" class="mode mode-fix" id="sheet-fix"><b>🔧 Needs a fix</b><span>Good event, wrong card. It waits, and comes back by itself once the card changes.</span></button>
       <button type="button" class="mode mode-notbear" id="sheet-notbear"><b>🚫🐻 Not bear</b><span>Not ours. Final — every night of this party.</span></button>
+      <div class="mode mode-tagged-wrap"><div class="chips tag-chips" id="sheet-event-tags"></div><button type="button" class="mode mode-tagged" id="sheet-tagged"><b>🏷 Keep it — not bear, but…</b><span>Tap what it is, then this. It stays on the calendar, every night of this party; the next run writes the tags.</span></button></div>
       <button type="button" class="mode mode-never" id="sheet-never"><b>🗑 Not an event</b><span>A duplicate, a fragment, junk. Final, whatever it says later.</span></button>
       <button type="button" class="mode mode-ask" id="sheet-ask-mode"><b>🙋 Ask a friend</b><span>Not sure? A friend who knows the city answers from a page; their answer lands on this card, the swipe stays yours.</span></button>
     </div>
@@ -2946,7 +2970,7 @@ window.__startDeck = function () {
     });
   }
   function post(body) { return postTo('/review/decide', body); }
-  function postBear(card, verdict, restore) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key, restore: restore || undefined }); }
+  function postBear(card, verdict, restore, tags) { return postTo('/review/bear', { verdict: verdict, event: card.bearIdentity || card.proposal, key: card.key, restore: restore || undefined, tags: tags && tags.length ? tags : undefined }); }
   function topItem() { return items()[0] || null; }
   function removeFromQueue(item) {
     var keys = {};
@@ -3019,7 +3043,16 @@ window.__startDeck = function () {
     // A settle on a "you said both" card replaces every stored entry; the
     // undo needs them all back, so the whole set is kept when there is one.
     function keepBear(result) { replaced.bear = result && result.replacedAll && result.replacedAll.length > 1 ? result.replacedAll : (result && result.replaced ? result.replaced : null); return result; }
-    var request = droppedNote
+    // "Keep it, not bear, but…": a tagged verdict with its tags, then the
+    // approval — under the dropped card's fix target when it has one.
+    var taggedKeep = verdict === 'approve' && reason && reason.mode === 'tagged' && (reason.eventTags || []).length > 0;
+    var request = taggedKeep
+      ? postBear(card, 'tagged', null, reason.eventTags).then(keepBear).then(function () {
+          if (isConflict(card)) return null;
+          var target = card.fixTarget || null;
+          return post({ key: target ? target.key : card.key, kind: target ? 'new' : card.kind, verdict: 'approve', runId: deck.runId, snapshot: target || card.proposal, reason: null }).then(keepDecision);
+        })
+      : droppedNote
       ? postBear(card, droppedNote === 'fix' ? 'bear' : 'not_bear').then(keepBear).then(function () {
           return post({ key: card.fixTarget.key, kind: 'new', verdict: 'reject', runId: deck.runId, snapshot: card.fixTarget, reason: reason }).then(keepDecision);
         })
@@ -3133,6 +3166,15 @@ window.__startDeck = function () {
     var isGone = !item.bulk && card.kind === 'gone';
     var isManualCard = !item.bulk && isManual(card);
     sheet.classList.toggle('gone', isGone || isManualCard);
+    // "Keep it, not bear, but…" is for event cards only: a bar, a gone
+    // record, a manual card or a bulk answer has no tags to give.
+    sheet.classList.toggle('no-tags', Boolean(item.bulk) || isGone || isManualCard || card.kind === 'bar' || isChoose(card));
+    var tagChips = document.getElementById('sheet-event-tags');
+    var preset = (card.eventTags || []).concat(card.bearVerdictTags || []);
+    tagChips.innerHTML = (deck.eventTagChoices || []).map(function (choice) {
+      return '<span class="chip' + (preset.indexOf(choice.tag) !== -1 ? ' on' : '') + '" data-tag="' + choice.tag + '">' + choice.label + '</span>';
+    }).join('');
+    Array.prototype.forEach.call(tagChips.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-fix').querySelector('b').textContent = isManualCard ? '⏸ Not now' : isGone ? '✅ Keep it on the calendar' : isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
     document.getElementById('sheet-fix').querySelector('span').textContent = isManualCard
       ? 'Nothing changes on the calendar. Say why, so the card can be fixed or dropped.'
@@ -3317,6 +3359,17 @@ window.__startDeck = function () {
     var tags = Array.prototype.map.call(sheetTags.querySelectorAll('.chip.on'), function (el) { return el.getAttribute('data-tag'); });
     var text = document.getElementById('sheet-text').value.trim();
     var card = pending;
+    // Kept for what it is: the verdict store gets a tagged verdict + the tags, and
+    // the card is approved under its own key so Execute writes it. One
+    // gesture, both stores — the same shape as a bear swipe on a dropped card.
+    if (mode === 'tagged') {
+      var eventTags = Array.prototype.map.call(document.querySelectorAll('#sheet-event-tags .chip.on'), function (el) { return el.getAttribute('data-tag'); });
+      if (eventTags.length === 0) { toast('Tap at least one tag first'); return; }
+      sheet.classList.remove('open'); fitSheet(); pending = null;
+      decide(card, 'approve', { tags: [], text: text, mode: 'tagged', eventTags: eventTags }, 'gone-right');
+      toast('Kept — ' + eventTags.join(', ') + '. Final for every night of this party; the next run writes the tags.');
+      return;
+    }
     sheet.classList.remove('open'); fitSheet(); pending = null;
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
@@ -3341,6 +3394,7 @@ window.__startDeck = function () {
   }
   document.getElementById('sheet-fix').onclick = function () { answerSheet('fix'); };
   document.getElementById('sheet-notbear').onclick = function () { answerSheet('not-bear'); };
+  document.getElementById('sheet-tagged').onclick = function () { answerSheet('tagged'); };
   document.getElementById('sheet-never').onclick = function () { answerSheet('never'); };
   function notBearTop() {
     var c = topItem(); if (!c) return;
@@ -4283,8 +4337,10 @@ async function handleRequest(state, req, res) {
         } catch (error) {
             return sendJson(res, 400, { ok: false, error: 'body must be JSON' });
         }
-        const verdict = body && (body.verdict === 'bear' || body.verdict === 'not_bear' || body.verdict === 'clear') ? body.verdict : null;
-        if (!verdict) return sendJson(res, 400, { ok: false, error: 'verdict must be bear, not_bear or clear' });
+        const verdict = body && (body.verdict === 'bear' || body.verdict === 'tagged' || body.verdict === 'not_bear' || body.verdict === 'clear') ? body.verdict : null;
+        if (!verdict) return sendJson(res, 400, { ok: false, error: 'verdict must be bear, tagged, not_bear or clear' });
+        const verdictTags = Array.isArray(body.tags) ? body.tags : [];
+        if (verdict === 'tagged' && verdictTags.length === 0) return sendJson(res, 400, { ok: false, error: 'a tagged verdict needs at least one tag' });
         const sharedRoot = reviewQueue.resolveSharedRoot();
         const verdictsPath = reviewQueue.getBearVerdictsPath(sharedRoot);
         try {
@@ -4312,13 +4368,14 @@ async function handleRequest(state, req, res) {
                 console.log(`Review: cleared bear verdict for "${(body.event && body.event.title) || '?'}"${cleared.removed ? (clearedTitles.length > 0 ? ` — removed ${clearedTitles.map((title) => `"${title}"`).join(', ')}` : '') : ' (none stored)'}`);
                 return sendJson(res, 200, { ok: true, removed: cleared.removed, verdicts: cleared.verdicts.length });
             }
-            const result = reviewQueue.upsertBearVerdict(current, core, body.event || {}, verdict);
+            const result = reviewQueue.upsertBearVerdict(current, core, body.event || {}, verdict, { tags: verdictTags });
             reviewQueue.saveBearVerdicts(verdictsPath, result.verdicts);
             const settled = Array.isArray(result.replacedAll) && result.replacedAll.length > 1
                 ? ` — settles ${result.replacedAll.length} stored entries (${result.replacedAll.map((entry) => `${entry.verdict} "${entry.title}"`).join(', ')})`
                 : '';
-            console.log(`Review: ${verdict} — "${result.entry.title}" @ "${result.entry.venue || result.entry.city}"${settled}`);
-            if (verdict === 'bear') {
+            const tagNote = Array.isArray(result.entry.tags) && result.entry.tags.length > 0 ? ` [${result.entry.tags.join(', ')}]` : '';
+            console.log(`Review: ${verdict}${tagNote} — "${result.entry.title}" @ "${result.entry.venue || result.entry.city}"${settled}`);
+            if (verdict === 'bear' || verdict === 'tagged') {
                 const decisionsPath = reviewQueue.getDecisionsPath(sharedRoot);
                 const cleared = reviewQueue.clearNotBearRejections(reviewQueue.loadDecisions(decisionsPath), core, body.event || {});
                 if (cleared.removed.length > 0) {

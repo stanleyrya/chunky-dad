@@ -621,6 +621,7 @@ function assessSourceHealth(records, options = {}) {
                     extracted: Number(line.extracted) || 0,
                     events: Number(line.events) || 0,
                     bear: Number(line.bear) || 0,
+                    tagged: Number(line.tagged) || 0,
                     upcoming: Number(line.upcoming) || 0,
                     proposals: line.proposals || { new: 0, merge: 0 },
                     status: line.status || 'ok',

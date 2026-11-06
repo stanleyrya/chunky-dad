@@ -2398,6 +2398,9 @@ class DynamicCalendarLoader extends CalendarCore {
 
         try {
             const existingEvents = Array.isArray(this.allEvents) ? this.allEvents : [];
+            // The festivals are in hand and so are the city's events: stamp
+            // the DERIVED tags (bear-run) before the festival rows join.
+            this.applyDerivedEventTags(existingEvents, festivals, cityKey);
             const mappedEvents = this.mapFestivalsToEvents(festivals, { cityKey, existingEvents });
 
             if (mappedEvents.length === 0) return;
@@ -2418,6 +2421,38 @@ class DynamicCalendarLoader extends CalendarCore {
     }
 
     // Try multiple free CORS proxies to fetch Google Calendar ICS
+    // Derived tags are computed here, never stored: an event inside a bear
+    // run's window (festivals.json nextDates + reach) wears `bear-run` for as
+    // long as the data says so. EventSchema.deriveFestivalTags holds the rule.
+    applyDerivedEventTags(events, festivals, cityKey) {
+        const schema = typeof window !== 'undefined' ? window.EventSchema : null;
+        if (!schema || typeof schema.deriveFestivalTags !== 'function' || !Array.isArray(events)) return;
+        const list = Array.isArray(festivals) ? festivals : (festivals && Array.isArray(festivals.festivals) ? festivals.festivals : []);
+        let stamped = 0;
+        events.forEach(event => {
+            if (!event || typeof event !== 'object') return;
+            const derived = schema.deriveFestivalTags(event, list, { cityKey, timezone: this.calendarTimezone || '' });
+            if (derived.length === 0) return;
+            event.tags = schema.mergeEventTags(event.tags, derived);
+            stamped += 1;
+        });
+        if (stamped > 0) {
+            logger.info('CALENDAR', `Derived tags: ${stamped} event(s) inside a bear run's window wear bear-run`);
+        }
+    }
+
+    // The chips a card shows for its tags: only the vocabulary entries the
+    // schema marks `shown` (the event-kind tags). bear-crowd and bear-run stay data.
+    renderEventTagBadges(event) {
+        const schema = typeof window !== 'undefined' ? window.EventSchema : null;
+        const vocabulary = schema && schema.EVENT_TAGS ? schema.EVENT_TAGS : {};
+        const tags = Array.isArray(event && event.tags) ? event.tags : [];
+        return tags
+            .filter(tag => vocabulary[tag] && vocabulary[tag].shown)
+            .map(tag => `<span class="tag-badge tag-${this.escapeCardText(tag)}">${this.escapeCardText(vocabulary[tag].label || tag)}</span>`)
+            .join('');
+    }
+
     async loadCalendarDataViaProxy(cityKey, cityConfig) {
         this.updateLoadingMessage(1, 'proxy');
         try {
@@ -3341,8 +3376,9 @@ class DynamicCalendarLoader extends CalendarCore {
         const venueRowHtml = this.generateAuroraVenueRow(event, distanceBadge);
         const orphanDistance = venueRowHtml ? '' : distanceBadge;
 
-        const badges = recurringBadge || dateBadge || orphanDistance ?
-            `<span class="ec-badges">${recurringBadge}${dateBadge}${orphanDistance}</span>` : '';
+        const tagBadges = this.renderEventTagBadges(event);
+        const badges = recurringBadge || dateBadge || orphanDistance || tagBadges ?
+            `<span class="ec-badges">${recurringBadge}${dateBadge}${orphanDistance}${tagBadges}</span>` : '';
 
         const faviconHtml = this.generateAuroraFaviconHtml(event);
 

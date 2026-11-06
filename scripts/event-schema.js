@@ -108,6 +108,8 @@ const EVENT_KEY_ALIASES = {
     imghorizontal: 'imageHorizontal',
     cover: 'cover',
     bearreview: 'bearReview',
+    tags: 'tags',
+    tag: 'tags',
 
     shortname: 'shortName',
     short: 'shortName',
@@ -196,8 +198,152 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
     image: 'image',
     imageVertical: 'imageVertical',
     imageHorizontal: 'imageHorizontal',
-    favicon: 'favicon'
+    favicon: 'favicon',
+    tags: 'tags'
 });
+
+// ---------------------------------------------------------------------------
+// EVENT TAGS — what an event is besides, or instead of, bear.
+//
+// The calendar used to answer one question per event (bear or not), and the
+// honest answer for a leather night at a bear bar, a Sunday beer bust the
+// bears happen to fill, or Provincetown tea during Spooky Bear was neither
+// "bear" nor "delete". Tags carry that answer. They ride in the notes as one
+// line, `tags: leather, bear-crowd`, so they flow calendar → ICS → site like
+// every other field, and the vocabulary is OPEN: an unknown tag is kept,
+// lower-cased, never dropped. The entries below say what the known ones mean
+// and who may assign them:
+//   machine  — the scraper stamps it from the event's own text (keyword tier
+//              for a title hit, the AI confirms a description-only hit)
+//   owner    — only a swipe on the deck can say it; nothing in the event's
+//              text can, by definition
+//   derived  — computed from other data at read time (festival windows) and
+//              NEVER written into the record, so a date change in
+//              festivals.json never leaves a stale tag behind
+// `shown` is the site's call: today only leather earns a chip on a card.
+// ---------------------------------------------------------------------------
+const EVENT_TAGS = Object.freeze({
+    // who: 'machine' — keyword hit in the event's own text, confirmed by the
+    //                  AI inside the bear check (hint = the prompt's gloss)
+    //      'owner'   — only a deck swipe or the verdict store gives it
+    //      'derived' — computed at read time, never stored
+    // shown: the site draws a chip for it; the rest stay data.
+    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine', hint: 'a leather, gear or harness night, run, contest or club' }),
+    'kink': Object.freeze({ label: 'Kink', shown: true, who: 'machine', hint: 'a kink, fetish, BDSM or play event' }),
+    'rubber': Object.freeze({ label: 'Rubber', shown: true, who: 'machine', hint: 'a rubber or latex event' }),
+    'diaper': Object.freeze({ label: 'Diaper', shown: true, who: 'machine', hint: 'a diaper or ABDL event' }),
+    'drag': Object.freeze({ label: 'Drag', shown: true, who: 'machine', hint: 'a drag show, brunch, competition or drag-race viewing' }),
+    'bear-crowd': Object.freeze({ label: 'Bear crowd', shown: false, who: 'owner' }),
+    'bear-run': Object.freeze({ label: 'Bear run', shown: false, who: 'derived' })
+});
+
+// One tag, canonical: lower-case, inner whitespace/underscores → hyphens,
+// anything but [a-z0-9-] dropped, hyphens collapsed and trimmed.
+function normalizeEventTag(raw) {
+    return String(raw == null ? '' : raw)
+        .toLowerCase()
+        .trim()
+        .replace(/[\s_]+/g, '-')
+        .replace(/[^a-z0-9-]+/g, '')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+
+// A tag list from any shape the pipeline meets: an array, a notes line
+// ("leather, bear-crowd"), or nothing. Unique, sorted, canonical.
+function normalizeEventTags(value) {
+    const raw = Array.isArray(value)
+        ? value
+        : typeof value === 'string' ? value.split(/[,;\n]/) : [];
+    const seen = new Set();
+    raw.forEach(item => {
+        const tag = normalizeEventTag(item);
+        if (tag) seen.add(tag);
+    });
+    return Array.from(seen).sort();
+}
+
+function isDerivedEventTag(tag) {
+    const entry = EVENT_TAGS[normalizeEventTag(tag)];
+    return Boolean(entry && entry.who === 'derived');
+}
+
+// The tags a record may carry in its notes: everything but the derived ones.
+function storableEventTags(value) {
+    return normalizeEventTags(value).filter(tag => !isDerivedEventTag(tag));
+}
+
+// The notes-line value: "bear-crowd, leather" — or '' when nothing is left,
+// which formatEventNotes reads as "no line at all".
+function formatEventTags(value) {
+    return storableEventTags(value).join(', ');
+}
+
+function mergeEventTags(...lists) {
+    return normalizeEventTags(lists.reduce((all, list) => all.concat(normalizeEventTags(list)), []));
+}
+
+// Local calendar day of a date-ish value, in a zone when one is known. The
+// Scriptable runtime has Intl, so the zone path works on the phone too.
+function eventTagLocalDay(value, timezone) {
+    const ms = value instanceof Date ? value.getTime() : Date.parse(String(value || ''));
+    if (!Number.isFinite(ms)) return '';
+    const date = new Date(ms);
+    if (timezone) {
+        try {
+            const day = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(day)) return day;
+        } catch (_) { /* unknown zone — UTC below */ }
+    }
+    return date.toISOString().slice(0, 10);
+}
+
+function eventTagVenueKey(value) {
+    return String(value || '').toLowerCase().replace(/^\s*the\s+/, '').replace(/[^a-z0-9]+/g, '');
+}
+
+// The DERIVED tags of one event against the curated festivals: `bear-run`
+// when the event falls inside a bear run's window and the run reaches it.
+// A festival's `reach` says how far the run spreads:
+//   'city'   — the run takes the town over (Provincetown, Palm Springs,
+//              Guerneville): every event in that city inside the window
+//   'venues' — the run lives at one or two bars in a big city (Urban Bear
+//              in New York): only events at the bars its `venues` list names
+//   absent   — the festival itself renders, nothing around it is tagged
+// Day arithmetic: the festival's `end` is INCLUSIVE, and the last night
+// runs past midnight, so the window closes the day after `end`.
+// options: { cityKey } — the page's city when the event carries none.
+function deriveFestivalTags(event, festivals, options = {}) {
+    if (!event || typeof event !== 'object' || !Array.isArray(festivals)) return [];
+    const city = String(event.city || options.cityKey || '').trim().toLowerCase();
+    const start = event.startDate || event.start || event.date;
+    const day = eventTagLocalDay(start, event.timezone || options.timezone || '');
+    if (!day) return [];
+    const venueKey = eventTagVenueKey(event.bar || event.venue || '');
+    const tags = [];
+    festivals.forEach(festival => {
+        if (!festival || typeof festival !== 'object') return;
+        if (String(festival.category || '').toLowerCase() !== 'bear-run') return;
+        const reach = String(festival.reach || '').toLowerCase();
+        if (reach !== 'city' && reach !== 'venues') return;
+        const dates = festival.nextDates && typeof festival.nextDates === 'object' ? festival.nextDates : null;
+        const windowStart = dates && /^\d{4}-\d{2}-\d{2}$/.test(String(dates.start || '')) ? String(dates.start) : '';
+        const windowEnd = dates && /^\d{4}-\d{2}-\d{2}$/.test(String(dates.end || '')) ? String(dates.end) : windowStart;
+        if (!windowStart || !windowEnd) return;
+        const closes = new Date(`${windowEnd}T00:00:00Z`);
+        closes.setUTCDate(closes.getUTCDate() + 1);
+        const lastDay = closes.toISOString().slice(0, 10);
+        if (day < windowStart || day > lastDay) return;
+        const festivalCity = String(festival.cityKey || '').trim().toLowerCase();
+        if (!festivalCity || !city || festivalCity !== city) return;
+        if (reach === 'venues') {
+            const venues = Array.isArray(festival.venues) ? festival.venues.map(eventTagVenueKey).filter(Boolean) : [];
+            if (!venueKey || !venues.includes(venueKey)) return;
+        }
+        tags.push('bear-run');
+    });
+    return normalizeEventTags(tags);
+}
 
 function normalizeAliasKey(key) {
     return String(key || '').toLowerCase().replace(/[\s\-_]/g, '');
@@ -985,6 +1131,14 @@ const EventSchema = {
     isUrlLikeField,
     parseNotesIntoFields,
     formatEventNotes,
+    EVENT_TAGS,
+    normalizeEventTag,
+    normalizeEventTags,
+    storableEventTags,
+    formatEventTags,
+    mergeEventTags,
+    isDerivedEventTag,
+    deriveFestivalTags,
     pickImageForOrientation,
     imageAssetKey,
     isSameImageAsset,

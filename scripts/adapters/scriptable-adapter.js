@@ -1734,7 +1734,7 @@ class ScriptableAdapter {
   // so a later tap on either card variant updates ONE entry: the opposite
   // direction overwrites (last tap wins), the same direction refreshes the
   // stamp.
-  async persistBearVerdictTap(event, verdict) {
+  async persistBearVerdictTap(event, verdict, tags = []) {
     if (!event || typeof event !== "object") return;
     const core = this.getIdentityCore();
     if (!core) {
@@ -1752,6 +1752,10 @@ class ScriptableAdapter {
       );
       return;
     }
+    // tags (EventSchema.EVENT_TAGS) ride on bear and tagged verdicts; a
+    // not_bear verdict carries none.
+    const storedTags =
+      verdict === "not_bear" ? [] : SharedEventSchema.storableEventTags(tags);
     const entry = {
       verdict,
       stampedAt: new Date().toISOString(),
@@ -1760,6 +1764,7 @@ class ScriptableAdapter {
       address: typeof event.address === "string" ? event.address : "",
       location: typeof event.location === "string" ? event.location : "",
       city: typeof event.city === "string" ? event.city : "",
+      ...(storedTags.length > 0 ? { tags: storedTags } : {}),
     };
     const verdicts = await this.loadBearVerdicts();
     const index = verdicts.findIndex(
