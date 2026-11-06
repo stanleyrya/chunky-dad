@@ -22,101 +22,6 @@
   },
   "events": [
     {
-      "name": "Western Xposure's XXL",
-      "day": "Thursday",
-      "time": "9AM-11:59PM",
-      "eventType": "routine",
-      "recurring": false,
-      "coordinates": {
-        "lat": 33.7796835,
-        "lng": -116.4689784
-      },
-      "startDate": "2026-10-15T09:00:00",
-      "endDate": "2026-10-18T23:59:59",
-      "unprocessedDescription": "description: Western Xposure's XXL is weekend 2 of Western Xpos\rure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbrite.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Angeles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-      "startTimezone": null,
-      "endTimezone": null,
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
-      "uid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 1,
-      "overrideIdentityType": null,
-      "bar": "CCBC Resort Hotel",
-      "cover": "$1-$180",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa",
-      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
-      "tea": "Western Xposure's XXL is weekend 2 of Western Xposure Fall 2026!",
-      "cadence": null,
-      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
-      "website": "https://www.westernxposure.com/westernxposurexxl",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-      "ticketUrl": "https://xxl2026.eventbrite.com/",
-      "shortName": "WESTERN XPOSURE",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "website",
-          "url": "https://www.westernxposure.com/westernxposurexxl",
-          "label": "🌐 Website"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://xxl2026.eventbrite.com/",
-          "label": "🎫 Tickets"
-        }
-      ],
-      "slug": "western-xposures-xxl-27c8c346"
-    },
-    {
-      "name": "WOOF",
-      "day": "Wednesday",
-      "time": "7PM-10PM",
-      "eventType": "monthly",
-      "recurring": true,
-      "recurrence": "FREQ=MONTHLY;BYDAY=1WE",
-      "coordinates": {
-        "lat": 33.8210557,
-        "lng": -116.5444345
-      },
-      "startDate": "2026-11-04T19:00:00",
-      "endDate": "2026-11-04T22:00:00",
-      "unprocessedDescription": "description: Monthly bear party at Dick's on Arenas, first Wed\rnesday of the month, 7–10pm. Guest DJs every time.\nbar: Dick's on Arenas\naddress: 301 E Arenas Rd, Palm Springs, CA 92262\ninstagram: https://www.instagram.com/woof.ps\nfavicon: https://www.instagram.com/woof.ps\nrecurrence: FREQ=MONTHLY;BYDAY=1WE",
-      "startTimezone": "America/Los_Angeles",
-      "endTimezone": "America/Los_Angeles",
-      "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": false,
-      "sourceUid": "woof-20261011T020000Z@chunky.dad",
-      "uid": "woof-20261011T020000Z@chunky.dad",
-      "recurrenceId": null,
-      "recurrenceIdTimezone": null,
-      "sequence": 0,
-      "overrideIdentityType": null,
-      "bar": "Dick's on Arenas",
-      "favicon": "https://www.instagram.com/woof.ps",
-      "tea": "Monthly bear party at Dick's on Arenas, first Wednesday of the month, 7–10pm. Guest DJs every time.",
-      "cadence": null,
-      "address": "301 E Arenas Rd, Palm Springs, CA 92262",
-      "website": null,
-      "instagram": "https://www.instagram.com/woof.ps",
-      "bearReview": null,
-      "links": [
-        {
-          "type": "instagram",
-          "url": "https://www.instagram.com/woof.ps",
-          "label": "📷 Instagram"
-        }
-      ],
-      "slug": "woof-080ebf02"
-    },
-    {
       "name": "Sticky Rice",
       "day": "Friday",
       "time": null,
@@ -181,7 +86,7 @@
       },
       "startDate": "2026-11-06T22:00:00",
       "endDate": "2026-11-07T02:00:00",
-      "unprocessedDescription": "description: SAM GEE marcos moreno\nbar: Toucans Tiki Lounge\na\rddress: 2100 PALM CANYON DRIVE\ntimezone: America/Los_Angeles\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nimage: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nimageVertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-palm-springs-pride|2026-11-07|toucans tiki lounge\nbearSource: keyword\npinSource: geocoded-exact\naddressSource: page\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
+      "unprocessedDescription": "bar: Toucans Tiki Lounge\naddress: 2100 PALM CANYON DRIVE\ntime\rzone: America/Los_Angeles\nimage: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: furball-palm-springs-pride|2026-11-07|toucans tiki lounge\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nbearSource: keyword\nimageVertical: https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg\ndescription: Palm Springs Pride\npinSource: curated\naddressSource: page\nimageSource: page\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=Toucans%20Tiki%20Lounge%2C%202100%20PALM%20CANYON%20DRIVE",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
@@ -196,7 +101,7 @@
       "image": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
       "imageVertical": "https://static.wixstatic.com/media/238fae_a7e6192f31144d07b98b9272b94a4887~mv2.jpg",
       "favicon": "https://linktr.ee/furballnyc",
-      "tea": "SAM GEE marcos moreno",
+      "tea": "Palm Springs Pride",
       "cadence": null,
       "address": "2100 PALM CANYON DRIVE",
       "website": "https://www.furball.nyc",
@@ -230,9 +135,112 @@
       "slug": "furball-palm-springs-pride-719921a0"
     },
     {
+      "name": "Western X-Mas: Holiday Bear Retreat 2026",
+      "day": "Thursday",
+      "time": "10AM-7PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.7796835,
+        "lng": -116.4689784
+      },
+      "startDate": "2026-12-24T10:00:00",
+      "endDate": "2026-12-27T19:00:00",
+      "unprocessedDescription": "description: Celebrate the season with your chosen family at We\rstern Xposure's new holiday tradition.\nbar: CCBC Resort Hotel\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\nticketUrl: https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5\nimageSource: jsonld\ncover: $28.52-$161.90\ntimezone: America/Los_Angeles\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234\npinSource: curated\nkey: western-x-mas-holiday-bear-retreat-2026|2026-12-24|ccbc resort hotel\nbearSource: keyword\nshortName: WESTERN XMAS",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC",
+      "uid": "F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "bar": "CCBC Resort Hotel",
+      "cover": "$28.52-$161.90",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5",
+      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5",
+      "tea": "Celebrate the season with your chosen family at Western Xposure's new holiday tradition.",
+      "cadence": null,
+      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+      "ticketUrl": "https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953",
+      "shortName": "WESTERN XMAS",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "western-x-mas-holiday-bear-retreat-2026-66c97ab6"
+    },
+    {
+      "name": "Western Xposure's XXL",
+      "day": "Thursday",
+      "time": "9AM-11:59PM",
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 33.7796835,
+        "lng": -116.4689784
+      },
+      "startDate": "2026-10-15T09:00:00",
+      "endDate": "2026-10-18T23:59:59",
+      "unprocessedDescription": "description: Western Xposure's XXL is weekend 2 of Western Xpos\rure Fall 2026!\nbar: CCBC Resort Hotel\nticketUrl: https://xxl2026.eventbrite.com/\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa\ncover: $1-$180\ntimezone: America/Los_Angeles\nkey: western-xposure-s-xxl|2026-10-15|ccbc resort hotel\nbearSource: ai\nwebsite: https://www.westernxposure.com/westernxposurexxl\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg\nshortName: WESTERN XPOSURE\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\npinSource: curated\naddressSource: page\nimageSource: jsonld\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "America/Los_Angeles",
+      "wasUTC": true,
+      "sourceUid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
+      "uid": "E7DD7B68-E0A5-485C-A244-88F7F3E58450",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 1,
+      "overrideIdentityType": null,
+      "bar": "CCBC Resort Hotel",
+      "cover": "$1-$180",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F905577643%2F147944147159%2F1%2Foriginal.20241124-202453?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.005&fp-y=0.005&s=d518b180693e4a8b50730f4f9c6f71fa",
+      "imageHorizontal": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/cc0bf12ecfeed9c6.jpg",
+      "tea": "Western Xposure's XXL is weekend 2 of Western Xposure Fall 2026!",
+      "cadence": null,
+      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
+      "website": "https://www.westernxposure.com/westernxposurexxl",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+      "ticketUrl": "https://xxl2026.eventbrite.com/",
+      "shortName": "WESTERN XPOSURE",
+      "bearReview": null,
+      "links": [
+        {
+          "type": "website",
+          "url": "https://www.westernxposure.com/westernxposurexxl",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+          "label": "🗺️ Google Maps"
+        },
+        {
+          "type": "tickets",
+          "url": "https://xxl2026.eventbrite.com/",
+          "label": "🎫 Tickets"
+        }
+      ],
+      "slug": "western-xposures-xxl-27c8c346"
+    },
+    {
       "name": "Meatball Presents \"Fat Slut Drag Show and Dance Party\"",
       "day": "Sunday",
-      "time": "4PM-7PM",
+      "time": "4PM-5:30AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
@@ -240,8 +248,8 @@
         "lng": -116.548096
       },
       "startDate": "2026-11-08T16:00:00",
-      "endDate": "2026-11-08T19:00:00",
-      "unprocessedDescription": "description: Drag Show-Dance Party\nbar: Toucans\naddress: 9226\r2\ntimezone: America/Los_Angeles\nimage: https://uploads.tickettailorassets.com/c_crop,dpr_1.0,h_1000,q_100,w_1000,x_0,y_0/c_scale,dpr_2.0,h_250,q_85,w_250/v1/production/userfiles/klw7tsa9avnrpnexfm96.jpg?_a=BAAHWXDQ\ncover: $200\nimageSource: page\naddressSource: page\nwebsite: https://www.furball.nyc\ngmaps: https://www.google.com/maps/search/?api=1&query=33.848691%2C-116.548096\npinSource: curated\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: meatball-presents-fat-slut-drag-show-and-dance-party|2026-11-09|toucans\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nbearSource: keyword\nendUnknown: true",
+      "endDate": "2026-11-09T05:30:00",
+      "unprocessedDescription": "description: Drag Show-Dance Party\nbar: Toucans\naddress: 9226\r2\ntimezone: America/Los_Angeles\nimage: https://uploads.tickettailorassets.com/c_crop,dpr_1.0,h_1000,q_100,w_1000,x_0,y_0/c_scale,dpr_2.0,h_250,q_85,w_250/v1/production/userfiles/klw7tsa9avnrpnexfm96.jpg?_a=BAAHWXDQ\ncover: $20\nwebsite: https://www.furball.nyc\nshortName: FUR­BALL\ninstagram: https://instagram.com/furballnyc/\nfavicon: https://linktr.ee/furballnyc\nkey: fat-slut-drag-show-and-dance-party|2026-11-09|toucans\nticketUrl: https://www.tickettailor.com/events/toucanstikilounge\nbearSource: keyword\npinSource: curated\naddressSource: page\nimageSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=33.848691%2C-116.548096",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
@@ -250,10 +258,10 @@
       "uid": "34376345-A67F-4D37-B4BC-DD39395A1BEB",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
+      "sequence": 1,
       "overrideIdentityType": null,
       "bar": "Toucans",
-      "cover": "$200",
+      "cover": "$20",
       "image": "https://uploads.tickettailorassets.com/c_crop,dpr_1.0,h_1000,q_100,w_1000,x_0,y_0/c_scale,dpr_2.0,h_250,q_85,w_250/v1/production/userfiles/klw7tsa9avnrpnexfm96.jpg?_a=BAAHWXDQ",
       "favicon": "https://linktr.ee/furballnyc",
       "tea": "Drag Show-Dance Party",
@@ -290,65 +298,45 @@
       "slug": "meatball-presents-fat-slut-drag-show-and-dance-party-0a751f9a"
     },
     {
-      "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
-      "day": "Friday",
-      "time": "11AM-12AM",
-      "eventType": "routine",
-      "recurring": false,
+      "name": "WOOF",
+      "day": "Wednesday",
+      "time": "7PM-10PM",
+      "eventType": "monthly",
+      "recurring": true,
+      "recurrence": "FREQ=MONTHLY;BYDAY=1WE",
       "coordinates": {
-        "lat": 33.7796835,
-        "lng": -116.4689784
+        "lat": 33.8210557,
+        "lng": -116.5444345
       },
-      "startDate": "2026-09-11T11:00:00",
-      "endDate": "2026-09-14T00:00:00",
-      "unprocessedDescription": "bar: CCBC Resort\naddress: 68-300 Gay Resort Dr, Cathedral Cit\ry, CA 92234, USA\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nwebsite: https://www.clubchubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-the-ultimate-celebration|2026-09-11|ccbc resort\ncover: $55.20-$150.16\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nbearSource: keyword\ndescription: The Ultimate Celebration!\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
-      "startTimezone": null,
-      "endTimezone": null,
+      "startDate": "2026-11-04T19:00:00",
+      "endDate": "2026-11-04T22:00:00",
+      "unprocessedDescription": "description: Monthly bear party at Dick's on Arenas, first Wed\rnesday of the month, 7–10pm. Guest DJs every time.\nbar: Dick's on Arenas\naddress: 301 E Arenas Rd, Palm Springs, CA 92262\ninstagram: https://www.instagram.com/woof.ps\nfavicon: https://www.instagram.com/woof.ps\nrecurrence: FREQ=MONTHLY;BYDAY=1WE",
+      "startTimezone": "America/Los_Angeles",
+      "endTimezone": "America/Los_Angeles",
       "calendarTimezone": "America/Los_Angeles",
-      "wasUTC": true,
-      "sourceUid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
-      "uid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
+      "wasUTC": false,
+      "sourceUid": "woof-20261011T020000Z@chunky.dad",
+      "uid": "woof-20261011T020000Z@chunky.dad",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "CCBC Resort",
-      "cover": "$55.20-$150.16",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
-      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
-      "favicon": "https://www.clubchubusa.com",
-      "tea": "The Ultimate Celebration!",
+      "bar": "Dick's on Arenas",
+      "favicon": "https://www.instagram.com/woof.ps",
+      "tea": "Monthly bear party at Dick's on Arenas, first Wednesday of the month, 7–10pm. Guest DJs every time.",
       "cadence": null,
-      "address": "68-300 Gay Resort Dr, Cathedral City, CA 92234, USA",
-      "website": "https://www.clubchubusa.com",
-      "instagram": "https://www.instagram.com/clubchubparty",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
-      "ticketUrl": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
-      "shortName": "CLUB CHUB",
+      "address": "301 E Arenas Rd, Palm Springs, CA 92262",
+      "website": null,
+      "instagram": "https://www.instagram.com/woof.ps",
       "bearReview": null,
       "links": [
         {
-          "type": "website",
-          "url": "https://www.clubchubusa.com",
-          "label": "🌐 Website"
-        },
-        {
           "type": "instagram",
-          "url": "https://www.instagram.com/clubchubparty",
+          "url": "https://www.instagram.com/woof.ps",
           "label": "📷 Instagram"
-        },
-        {
-          "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
-          "label": "🗺️ Google Maps"
-        },
-        {
-          "type": "tickets",
-          "url": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
-          "label": "🎫 Tickets"
         }
       ],
-      "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
+      "slug": "woof-080ebf02"
     },
     {
       "name": "MEGAWOOF",
@@ -410,53 +398,65 @@
       "slug": "megawoof-22570191"
     },
     {
-      "name": "Western X-Mas: Holiday Bear Retreat 2026",
-      "day": "Thursday",
-      "time": "10AM-7PM",
+      "name": "Club Chub Weekend 2026 — The Ultimate Celebration!",
+      "day": "Friday",
+      "time": "11AM-12AM",
       "eventType": "routine",
       "recurring": false,
       "coordinates": {
         "lat": 33.7796835,
         "lng": -116.4689784
       },
-      "startDate": "2026-12-24T10:00:00",
-      "endDate": "2026-12-27T19:00:00",
-      "unprocessedDescription": "description: Celebrate the season with your chosen family at We\rstern Xposure's new holiday tradition.\nbar: CCBC Resort Hotel\naddress: 68-300 Gay Resort Drive, Cathedral City, CA 92234\nticketUrl: https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5\nimageSource: jsonld\ncover: $28.52-$161.90\ntimezone: America/Los_Angeles\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5\nbarSource: curated\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234\npinSource: curated\nkey: western-x-mas-holiday-bear-retreat-2026|2026-12-24|ccbc resort hotel\nbearSource: keyword\nshortName: WESTERN XMAS",
+      "startDate": "2026-09-11T11:00:00",
+      "endDate": "2026-09-14T00:00:00",
+      "unprocessedDescription": "bar: CCBC Resort\naddress: 68-300 Gay Resort Dr, Cathedral Cit\ry, CA 92234, USA\ntimezone: America/Los_Angeles\nticketUrl: https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nwebsite: https://www.clubchubusa.com\nshortName: CLUB CHUB\ninstagram: https://www.instagram.com/clubchubparty\nfavicon: https://www.clubchubusa.com\nkey: club-chub-weekend-2026-the-ultimate-celebration|2026-09-11|ccbc resort\ncover: $55.20-$150.16\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e\nbearSource: keyword\ndescription: The Ultimate Celebration!\npinSource: page\naddressSource: page\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/Los_Angeles",
       "wasUTC": true,
-      "sourceUid": "F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC",
-      "uid": "F23AB28B-DFAF-4342-ACB4-9C27F04C6DEC",
+      "sourceUid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
+      "uid": "E21A39AC-AC29-47E3-A8C2-23C3D36AD105",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
       "sequence": 0,
       "overrideIdentityType": null,
-      "bar": "CCBC Resort Hotel",
-      "cover": "$28.52-$161.90",
-      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5",
-      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1063551303%2F147944147159%2F1%2Foriginal.20250630-181553?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=a7815c88b9bca8b332b547e6570152d5",
-      "tea": "Celebrate the season with your chosen family at Western Xposure's new holiday tradition.",
+      "bar": "CCBC Resort",
+      "cover": "$55.20-$150.16",
+      "image": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
+      "imageHorizontal": "https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1181907187%2F455155557312%2F1%2Foriginal.20260410-213422?w=940&auto=format%2Ccompress&q=75&sharp=10&s=0324450eaa0398ee271fc5832cfec54e",
+      "favicon": "https://www.clubchubusa.com",
+      "tea": "The Ultimate Celebration!",
       "cadence": null,
-      "address": "68-300 Gay Resort Drive, Cathedral City, CA 92234",
-      "website": null,
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
-      "ticketUrl": "https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953",
-      "shortName": "WESTERN XMAS",
+      "address": "68-300 Gay Resort Dr, Cathedral City, CA 92234, USA",
+      "website": "https://www.clubchubusa.com",
+      "instagram": "https://www.instagram.com/clubchubparty",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
+      "ticketUrl": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
+      "shortName": "CLUB CHUB",
       "bearReview": null,
       "links": [
         {
+          "type": "website",
+          "url": "https://www.clubchubusa.com",
+          "label": "🌐 Website"
+        },
+        {
+          "type": "instagram",
+          "url": "https://www.instagram.com/clubchubparty",
+          "label": "📷 Instagram"
+        },
+        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%20Hotel%2C%2068-300%20Gay%20Resort%20Drive%2C%20Cathedral%20City%2C%20CA%2092234",
+          "url": "https://www.google.com/maps/search/?api=1&query=CCBC%20Resort%2C%2068-300%20Gay%20Resort%20Dr%2C%20Cathedral%20City%2C%20CA%2092234%2C%20USA",
           "label": "🗺️ Google Maps"
         },
         {
           "type": "tickets",
-          "url": "https://www.eventbrite.com/e/western-x-mas-holiday-bear-retreat-2026-tickets-1999502215953",
+          "url": "https://www.eventbrite.com/e/club-chub-weekend-2026-the-ultimate-celebration-tickets-1975884326209?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
           "label": "🎫 Tickets"
         }
       ],
-      "slug": "western-x-mas-holiday-bear-retreat-2026-66c97ab6"
+      "slug": "club-chub-weekend-2026-the-ultimate-celebration-4e2fbd1c"
     }
   ]
 }

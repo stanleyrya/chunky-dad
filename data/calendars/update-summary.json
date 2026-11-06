@@ -21,7 +21,7 @@
     "atlanta": {
       "name": "Atlanta",
       "status": "success",
-      "dataLength": 10783,
+      "dataLength": 10912,
       "eventCount": 8
     },
     "austin": {
@@ -99,7 +99,7 @@
     "dallas": {
       "name": "Dallas",
       "status": "success",
-      "dataLength": 25280,
+      "dataLength": 26390,
       "eventCount": 16
     },
     "dc": {
@@ -141,8 +141,8 @@
     "fort-lauderdale": {
       "name": "Fort Lauderdale",
       "status": "success",
-      "dataLength": 58430,
-      "eventCount": 48
+      "dataLength": 60979,
+      "eventCount": 50
     },
     "gettysburg": {
       "name": "Gettysburg",
@@ -183,8 +183,8 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 141947,
-      "eventCount": 125
+      "dataLength": 158768,
+      "eventCount": 137
     },
     "leipzig": {
       "name": "Leipzig",
@@ -249,8 +249,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 258393,
-      "eventCount": 229
+      "dataLength": 276084,
+      "eventCount": 236
     },
     "orlando": {
       "name": "Orlando",
@@ -273,7 +273,7 @@
     "palm-springs": {
       "name": "Palm Springs",
       "status": "success",
-      "dataLength": 12848,
+      "dataLength": 12798,
       "eventCount": 9
     },
     "paris": {
@@ -297,7 +297,7 @@
     "phoenix": {
       "name": "Phoenix",
       "status": "success",
-      "dataLength": 11143,
+      "dataLength": 11338,
       "eventCount": 7
     },
     "poconos": {
@@ -309,7 +309,7 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 44149,
+      "dataLength": 44196,
       "eventCount": 31
     },
     "prague": {
@@ -321,8 +321,8 @@
     "ptown": {
       "name": "Provincetown",
       "status": "success",
-      "dataLength": 50816,
-      "eventCount": 38
+      "dataLength": 181553,
+      "eventCount": 134
     },
     "pv": {
       "name": "Puerto Vallarta",
@@ -357,7 +357,7 @@
     "seattle": {
       "name": "Seattle",
       "status": "success",
-      "dataLength": 33374,
+      "dataLength": 33572,
       "eventCount": 25
     },
     "seoul": {
@@ -369,8 +369,8 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 80628,
-      "eventCount": 60
+      "dataLength": 84440,
+      "eventCount": 63
     },
     "singapore": {
       "name": "Singapore",
@@ -387,8 +387,8 @@
     "sydney": {
       "name": "Sydney",
       "status": "success",
-      "dataLength": 6096,
-      "eventCount": 5
+      "dataLength": 7341,
+      "eventCount": 6
     },
     "taipei": {
       "name": "Taipei",
@@ -405,8 +405,8 @@
     "toronto": {
       "name": "Toronto",
       "status": "success",
-      "dataLength": 25540,
-      "eventCount": 22
+      "dataLength": 27834,
+      "eventCount": 24
     },
     "torremolinos": {
       "name": "Torremolinos",

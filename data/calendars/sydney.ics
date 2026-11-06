@@ -6,45 +6,23 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-sydney
 X-WR-TIMEZONE:Australia/Sydney
 BEGIN:VEVENT
-DTSTART:20261113T100000Z
-DTEND:20261113T170000Z
-DTSTAMP:20261030T191531Z
-UID:C2321295-4A14-4C86-AA13-BDDBCE791377
-CREATED:20261006T224431Z
-DESCRIPTION:bar: Trough X\nticketUrl: https://events.humanitix.com/beef13no
- v\nimage: https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-87
- 67d4c49b0a.jpg\nimageSource: json-api\ntimezone: Australia/Sydney\nimageVer
- tical: https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-8767d
- 4c49b0a.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=Trough%
- 20X%2C%20sydney\nkey: beefcake-leather-🥩-sydney-trough-x|2026-11-13|trough
-  x\nbearSource: keyword\nshortName: BEEFCAKE
-LAST-MODIFIED:20261006T224431Z
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:BEEFCAKE Leather 🥩 Sydney
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261030T080000Z
-DTEND:20261030T110000Z
-DTSTAMP:20261030T191531Z
-UID:6BB5725B-C8E2-4D13-A048-F0D512CC2C53
-CREATED:20261030T190613Z
-DESCRIPTION:description: Furry Friday\\: Halloween\nbar: Kings Cross Hotel\
- naddress: 244-248 William Street\, Kings Cross\ntimezone: Australia/Sydney\
- nfacebook: https://www.facebook.com/aconhealth\nimage: https://acqvlhciredw
- tlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0
- .png\naddressSource: page\nwebsite: https://hcbears.com.au/event-6700980/Re
- gistration\ngmaps: https://www.google.com/maps/search/?api=1&query=Kings%20
- Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross\npinSource
- : curated\ncadence: FREQ=WEEKLY\;BYDAY=FR\nkey: furry-friday|2026-10-30|kin
- gs cross hotel\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/s
- torage/v1/object/public/event-images/8f34856f66beb1b0.png\nimageSource: jso
- n-api\nbarSource: curated\nbearSource: keyword\nshortName: FURRY FRIDAY\nen
- dUnknown: true
-LAST-MODIFIED:20261030T190613Z
+DTSTART:20261016T080000Z
+DTEND:20261018T050000Z
+DTSTAMP:20261106T020631Z
+UID:7848F567-25CF-4742-8C03-4A824C37A7FE
+CREATED:20261013T224658Z
+DESCRIPTION:description: Furry Friday\\: Kilt\nbar: Kings Cross Hotel\naddr
+ ess: 244-248 William Street\, Kings Cross\ntimezone: Australia/Sydney\nface
+ book: https://www.facebook.com/aconhealth\nimage: https://acqvlhciredwtlbpi
+ sso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\
+ naddressSource: page\nwebsite: https://hcbears.com.au/event-6700980/Registr
+ ation\ngmaps: https://www.google.com/maps/search/?api=1&query=Kings%20Cross
+ %20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross\npinSource: cur
+ ated\ncadence: FREQ=WEEKLY\;BYDAY=FR\nkey: furry-friday|2026-10-16|kings cr
+ oss hotel\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storag
+ e/v1/object/public/event-images/8f34856f66beb1b0.png\nimageSource: json-api
+ \nbarSource: curated\nbearSource: keyword\nshortName: FURRY FRIDAY
+LAST-MODIFIED:20261013T224658Z
 LOCATION:-33.8749589\, 151.2219447
 SEQUENCE:0
 STATUS:CONFIRMED
@@ -56,7 +34,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261002T110000Z
 DTEND:20261002T180000Z
-DTSTAMP:20261030T191531Z
+DTSTAMP:20261106T020631Z
 UID:EC84B336-7030-4AA5-AE00-9B1E1AB4E56A
 CREATED:20261001T131413Z
 DESCRIPTION:bar: ARQ Sydney\nticketUrl: https://events.humanitix.com/syd2oc
@@ -81,7 +59,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20261009T080000Z
 DTEND:20261009T110000Z
-DTSTAMP:20261030T191531Z
+DTSTAMP:20261106T020631Z
 UID:13A4CAA0-9472-4A76-BBDC-00789032A0F2
 CREATED:20261006T224430Z
 DESCRIPTION:description: a community group for hairy\, gay men\, their frie
@@ -106,23 +84,71 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20261016T080000Z
-DTEND:20261018T050000Z
-DTSTAMP:20261030T191531Z
-UID:7848F567-25CF-4742-8C03-4A824C37A7FE
-CREATED:20261013T224658Z
-DESCRIPTION:description: Furry Friday\\: Kilt\nbar: Kings Cross Hotel\naddr
- ess: 244-248 William Street\, Kings Cross\ntimezone: Australia/Sydney\nface
- book: https://www.facebook.com/aconhealth\nimage: https://acqvlhciredwtlbpi
- sso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png\
- naddressSource: page\nwebsite: https://hcbears.com.au/event-6700980/Registr
- ation\ngmaps: https://www.google.com/maps/search/?api=1&query=Kings%20Cross
- %20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross\npinSource: cur
- ated\ncadence: FREQ=WEEKLY\;BYDAY=FR\nkey: furry-friday|2026-10-16|kings cr
- oss hotel\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/storag
- e/v1/object/public/event-images/8f34856f66beb1b0.png\nimageSource: json-api
- \nbarSource: curated\nbearSource: keyword\nshortName: FURRY FRIDAY
-LAST-MODIFIED:20261013T224658Z
+DTSTART:20261113T100000Z
+DTEND:20261113T170000Z
+DTSTAMP:20261106T020631Z
+UID:C2321295-4A14-4C86-AA13-BDDBCE791377
+CREATED:20261006T224431Z
+DESCRIPTION:bar: Trough X\nticketUrl: https://events.humanitix.com/beef13no
+ v\nimage: https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-87
+ 67d4c49b0a.jpg\nimageSource: json-api\ntimezone: Australia/Sydney\nimageVer
+ tical: https://cdn.whereto.party/media/events/a66ef065-34f6-45db-9eb1-8767d
+ 4c49b0a.jpg\ngmaps: https://www.google.com/maps/search/?api=1&query=Trough%
+ 20X%2C%20sydney\nkey: beefcake-leather-🥩-sydney-trough-x|2026-11-13|trough
+  x\nbearSource: keyword\nshortName: BEEFCAKE
+LAST-MODIFIED:20261006T224431Z
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:BEEFCAKE Leather 🥩 Sydney
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261030T080000Z
+DTEND:20261030T110000Z
+DTSTAMP:20261106T020631Z
+UID:6BB5725B-C8E2-4D13-A048-F0D512CC2C53
+CREATED:20261030T190613Z
+DESCRIPTION:description: Furry Friday\\: Halloween\nbar: Kings Cross Hotel\
+ naddress: 244-248 William Street\, Kings Cross\ntimezone: Australia/Sydney\
+ nfacebook: https://www.facebook.com/aconhealth\nimage: https://acqvlhciredw
+ tlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0
+ .png\naddressSource: page\nwebsite: https://hcbears.com.au/event-6700980/Re
+ gistration\ngmaps: https://www.google.com/maps/search/?api=1&query=Kings%20
+ Cross%20Hotel%2C%20244-248%20William%20Street%2C%20Kings%20Cross\npinSource
+ : curated\ncadence: FREQ=WEEKLY\;BYDAY=FR\nkey: furry-friday|2026-10-30|kin
+ gs cross hotel\nimageHorizontal: https://acqvlhciredwtlbpisso.supabase.co/s
+ torage/v1/object/public/event-images/8f34856f66beb1b0.png\nimageSource: jso
+ n-api\nbarSource: curated\nbearSource: keyword\nshortName: FURRY FRIDAY\nen
+ dUnknown: true
+LAST-MODIFIED:20261030T190613Z
+LOCATION:-33.8749589\, 151.2219447
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Furry Friday
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261106T080000Z
+DTEND:20261106T110000Z
+DTSTAMP:20261106T020631Z
+UID:584FC2A2-146D-40C3-8526-0DBFD718E264
+CREATED:20261106T004509Z
+DESCRIPTION:description: KINK\nbar: Kings Cross Hotel\naddress: 244-248 Wil
+ liam Street\, Kings Cross\ntimezone: Australia/Sydney\nfacebook: https://ww
+ w.facebook.com/aconhealth\nimage: https://acqvlhciredwtlbpisso.supabase.co/
+ storage/v1/object/public/event-images/8f34856f66beb1b0.png\naddressSource: 
+ page\nwebsite: https://hcbears.com.au/event-6700980/Registration\ngmaps: ht
+ tps://www.google.com/maps/search/?api=1&query=Kings%20Cross%20Hotel%2C%2024
+ 4-248%20William%20Street%2C%20Kings%20Cross\npinSource: curated\ncadence: F
+ REQ=WEEKLY\;BYDAY=FR\nkey: furry-friday|2026-11-06|kings cross hotel\nimage
+ Horizontal: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/publ
+ ic/event-images/8f34856f66beb1b0.png\nimageSource: json-api\nbarSource: cur
+ ated\nbearSource: keyword\nshortName: FURRY FRIDAY\nendUnknown: true
+LAST-MODIFIED:20261106T004510Z
 LOCATION:-33.8749589\, 151.2219447
 SEQUENCE:0
 STATUS:CONFIRMED
