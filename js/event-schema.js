@@ -228,11 +228,13 @@ const EVENT_TAGS = Object.freeze({
     //      'owner'   — only a deck swipe or the verdict store gives it
     //      'derived' — computed at read time, never stored
     // shown: the site draws a chip for it; the rest stay data.
-    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine', hint: 'a leather, gear or harness night, run, contest or club' }),
-    'kink': Object.freeze({ label: 'Kink', shown: true, who: 'machine', hint: 'a kink, fetish, BDSM or play event' }),
+    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine', hint: 'a leather, gear or harness night, run, contest or club — not a dress-code aside, not gym gear' }),
+    'kink': Object.freeze({ label: 'Kink', shown: true, who: 'machine', hint: 'a kink, fetish, BDSM or play event — not a DJ or show whose name merely sounds kinky' }),
     'rubber': Object.freeze({ label: 'Rubber', shown: true, who: 'machine', hint: 'a rubber or latex event' }),
     'diaper': Object.freeze({ label: 'Diaper', shown: true, who: 'machine', hint: 'a diaper or ABDL event' }),
-    'drag': Object.freeze({ label: 'Drag', shown: true, who: 'machine', hint: 'a drag show, brunch, competition or drag-race viewing' }),
+    'drag': Object.freeze({ label: 'Drag', shown: true, who: 'machine', hint: 'a drag show, brunch, competition or drag-race viewing — not a bar night that merely has a drag host' }),
+    'pup': Object.freeze({ label: 'Pup', shown: true, who: 'machine', hint: 'a pup or pet play night, mosh or pup social — not an event that merely welcomes pups' }),
+    'underwear': Object.freeze({ label: 'Underwear', shown: true, who: 'machine', hint: 'an underwear, jockstrap or singlet night or party — not a night where underwear is merely allowed' }),
     'bear-crowd': Object.freeze({ label: 'Bear crowd', shown: false, who: 'owner' }),
     'bear-run': Object.freeze({ label: 'Bear run', shown: false, who: 'derived' })
 });

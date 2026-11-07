@@ -636,8 +636,11 @@ class SharedCore {
             kink: { substring: ['kink', 'fetish', 'bdsm', 'dungeon'], word: ['play party', 'cbt'] },
             rubber: { substring: ['rubber', 'latex'], word: [] },
             diaper: { substring: ['diaper', 'abdl'], word: ['nappy', 'nappies'] },
-            drag: { substring: ['dragula'], word: ['drag'] }
+            drag: { substring: ['dragula'], word: ['drag'] },
+            pup: { substring: ['puppy', 'puppies'], word: ['pup', 'pups', 'mosh', 'pet night', 'pet play'] },
+            underwear: { substring: ['underwear', 'jockstrap'], word: ['undies', 'jocks', 'singlet', 'singlets'] }
         };
+
         
         // Store cities config for timezone assignment
         this.cities = cities;
@@ -14428,23 +14431,28 @@ class SharedCore {
         if (machine.candidates.length > 0) {
             const describe = tag => {
                 const hit = machine.hits[tag] || { title: [], description: [] };
-                const where = hit.title.length > 0 ? `title: ${hit.title.join(', ')}` : `description: ${hit.description.join(', ')}`;
-                return `${tag} (${where})`;
+                return `${tag} (${hit.title.length > 0 ? `title: ${hit.title.join(', ')}` : `description: ${hit.description.join(', ')}`})`;
             };
-            const named = machine.candidates.map(describe).join('; ');
-            // The keyword path may have skipped the AI; the call is memoized
-            // per event, so a judged event costs nothing extra here.
-            const ai = await this.getAiBearVerdict(event, parserConfig, httpAdapter);
-            if (!ai) {
-                tags = machine.fromTitle.slice();
-                console.log(`🏷️ TAGS: "${title}" — ${named}; no AI to confirm → ${tags.length > 0 ? `title-named stand: ${tags.join(', ')}` : 'not tagged'}`);
-            } else {
-                const aiTags = Array.isArray(ai.tags) ? ai.tags : [];
-                tags = machine.candidates.filter(tag => aiTags.includes(tag));
-                const declined = machine.candidates.filter(tag => !aiTags.includes(tag));
-                const volunteered = aiTags.filter(tag => !machine.candidates.includes(tag));
-                console.log(`🏷️ TAGS: "${title}" — ${named}; AI confirms ${tags.length > 0 ? tags.join(', ') : 'none'}${declined.length > 0 ? `, declines ${declined.join(', ')}` : ''}${volunteered.length > 0 ? ` (volunteered without a keyword, ignored: ${volunteered.join(', ')})` : ''}`);
-            }
+            // One focused call per candidate tag (memoized per event+tag,
+            // cached like every pass). The bear verdict is a separate answer
+            // on purpose: sharing one JSON moved verdicts (2026-11-06).
+            const answers = await Promise.all(machine.candidates.map(tag => this.getAiTagVerdict(event, tag, parserConfig, httpAdapter)));
+            const confirmed = []; const declined = []; const unanswered = [];
+            machine.candidates.forEach((tag, index) => {
+                const answer = answers[index];
+                if (!answer) unanswered.push(tag);
+                else if (answer.applies) confirmed.push(`${tag}: "${answer.evidence[0] || ''}"`);
+                else declined.push(`${tag}: ${answer.reason || 'no reason'}`);
+            });
+            // No AI to ask: what the TITLE names stands, a description-only
+            // hit does not (a dress-code aside reads the same as a night).
+            const standing = unanswered.filter(tag => machine.fromTitle.includes(tag));
+            tags = schema.normalizeEventTags(confirmed.map(line => line.split(':')[0]).concat(standing));
+            const parts = [];
+            if (confirmed.length > 0) parts.push(`confirmed ${confirmed.join('; ')}`);
+            if (declined.length > 0) parts.push(`declined ${declined.join('; ')}`);
+            if (unanswered.length > 0) parts.push(`no AI for ${unanswered.join(', ')} → ${standing.length > 0 ? `title-named stand: ${standing.join(', ')}` : 'not tagged'}`);
+            console.log(`🏷️ TAGS: "${title}" — candidates ${machine.candidates.map(describe).join('; ')}; ${parts.join('; ')}`);
         }
         decision.tags = tags;
         // Not bear, but tagged: kept. An allowlist miss is the source's own
@@ -14652,6 +14660,69 @@ class SharedCore {
     static getAiConfirmableTags() {
         const tags = SharedCore.eventTagsVocabulary();
         return Object.keys(tags).filter(tag => tags[tag] && tags[tag].who === 'machine');
+    }
+
+    // The tag check: one question, one tag, one event. Kept apart from the
+    // bear check so the verdict prompt never learns the word "drag".
+    buildTagCheckPrompt(event, tag) {
+        const vocabulary = SharedCore.eventTagsVocabulary();
+        const entry = vocabulary[tag] || {};
+        const title = String(event.title || '').trim();
+        const description = String(event.description || '').trim();
+        const bar = String(event.bar || '').trim();
+        return [
+            'You are tagging events on a gay men\'s nightlife calendar. One tag, one event: does the tag apply?',
+            '',
+            `Tag: ${tag}`,
+            `Meaning: ${entry.hint || entry.label || tag}.`,
+            '',
+            'Event:',
+            `- Title: ${title}`,
+            `- Venue: ${bar || 'unknown'}`,
+            `- City: ${event.city || 'unknown'}`,
+            `- Description: ${description ? description.slice(0, 600) : '(none)'}`,
+            '',
+            'The tag applies only when the EVENT ITSELF is that kind of event. It does not apply because of the venue\'s reputation, a host\'s persona, a dress-code aside ("gear welcome"), a word used in another sense (a DJ called KiNK, gym gear, a Dungeons & Dragons game), or a promoter\'s other parties.',
+            'Quote the words from the Title or Description that make it apply — copied WORD FOR WORD, never from the Venue line. If you cannot quote any, it does not apply.',
+            '',
+            'Respond with ONLY a JSON object, no other text:',
+            `{"tag": "${tag}", "applies": true | false, "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}`
+        ].join('\n');
+    }
+
+    // { applies, evidence, reason } or null (no AI / unusable answer). An
+    // "applies: true" with no quote that occurs in the event's own text is a
+    // decline: the check fails closed, exactly like the bear evidence gate.
+    async getAiTagVerdict(event, tag, parserConfig, httpAdapter) {
+        if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return null;
+        const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        if (rawAi.enabled === false) return null;
+        const resolved = this.resolveAiConfig(rawAi);
+        if (!resolved.enabled || !resolved.endpoint) return null;
+        const title = String(event.title || '').trim();
+        const description = String(event.description || '').trim();
+        const bar = String(event.bar || '').trim();
+        const memoKey = `${tag}|${title}|${description}|${bar}`;
+        if (!this._tagVerdictMemo) this._tagVerdictMemo = new Map();
+        if (this._tagVerdictMemo.has(memoKey)) return this._tagVerdictMemo.get(memoKey);
+        const prompt = this.buildTagCheckPrompt(event, tag);
+        const config = { ...resolved, temperature: 0, numPredict: Math.min(Number(resolved.numPredict) || 200, 200) };
+        const pending = (async () => {
+            const rawResponse = await this.callAiGenerate(config, prompt, 'tag-check', httpAdapter);
+            if (!rawResponse) return null;
+            let parsed = null;
+            try { parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse); } catch (_) { return null; }
+            if (!parsed || typeof parsed !== 'object' || typeof parsed.applies !== 'boolean') return null;
+            const claimed = Array.isArray(parsed.eventEvidence) ? parsed.eventEvidence.filter(item => typeof item === 'string') : [];
+            const evidence = this.verifyBearEvidenceQuotes(claimed, event);
+            const reason = typeof parsed.reason === 'string' ? parsed.reason.trim() : '';
+            if (parsed.applies && evidence.length === 0) {
+                return { applies: false, evidence: [], reason: `${claimed.length > 0 ? 'quoted words not in the event text' : 'no words quoted'}${reason ? ` — ${reason}` : ''}` };
+            }
+            return { applies: parsed.applies, evidence, reason };
+        })().catch(() => null);
+        this._tagVerdictMemo.set(memoKey, pending);
+        return pending;
     }
 
     static eventTagsVocabulary() {
@@ -14991,24 +15062,18 @@ class SharedCore {
             ''
         ];
 
-        // The tag vocabulary and its glosses come from EventSchema.EVENT_TAGS
-        // so a new machine tag is one schema line, not a prompt edit.
-        const vocabulary = SharedCore.eventTagsVocabulary();
-        const tagVocabulary = SharedCore.getAiConfirmableTags();
-        const tagGloss = tagVocabulary.map(tag => `${tag} (${vocabulary[tag].hint || vocabulary[tag].label || tag})`).join(', ');
+        // Tags are NOT part of this answer: measured 2026-11-06 on 470 cached
+        // events, a tags field in the same JSON made the model demote drag
+        // shows put on by bear promoters. Tags get their own call per
+        // candidate — see buildTagCheckPrompt / getAiTagVerdict.
         const outputContract = [
             'Respond with ONLY a JSON object, no other text:',
-            `{"verdict": "bear" | "not_bear" | "unsure", "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>", "tags": [<zero or more of: ${tagVocabulary.map(tag => `"${tag}"`).join(', ')}>]}`,
+            '{"verdict": "bear" | "not_bear" | "unsure", "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}',
             '',
             'eventEvidence is checked automatically against the text above:',
             '- Every string must be copied WORD FOR WORD from the Title or the Description. Never paraphrase, summarize or invent.',
             '- Never quote the Venue, City or Provenance lines. The venue name is not evidence.',
-            '- Quote only wording that shows the EVENT ITSELF is aimed at the bear community. If there is none, return [].',
-            '',
-            // Measured 2026-11-06 (470 cached cases): without the "never
-            // changes it" sentence the model read "drag" as "not bear" and
-            // demoted 14 drag shows put on by bear promoters.
-            `tags is separate from the verdict and NEVER changes it: decide "bear" exactly as you would without tags — a drag show, leather night or kink party put on by a bear promoter or aimed at bears is "bear" AND tagged. tags says what the event ITSELF is. Use only these, as many as fit: ${tagGloss}. A dress-code aside ("leather or gear welcome", "harnesses encouraged"), a drag host at a bar night, or gear meaning gym wear does not make it one: leave tags [] when none fits.`
+            '- Quote only wording that shows the EVENT ITSELF is aimed at the bear community. If there is none, return [].'
         ];
 
         if (this.isBearCheckCurated(event, parserConfig)) {
@@ -15109,17 +15174,10 @@ class SharedCore {
             const evidence = Array.isArray(parsed.eventEvidence)
                 ? parsed.eventEvidence.filter(item => typeof item === 'string')
                 : [];
-            // tags: only the machine-assignable vocabulary, and only ever a
-            // CONFIRMATION of a keyword hit (attachEventTagsToBearDecision).
-            const confirmable = SharedCore.getAiConfirmableTags();
-            const tags = Array.isArray(parsed.tags)
-                ? this.eventSchema.normalizeEventTags(parsed.tags).filter(tag => confirmable.includes(tag))
-                : [];
             return {
                 verdict,
                 reason: typeof parsed.reason === 'string' ? parsed.reason.trim() : '',
                 evidence,
-                tags,
                 provenance
             };
         })().catch(() => null);

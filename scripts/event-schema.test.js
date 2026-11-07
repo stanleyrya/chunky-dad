@@ -949,7 +949,7 @@ test('tags: any spelling folds to the canonical list; the notes line is the stor
     assert.ok(EventSchema.EVENT_TAGS[tag].hint, `${tag} has a hint`);
     assert.equal(EventSchema.EVENT_TAGS[tag].shown, true, `${tag} is an event-kind tag, shown on the card`);
   });
-  assert.deepEqual(EventSchema.normalizeEventTags('drag, kink, Rubber, diaper, leather'), ['diaper', 'drag', 'kink', 'leather', 'rubber']);
+  assert.deepEqual(EventSchema.normalizeEventTags('drag, kink, Rubber, diaper, leather, pup, underwear'), ['diaper', 'drag', 'kink', 'leather', 'pup', 'rubber', 'underwear']);
   assert.equal(EventSchema.isDerivedEventTag('bear-run'), true);
 });
 
