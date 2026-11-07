@@ -29897,6 +29897,13 @@ test('tags: getAiTagVerdict fails closed on a claimed quote the text lacks, and 
   assert.equal(real.applies, true);
   assert.deepEqual(real.evidence, ['Drag Race Viewing']);
   assert.equal(await core.getAiTagVerdict(event, 'drag', { ai: { enabled: false } }, adapter), null, 'AI off → null');
+  // A bare list of quotes is "applies, here are the words" — gated like any claim.
+  const bare = await core.getAiTagVerdict({ title: 'Underwear Night', description: 'strip down to your undies' }, 'underwear', bearCheckConfig('enforce'),
+    buildTagAwareAdapter(null, { underwear: '["Underwear Night", "undies"]' }));
+  assert.deepEqual(bare, { applies: true, evidence: ['Underwear Night', 'undies'], reason: 'quotes only' });
+  const bareBogus = await core.getAiTagVerdict({ title: 'Trivia', description: '' }, 'underwear', bearCheckConfig('enforce'),
+    buildTagAwareAdapter(null, { underwear: '["jockstraps"]' }));
+  assert.equal(bareBogus.applies, false);
 });
 
 test('tags: a stored tagged verdict keeps the event with the owner\'s tags and a manual-tagged stamp; a stored bear verdict carries its tags too', async () => {

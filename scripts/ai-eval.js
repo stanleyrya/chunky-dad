@@ -422,6 +422,8 @@ function scoreBearCheck(kase, parsed, baselineParsed) {
 // tag-check: {tag, applies, eventEvidence, reason}. Production turns an
 // "applies" with no verbatim quote into a decline, so the scorer does too.
 function scoreTagCheck(kase, parsed, baselineParsed) {
+    // Production reads a bare list of quotes as "applies" (still gated).
+    if (Array.isArray(parsed)) parsed = { applies: true, eventEvidence: parsed, reason: 'quotes only', bareList: true };
     if (!parsed || typeof parsed !== 'object' || typeof parsed.applies !== 'boolean') {
         return { accepted: false, acceptDetail: 'no boolean applies', agreement: null };
     }
@@ -439,7 +441,7 @@ function scoreTagCheck(kase, parsed, baselineParsed) {
         acceptDetail: (effective ? 'applies' : 'does not apply') + (parsed.applies && !effective ? ' (no verified quote, demoted)' : '') + ', ' + verified.length + '/' + quotes.length + ' quotes verified',
         agreement,
         agreementDetail,
-        extra: { tag: parsed.tag, applies: effective, claimed: parsed.applies, fabricatedQuotes: quotes.length - verified.length }
+        extra: { tag: parsed.tag, applies: effective, claimed: parsed.applies, bareList: Boolean(parsed.bareList), fabricatedQuotes: quotes.length - verified.length }
     };
 }
 

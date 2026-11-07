@@ -14683,10 +14683,11 @@ class SharedCore {
             `- Description: ${description ? description.slice(0, 600) : '(none)'}`,
             '',
             'The tag applies only when the EVENT ITSELF is that kind of event. It does not apply because of the venue\'s reputation, a host\'s persona, a dress-code aside ("gear welcome"), a word used in another sense (a DJ called KiNK, gym gear, a Dungeons & Dragons game), or a promoter\'s other parties.',
-            'Quote the words from the Title or Description that make it apply — copied WORD FOR WORD, never from the Venue line. If you cannot quote any, it does not apply.',
             '',
-            'Respond with ONLY a JSON object, no other text:',
-            `{"tag": "${tag}", "applies": true | false, "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}`
+            'Respond with ONLY this JSON object (an object, never a bare list), no other text:',
+            `{"tag": "${tag}", "applies": true | false, "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}`,
+            '',
+            'eventEvidence is checked automatically: every string must be copied WORD FOR WORD from the Title or the Description, never from the Venue line. It holds the words that make the tag apply; when it would be empty, applies is false.'
         ].join('\n');
     }
 
@@ -14712,6 +14713,10 @@ class SharedCore {
             if (!rawResponse) return null;
             let parsed = null;
             try { parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse); } catch (_) { return null; }
+            // A bare list of quotes (24 of 640 answers on 2026-11-07, the
+            // model skipping straight to the evidence) is read as "applies,
+            // here are the words": the quotes still have to be in the text.
+            if (Array.isArray(parsed)) parsed = { applies: true, eventEvidence: parsed, reason: 'quotes only' };
             if (!parsed || typeof parsed !== 'object' || typeof parsed.applies !== 'boolean') return null;
             const claimed = Array.isArray(parsed.eventEvidence) ? parsed.eventEvidence.filter(item => typeof item === 'string') : [];
             const evidence = this.verifyBearEvidenceQuotes(claimed, event);
