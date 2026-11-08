@@ -2,12 +2,10 @@
 // Per-city calendar summary; js/city-config.js reads it to delist cities
 // with nothing upcoming (see isCityActive there).
 window.CITY_ACTIVITY = {
- "generatedAt": "2026-11-06",
+ "generatedAt": "2026-11-08",
  "cities": {
   "nyc": {
    "dates": [
-    "2026-11-06",
-    "2026-11-07",
     "2026-11-08",
     "2026-11-10",
     "2026-11-11",
@@ -82,7 +80,6 @@ window.CITY_ACTIVITY = {
   },
   "seattle": {
    "dates": [
-    "2026-11-07",
     "2026-11-08",
     "2026-11-15",
     "2026-11-21",
@@ -96,7 +93,6 @@ window.CITY_ACTIVITY = {
   },
   "la": {
    "dates": [
-    "2026-11-06",
     "2026-11-08",
     "2026-11-12",
     "2026-11-14",
@@ -192,8 +188,6 @@ window.CITY_ACTIVITY = {
   },
   "chicago": {
    "dates": [
-    "2026-11-06",
-    "2026-11-07",
     "2026-11-08",
     "2026-11-11",
     "2026-11-13",
@@ -222,7 +216,6 @@ window.CITY_ACTIVITY = {
   },
   "palm-springs": {
    "dates": [
-    "2026-11-06",
     "2026-11-08",
     "2026-12-24"
    ],
@@ -238,8 +231,6 @@ window.CITY_ACTIVITY = {
   },
   "dallas": {
    "dates": [
-    "2026-11-06",
-    "2026-11-07",
     "2026-11-12",
     "2026-11-15",
     "2026-11-21",
@@ -276,7 +267,6 @@ window.CITY_ACTIVITY = {
   },
   "sf": {
    "dates": [
-    "2026-11-06",
     "2026-11-08",
     "2026-11-12",
     "2026-11-13",
@@ -304,7 +294,6 @@ window.CITY_ACTIVITY = {
   },
   "portland": {
    "dates": [
-    "2026-11-06",
     "2026-11-08",
     "2026-11-14",
     "2026-11-16",
@@ -350,7 +339,6 @@ window.CITY_ACTIVITY = {
   },
   "ptown": {
    "dates": [
-    "2026-11-07",
     "2026-11-08",
     "2027-05-07",
     "2027-05-08",
@@ -511,8 +499,6 @@ window.CITY_ACTIVITY = {
   },
   "fort-lauderdale": {
    "dates": [
-    "2026-11-06",
-    "2026-11-07",
     "2026-11-08",
     "2026-11-13",
     "2026-11-14",
@@ -646,7 +632,6 @@ window.CITY_ACTIVITY = {
   },
   "sydney": {
    "dates": [
-    "2026-11-06",
     "2026-11-13"
    ],
    "recurring": 0,
@@ -755,9 +740,7 @@ window.CITY_ACTIVITY = {
    "festivalUntil": null
   },
   "adelaide": {
-   "dates": [
-    "2026-11-06"
-   ],
+   "dates": [],
    "recurring": 0,
    "festivalUntil": null
   },
