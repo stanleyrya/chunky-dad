@@ -323,7 +323,7 @@ test('bear verdict store: upsert by party identity (last verdict wins), clear, a
   assert.equal(cleared.removed, true);
   assert.equal(cleared.verdicts.length, 1);
   assert.throws(() => rq.upsertBearVerdict([], core, { title: '', bar: 'x' }, 'bear'), /no title identity/);
-  assert.throws(() => rq.upsertBearVerdict([], core, { title: 'x' }, 'maybe'), /bear or not_bear/);
+  assert.throws(() => rq.upsertBearVerdict([], core, { title: 'x' }, 'maybe'), /bear, tagged or not_bear/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -1710,4 +1710,17 @@ test('manual cards: normalise (actions, required fields, edit changes, two optio
   assert.equal(chosenDeck.counts.waiting, 0, 'and is not a fix note');
   assert.ok(rq.formatRejectionsText(chosen).includes('[CHOSE B] MANUAL CHOOSE A or B?'), rq.formatRejectionsText(chosen));
   assert.ok(rq.MANUAL_REASON_TAGS.includes('already done by hand'));
+});
+
+test('bear verdict store: tagged verdicts carry their tags; not_bear never does; a tagged verdict without tags is refused', () => {
+  const core = rq.createDeckCore({ config: { cities: CITIES } }, {});
+  const tagged = rq.upsertBearVerdict([], core, { title: 'Beer Bust', bar: 'Eagle NYC', city: 'nyc' }, 'tagged', { tags: ['Bear crowd', 'leather', 'bear-run'], now: new Date('2030-01-01T00:00:00Z') });
+  assert.deepEqual(tagged.entry.tags, ['bear-crowd', 'leather'], 'canonical, and never the derived bear-run');
+  assert.throws(() => rq.upsertBearVerdict([], core, { title: 'Beer Bust', bar: 'Eagle NYC', city: 'nyc' }, 'tagged'), /needs at least one tag/);
+  const notBear = rq.upsertBearVerdict(tagged.verdicts, core, { title: 'Beer Bust', bar: 'Eagle NYC', city: 'nyc' }, 'not_bear', { tags: ['leather'] });
+  assert.equal(notBear.verdicts.length, 1, 'the tagged entry is replaced');
+  assert.equal(notBear.entry.tags, undefined);
+  assert.deepEqual(
+    rq.normalizeBearVerdicts({ verdicts: [{ verdict: 'tagged', tags: 'leather, bear-run', title: 'x', venue: 'y' }, { verdict: 'not_bear', tags: ['leather'], title: 'z', venue: 'y' }, { verdict: 'maybe', title: 'q' }] }),
+    [{ verdict: 'tagged', tags: ['leather'], title: 'x', venue: 'y' }, { verdict: 'not_bear', title: 'z', venue: 'y' }]);
 });

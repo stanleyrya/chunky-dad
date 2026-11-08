@@ -35,6 +35,7 @@ const PASSES = [
     'ocr',
     'context-prep',
     'bear-check',
+    'tag-check',
     'merge-arbitration',
     'classify-page',
     'short-name',
@@ -49,6 +50,7 @@ const PASS_NUM_PREDICT = {
     'ocr': 2000,
     'context-prep': 2000,
     'bear-check': 400,
+    'tag-check': 200,
     'merge-arbitration': 800,
     'classify-page': 300,
     'short-name': 200,
@@ -417,6 +419,32 @@ function scoreBearCheck(kase, parsed, baselineParsed) {
     };
 }
 
+// tag-check: {tag, applies, eventEvidence, reason}. Production turns an
+// "applies" with no verbatim quote into a decline, so the scorer does too.
+function scoreTagCheck(kase, parsed, baselineParsed) {
+    // Production reads a bare list of quotes as "applies" (still gated).
+    if (Array.isArray(parsed)) parsed = { applies: true, eventEvidence: parsed, reason: 'quotes only', bareList: true };
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.applies !== 'boolean') {
+        return { accepted: false, acceptDetail: 'no boolean applies', agreement: null };
+    }
+    const quotes = Array.isArray(parsed.eventEvidence) ? parsed.eventEvidence : [];
+    const verified = quotes.filter(q => occursInPrompt(kase.prompt, q));
+    const effective = parsed.applies && verified.length === 0 ? false : parsed.applies;
+    let agreement = null;
+    let agreementDetail = '';
+    if (baselineParsed && typeof baselineParsed === 'object' && typeof baselineParsed.applies === 'boolean') {
+        agreement = baselineParsed.applies === effective ? 1 : 0;
+        agreementDetail = agreement ? String(effective) : String(baselineParsed.applies) + ' -> ' + String(effective);
+    }
+    return {
+        accepted: true,
+        acceptDetail: (effective ? 'applies' : 'does not apply') + (parsed.applies && !effective ? ' (no verified quote, demoted)' : '') + ', ' + verified.length + '/' + quotes.length + ' quotes verified',
+        agreement,
+        agreementDetail,
+        extra: { tag: parsed.tag, applies: effective, claimed: parsed.applies, bareList: Boolean(parsed.bareList), fabricatedQuotes: quotes.length - verified.length }
+    };
+}
+
 function scoreMergeArbitration(kase, parsed, baselineParsed, gates) {
     if (!parsed || typeof parsed !== 'object') {
         return { accepted: false, acceptDetail: 'not an object', agreement: null };
@@ -613,6 +641,7 @@ const SCORERS = {
     'extraction': scoreExtraction,
     'ocr': scoreOcr,
     'bear-check': scoreBearCheck,
+    'tag-check': scoreTagCheck,
     'merge-arbitration': scoreMergeArbitration,
     'classify-page': scoreClassifyPage,
     'short-name': scoreShortName,

@@ -611,13 +611,36 @@ class SharedCore {
         // boundaries.
         this.bearSubstringKeywords = [
             'bear', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 'otter',
-            'leather', 'bearracuda', 'furball', 'megawoof', 'grizzly', 'chunk',
+            'bearracuda', 'furball', 'megawoof', 'grizzly', 'chunk',
             'chub', 'beef', 'scruff', 'jock'
         ];
         this.bearWordBoundaryKeywords = [
             'dad', 'dads', 'fat', 'fur', 'pup', 'pig', 'wolf', 'wolves',
-            'thick', 'burly', 'stocky', 'husky', 'beard', 'bearded', 'harness'
+            'thick', 'burly', 'stocky', 'husky', 'beard', 'bearded'
         ];
+        // Tag vocabulary is TAG evidence, not bear evidence (owner ruling
+        // 2026-11-05: a leather night is on the calendar because it is
+        // leather, and whether it is also bear is the AI's call on the rest
+        // of the text). 'leather' and 'harness' moved here from the bear
+        // lists above — the event is still kept, it now says why. One family
+        // per machine tag in EventSchema.EVENT_TAGS (a test holds the two in
+        // step), same two-list shape as the bear keywords: substrings for
+        // distinctive stems, word boundaries for common words ("gear",
+        // "drag", "pup"). Every hit is a CANDIDATE the AI confirms or
+        // declines — see collectMachineEventTags. Sweep of the 3,699 distinct
+        // events in the bear-check cache (2026-11-06): "queens" alone is a
+        // brass band and a horror night, "dungeon" is a D&D drag show as
+        // often as a play space — hence the AI confirmation.
+        this.tagKeywords = {
+            leather: { substring: ['leather', 'bootblack'], word: ['harness', 'harnesses', 'gear', 'flw'] },
+            kink: { substring: ['kink', 'fetish', 'bdsm', 'dungeon'], word: ['play party', 'cbt'] },
+            rubber: { substring: ['rubber', 'latex'], word: [] },
+            diaper: { substring: ['diaper', 'abdl'], word: ['nappy', 'nappies'] },
+            drag: { substring: ['dragula'], word: ['drag'] },
+            pup: { substring: ['puppy', 'puppies'], word: ['pup', 'pups', 'mosh', 'pet night', 'pet play'] },
+            underwear: { substring: ['underwear', 'jockstrap'], word: ['undies', 'jocks', 'singlet', 'singlets'] }
+        };
+
         
         // Store cities config for timezone assignment
         this.cities = cities;
@@ -1386,7 +1409,7 @@ class SharedCore {
         // content.
         if (SharedCore.isProvenanceCompanionField(name)) return false;
         return name !== 'key' && name !== 'notes' && name !== 'source'
-            && name !== 'location' && name !== 'gmaps';
+            && name !== 'location' && name !== 'gmaps' && name !== 'tags';
     }
 
     // True for the provenance companion fields (the canonical list lives on
@@ -1441,14 +1464,30 @@ class SharedCore {
         const fields = this.parseNotesIntoFields(record.notes || '');
         const value = typeof fields.bearSource === 'string' ? fields.bearSource.trim().toLowerCase() : '';
         if (value.startsWith('manual-not-bear')) return 'manual-not-bear';
+        if (value.startsWith('manual-tagged')) return 'manual-tagged';
         if (value.startsWith('manual-bear')) return 'manual-bear';
         return null;
+    }
+
+    // True for a stored verdict record the pipeline reads: bear, tagged
+    // (kept for its tags, not bear) or not_bear.
+    static isBearVerdictValue(value) {
+        return value === 'bear' || value === 'tagged' || value === 'not_bear';
+    }
+
+    // Automatic bearSource for an event kept on its tags: `tagged (keyword:
+    // leather)` / `tagged (ai: <reason>)` — ranks with keyword/ai
+    // (PROVENANCE_TRUST_TIERS), so an owner verdict still outranks it.
+    static buildTaggedBearSource(provenance) {
+        let reason = String(provenance || '').replace(/^tagged:[^—]*—\s*/, '').replace(/\s+/g, ' ').trim();
+        if (reason.length > 80) reason = `${reason.slice(0, 77)}...`;
+        return reason ? `tagged (${reason})` : 'tagged';
     }
 
     // One-line manual bearSource value: `manual-bear (overrode ai: <reason>)` /
     // `manual-not-bear (overrode ai: <reason>)`, reason truncated to ~80 chars.
     static buildManualBearSource(direction, overriddenReason) {
-        const label = direction === 'bear' ? 'manual-bear' : 'manual-not-bear';
+        const label = direction === 'bear' ? 'manual-bear' : direction === 'tagged' ? 'manual-tagged' : 'manual-not-bear';
         let reason = String(overriddenReason || '').replace(/\s+/g, ' ').trim();
         // The stored verdict reasons are prefixed with their cascade tier
         // ("ai: drag show") — the label already says "overrode ai", so strip it.
@@ -1465,7 +1504,7 @@ class SharedCore {
     // store-kept event written to the calendar converges with a live tap —
     // getManualBearVerdictFromRecord recognizes it on future runs.
     static buildBearVerdictStoreSource(verdict, stampedAt) {
-        const label = verdict === 'bear' ? 'manual-bear' : 'manual-not-bear';
+        const label = verdict === 'bear' ? 'manual-bear' : verdict === 'tagged' ? 'manual-tagged' : 'manual-not-bear';
         const stamp = String(stampedAt || '').slice(0, 10);
         return stamp ? `${label} (verdict store ${stamp})` : `${label} (verdict store)`;
     }
@@ -1743,7 +1782,7 @@ class SharedCore {
         const cached = this._bearVerdictStoreIndex;
         if (cached && cached.store === store && cached.signature === signature) return cached;
         const usable = store.filter(entry => entry && typeof entry === 'object'
-            && (entry.verdict === 'bear' || entry.verdict === 'not_bear'));
+            && SharedCore.isBearVerdictValue(entry.verdict));
         const groups = new Map();
         for (const entry of usable) {
             const names = [entry.venue];
@@ -1881,7 +1920,7 @@ class SharedCore {
             return keys;
         };
         const usable = store.filter(entry => entry && typeof entry === 'object'
-            && (entry.verdict === 'bear' || entry.verdict === 'not_bear'));
+            && SharedCore.isBearVerdictValue(entry.verdict));
         const exact = [];
         const siblings = [];
         for (const entry of usable) {
@@ -2744,7 +2783,7 @@ class SharedCore {
             if (!byHost.has(host)) {
                 byHost.set(host, {
                     host, parsers: [], pages: 0, outbound_pages: 0, page_errors: 0, errors: [],
-                    extracted: 0, events: 0, bear: 0, upcoming: 0, duration_ms: 0,
+                    extracted: 0, events: 0, bear: 0, tagged: 0, upcoming: 0, duration_ms: 0,
                     proposals: { new: 0, merge: 0 }, upcomingKeys: {}, eventKeyIndex: new Set(),
                     roles: [], url: '', signals: { structured: 0, ai: 0 },
                     quality: { n: 0, time: 0, place: 0, coords: 0, url: 0, image: 0, desc: 0, keys: new Set(), maxDay: '', flags: {}, aiDropped: 0, manualDropped: 0, dropReasons: new Map(), dedupRemoved: 0, merges: 0, changed: 0, churnFields: {}, errors: {}, renamed: 0, renamedExamples: [] }
@@ -2795,6 +2834,7 @@ class SharedCore {
                 const row = hostOf(host);
                 row.events += 1;
                 if (event.isBearEvent === true) row.bear += 1;
+                if (String(event.tags || '').trim()) row.tagged += 1;
                 const q = row.quality;
                 q.n += 1;
                 if (!(event.timeUnknown === true || event.allDay === true)) q.time += 1;
@@ -2959,6 +2999,7 @@ class SharedCore {
                 extracted: row.extracted,
                 events: row.events,
                 bear: row.bear,
+                tagged: row.tagged,
                 upcoming: row.upcoming,
                 proposals: row.proposals,
                 duration_ms: row.duration_ms,
@@ -14171,7 +14212,7 @@ class SharedCore {
         if (mode === 'off') return legacyFilter();
 
         const tag = mode === 'report' ? ' [report]' : '';
-        const counts = { bear: 0, keyword: 0, ai: 0, flagged: 0, dropped: 0 };
+        const counts = { bear: 0, keyword: 0, ai: 0, tagged: 0, flagged: 0, dropped: 0 };
         const kept = [];
         // Drops are decided per record here but FINALISED after the loop, once
         // every record's verdict exists — see the twin sweep below.
@@ -14206,8 +14247,19 @@ class SharedCore {
                             : decision.provenance.startsWith('config:') ? 'config'
                                 : '';
                 kept.push(bearSource
-                    ? {...event, isBearEvent: true, bearSource}
-                    : {...event, isBearEvent: true});
+                    ? {...event, isBearEvent: true, bearSource, ...this.buildEventTagsPatch(decision)}
+                    : {...event, isBearEvent: true, ...this.buildEventTagsPatch(decision)});
+            } else if (decision.result === 'tagged') {
+                // Not bear, kept for its tags (see attachEventTagsToBearDecision).
+                // isBearEvent stays the pipeline's "belongs on the calendar"
+                // flag; bearSource says it was the tags that earned the place.
+                counts.tagged++;
+                const tagList = Array.isArray(decision.tags) ? decision.tags.join(', ') : '';
+                console.log(`🏷️ BEAR CHECK${tag}: "${title}" → KEEP, tagged ${tagList} — not bear (${decision.provenance})`);
+                const bearSource = decision.manualStore
+                    ? SharedCore.buildBearVerdictStoreSource('tagged', decision.storedVerdictEntry && decision.storedVerdictEntry.stampedAt)
+                    : SharedCore.buildTaggedBearSource(decision.provenance);
+                kept.push({...event, isBearEvent: true, bearSource, ...this.buildEventTagsPatch(decision)});
             } else if (decision.result === 'not_bear' && (!trusted || decision.manualStore === true)) {
                 // A stored manual not_bear drops even TRUSTED (alwaysBear /
                 // promoter-always) events: the owner's explicit verdict wins
@@ -14300,9 +14352,16 @@ class SharedCore {
 
         const flagLabel = mode === 'report' ? 'would-flag' : 'flagged';
         const dropLabel = mode === 'report' ? 'would-drop' : 'dropped';
-        console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}`);
+        console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.tagged} tagged (kept, not bear), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}`);
 
         return mode === 'report' ? legacyFilter() : kept;
+    }
+
+    // `{ tags: 'leather' }` for a decision that carries tags, `{}` otherwise —
+    // the notes line is the storable set (derived tags never land in a record).
+    buildEventTagsPatch(decision) {
+        const tags = decision && Array.isArray(decision.tags) ? this.eventSchema.formatEventTags(decision.tags) : '';
+        return tags ? { tags } : {};
     }
 
     getBearCheckMode(parserConfig) {
@@ -14345,7 +14404,68 @@ class SharedCore {
 
     // One cascade decision per event: { result: 'bear'|'not_bear'|'unsure',
     // provenance: 'keyword: ...' | 'allowlist: ...' | 'ai: ...' | 'config/fallback: ...' }.
+    // The bear check's whole answer: the verdict (computeBearCheckVerdict's
+    // cascade) plus the event's tags, plus the one rule that joins them — an
+    // event that is not bear but carries a tag that earns it a place
+    // (EventSchema.EVENT_TAGS) is KEPT as `tagged`, never dropped. Owner
+    // ruling 2026-11-05: delete what is not bear, but keep leather,
+    // bear-crowd, bear-run.
     async computeBearCheckDecision(event, parserConfig, httpAdapter) {
+        const decision = await this.computeBearCheckVerdict(event, parserConfig, httpAdapter);
+        return this.attachEventTagsToBearDecision(decision, event, parserConfig, httpAdapter);
+    }
+
+    async attachEventTagsToBearDecision(decision, event, parserConfig, httpAdapter) {
+        if (!decision || typeof decision !== 'object') return decision;
+        const schema = this.eventSchema;
+        const title = (event && event.title) || 'Unknown';
+        // A stored owner verdict carries the owner's tags — exactly those,
+        // nothing the machine would add on top.
+        if (decision.manualStore === true) {
+            const entry = decision.storedVerdictEntry || {};
+            decision.tags = schema.normalizeEventTags(entry.tags);
+            return decision;
+        }
+        const machine = this.collectMachineEventTags(event);
+        let tags = [];
+        if (machine.candidates.length > 0) {
+            const describe = tag => {
+                const hit = machine.hits[tag] || { title: [], description: [] };
+                return `${tag} (${hit.title.length > 0 ? `title: ${hit.title.join(', ')}` : `description: ${hit.description.join(', ')}`})`;
+            };
+            // One focused call per candidate tag (memoized per event+tag,
+            // cached like every pass). The bear verdict is a separate answer
+            // on purpose: sharing one JSON moved verdicts (2026-11-06).
+            const answers = await Promise.all(machine.candidates.map(tag => this.getAiTagVerdict(event, tag, parserConfig, httpAdapter)));
+            const confirmed = []; const declined = []; const unanswered = [];
+            machine.candidates.forEach((tag, index) => {
+                const answer = answers[index];
+                if (!answer) unanswered.push(tag);
+                else if (answer.applies) confirmed.push(`${tag}: "${answer.evidence[0] || ''}"`);
+                else declined.push(`${tag}: ${answer.reason || 'no reason'}`);
+            });
+            // No AI to ask: what the TITLE names stands, a description-only
+            // hit does not (a dress-code aside reads the same as a night).
+            const standing = unanswered.filter(tag => machine.fromTitle.includes(tag));
+            tags = schema.normalizeEventTags(confirmed.map(line => line.split(':')[0]).concat(standing));
+            const parts = [];
+            if (confirmed.length > 0) parts.push(`confirmed ${confirmed.join('; ')}`);
+            if (declined.length > 0) parts.push(`declined ${declined.join('; ')}`);
+            if (unanswered.length > 0) parts.push(`no AI for ${unanswered.join(', ')} → ${standing.length > 0 ? `title-named stand: ${standing.join(', ')}` : 'not tagged'}`);
+            console.log(`🏷️ TAGS: "${title}" — candidates ${machine.candidates.map(describe).join('; ')}; ${parts.join('; ')}`);
+        }
+        decision.tags = tags;
+        // Not bear, but tagged: kept. An allowlist miss is the source's own
+        // rule ("only these events from this site") and is never overruled.
+        const promotable = decision.result === 'not_bear' || decision.result === 'unsure';
+        if (tags.length > 0 && promotable && !String(decision.provenance || '').startsWith('allowlist:')) {
+            decision.result = 'tagged';
+            decision.provenance = `tagged: ${tags.join(', ')} — ${decision.provenance}`;
+        }
+        return decision;
+    }
+
+    async computeBearCheckVerdict(event, parserConfig, httpAdapter) {
         // Tier 0 — the owner's persistent verdict store (results-UI taps the
         // adapters persist to bear-verdicts.json). A stored manual verdict
         // outranks every automatic tier IN BOTH DIRECTIONS, exactly like the
@@ -14487,6 +14607,143 @@ class SharedCore {
             if (new RegExp(`\\b${escaped}\\b`, 'i').test(source)) matched.push(keyword);
         }
         return matched;
+    }
+
+    // One tag family's keyword hits in a text (same two-list shape as
+    // matchBearKeywords). Empty array = no hit.
+    matchTagKeywords(text, tag) {
+        const family = this.tagKeywords && this.tagKeywords[tag];
+        const source = String(text || '').toLowerCase();
+        if (!family || !source) return [];
+        const matched = [];
+        for (const keyword of family.substring || []) {
+            if (source.includes(keyword)) matched.push(keyword);
+        }
+        for (const keyword of family.word || []) {
+            const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (new RegExp(`\\b${escaped}\\b`, 'i').test(source)) matched.push(keyword);
+        }
+        return matched;
+    }
+
+    // The machine-assignable tags an event's OWN text supports:
+    //   candidates — every tag with a keyword hit in the title or the
+    //                description; the AI confirms or declines each one
+    //                inside the bear-check answer (attachEventTagsToBearDecision)
+    //   fromTitle  — the subset the TITLE names ("Leather Night", "Drag
+    //                Brunch"): what stands when no AI is there to ask
+    //   hits       — per tag, the words that matched, by field
+    // A dress-code aside ("leather or gear welcome") reads the same as a
+    // leather night here, and "KiNK (live)" is a DJ, "Gym Gear Party" is
+    // gym wear, "Dungeons & Drag Queens" is a board game — the words alone
+    // cannot tell, so nothing is stamped without the AI while it is up.
+    // The venue name is never evidence: a leather bar's trivia night is not
+    // a leather event.
+    collectMachineEventTags(event) {
+        const result = { candidates: [], fromTitle: [], hits: {} };
+        if (!event || typeof event !== 'object') return result;
+        for (const tag of SharedCore.getAiConfirmableTags()) {
+            const title = this.matchTagKeywords(event.title, tag);
+            const description = this.matchTagKeywords(event.description, tag);
+            if (title.length === 0 && description.length === 0) continue;
+            result.candidates.push(tag);
+            if (title.length > 0) result.fromTitle.push(tag);
+            result.hits[tag] = { title, description };
+        }
+        result.candidates.sort();
+        result.fromTitle.sort();
+        return result;
+    }
+
+    // Tags the AI may CONFIRM (never originate): the machine-assignable
+    // vocabulary from EventSchema.EVENT_TAGS.
+    static getAiConfirmableTags() {
+        const tags = SharedCore.eventTagsVocabulary();
+        return Object.keys(tags).filter(tag => tags[tag] && tags[tag].who === 'machine');
+    }
+
+    // The tag check: one question, one tag, one event. Kept apart from the
+    // bear check so the verdict prompt never learns the word "drag".
+    buildTagCheckPrompt(event, tag) {
+        const vocabulary = SharedCore.eventTagsVocabulary();
+        const entry = vocabulary[tag] || {};
+        const title = String(event.title || '').trim();
+        const description = String(event.description || '').trim();
+        const bar = String(event.bar || '').trim();
+        return [
+            'You are tagging events on a gay men\'s nightlife calendar. One tag, one event: does the tag apply?',
+            '',
+            `Tag: ${tag}`,
+            `Meaning: ${entry.hint || entry.label || tag}.`,
+            '',
+            'Event:',
+            `- Title: ${title}`,
+            `- Venue: ${bar || 'unknown'}`,
+            `- City: ${event.city || 'unknown'}`,
+            `- Description: ${description ? description.slice(0, 600) : '(none)'}`,
+            '',
+            'The tag applies only when the EVENT ITSELF is that kind of event. It does not apply because of the venue\'s reputation, a host\'s persona, a dress-code aside ("gear welcome"), a word used in another sense (a DJ called KiNK, gym gear, a Dungeons & Dragons game), or a promoter\'s other parties.',
+            '',
+            'Respond with ONLY this JSON object (an object, never a bare list), no other text:',
+            `{"tag": "${tag}", "applies": true | false, "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}`,
+            '',
+            'eventEvidence is checked automatically: every string must be copied WORD FOR WORD from the Title or the Description, never from the Venue line. It holds the words that make the tag apply; when it would be empty, applies is false.'
+        ].join('\n');
+    }
+
+    // { applies, evidence, reason } or null (no AI / unusable answer). An
+    // "applies: true" with no quote that occurs in the event's own text is a
+    // decline: the check fails closed, exactly like the bear evidence gate.
+    async getAiTagVerdict(event, tag, parserConfig, httpAdapter) {
+        if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return null;
+        const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        if (rawAi.enabled === false) return null;
+        const resolved = this.resolveAiConfig(rawAi);
+        if (!resolved.enabled || !resolved.endpoint) return null;
+        const title = String(event.title || '').trim();
+        const description = String(event.description || '').trim();
+        const bar = String(event.bar || '').trim();
+        const memoKey = `${tag}|${title}|${description}|${bar}`;
+        if (!this._tagVerdictMemo) this._tagVerdictMemo = new Map();
+        if (this._tagVerdictMemo.has(memoKey)) return this._tagVerdictMemo.get(memoKey);
+        const prompt = this.buildTagCheckPrompt(event, tag);
+        const config = { ...resolved, temperature: 0, numPredict: Math.min(Number(resolved.numPredict) || 200, 200) };
+        const pending = (async () => {
+            const rawResponse = await this.callAiGenerate(config, prompt, 'tag-check', httpAdapter);
+            if (!rawResponse) return null;
+            let parsed = null;
+            try { parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse); } catch (_) { return null; }
+            // A bare list of quotes (24 of 640 answers on 2026-11-07, the
+            // model skipping straight to the evidence) is read as "applies,
+            // here are the words": the quotes still have to be in the text.
+            if (Array.isArray(parsed)) parsed = { applies: true, eventEvidence: parsed, reason: 'quotes only' };
+            if (!parsed || typeof parsed !== 'object' || typeof parsed.applies !== 'boolean') return null;
+            const claimed = Array.isArray(parsed.eventEvidence) ? parsed.eventEvidence.filter(item => typeof item === 'string') : [];
+            const evidence = this.verifyBearEvidenceQuotes(claimed, event);
+            const reason = typeof parsed.reason === 'string' ? parsed.reason.trim() : '';
+            if (parsed.applies && evidence.length === 0) {
+                return { applies: false, evidence: [], reason: `${claimed.length > 0 ? 'quoted words not in the event text' : 'no words quoted'}${reason ? ` — ${reason}` : ''}` };
+            }
+            return { applies: parsed.applies, evidence, reason };
+        })().catch(() => null);
+        this._tagVerdictMemo.set(memoKey, pending);
+        return pending;
+    }
+
+    static eventTagsVocabulary() {
+        const schema = SharedCore.resolveEventSchema();
+        return schema && schema.EVENT_TAGS ? schema.EVENT_TAGS : {};
+    }
+
+    // The schema twin this runtime loaded (scripts/ in Node, window.EventSchema
+    // on the site) — for the static tag helpers that have no instance.
+    static resolveEventSchema() {
+        if (typeof module !== 'undefined' && module.exports) {
+            try { return require('./event-schema').EventSchema; } catch (_) { /* fall through */ }
+        }
+        if (typeof window !== 'undefined' && window.EventSchema) return window.EventSchema;
+        if (typeof globalThis !== 'undefined' && globalThis.EventSchema) return globalThis.EventSchema;
+        return null;
     }
 
     // Prompt exemplars for "a named bear party brand or series", read off the
@@ -14810,6 +15067,10 @@ class SharedCore {
             ''
         ];
 
+        // Tags are NOT part of this answer: measured 2026-11-06 on 470 cached
+        // events, a tags field in the same JSON made the model demote drag
+        // shows put on by bear promoters. Tags get their own call per
+        // candidate — see buildTagCheckPrompt / getAiTagVerdict.
         const outputContract = [
             'Respond with ONLY a JSON object, no other text:',
             '{"verdict": "bear" | "not_bear" | "unsure", "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}',
@@ -18459,6 +18720,25 @@ class SharedCore {
             // word and wins; otherwise a stored manual-* value is never
             // clobbered by an automatic keyword/ai/config stamp; otherwise the
             // fresh automatic verdict follows this run's cascade decision.
+            // tags: an owner verdict's tags are exact (a fresh manual-* tap on
+            // the scraped side, else a manual-* record on the calendar); between
+            // two automatic readings the union stands — a machine tag, once
+            // earned, leaves only by the owner's word. Never arbitrated by the
+            // AI (isArbitrationEligibleField), never a reason for a card
+            // (getOwnerReviewChangeFields): a tags-only update is housekeeping.
+            if (fieldName === 'tags') {
+                const scraperManual = this.isManualBearSource(scraperObject.bearSource);
+                const calendarManual = this.isManualBearSource(calendarObject.bearSource);
+                const tags = scraperManual
+                    ? this.eventSchema.formatEventTags(scraperValue)
+                    : calendarManual
+                        ? this.eventSchema.formatEventTags(calendarValue)
+                        : this.eventSchema.formatEventTags(this.eventSchema.mergeEventTags(scraperValue, calendarValue));
+                if (tags) mergedObject[fieldName] = tags;
+                else delete mergedObject[fieldName];
+                continue;
+            }
+
             if (fieldName === 'bearSource') {
                 if (this.isManualBearSource(scraperValue)) {
                     mergedObject[fieldName] = scraperValue;
@@ -24700,11 +24980,17 @@ class SharedCore {
                 // Mirrors the live-tap `keptMarkedBear` branch in the Scriptable
                 // adapter (isBearEvent set, stored bearSource adopted, review flag
                 // deleted) so a stored verdict and a live tap converge on one state.
-                if (storedVerdict === 'manual-bear') {
+                if (storedVerdict === 'manual-bear' || storedVerdict === 'manual-tagged') {
                     const storedFields = this.parseNotesIntoFields(matchedRecord.notes || '');
                     const storedBearSource = typeof storedFields.bearSource === 'string' ? storedFields.bearSource.trim() : '';
                     preparedEvent = { ...event, isBearEvent: true };
                     if (storedBearSource) preparedEvent.bearSource = storedBearSource;
+                    // A manual-tagged record's tags are the owner's word on
+                    // the event — the write carries them, not this run's.
+                    if (storedVerdict === 'manual-tagged') {
+                        const storedTags = this.eventSchema.formatEventTags(storedFields.tags);
+                        if (storedTags) preparedEvent.tags = storedTags;
+                    }
                     const clearedFlag = typeof preparedEvent.bearReview === 'string' && preparedEvent.bearReview
                         ? preparedEvent.bearReview
                         : '';
@@ -24768,7 +25054,8 @@ class SharedCore {
                 const existingEvents = this.viewStoredAllDayRecords(await calendarAdapter.getExistingEvents(droppedEvent), droppedEvent);
                 const analysis = await this.resolveCalendarAnalysisWithSeriesProbe(droppedEvent, existingEvents, mergeMode, calendarAdapter);
                 const matchedRecord = analysis.existingEvent || analysis.sourceEvent || null;
-                if (!matchedRecord || this.getManualBearVerdictFromRecord(matchedRecord) !== 'manual-bear') continue;
+                const recordVerdict = matchedRecord ? this.getManualBearVerdictFromRecord(matchedRecord) : null;
+                if (recordVerdict !== 'manual-bear' && recordVerdict !== 'manual-tagged') continue;
                 console.log(`🐻 BEAR CHECK: "${droppedEvent.title || 'Unknown'}" → bear (manual override on calendar record)`);
                 const rescuedEvent = { ...droppedEvent, isBearEvent: true };
                 // Duplicate-row guard: this rescue joins the plan AFTER every
@@ -30509,7 +30796,7 @@ SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
     // parser spells structured-data artwork 'jsonld', 'json-ld' or
     // 'json-api' depending on the route it came by.
     imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'json-ld': 2, 'json-api': 2, 'page': 1 }),
-    bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'keyword': 1, 'ai': 1, 'config': 1 })
+    bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'manual-tagged': 2, 'keyword': 1, 'ai': 1, 'config': 1, 'tagged': 1 })
 });
 
 // ============================================================================

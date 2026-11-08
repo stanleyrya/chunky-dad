@@ -1415,6 +1415,12 @@ test('review routes: deck → decide → decided → undo, over a temp shared di
     assert.equal(JSON.parse(clearedBear.body).removed, true);
     assert.equal((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'maybe', event: {} }))).status, 400);
 
+    const taggedNoTags = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'tagged', event: { title: 'Beer Bust', bar: 'Eagle NYC', city: 'nyc' } }));
+    assert.equal(taggedNoTags.status, 400, 'a tagged verdict needs its tags');
+    const tagged = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'tagged', tags: ['bear-crowd'], event: { title: 'Beer Bust', bar: 'Eagle NYC', city: 'nyc' } }));
+    assert.equal(tagged.status, 200);
+    assert.deepEqual(JSON.parse(tagged.body).entry.tags, ['bear-crowd']);
+
     const fallback = await request(state, 'GET', '/review?run=not-a-run');
     assert.ok(fallback.body.includes('FURBALL NYC'), 'a bad run id falls back to the newest run');
     const missing = await request(state, 'GET', '/review?run=20200101-000000');
