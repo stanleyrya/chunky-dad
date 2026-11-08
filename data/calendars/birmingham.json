@@ -41,6 +41,7 @@
       "ticketUrl": "https://dice.fm/event/oepd2a-beefmince-x-bear-brum-2026-26th-sep-eden-birmingham-tickets",
       "shortName": "BEEF­MINCE",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -91,6 +92,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=52.4822694%2C-1.8900078",
       "shortName": "BEAR BRUM",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",

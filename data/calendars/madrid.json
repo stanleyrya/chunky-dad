@@ -30,6 +30,7 @@
       "website": null,
       "gmaps": "https://www.google.com/maps/search/?api=1&query=madrid",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",
@@ -73,6 +74,7 @@
       "ticketUrl": "https://www.tickettailor.com/events/asociacionmadbear/2409132",
       "shortName": "FUR­BALL",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -126,6 +128,7 @@
       "ticketUrl": "https://www.tickettailor.com/checkout/view-event/id/9065398/chk/a813c34adf9fbe0b73739aade9500825/",
       "shortName": "MADBEAR PARTY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",
@@ -168,6 +171,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Chang%C3%B3%2C%20Madrid",
       "ticketUrl": "https://site.fourvenues.com/es/matrix-events/events/macho-party--04-12-2026-0U83",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",

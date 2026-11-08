@@ -37,6 +37,7 @@
       "ticketUrl": "https://events.humanitix.com/bri13nov",
       "shortName": "THICK 'N' JUICY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",
@@ -83,6 +84,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Come%20to%20Daddy%2C%20208%20Montague%20Road%2C%20Brisbane%2C%20Queensland",
       "shortName": "NIGHT BEFORE",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",
@@ -125,6 +127,7 @@
       "ticketUrl": "https://events.humanitix.com/come-aboard-to-daddy-melt-boat-parade-on-the-lady-brisbane-with-come-to-daddy/tickets",
       "shortName": "COME ABOARD",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",

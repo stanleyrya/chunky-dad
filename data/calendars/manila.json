@@ -33,6 +33,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Hey%20Teddy%20Manila",
       "shortName": "POBLACION BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",

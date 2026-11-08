@@ -33,6 +33,7 @@
       "ticketUrl": "https://forms.gle/7bMZpoZaCaK1RZjB9",
       "shortName": "UTOPIA×TACKLE",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",
@@ -74,6 +75,7 @@
       "website": null,
       "gmaps": "https://www.google.com/maps/search/?api=1&query=DRUNK%20Taipei",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",

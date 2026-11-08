@@ -30,6 +30,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Edinburgh",
       "shortName": "BEARSCOTS FEST",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",

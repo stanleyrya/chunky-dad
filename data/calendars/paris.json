@@ -37,6 +37,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=AU%20WORKSHOP%2C%20173%20Rue%20Saint-Martin%2C%2075003%20Paris",
       "shortName": "BEARS PANAME",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",
@@ -76,6 +77,7 @@
       "ticketUrl": "https://shotgun.live/events/bonbon-de-bears-paname",
       "shortName": "BEARS PANAME",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",

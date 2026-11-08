@@ -37,6 +37,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3483941%2C-71.0723921",
       "shortName": "BEAR BOUTIQUE",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -84,6 +85,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/the-belly-party-tickets-1992454124923",
       "shortName": "BELLY PARTY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -135,6 +137,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "MONTHLY TRIVIA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -177,6 +180,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Online%2FVirtual",
       "shortName": "MONTHLY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -223,6 +227,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.32216710000001%2C-71.0621278",
       "shortName": "BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -270,6 +275,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/belly-pride-tickets-1988365931025",
       "shortName": "BELLY PARTY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -326,6 +332,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.358084%2C-71.0587317",
       "shortName": "SPOOKY BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -383,6 +390,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "ALLEY BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -425,6 +433,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Online%2FVirtual",
       "shortName": "MONTHLY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -472,6 +481,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "ALLEY BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -519,6 +529,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "MA BEAR CONTEST",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -569,6 +580,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/massachusetts-bear-2027-contest-tickets-2000202025101",
       "shortName": "MA BEAR CONTEST",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -620,6 +632,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "ALLEY BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -666,6 +679,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3486155%2C-71.0723826",
       "shortName": "BEAR TEA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -708,6 +722,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Online%2FVirtual",
       "shortName": "MONTHLY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -756,6 +771,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/the-belly-party-tickets-1992454124923",
       "shortName": "BELLY PARTY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -807,6 +823,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "MONTHLY TRIVIA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -849,6 +866,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Online%2FVirtual",
       "shortName": "MONTHLY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -896,6 +914,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "ALLEY BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -945,6 +964,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/the-belly-party-tickets-2003913244458",
       "shortName": "BELLY PARTY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -996,6 +1016,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3486155%2C-71.0723826",
       "shortName": "BEAR TEA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1042,6 +1063,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3486155%2C-71.0723826",
       "shortName": "BEAR TEA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1089,6 +1111,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "ALLEY BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1135,6 +1158,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.32216710000001%2C-71.0621278",
       "shortName": "BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1185,6 +1209,7 @@
       "ticketUrl": "https://www.ticketweb.com/event/furball-boston-725-bear-week-legacy-tickets/14269444?REFERRAL_ID=tmfeed",
       "shortName": "FUR-BALL",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1241,6 +1266,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.32216710000001%2C-71.0621278",
       "shortName": "BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1288,6 +1314,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "ALLEY BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1334,6 +1361,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3486155%2C-71.0723826",
       "shortName": "BEAR TEA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1380,6 +1408,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "MONTHLY TRIVIA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1427,6 +1456,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3483941%2C-71.0723921",
       "shortName": "BEAR COMMUNITEA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1473,6 +1503,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3483941%2C-71.0723921",
       "shortName": "BEAR TEA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1519,6 +1550,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3486155%2C-71.0723826",
       "shortName": "BEAR TEA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1566,6 +1598,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "ALLEY BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1612,6 +1645,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3237107%2C-71.0644763",
       "shortName": "BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1658,6 +1692,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "MONTHLY TRIVIA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1704,6 +1739,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "MONTHLY TRIVIA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1752,6 +1788,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/new-england-bear-pride-meet-and-greet-hosted-by-mass-bears-and-cubs-tickets-1989266154618",
       "shortName": "MEET & GREET",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1803,6 +1840,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3483941%2C-71.0723921",
       "shortName": "BEAR TEA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1849,6 +1887,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Dorchester%20Brewing%20Company%2C%201250%20Massachusetts%20Avenue%20Boston%2C%20MA%2C%2002125%20United%20States",
       "shortName": "BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1891,6 +1930,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Online%2FVirtual",
       "shortName": "MONTHLY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1937,6 +1977,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.3483941%2C-71.0723921",
       "shortName": "BEAR TEA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1983,6 +2024,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.32216710000001%2C-71.0621278",
       "shortName": "BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2032,6 +2074,7 @@
       "ticketUrl": "https://www.ticketweb.com/event/furball-boston-dog-days-partyt-legacy-tickets/15006453",
       "shortName": "FUR-BALL",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2094,6 +2137,7 @@
       "ticketUrl": "https://www.ticketweb.com/event/furball-boston-919-locker-room-legacy-tickets/14318244",
       "shortName": "FUR­BALL",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2150,6 +2194,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.32216710000001%2C-71.0621278",
       "shortName": "BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2197,6 +2242,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "ALLEY BEARS",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2244,6 +2290,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "BEAR PRIDE",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2291,6 +2338,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=42.32216710000001%2C-71.0621278",
       "shortName": "BEARZAAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2337,6 +2385,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "MONTHLY TRIVIA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2384,6 +2433,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/the-belly-party-tickets-1987758020749?aff=oddtdtcreator&keep_tld=true",
       "shortName": "BELLY PARTY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2431,6 +2481,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Online%2FVirtual",
       "shortName": "MONTHLY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2479,6 +2530,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/woof-pride-block-party-tickets-1987460355424?utm-campaign=social&utm-content=attendeeshare&utm-medium=discovery&utm-term=listing&utm-source=cp&aff=ebdsshcopyurl",
       "shortName": "WOOF",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2532,6 +2584,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/jocks-at-jacques-tickets-1997052100592?aff=ebdssbdestsearch",
       "shortName": "JOCKS AT JACQUES",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2589,6 +2642,7 @@
       "ticketUrl": "https://www.ticketweb.com/event/furball-boston-1010-foxy-legacy-tickets/14338364?pl=chp",
       "shortName": "FUR­BALL",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2645,6 +2699,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "shortName": "MONTHLY TRIVIA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",

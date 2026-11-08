@@ -33,6 +33,7 @@
       "ticketUrl": "https://events.humanitix.com/per24oct/tickets",
       "shortName": "THICK 'N' JUICY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",
@@ -76,6 +77,7 @@
       "ticketUrl": "https://events.humanitix.com/chunk/tickets",
       "shortName": "CHUNK",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -133,6 +135,7 @@
       "ticketUrl": "https://events.humanitix.com/beef27nov",
       "shortName": "BEEFCAKE",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",

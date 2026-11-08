@@ -37,6 +37,7 @@
       "ticketUrl": "https://www.facebook.com/events/2577149372800975",
       "shortName": "BEAR BASH",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",
@@ -80,6 +81,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=50.9413035%2C6.958138",
       "shortName": "BEARPRIDE",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",

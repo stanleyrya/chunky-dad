@@ -30,6 +30,7 @@
       "ticketUrl": "https://www.leipzig-baeren.de/party/#ticketshop",
       "shortName": "LEIPZIG BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -79,6 +80,7 @@
       "ticketUrl": "https://www.leipzig-baeren.de/party/#ticketshop",
       "shortName": "HAPPY BÄRSDAY",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "gmaps",

@@ -37,6 +37,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Crowne%20Plaza%20Lake%20Buena%20Vista%2C%20Orlando%2C%20FL",
       "shortName": "JAM­BO­REE",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -94,6 +95,7 @@
       "ticketUrl": "https://www.bearjamboree.com/tickets",
       "shortName": "BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",

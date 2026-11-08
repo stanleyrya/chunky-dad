@@ -49,6 +49,7 @@
       "instagram": "https://www.instagram.com/bearhappyhourchi",
       "shorterName": "BHH",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -95,6 +96,7 @@
       "shortName": "Furball",
       "shorterName": "FUR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -143,6 +145,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-4",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -201,6 +204,7 @@
       "ticketUrl": "https://www.sickening.events/e/daddy-pop-6/tickets",
       "shortName": "DADDY POP",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -258,6 +262,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-10",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -317,6 +322,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-market-days-tickets-1991246880021",
       "shortName": "COACH",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "instagram",
@@ -369,6 +375,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-3/tickets",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -427,6 +434,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-3/tickets",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -484,6 +492,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-9",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -546,6 +555,7 @@
       "ticketUrl": "https://events.ticketleap.com/tickets/furballnyc/furball-chicago-friday-the-13th",
       "shortName": "FUR­BALL",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -604,6 +614,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-8",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -663,6 +674,7 @@
       "ticketUrl": "https://www.sickening.events/e/treasurechi/tickets",
       "shortName": "TREAS-URE TRAIL",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -721,6 +733,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-10",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -782,6 +795,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-2003520060434",
       "shortName": "COACH",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -840,6 +854,7 @@
       "ticketUrl": "https://www.sickening.events/e/fetish-friday-gear-3-5",
       "shortName": "GEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -898,6 +913,7 @@
       "ticketUrl": "https://www.etix.com/ticket/p/54403374/?partner_id=100...",
       "shortName": "FUR-BALL",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -956,6 +972,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1014,6 +1031,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-8",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1071,6 +1089,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-2/tickets",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1130,6 +1149,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-3/tickets",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1188,6 +1208,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-5",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1246,6 +1267,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-6",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1304,6 +1326,7 @@
       "ticketUrl": "https://www.sickening.events/e/fetish-friday-gear-3-4/tickets",
       "shortName": "GEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1361,6 +1384,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-7",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1419,6 +1443,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1476,6 +1501,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-4",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1534,6 +1560,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-7",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1592,6 +1619,7 @@
       "ticketUrl": "https://www.sickening.events/e/kok-halloween",
       "shortName": "KOK HALLOWEEN",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1649,6 +1677,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=Jackhammer%2C%206406%20North%20Clark%20Street%2C%20Chicago%2C%20IL%2060626",
       "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1987165553664",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1706,6 +1735,7 @@
       "facebook": "https://www.facebook.com/chijackhammer/events",
       "gmaps": "https://maps.app.goo.gl/Groc2oBnZyjMU2cJA",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1756,6 +1786,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
       "shortName": "CHUNK",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1809,6 +1840,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-9",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1868,6 +1900,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
       "shortName": "CHUNK",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1921,6 +1954,7 @@
       "ticketUrl": "https://www.facebook.com/share/1C7R4GAmgx/",
       "shortName": "DADDY POP",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -1982,6 +2016,7 @@
       "ticketUrl": "https://www.facebook.com/share/1FhfxoAgRX/",
       "shortName": "BELLY UP + COAT",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2048,6 +2083,7 @@
       "shortName": "BHH",
       "shorterName": "BHH",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2108,6 +2144,7 @@
       "shortName": "BHH",
       "shorterName": "BHH",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2166,6 +2203,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-4/tickets",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2226,6 +2264,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
       "shortName": "CHUNK",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2280,6 +2319,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-4/tickets",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2339,6 +2379,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
       "shortName": "CHUNK",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2392,6 +2433,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-2",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2447,6 +2489,7 @@
       "website": "https://northalsted.com/main-events/northalsted-market-days/",
       "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2495,6 +2538,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-3",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2552,6 +2596,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-5",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2609,6 +2654,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-8",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2667,6 +2713,7 @@
       "gmaps": "https://www.google.com/maps/search/?api=1&query=41.998402%2C-87.6709808&query_place_id=ChIJ44RAWrzRD4gRDGoLchD_2SI",
       "ticketUrl": "https://www.eventbrite.com/e/coach-after-dark-chicago-tickets-1980995304282",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "instagram",
@@ -2720,6 +2767,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-4",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2780,6 +2828,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/megawoof-chicago-11-year-anniversary-tickets-1999541032053",
       "shortName": "MEGA­WOOF",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2840,6 +2889,7 @@
       "shortName": "BHH",
       "shorterName": "BHH",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2898,6 +2948,7 @@
       "ticketUrl": "https://www.sickening.events/e/patio-beef-tailgate",
       "shortName": "PATIO BEEF",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -2956,6 +3007,7 @@
       "ticketUrl": "https://www.facebook.com/share/1GMcS6AWCr/",
       "shortName": "LUMBERSEXUAL",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3014,6 +3066,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-2",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3072,6 +3125,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-6",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3132,6 +3186,7 @@
       "ticketUrl": "https://www.sickening.events/e/bear-happy-hour-christmas-eve-edition",
       "shortName": "CHRISTMAS EVE",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3190,6 +3245,7 @@
       "ticketUrl": "https://www.sickening.events/e/nerd-bear-trivia-2-11-11-5-10",
       "shortName": "NERD BEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3248,6 +3304,7 @@
       "ticketUrl": "https://www.sickening.events/e/fetish-friday-gear-3-6",
       "shortName": "GEAR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3306,6 +3363,7 @@
       "ticketUrl": "https://www.sickening.events/e/halloween-at-the-sofo-tap/tickets",
       "shortName": "HALLOWEEN",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3365,6 +3423,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/megawoof-chicago-july-bearwatch-tickets-1987363318183",
       "shortName": "MEGA-WOOF",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3425,6 +3484,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
       "shortName": "CHUNK",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3480,6 +3540,7 @@
       "ticketUrl": "https://www.eventbrite.com/e/bearracuda-chicago-labor-day-jockstrap-party-tickets-1412963053529?aff=oddtdtcreator",
       "shortName": "Bear-rac-uda",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3543,6 +3604,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-5",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3601,6 +3663,7 @@
       "ticketUrl": "https://www.sickening.events/e/free-pumpkin-carving-on-the-patio",
       "shortName": "FREE PUMPKIN",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3658,6 +3721,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJUztUhCjSD4gRnZEajxMfo7Q",
       "ticketUrl": "https://www.sickening.events/e/bearaoke-2-11-11-6",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3716,6 +3780,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-9",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3771,6 +3836,7 @@
       "website": "https://northalsted.com/main-events/northalsted-market-days/",
       "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3822,6 +3888,7 @@
       "shortName": "GOLDI­LOXX",
       "shorterName": "GLX",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "instagram",
@@ -3872,6 +3939,7 @@
       "website": "https://northalsted.com/main-events/northalsted-market-days/",
       "instagram": "https://www.instagram.com/marketdayschicago?igsh=eXZkc3kxMjV0Y3U1",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3920,6 +3988,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-3",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -3978,6 +4047,7 @@
       "ticketUrl": "https://www.sickening.events/e/grrr-chicagos-original-bear-night-2-11-11-5-7",
       "shortName": "GRRR",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
@@ -4037,6 +4107,7 @@
       "gmaps": "https://www.google.com/maps/place/?q=place_id:ChIJ44RAWrzRD4gRDGoLchD_2SI",
       "ticketUrl": "https://www.eventbrite.com/e/flex-on-tour-muscle-worship-in-chicago-tickets-1977453306070",
       "bearReview": null,
+      "tags": [],
       "links": [
         {
           "type": "website",
