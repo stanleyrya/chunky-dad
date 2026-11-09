@@ -632,7 +632,16 @@ class SharedCore {
         // brass band and a horror night, "dungeon" is a D&D drag show as
         // often as a play space — hence the AI confirmation.
         this.tagKeywords = {
-            leather: { substring: ['leather', 'bootblack'], word: ['harness', 'harnesses', 'gear', 'flw'] },
+            // `titleWord`: a word that names the tag only as a TITLE word.
+            // In a description the bare word is an aside ("special guests,
+            // surprises and gear!", "pups, handlers, gear lovers" — both
+            // confirmed as leather on 2026-11-09); there the description has
+            // to say the night is about it ("GEAR IS REQUIRED", "a gear night").
+            leather: {
+                substring: ['leather', 'bootblack'],
+                word: ['harness', 'harnesses', 'flw', 'gear night', 'gear party', 'gear required', 'gear is required', 'gear only', 'gear mandatory', 'full gear'],
+                titleWord: ['gear']
+            },
             kink: { substring: ['kink', 'fetish', 'bdsm', 'dungeon'], word: ['play party', 'cbt'] },
             rubber: { substring: ['rubber', 'latex'], word: [] },
             diaper: { substring: ['diaper', 'abdl'], word: ['nappy', 'nappies'] },
@@ -14647,8 +14656,9 @@ class SharedCore {
     }
 
     // One tag family's keyword hits in a text (same two-list shape as
-    // matchBearKeywords). Empty array = no hit.
-    matchTagKeywords(text, tag) {
+    // matchBearKeywords). Empty array = no hit. options.title: the text is
+    // the event's TITLE, where the family's `titleWord` list counts too.
+    matchTagKeywords(text, tag, options = {}) {
         const family = this.tagKeywords && this.tagKeywords[tag];
         const source = String(text || '').toLowerCase();
         if (!family || !source) return [];
@@ -14656,7 +14666,8 @@ class SharedCore {
         for (const keyword of family.substring || []) {
             if (source.includes(keyword)) matched.push(keyword);
         }
-        for (const keyword of family.word || []) {
+        const words = (family.word || []).concat(options.title === true ? family.titleWord || [] : []);
+        for (const keyword of words) {
             const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             if (new RegExp(`\\b${escaped}\\b`, 'i').test(source)) matched.push(keyword);
         }
@@ -14680,7 +14691,7 @@ class SharedCore {
         const result = { candidates: [], fromTitle: [], hits: {} };
         if (!event || typeof event !== 'object') return result;
         for (const tag of SharedCore.getAiConfirmableTags()) {
-            const title = this.matchTagKeywords(event.title, tag);
+            const title = this.matchTagKeywords(event.title, tag, { title: true });
             const description = this.matchTagKeywords(event.description, tag);
             if (title.length === 0 && description.length === 0) continue;
             result.candidates.push(tag);

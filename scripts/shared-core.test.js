@@ -6014,12 +6014,12 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
   assert.deepEqual(core.collectMachineEventTags(gearNight), {
     candidates: ['leather', 'rubber'],
     fromTitle: ['leather'],
-    hits: { leather: { title: ['gear'], description: ['leather', 'harnesses', 'gear'] }, rubber: { title: [], description: ['rubber'] } }
+    hits: { leather: { title: ['gear night', 'gear'], description: ['leather', 'harnesses', 'gear night'] }, rubber: { title: [], description: ['rubber'] } }
   });
   // The dress-code aside is a candidate too — nothing in the words tells it
   // from a leather night; the AI does.
   const wigOut = core.collectMachineEventTags({ title: 'Wig Out Wig Night', description: 'you can always wear your regular leather or gear' });
-  assert.deepEqual(wigOut, { candidates: ['leather'], fromTitle: [], hits: { leather: { title: [], description: ['leather', 'gear'] } } });
+  assert.deepEqual(wigOut, { candidates: ['leather'], fromTitle: [], hits: { leather: { title: [], description: ['leather'] } } });
   // The venue name is never evidence.
   assert.deepEqual(core.collectMachineEventTags({ title: 'Trivia', bar: 'Leather Lodge' }), { candidates: [], fromTitle: [], hits: {} });
 });
@@ -30112,4 +30112,20 @@ test('keeps: the owner\'s stored verdict and a source allowlist are never overru
   const bear = await core.attachEventTagsToBearDecision({ result: 'bear', provenance: 'keyword' }, { ...event }, bearCheckConfig('enforce'), adapter);
   assert.equal(bear.result, 'bear', 'a bear verdict is never re-labelled');
   assert.equal(bear.bearRun, undefined);
+});
+
+test('tags: the bare word "gear" names leather only in a title; a description has to say the night is about it', async () => {
+  const core = createCore();
+  assert.deepEqual(core.collectMachineEventTags({ title: 'Fetish Friday: GEAR', description: '' }).fromTitle, ['kink', 'leather']);
+  for (const description of ['Join Ryan with special guests, surprises and gear!', 'built for pups, handlers, gear lovers, and anyone', 'Jockstraps, Short Shorts, Onesies, and/or Gear are encouraged!']) {
+    assert.ok(!core.collectMachineEventTags({ title: 'Sunday Session', description }).candidates.includes('leather'), description);
+  }
+  for (const description of ['UPSTAIRS Mondays 9pm-2am $5.00 Cover GEAR IS REQUIRED', 'A gear night at The Eagle NYC hosted by Cadet Kelley', 'An evening of SOCIAL, PLAY AND GEAR NIGHT', 'come in full gear', 'harness up, boys']) {
+    assert.ok(core.collectMachineEventTags({ title: 'Sunday Session', description }).candidates.includes('leather'), description);
+  }
+  // An aside nobody can ask the AI about, and one it would have confirmed: neither keeps the event.
+  const adapter = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'a spa afternoon' }, { leather: { applies: true, eventEvidence: ['gear'], reason: 'gear' } });
+  const result = await core.filterBearEvents([{ title: 'Sunday Session', description: 'special guests, surprises and gear!' }], bearCheckConfig('enforce'), adapter);
+  assert.equal(result.length, 0);
+  assert.equal(adapter.calls.filter(call => /^Tag: /m.test(call.prompt)).length, 0, 'no candidate, no question');
 });
