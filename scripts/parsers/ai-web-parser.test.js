@@ -14392,9 +14392,40 @@ test('the month-feed POST body carries the page\'s atts blob verbatim and a stab
   assert.equal(postCalls.length, 3);
   assert.ok(postCalls[0].body.endsWith(`&${MEC_FIXTURE_ATTS}`),
     `the atts blob is harvested from the page and replayed VERBATIM, got: ${postCalls[0].body}`);
-  assert.equal(postCalls[0].options.cacheUrl,
-    'https://venue.example/wp-admin/admin-ajax.php?mec_month_feed=2026-09',
-    'the synthetic cache key must be stable across runs so the page cache can answer the next one');
+  assert.match(postCalls[0].options.cacheUrl,
+    /^https:\/\/venue\.example\/wp-admin\/admin-ajax\.php\?mec_month_feed=2026-09&mec_atts=[0-9a-f]{8}$/,
+    'the synthetic cache key names the month and the widget that asked');
+
+  // Stable across runs, so the page cache can answer the next one.
+  const again = [];
+  await createParser().parseEvents(
+    { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
+    { discoveryOnly: true }, null, 'link-aggregator',
+    { postForm: async (url, body, options) => { again.push(options.cacheUrl); return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON }; } });
+  assert.deepEqual(again, postCalls.map(call => call.options.cacheUrl));
+});
+
+test('two month widgets on one site never share a cached month: the key carries the widget\'s own atts', async () => {
+  // Eagle LA 2026-10-12 → 11-09: the home page's category-filtered widget and
+  // /calendar/'s full grid POST to one endpoint for the same months. Keyed by
+  // month alone, the home page's filtered answer was served to the calendar.
+  assert.ok(MEC_MONTH_GRID_PAGE_HTML.includes(MEC_FIXTURE_ATTS), 'fixture carries its atts');
+  const filteredAtts = `${MEC_FIXTURE_ATTS}&atts%5Bcategory%5D=21`;
+  const filteredHtml = MEC_MONTH_GRID_PAGE_HTML.split(MEC_FIXTURE_ATTS).join(filteredAtts);
+  const keysFor = async (url, html) => {
+    const keys = [];
+    await createParser().parseEvents({ url, html }, { discoveryOnly: true }, null, 'link-aggregator',
+      { postForm: async (endpoint, body, options) => { keys.push(options.cacheUrl); return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON }; } });
+    return keys;
+  };
+  const calendar = await keysFor('https://venue.example/calendar/', MEC_MONTH_GRID_PAGE_HTML);
+  const home = await keysFor('https://venue.example/home/', filteredHtml);
+  assert.equal(calendar.length, 3);
+  assert.equal(home.length, 3);
+  for (const key of home) assert.ok(!calendar.includes(key), `the filtered widget must not share a key with the full grid: ${key}`);
+  // The same widget embedded on two pages DOES share: one answer, one fetch.
+  const twin = await keysFor('https://venue.example/whats-on/', MEC_MONTH_GRID_PAGE_HTML);
+  assert.deepEqual(twin, calendar);
 });
 
 test('a failed month-feed POST degrades like any failed crawled page: logged, run continues', async () => {

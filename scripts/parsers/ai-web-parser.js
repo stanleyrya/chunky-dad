@@ -9636,7 +9636,8 @@ class AiWebParser {
      * All HTTP goes through the injected httpAdapter (postForm), so the
      * NetworkResilience wrapper and the page cache apply. Each month is
      * cached under a stable synthetic URL (ajax URL + mec_month_feed=YYYY-MM
-     * query suffix — query, not fragment: the cache normalizer strips
+     * + mec_atts=<hash of the widget's atts> — query, not fragment: the cache
+     * normalizer strips
      * fragments) so repeat runs inside the TTL replay the same grid without
      * touching the network.
      */
@@ -11839,6 +11840,18 @@ class AiWebParser {
         return events;
     }
 
+    // FNV-1a, 32 bit, as 8 hex digits: a stable name for a blob of text in a
+    // cache key. Not for security — only "same text, same key".
+    static shortTextHash(text) {
+        let hash = 0x811c9dc5;
+        const value = String(text || '');
+        for (let index = 0; index < value.length; index++) {
+            hash ^= value.charCodeAt(index);
+            hash = Math.imul(hash, 0x01000193);
+        }
+        return (hash >>> 0).toString(16).padStart(8, '0');
+    }
+
     async collectMecMonthFeeds(htmlData, parserConfig, httpAdapter) {
         const html = htmlData && htmlData.html ? htmlData.html : '';
         const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
@@ -11871,7 +11884,15 @@ class AiWebParser {
             // The page's own protocol, replayed: fixed action/navigator fields
             // plus the atts blob EXACTLY as the page embedded it.
             const body = `action=mec_monthly_view_load_month&mec_year=${year}&mec_month=${monthNumber}&navigator_click=true&${mec.attsQuery}`;
-            const cacheUrl = `${mec.ajaxUrl}${mec.ajaxUrl.includes('?') ? '&' : '?'}mec_month_feed=${monthLabel}`;
+            // The cache key names WHICH widget asked, not just the month. One
+            // site can carry two month widgets with different atts — Eagle LA's
+            // home page has a category-filtered one and /calendar/ the full
+            // grid. Keyed by month alone, whichever page was read first
+            // answered for both: from 2026-10-12 the calendar was served the
+            // home page's filtered months, the December-February one-offs
+            // vanished from the read, and nine real events were offered to the
+            // owner as "gone from the source".
+            const cacheUrl = `${mec.ajaxUrl}${mec.ajaxUrl.includes('?') ? '&' : '?'}mec_month_feed=${monthLabel}&mec_atts=${this.constructor.shortTextHash(mec.attsQuery)}`;
             try {
                 const response = await httpAdapter.postForm(mec.ajaxUrl, body, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
