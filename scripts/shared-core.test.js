@@ -30189,3 +30189,108 @@ test('aggregator: a not-bear held because the row names a usually-bear promoter 
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, true, { siteRole: 'aggregator' }), false, 'a trusted promoter is never dropped here');
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, false, { siteRole: 'venue' }), false);
 });
+
+// ---------------------------------------------------------------------------
+// The bear check reads the name the page stated (2026-11-09)
+//   atlantaeagle.com printed "Southern Bears Lumberjack ft. Fer Juz". The
+//   model answered title "Lumberjack"; the event page's own record carried
+//   the full name and lost the title to the listing; the bear check then
+//   judged "Lumberjack" and dropped a bear party (run 20261109-053706).
+// ---------------------------------------------------------------------------
+
+test('stated name: a title is a trim of a longer page name only when its words are one run of it, it is a name line, and the extra words are not a site-name tail', () => {
+  const core = createCore();
+  const stated = (title, candidate) => core.statedNameBehindTitle(title, candidate);
+  assert.equal(stated('Lumberjack', 'Southern Bears Lumberjack ft. Fer Juz'), 'Southern Bears Lumberjack ft. Fer Juz');
+  assert.equal(stated('Marché Des Ours', 'LE MARCHÉ DES OURS THE BEAR MARKET'), 'LE MARCHÉ DES OURS THE BEAR MARKET', 'case and accents as the page prints them');
+  assert.equal(stated('Lumberjack Edition', 'Bear Night - Lumberjack Edition'), 'Bear Night - Lumberjack Edition', 'what leads the name is part of it');
+  // What follows a separator after the name is where a page puts its own name.
+  assert.equal(stated('RED', 'RED | Bear Jamboree'), '');
+  assert.equal(stated('Beer Bust @ SF Eagle', 'Beer Bust @ SF Eagle — Bears of San Francisco'), '');
+  assert.equal(stated('Noche de Reyes', 'Noche de Reyes 2027 – Bears Naturistas'), 'Noche de Reyes 2027');
+  // Metadata lines and prose are not name lines.
+  assert.equal(stated('RED', 'og:title: RED | Bear Jamboree'), '');
+  assert.equal(stated('Jugoso', 'Join the bears next month in Zipolite, Mexico for Jugoso!'), '', 'nine more words is a sentence');
+  assert.equal(stated('Jugoso', 'Jugoso is a four-day bear party in Zipolite, a beach town on the Pacific coast of Oaxaca, Mexico.'), '');
+  // Not a trim: the same name, a different name, half a word.
+  assert.equal(stated('Lumberjack', 'LUMBERJACK'), '');
+  assert.equal(stated('Bear Night', 'Southern Lumberjack'), '');
+  assert.equal(stated('Lumber', 'Southern Bears Lumberjack'), '');
+  assert.equal(stated('', 'Southern Bears Lumberjack'), '');
+});
+
+test('stated name: the fold keeps the name it did not save, both directions, and carries it through later folds', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+  const start = new Date('2026-11-15T02:00:00.000Z');
+  const listing = () => ({
+    title: 'Lumberjack', bar: 'Atlanta Eagle', city: 'atlanta', startDate: start, endDate: new Date('2026-11-15T08:00:00.000Z'),
+    source: 'ai-web', _extractionSource: 'ai', _pageOrigin: 'listing', _sourcePageUrl: 'https://atlantaeagle.com/events/', _fieldPriorities: priorities
+  });
+  const eventPage = () => ({
+    title: 'Southern Bears Lumberjack ft. Fer Juz', bar: 'Atlanta Eagle', city: 'atlanta', startDate: start, endDate: new Date('2026-11-15T08:00:00.000Z'),
+    source: 'ai-web', _extractionSource: 'jsonld', _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://atlantaeagle.com/event/southern-bears-lumberjack-ft-fer-juz/', _parserConfig: TEST_AI_PARSER_CONFIG, _fieldPriorities: priorities
+  });
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let merged; let flipped; let later;
+  try {
+    merged = await core.mergeParsedEvents(listing(), eventPage(), { httpAdapter: adapter });
+    flipped = await core.mergeParsedEvents(eventPage(), listing(), { httpAdapter: adapter });
+    later = await core.mergeParsedEvents(merged, { ...listing(), _pageOrigin: 'crawl', cover: '$10' }, { httpAdapter: adapter });
+  } finally { console.log = quiet; }
+  assert.equal(merged.title, 'Lumberjack', 'the saved title is not changed');
+  assert.deepEqual(merged._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+  assert.equal(flipped.title, 'Lumberjack');
+  assert.deepEqual(flipped._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+  assert.deepEqual(later._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz'], 'an existing-only stamp survives the next fold');
+  assert.ok(logs.some(line => line.includes('🏷️ TITLE: "Lumberjack" is the saved title — the name the page stated, "Southern Bears Lumberjack ft. Fer Juz"')), logs.join('\n'));
+  assert.ok(!String(merged.notes || '').includes('Southern Bears'), 'the stamp is not written into notes');
+
+  // A brand the pipeline put in front is not something the page stated.
+  const prefixed = await core.mergeParsedEvents(
+    { ...listing(), title: 'Hotel' },
+    { ...eventPage(), title: 'Bear Jamboree: Hotel', _titleBeforeBrandPrefix: 'Hotel' },
+    { httpAdapter: adapter });
+  assert.equal(prefixed._statedTitles, undefined);
+  // Two different names: nothing is stamped.
+  const different = await core.mergeParsedEvents(listing(), { ...eventPage(), title: 'Bear Bust' }, { httpAdapter: adapter });
+  assert.equal(different._statedTitles, undefined);
+});
+
+test('stated name: the keyword tier and the tag keyword match read the saved title and the stated name', async () => {
+  const notBear = { verdict: 'not_bear', reason: 'a lumberjack theme night, no bear wording' };
+  const event = () => ({ title: 'Lumberjack', description: 'ft. Fer Juz', bar: 'Atlanta Eagle', city: 'atlanta' });
+
+  // Before: the model judged the trim and dropped it.
+  const before = buildBearVerdictAdapter(notBear);
+  const dropped = await createCore().computeBearCheckVerdict(event(), bearCheckConfig('enforce'), before);
+  assert.equal(dropped.result, 'not_bear');
+  assert.equal(before.calls.length, 1);
+
+  // With the stated name beside the title the keyword decides, no AI call.
+  const after = buildBearVerdictAdapter(notBear);
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let kept;
+  try {
+    kept = await createCore().computeBearCheckVerdict({ ...event(), _statedTitles: ['Southern Bears Lumberjack ft. Fer Juz'] }, bearCheckConfig('enforce'), after);
+  } finally { console.log = quiet; }
+  assert.equal(kept.result, 'bear');
+  assert.match(kept.provenance, /^keyword: .*\(the page's own name: "Southern Bears Lumberjack ft\. Fer Juz"\)$/);
+  assert.equal(after.calls.length, 0);
+  assert.ok(logs.some(line => line.includes('is in the name the page stated')), logs.join('\n'));
+
+  // A keyword in the saved title reads exactly as before.
+  const plain = await createCore().computeBearCheckVerdict({ title: 'Bear Night', bar: 'Club Nine' }, bearCheckConfig('enforce'), buildBearVerdictAdapter(notBear));
+  assert.match(plain.provenance, /^keyword: [a-z, ]+$/);
+
+  // Tags: the title family words are read in the stated name too.
+  const core = createCore();
+  assert.deepEqual(core.collectMachineEventTags({ title: 'Onyx' }).candidates, []);
+  const tagged = core.collectMachineEventTags({ title: 'Onyx', _statedTitles: ['Onyx Leather Night'] });
+  assert.deepEqual(tagged.fromTitle, ['leather']);
+  assert.ok(tagged.hits.leather.title.includes('leather'));
+});

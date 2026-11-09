@@ -23484,3 +23484,70 @@ test('session lines on a day-dated event page: a Squarespace 00:01 start with "F
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T04:00:00Z'), timezone: 'America/New_York' }), '2026-10-30');
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T23:00:00Z'), timezone: 'America/New_York' }), '');
 });
+
+// ---------------------------------------------------------------------------
+// The name the page stated rides beside a trimmed title (2026-11-09)
+//   atlantaeagle.com's listing card (page cache, trimmed): the model answered
+//   title "Lumberjack" for the line "Southern Bears Lumberjack ft. Fer Juz"
+//   and the bear check dropped the party (run 20261109-053706).
+// ---------------------------------------------------------------------------
+
+test('stated name: a model title that is a trim of the card\'s own line keeps the line beside it; the saved title is not changed', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(Date.UTC(2026, 10, 9, 12, 0, 0));
+  const cardLines = ['Nov', 'Events', 'Southern Bears Lumberjack ft. Fer Juz', 'November 14, 2026 9:00 pm – November 15, 2026 3:00 am', 'Atlanta Eagle', 'View More →'];
+  const htmlData = {
+    html: cardLines.join('\n'),
+    url: 'https://atlantaeagle.com/events/',
+    // What the run derived for this card: a category label, not the name.
+    segmentListingTitle: 'Events',
+    segmentCardLines: cardLines
+  };
+  // The model's real answer shape for this card (cached extraction 7tihv2):
+  // single-quoted evidence naming the whole line.
+  parser.getAiEvent = async () => ({
+    title: 'Lumberjack',
+    startDate: '2026-11-14T21:00:00',
+    bar: 'Atlanta Eagle',
+    __fieldEvidence: { title: "LUMBERJACK in OCR_IMAGE_TEXT and 'Southern Bears Lumberjack ft. Fer Juz' in page body" }
+  });
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let event;
+  try {
+    event = await parser.extractSingleEvent(htmlData, {}, null, ['title', 'bar', 'startDate']);
+  } finally { console.log = original; }
+  assert.ok(event, logs.join('\n'));
+  assert.equal(event.title, 'Lumberjack');
+  assert.deepEqual(event._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+  assert.ok(logs.some(line => line.includes('🏷️ TITLE: "Lumberjack" is a trim of the name the page stated, "Southern Bears Lumberjack ft. Fer Juz"')), logs.join('\n'));
+
+  // The pointer alone is enough (no card lines: a single page).
+  const pointerOnly = createParser();
+  pointerOnly.now = parser.now;
+  pointerOnly.getAiEvent = parser.getAiEvent;
+  console.log = () => {};
+  let single;
+  try {
+    single = await pointerOnly.extractSingleEvent({ html: htmlData.html, url: htmlData.url }, {}, null, ['title', 'bar', 'startDate']);
+  } finally { console.log = original; }
+  assert.deepEqual(single._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+
+  // A title the page states whole gets no stamp, and neither does one whose
+  // only longer form is the page's own name after a separator.
+  const whole = createParser();
+  whole.now = parser.now;
+  whole.getAiEvent = async () => ({ title: 'Southern Bears Lumberjack ft. Fer Juz', startDate: '2026-11-14T21:00:00', __fieldEvidence: { title: 'Southern Bears Lumberjack ft. Fer Juz' } });
+  console.log = () => {};
+  let full; let branded;
+  try {
+    full = await whole.extractSingleEvent(htmlData, {}, null, ['title', 'startDate']);
+    whole.getAiEvent = async () => ({ title: 'Riptide', startDate: '2026-11-14T21:00:00', __fieldEvidence: { title: '"Riptide | Bear Jamboree"' } });
+    branded = await whole.extractSingleEvent({ html: 'Riptide | Bear Jamboree\nNovember 14, 2026 9:00 pm', url: 'https://www.bearjamboree.com/riptide', segmentCardLines: ['Riptide | Bear Jamboree', 'November 14, 2026 9:00 pm'] }, {}, null, ['title', 'startDate']);
+  } finally { console.log = original; }
+  assert.equal(full._statedTitles, undefined);
+  assert.ok(branded, 'the page is still read');
+  assert.equal(branded._statedTitles, undefined, 'a site name after a separator is not part of the event\'s name');
+});

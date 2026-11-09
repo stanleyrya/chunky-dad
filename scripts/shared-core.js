@@ -14558,7 +14558,10 @@ class SharedCore {
             };
         }
 
-        const searchText = `${event.title || ''} ${event.description || ''} ${event.bar || ''}`;
+        // The name the page stated is read beside the saved title: the saved
+        // title may be a trim of it (see statedNameBehindTitle).
+        const statedTitles = this.getStatedTitles(event);
+        const searchText = `${event.title || ''}${statedTitles.length > 0 ? ` ${statedTitles.join(' ')}` : ''} ${event.description || ''} ${event.bar || ''}`;
 
         // Per-event trust: a registry-matched promoter's bearAffinity
         // overrides parserConfig.alwaysBear (see getEventBearTrust);
@@ -14592,6 +14595,10 @@ class SharedCore {
         const matched = this.matchBearKeywords(searchText);
         const keywordTier = this.classifyBearKeywordMatch(event, matched);
         if (matched.length > 0 && keywordTier.shortCircuit) {
+            if (keywordTier.source === 'stated-title') {
+                console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — keyword ${matched.join(', ')} is in the name the page stated, "${keywordTier.stated}"`);
+                return { result: 'bear', provenance: `keyword: ${matched.join(', ')} (the page's own name: "${keywordTier.stated}")` };
+            }
             return { result: 'bear', provenance: `keyword: ${matched.join(', ')}` };
         }
         if (matched.length > 0) {
@@ -14669,6 +14676,77 @@ class SharedCore {
         return this.matchBearKeywords(searchText).length > 0;
     }
 
+    // THE NAME THE PAGE STATED (2026-11-09). The saved title is often a TRIM
+    // of the line the page printed: the model returns the short reusable
+    // name, and the merge keeps a listing's short name over the event page's
+    // full one. Every later reader then sees only the trim. atlantaeagle.com
+    // printed "Southern Bears Lumberjack ft. Fer Juz"; the model answered
+    // "Lumberjack" (quoting the full line as its evidence), the event page's
+    // own record carried the full name and lost the title to the listing,
+    // and the bear check dropped a bear party it never saw named (run
+    // 20261109-053706). The saved title is NOT changed here. The longer name
+    // is kept beside it (event._statedTitles) and the bear keyword tier and
+    // the tag keyword match read both.
+    //
+    // A candidate is the stated name of a title only when ALL hold:
+    //   - the title's words are one unbroken run of the candidate's words
+    //     (the title is a trim of it, not a different name)
+    //   - the candidate says more than the title
+    //   - what follows a separator AFTER the run is cut off first: that is
+    //     where a page puts its own name ("RED | Bear Jamboree", "Beer Bust
+    //     @ SF Eagle — Bears of San Francisco"), and a word that is only the
+    //     site's brand is not the event's name
+    //   - it is a name line, not a sentence: at most six more words than the
+    //     title and 100 characters ("Jugoso is a four-day bear party in
+    //     Zipolite, a beach town…" is prose; the AI tier reads prose)
+    //   - it is not a metadata line ("og:title: …", "description: …")
+    // Returns the stated name, or '' when the candidate is not one.
+    statedNameBehindTitle(title, candidate) {
+        const clean = text => String(text || '').replace(/\s+/g, ' ').trim();
+        const kept = clean(title);
+        let stated = clean(candidate);
+        if (!kept || !stated || stated.length > 400) return '';
+        if (/^(?:og|twitter|article|meta)[:_.][\w:.-]*\s*:|^(?:description|title|keywords)\s*:/i.test(stated)) return '';
+        const words = text => text.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+        const keptWords = words(kept);
+        if (keptWords.length === 0) return '';
+        let match;
+        try {
+            const run = keptWords.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[^\\p{L}\\p{N}]+');
+            match = new RegExp(`(^|[^\\p{L}\\p{N}])${run}(?=$|[^\\p{L}\\p{N}])`, 'iu').exec(stated);
+        } catch (_) {
+            return '';
+        }
+        if (!match) return '';
+        const runEnd = match.index + match[0].length;
+        const separator = /\s*(?:[|\u00b7\u2013\u2014]|\s-)\s+\S/.exec(stated.slice(runEnd));
+        if (separator) stated = stated.slice(0, runEnd + separator.index).trim();
+        const statedWords = words(stated);
+        if (statedWords.length <= keptWords.length) return '';
+        if (statedWords.length > keptWords.length + 6 || stated.length > 100) return '';
+        return stated;
+    }
+
+    // The stated names stamped on a record (see statedNameBehindTitle).
+    getStatedTitles(event) {
+        const list = event && Array.isArray(event._statedTitles) ? event._statedTitles : [];
+        return list.filter(entry => typeof entry === 'string' && entry.trim()).map(entry => entry.trim());
+    }
+
+    // Stamp `candidate` as a stated name of `event` when it is one for
+    // `title` (default: the event's own title). At most three are kept.
+    // Returns the stated name that was added, or ''.
+    noteStatedTitle(event, candidate, title = null) {
+        if (!event || typeof event !== 'object') return '';
+        const stated = this.statedNameBehindTitle(title === null ? event.title : title, candidate);
+        if (!stated) return '';
+        const known = this.getStatedTitles(event);
+        if (known.some(entry => entry.toLowerCase() === stated.toLowerCase())) return '';
+        if (known.length >= 3) return '';
+        event._statedTitles = known.concat(stated);
+        return stated;
+    }
+
     // Returns the list of bear keywords the text hits (empty array = no match).
     matchBearKeywords(text) {
         const source = String(text || '').toLowerCase();
@@ -14720,7 +14798,14 @@ class SharedCore {
         const result = { candidates: [], fromTitle: [], hits: {} };
         if (!event || typeof event !== 'object') return result;
         for (const tag of SharedCore.getAiConfirmableTags()) {
+            // The title is the saved title AND the name the page stated for
+            // it (see statedNameBehindTitle): a trim must not hide the word.
             const title = this.matchTagKeywords(event.title, tag, { title: true });
+            for (const stated of this.getStatedTitles(event)) {
+                for (const keyword of this.matchTagKeywords(stated, tag, { title: true })) {
+                    if (!title.includes(keyword)) title.push(keyword);
+                }
+            }
             const description = this.matchTagKeywords(event.description, tag);
             if (title.length === 0 && description.length === 0) continue;
             result.candidates.push(tag);
@@ -15012,6 +15097,8 @@ class SharedCore {
     //   description + a registry brand → yes. Bearracuda's Portland NYE / SF
     //             FLSM / Treasure Trail family puts the BRAND in the
     //             description and not the title; that is still identity.
+    //   the name the PAGE stated → yes, the same as the title (the saved
+    //             title is a trim of it; see statedNameBehindTitle).
     //   description, generic vocabulary only → NO. "unleash your inner pup",
     //             "wear your regular leather or gear" is prose about a
     //             dress code, and the AI tier gets these right when it is
@@ -15022,6 +15109,11 @@ class SharedCore {
         }
         if (this.matchBearKeywords(event && event.title).length > 0) {
             return { shortCircuit: true, source: 'title', brand: '' };
+        }
+        // The name the page stated is the title too (see statedNameBehindTitle).
+        const statedHit = this.getStatedTitles(event).find(stated => this.matchBearKeywords(stated).length > 0);
+        if (statedHit) {
+            return { shortCircuit: true, source: 'stated-title', brand: '', stated: statedHit };
         }
         if (this.matchBearKeywords(event && event.bar).length > 0) {
             return { shortCircuit: true, source: 'venue', brand: '' };
@@ -18433,6 +18525,32 @@ class SharedCore {
                 const existingTitle = existingEvent.title || 'event';
                 const newTitle = newEvent.title || 'event';
                 console.log(`🔄 PARSER MERGE: "${existingTitle}" (${existingEvent.source}) + "${newTitle}" (${newEvent.source}) → ${changedFields.length} field${changedFields.length === 1 ? '' : 's'} updated (${previewText})`);
+            }
+        }
+
+        // THE NAME THE PAGE STATED SURVIVES THE FOLD (see
+        // statedNameBehindTitle). Both sides' stamps are carried — the base
+        // spread keeps only the new side's — and a title this fold did not
+        // keep is stamped when the kept title is a trim of it. A brand the
+        // pipeline prefixed is not something the page stated: such a record
+        // offers the name it had before the prefix.
+        {
+            const pageTitleOf = record => (record && typeof record._titleBeforeBrandPrefix === 'string' && record._titleBeforeBrandPrefix.trim())
+                ? record._titleBeforeBrandPrefix
+                : (record && typeof record.title === 'string' ? record.title : '');
+            const carried = this.getStatedTitles(existingEvent).concat(this.getStatedTitles(newEvent));
+            const unique = [];
+            for (const stated of carried) {
+                if (!unique.some(entry => entry.toLowerCase() === stated.toLowerCase())) unique.push(stated);
+            }
+            if (unique.length > 0) mergedEvent._statedTitles = unique.slice(0, 3);
+            else delete mergedEvent._statedTitles;
+            const keptTitle = pageTitleOf(mergedEvent);
+            for (const side of [existingEvent, newEvent]) {
+                const added = this.noteStatedTitle(mergedEvent, pageTitleOf(side), keptTitle);
+                if (added) {
+                    console.log(`🏷️ TITLE: "${mergedEvent.title}" is the saved title — the name the page stated, "${added}", stays readable to the bear check and the tags`);
+                }
             }
         }
 

@@ -3254,6 +3254,7 @@ class AiWebParser {
             }
             event._aiValidation = report;
         }
+        this.stampStatedTitles(event, aiEvent, promptHtmlData, evidenceContext);
         // Evidence-pointer rescue candidates (LOG-ONLY observation phase):
         // stash on the event as an underscore field (never serialized into
         // notes — same systematic exclusion as _geoPoi*) so the results-UI
@@ -3276,6 +3277,52 @@ class AiWebParser {
             }
         }
         return event;
+    }
+
+    // THE NAME THE PAGE STATED, stamped where the first trim happens: the
+    // model's answer. The model returns the short reusable name and quotes
+    // the page's line as its evidence — atlantaeagle.com's card line
+    // "Southern Bears Lumberjack ft. Fer Juz" came back as title
+    // "Lumberjack", and the bear check then never saw the word "Bears" (run
+    // 20261109-053706). The saved title is left alone; the longer name goes
+    // on event._statedTitles, which the bear keyword tier and the tag
+    // keyword match read beside the title (SharedCore.statedNameBehindTitle
+    // holds the one test for what counts). Candidates, all the page's own
+    // words: the listing title of the card, the card's own lines, and the
+    // span the model's title evidence points at. A brand the pipeline
+    // prefixed is not part of the name being compared.
+    stampStatedTitles(event, aiEvent, htmlData, evidenceContext) {
+        const core = this.core;
+        if (!event || !core || typeof core.noteStatedTitle !== 'function') return;
+        const title = typeof event._titleBeforeBrandPrefix === 'string' && event._titleBeforeBrandPrefix.trim()
+            ? event._titleBeforeBrandPrefix
+            : event.title;
+        if (typeof title !== 'string' || !title.trim()) return;
+        const candidates = [];
+        if (htmlData && typeof htmlData.segmentListingTitle === 'string') candidates.push(htmlData.segmentListingTitle);
+        for (const line of (htmlData && Array.isArray(htmlData.segmentCardLines) ? htmlData.segmentCardLines : [])) {
+            if (typeof line === 'string') candidates.push(line);
+        }
+        const evidence = aiEvent && aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object'
+            && typeof aiEvent.__fieldEvidence.title === 'string'
+            ? aiEvent.__fieldEvidence.title
+            : '';
+        const raw = evidenceContext && typeof evidenceContext.raw === 'string' ? evidenceContext.raw : '';
+        if (evidence && raw) {
+            // Models quote with single quotes as often as double.
+            const fragments = this.extractEvidenceQuoteFragments(evidence)
+                .concat((evidence.match(/'[^']{4,140}'/g) || []).map(quoted => quoted.slice(1, -1)));
+            for (const fragment of fragments) {
+                const span = this.locateEvidenceFragmentSpan(fragment, raw);
+                if (span) candidates.push(span);
+            }
+        }
+        for (const candidate of candidates) {
+            const added = core.noteStatedTitle(event, candidate, title);
+            if (added) {
+                console.log(`🏷️ TITLE: "${event.title}" is a trim of the name the page stated, "${added}" — the saved title stays; the bear check and the tags read both`);
+            }
+        }
     }
 
     // Deterministic venue-hours notice detector: true when a title consists of
