@@ -11671,7 +11671,7 @@ class SharedCore {
                 // A page the phone fetched for the Mac (the inbox) sits in
                 // the shared cache: a parked host never stops a cache read.
                 const cachedForUs = httpAdapter && typeof httpAdapter.hasFreshCachedPage === 'function' && httpAdapter.hasFreshCachedPage(url);
-                const browserOpen = httpAdapter && typeof httpAdapter.canFetchWithBrowser === 'function' && httpAdapter.canFetchWithBrowser();
+                const browserOpen = httpAdapter && typeof httpAdapter.canFetchWithBrowser === 'function' && httpAdapter.canFetchWithBrowser(url);
                 const parkedPeek = this.deadEndRunContext && this.deadEndRunContext.enabled && !discoveryOnly
                     ? this.getBlockedDeadEndHostEntry(this.deadEndRunContext, url)
                     : null;
@@ -13391,7 +13391,7 @@ class SharedCore {
             // the adapter has one (web-adapter.fetchWithBrowser); only when
             // it has none is the page asked of the phone instead.
             if (blockedHost && SharedCore.isRateLimitedDeadEndHostEntry(blockedHost) && httpAdapter) {
-                if (typeof httpAdapter.canFetchWithBrowser === 'function' && httpAdapter.canFetchWithBrowser()) blockedHost = null;
+                if (typeof httpAdapter.canFetchWithBrowser === 'function' && httpAdapter.canFetchWithBrowser(url)) blockedHost = null;
                 else if (typeof httpAdapter.noteInboxRequest === 'function') httpAdapter.noteInboxRequest(url, 'the host answers the Mac 429 on every run');
             }
             if (blockedHost) {

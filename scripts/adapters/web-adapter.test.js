@@ -287,8 +287,18 @@ test('browser fetch: a GET answered 429 is tried once more in a real browser; wh
     // Off switch and the per-run cap.
     const off = new WebAdapter({ cities: CITIES, politeness: {}, browserFetch: { mode: 'off' } });
     assert.equal(off.canFetchWithBrowser(), false);
+    // The allowance is per site: one walled site spending its own never
+    // closes the browser to the next one (2026-11-08: Folsom Europe's pages
+    // took a run-wide twenty and two Eagles read as empty).
+    adapter._browserFetch.hosts['dilf.example'] = WebAdapter.BROWSER_FETCH_HOST_CAP;
+    assert.equal(adapter.canFetchWithBrowser('https://www.dilf.example/events/leeds'), false, 'this site has spent its own');
+    assert.equal(adapter.canFetchWithBrowser('https://eagle.example/calendar'), true, 'another site still has its own');
+    console.log = (line) => lines.push(String(line));
+    try { assert.equal(await adapter.fetchWithBrowser('https://dilf.example/events/leeds'), null); } finally { console.log = originalLog; }
+    assert.ok(lines.some((line) => /not tried — \d+ browser fetches of dilf\.example already this run/.test(line)), lines.join('\n'));
     adapter._browserFetch.count = WebAdapter.BROWSER_FETCH_CAP;
-    assert.equal(adapter.canFetchWithBrowser(), false, 'cap reached');
+    assert.equal(adapter.canFetchWithBrowser('https://eagle.example/calendar'), false, 'run ceiling reached');
+    assert.equal(adapter.canFetchWithBrowser(), false, 'run ceiling reached');
   } finally {
     global.fetch = originalFetch;
     shared.restore();

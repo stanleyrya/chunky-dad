@@ -662,7 +662,8 @@ class WebAdapter {
     // the installed one (config.browserFetch.executablePath or the macOS
     // default), headless, one page per launch, closed in finally — and the
     // rendered document is the page. Pacing of its own: BROWSER_FETCH_GAP_MS
-    // between launches, at most BROWSER_FETCH_CAP per run, 45 s per page.
+    // between launches, at most BROWSER_FETCH_HOST_CAP per site and
+    // BROWSER_FETCH_CAP per run, 45 s per page.
     // Off with config.browserFetch.mode "off"; absent Chrome = off. The
     // phone's inbox remains the fallback.
     getBrowserFetchConfig() {
@@ -671,18 +672,42 @@ class WebAdapter {
         const executablePath = typeof raw.executablePath === 'string' && raw.executablePath
             ? raw.executablePath
             : (process.env.PUPPETEER_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
-        return { mode, executablePath, cap: Number.isFinite(Number(raw.cap)) ? Number(raw.cap) : WebAdapter.BROWSER_FETCH_CAP };
+        return {
+            mode,
+            executablePath,
+            cap: Number.isFinite(Number(raw.cap)) ? Number(raw.cap) : WebAdapter.BROWSER_FETCH_CAP,
+            hostCap: Number.isFinite(Number(raw.hostCap)) ? Number(raw.hostCap) : WebAdapter.BROWSER_FETCH_HOST_CAP
+        };
+    }
+
+    // THE BROWSER BUDGET IS PER SITE. One run-wide count let the first
+    // walled site spend the lot: on 2026-11-08 Folsom Europe's programme
+    // pages took all twenty, and Eagle Wilton Manors and Eagle Portland —
+    // both of which answer only a browser — were "not tried" and read as
+    // 0 and 4 events (102 the next morning, by luck of ordering). So each
+    // site has its own allowance (hostCap); the run-wide cap stays only as
+    // a ceiling on run time.
+    getBrowserFetchHostKey(url) {
+        return (String(url || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+    }
+
+    getBrowserFetchRefusal(url, settings, state) {
+        if (state.count >= settings.cap) return `${settings.cap} browser fetches already this run`;
+        const hostKey = this.getBrowserFetchHostKey(url);
+        const spent = hostKey && state.hosts ? Number(state.hosts[hostKey]) || 0 : 0;
+        if (hostKey && spent >= settings.hostCap) return `${settings.hostCap} browser fetches of ${hostKey} already this run`;
+        return '';
     }
 
     // Is the browser route open this run? (Mode on, Chrome present, cap
     // not reached.) shared-core asks before skipping a host it is leaving
     // alone for 429: with a browser to hand, the page is tried, not skipped.
-    canFetchWithBrowser() {
+    canFetchWithBrowser(url = '') {
         if (!this.isNode) return false;
         const settings = this.getBrowserFetchConfig();
         if (settings.mode === 'off') return false;
-        const state = this._browserFetch || { count: 0, unavailable: '' };
-        if (state.unavailable || state.count >= settings.cap) return false;
+        const state = this._browserFetch || { count: 0, unavailable: '', hosts: {} };
+        if (state.unavailable || this.getBrowserFetchRefusal(url, settings, state)) return false;
         try { return this.fs.existsSync(settings.executablePath); } catch (_) { return false; }
     }
 
@@ -690,11 +715,13 @@ class WebAdapter {
         if (!this.isNode) return null;
         const settings = this.getBrowserFetchConfig();
         if (settings.mode === 'off') return null;
-        if (!this._browserFetch) this._browserFetch = { count: 0, lastAt: 0, unavailable: '' };
+        if (!this._browserFetch) this._browserFetch = { count: 0, lastAt: 0, unavailable: '', hosts: {} };
         const state = this._browserFetch;
+        if (!state.hosts) state.hosts = {};
         if (state.unavailable) return null;
-        if (state.count >= settings.cap) {
-            console.log(`🧭 BROWSER: ${url} not tried — ${settings.cap} browser fetches already this run`);
+        const refusal = this.getBrowserFetchRefusal(url, settings, state);
+        if (refusal) {
+            console.log(`🧭 BROWSER: ${url} not tried — ${refusal}`);
             return null;
         }
         try {
@@ -706,6 +733,8 @@ class WebAdapter {
             const wait = WebAdapter.BROWSER_FETCH_GAP_MS - (Date.now() - state.lastAt);
             if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
             state.count += 1;
+            const hostKey = this.getBrowserFetchHostKey(url);
+            if (hostKey) state.hosts[hostKey] = (Number(state.hosts[hostKey]) || 0) + 1;
             state.lastAt = Date.now();
             const startedAt = Date.now();
             const puppeteer = await this.loadPuppeteer();
@@ -3263,7 +3292,9 @@ async saveFailureNote(url, error, metadata = {}) {
 }
 
 // Export for both environments
-WebAdapter.BROWSER_FETCH_CAP = 20;
+// Per site, and a ceiling for the whole run (see getBrowserFetchRefusal).
+WebAdapter.BROWSER_FETCH_HOST_CAP = 20;
+WebAdapter.BROWSER_FETCH_CAP = 80;
 WebAdapter.BROWSER_FETCH_GAP_MS = 3000;
 WebAdapter.BROWSER_FETCH_TIMEOUT_MS = 45000;
 // Hard deadline for one browser attempt (launch + navigation + body) and
