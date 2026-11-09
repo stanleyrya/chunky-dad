@@ -36,6 +36,7 @@ const PASSES = [
     'context-prep',
     'bear-check',
     'tag-check',
+    'audience-check',
     'merge-arbitration',
     'classify-page',
     'short-name',
@@ -51,6 +52,7 @@ const PASS_NUM_PREDICT = {
     'context-prep': 2000,
     'bear-check': 400,
     'tag-check': 200,
+    'audience-check': 200,
     'merge-arbitration': 800,
     'classify-page': 300,
     'short-name': 200,
@@ -445,6 +447,31 @@ function scoreTagCheck(kase, parsed, baselineParsed) {
     };
 }
 
+// The audience check: production reads only "another-group" with a verified
+// quote as an answer that changes anything; every other answer keeps.
+function scoreAudienceCheck(kase, parsed, baselineParsed) {
+    const VALUES = ['another-group', 'everyone', 'men', 'unstated'];
+    const read = value => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+        const stated = String(value.audience || '').trim().toLowerCase();
+        if (!VALUES.includes(stated)) return null;
+        const quotes = Array.isArray(value.eventEvidence) ? value.eventEvidence : [];
+        const verified = quotes.filter(q => occursInPrompt(kase.prompt, q));
+        return { stated, effective: stated !== 'unstated' && verified.length === 0 ? 'unstated' : stated, quotes: quotes.length, verified: verified.length };
+    };
+    const now = read(parsed);
+    if (!now) return { accepted: false, acceptDetail: 'no audience value', agreement: null };
+    const before = read(baselineParsed);
+    const agreement = before ? (before.effective === now.effective ? 1 : 0) : null;
+    return {
+        accepted: true,
+        acceptDetail: now.effective + (now.stated !== now.effective ? ' (no verified quote, was ' + now.stated + ')' : '') + ', ' + now.verified + '/' + now.quotes + ' quotes verified',
+        agreement,
+        agreementDetail: before ? (agreement ? now.effective : before.effective + ' -> ' + now.effective) : '',
+        extra: { audience: now.effective, claimed: now.stated, fabricatedQuotes: now.quotes - now.verified }
+    };
+}
+
 function scoreMergeArbitration(kase, parsed, baselineParsed, gates) {
     if (!parsed || typeof parsed !== 'object') {
         return { accepted: false, acceptDetail: 'not an object', agreement: null };
@@ -642,6 +669,7 @@ const SCORERS = {
     'ocr': scoreOcr,
     'bear-check': scoreBearCheck,
     'tag-check': scoreTagCheck,
+    'audience-check': scoreAudienceCheck,
     'merge-arbitration': scoreMergeArbitration,
     'classify-page': scoreClassifyPage,
     'short-name': scoreShortName,

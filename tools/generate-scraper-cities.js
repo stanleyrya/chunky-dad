@@ -28,6 +28,10 @@ Object.entries(CITY_CONFIG).forEach(([cityKey, cityConfig]) => {
   const { calendar, timezone, patterns, coordinates } = cityConfig;
   if (!calendar || !timezone || !Array.isArray(patterns)) return;
   scraperCities[cityKey] = { calendar, timezone, patterns };
+  // A destination town: a bear run there takes the whole town over, so the
+  // bear check keeps every event inside the run's window (EventSchema
+  // .findBearRunForEvent). Absent everywhere else.
+  if (cityConfig.destination === true) scraperCities[cityKey].destination = true;
   // City-center coordinates power distance-ranked geocode validation in the
   // scraper's OpenStreetMapNormalizer.
   if (coordinates && Number.isFinite(Number(coordinates.lat)) && Number.isFinite(Number(coordinates.lng))) {

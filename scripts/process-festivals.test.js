@@ -187,3 +187,28 @@ test('festivals: describeScraperRecordRefusal names both tells and clears a real
         ''
     );
 });
+
+// A festival may state how far it spreads over its town (see
+// EventSchema.findBearRunForEvent): the calendar's own notes carry the line.
+test('festivals: a reach line (and its venues) converts; an unknown reach is ignored with a warning', () => {
+    const vevent = (uid, name, description) => [
+        'BEGIN:VEVENT', 'DTSTART;VALUE=DATE:20270917', 'DTEND;VALUE=DATE:20270921', 'DTSTAMP:20260823T201509Z',
+        `UID:${uid}@chunky.dad`, `DESCRIPTION:${description}`, `SUMMARY:${name}`, 'END:VEVENT'
+    ];
+    const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0',
+        ...vevent('festival-urban-bear-nyc', 'Urban Bear NYC', 'key: urban-bear-nyc\\ncategory: bear-run\\ncityKey: nyc\\nreach: venues\\nvenues: Rockbar\\, Eagle NYC'),
+        ...vevent('festival-big-run', 'Big Run', 'key: big-run\\ncategory: bear-run\\ncityKey: dallas\\nreach: City'),
+        ...vevent('festival-odd-run', 'Odd Run', 'key: odd-run\\ncategory: bear-run\\ncityKey: sf\\nreach: region'),
+        ...vevent('festival-plain-run', 'Plain Run', 'key: plain-run\\ncategory: bear-run\\ncityKey: ptown'),
+        'END:VCALENDAR', ''].join('\r\n');
+    const { entries, warnings } = convert(ics, []);
+    const byKey = new Map(entries.map(entry => [entry.key, entry]));
+    assert.equal(byKey.get('urban-bear-nyc').reach, 'venues');
+    assert.deepEqual(byKey.get('urban-bear-nyc').venues, ['Rockbar', 'Eagle NYC']);
+    assert.equal(byKey.get('big-run').reach, 'city');
+    assert.equal(byKey.get('big-run').venues, undefined);
+    assert.equal(byKey.get('odd-run').reach, undefined);
+    assert.ok(warnings.some(w => /"Odd Run": unknown reach "region"/.test(w)), JSON.stringify(warnings));
+    assert.equal(byKey.get('plain-run').reach, undefined, 'no line, no reach: the town decides');
+    assert.ok(/"reach": "venues"/.test(tool.serializeFestivals(entries)), 'the published file carries it');
+});

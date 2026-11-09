@@ -29945,3 +29945,171 @@ test('tags: merge — an owner verdict\'s tags are exact, two automatic readings
   assert.equal(SharedCore.getProvenanceTrustTier('bearSource', 'tagged (ai: leather social)'), 1);
   assert.equal(SharedCore.buildTaggedBearSource('tagged: leather — ai: a leather social'), 'tagged (ai: a leather social)');
 });
+
+// ── What a not-bear event is kept for (owner rubric, 2026-11-09) ────────────
+// "I'm tempted to save bear and leather but not a lot of the other events."
+
+function buildAudienceAwareAdapter(verdict, tagAnswers, audienceAnswer) {
+  const calls = [];
+  return {
+    calls,
+    postJson: async (endpoint, payload) => {
+      calls.push(payload);
+      const prompt = String(payload.prompt || '');
+      const tag = /^Tag: ([a-z-]+)$/m.exec(prompt);
+      let body;
+      if (tag) {
+        const answer = tagAnswers[tag[1]];
+        body = JSON.stringify(answer === undefined ? { tag: tag[1], applies: false, eventEvidence: [], reason: 'no' } : { tag: tag[1], ...answer });
+      } else if (/who is it held FOR\?/.test(prompt)) {
+        body = typeof audienceAnswer === 'string' ? audienceAnswer : JSON.stringify(audienceAnswer);
+      } else {
+        body = JSON.stringify(verdict);
+      }
+      return { ok: true, status: 200, text: JSON.stringify({ response: body }) };
+    }
+  };
+}
+
+test('keeps: only a tag that keeps (leather) earns a not-bear event its place — drag, kink, pup, underwear describe and do not keep', async () => {
+  const notBear = { verdict: 'not_bear', reason: 'no bear wording' };
+  const cases = [
+    { title: 'Drag Bingo', tag: 'drag', quote: 'Drag Bingo' },
+    { title: 'Kink Night', tag: 'kink', quote: 'Kink Night' },
+    // ("Pup Night" itself is a bear KEYWORD hit — the keyword tier is wider than the tags.)
+    { title: 'Mosh Night', tag: 'pup', quote: 'Mosh Night' },
+    { title: 'Underwear Party', tag: 'underwear', quote: 'Underwear Party' }
+  ];
+  for (const item of cases) {
+    const adapter = buildTagAwareAdapter(notBear, { [item.tag]: { applies: true, eventEvidence: [item.quote], reason: 'yes' } });
+    const result = await createCore().filterBearEvents([{ title: item.title, description: 'come along' }], bearCheckConfig('enforce'), adapter);
+    assert.equal(result.length, 0, `${item.tag} alone does not keep "${item.title}"`);
+  }
+  // The same tags ride along when leather is what keeps the event.
+  const both = await createCore().filterBearEvents([{ title: 'Leather & Kink Night', description: 'come along' }], bearCheckConfig('enforce'),
+    buildTagAwareAdapter(notBear, {
+      leather: { applies: true, eventEvidence: ['Leather'], reason: 'leather' },
+      kink: { applies: true, eventEvidence: ['Kink Night'], reason: 'kink' }
+    }));
+  assert.equal(both.length, 1);
+  assert.equal(both[0].tags, 'kink, leather');
+  // And a bear event carries every tag it earned: describing is not keeping.
+  const bear = await createCore().filterBearEvents([{ title: 'Bear Drag Bingo', description: 'come along' }], bearCheckConfig('enforce'),
+    buildTagAwareAdapter(notBear, { drag: { applies: true, eventEvidence: ['Drag Bingo'], reason: 'drag' } }));
+  assert.equal(bear.length, 1);
+  assert.equal(bear[0].bearSource, 'keyword');
+  assert.equal(bear[0].tags, 'drag');
+  assert.deepEqual(EventSchema.keepingEventTags('drag, kink, leather, bear-crowd'), ['leather', 'bear-crowd'].sort());
+});
+
+test('keeps: a leather night held for another crowd is not kept; "everyone", no answer, or a quote the event lacks keeps it', async () => {
+  const notBear = { verdict: 'not_bear', reason: 'a leather night' };
+  const leather = { leather: { applies: true, eventEvidence: ['Leather Night'], reason: 'leather' } };
+  const event = { title: "Women's Leather Night", description: 'A night for leatherwomen and dykes. All genders welcome at the bar downstairs.' };
+
+  const another = buildAudienceAwareAdapter(notBear, leather, { audience: 'another-group', eventEvidence: ["Women's Leather Night"], reason: 'a women\'s night' });
+  const dropped = [];
+  const gone = await createCore().filterBearEvents([{ ...event }], bearCheckConfig('enforce'), another, dropped);
+  assert.equal(gone.length, 0, 'held for another crowd → the leather tag does not keep it');
+  assert.equal(another.calls.filter(call => /who is it held FOR\?/.test(call.prompt)).length, 1, 'asked once');
+  assert.ok(/another crowd/.test(String(dropped[0] && dropped[0].reason)), `the drop says why: ${dropped[0] && dropped[0].reason}`);
+
+  const keeps = [
+    { audience: 'everyone', eventEvidence: ['All genders welcome'], reason: 'open to all' },
+    { audience: 'men', eventEvidence: [], reason: 'guess' },
+    { audience: 'unstated', eventEvidence: [], reason: 'does not say' },
+    // A quote the event does not contain is no evidence: fails OPEN.
+    { audience: 'another-group', eventEvidence: ['lesbians only'], reason: 'made up' },
+    'not json at all'
+  ];
+  for (const answer of keeps) {
+    const result = await createCore().filterBearEvents([{ ...event }], bearCheckConfig('enforce'), buildAudienceAwareAdapter(notBear, leather, answer));
+    assert.equal(result.length, 1, `kept on ${JSON.stringify(answer)}`);
+    assert.equal(result[0].tags, 'leather');
+  }
+
+  // Never asked about a bear event, and never about one with no keeping tag.
+  const bearAdapter = buildAudienceAwareAdapter(notBear, leather, { audience: 'another-group', eventEvidence: ['Leather Night'], reason: 'x' });
+  const bear = await createCore().filterBearEvents([{ title: 'Bear Leather Night', description: '' }], bearCheckConfig('enforce'), bearAdapter);
+  assert.equal(bear.length, 1);
+  assert.equal(bearAdapter.calls.filter(call => /who is it held FOR\?/.test(call.prompt)).length, 0);
+});
+
+test('keeps: the audience verdict is memoized, null without AI, and only verified quotes carry a stated audience', async () => {
+  const core = createCore();
+  const adapter = buildAudienceAwareAdapter(null, {}, { audience: 'another-group', eventEvidence: ['Dyke Night'], reason: 'a dyke night' });
+  const event = { title: 'Dyke Night', description: 'leather and denim', bar: 'Eagle' };
+  const first = await core.getAiAudienceVerdict(event, bearCheckConfig('enforce'), adapter);
+  assert.deepEqual(first, { audience: 'another-group', evidence: ['Dyke Night'], reason: 'a dyke night' });
+  await core.getAiAudienceVerdict(event, bearCheckConfig('enforce'), adapter);
+  assert.equal(adapter.calls.length, 1, 'second ask is the memo');
+  assert.equal(await core.getAiAudienceVerdict(event, { ai: { enabled: false } }, adapter), null);
+  assert.equal(await core.getAiAudienceVerdict(event, bearCheckConfig('enforce'), null), null);
+  const prompt = core.buildAudienceCheckPrompt(event);
+  assert.ok(/who is it held FOR\?/.test(prompt) && /- Title: Dyke Night/.test(prompt) && /- Venue: Eagle/.test(prompt));
+});
+
+function createDestinationCore(festivals) {
+  return new SharedCore({
+    ptown: { timezone: 'America/New_York', patterns: ['provincetown'], destination: true },
+    nyc: { timezone: 'America/New_York', patterns: ['new york'] }
+  }, { eventSchema: EventSchema, festivals });
+}
+
+test('keeps: a bear run takes a destination town over — every event inside its window is kept; a big city\'s run keeps nothing around it', async () => {
+  const festivals = [
+    { key: 'spooky-bear', name: 'Spooky Bear', category: 'bear-run', cityKey: 'ptown', nextDates: { start: '2026-10-29', end: '2026-11-01' } },
+    { key: 'urban-bear-nyc', name: 'Urban Bear NYC', category: 'bear-run', cityKey: 'nyc', nextDates: { start: '2026-09-17', end: '2026-09-20' } },
+    { key: 'ptown-pride', name: 'Provincetown Pride', category: 'pride', cityKey: 'ptown', nextDates: { start: '2026-06-05', end: '2026-06-07' } }
+  ];
+  const notBear = { verdict: 'not_bear', reason: 'a cabaret brunch' };
+  const run = async (event, verdict = notBear) => {
+    const adapter = buildTagAwareAdapter(verdict);
+    const result = await createDestinationCore(festivals).filterBearEvents([event], bearCheckConfig('enforce'), adapter);
+    return { result, adapter };
+  };
+  const brunch = { title: 'Cabaret Brunch', description: 'show tunes and mimosas', bar: 'Crown & Anchor', city: 'ptown', timezone: 'America/New_York' };
+
+  const inside = await run({ ...brunch, startDate: new Date('2026-10-31T16:00:00.000Z') });
+  assert.equal(inside.result.length, 1, 'inside the run, in the town');
+  assert.equal(inside.result[0].isBearEvent, true);
+  assert.equal(inside.result[0].bearSource, 'tagged (bear-run: Spooky Bear)');
+  assert.equal(inside.result[0].tags, undefined, 'bear-run is derived at load, never stored');
+  assert.equal(inside.result[0].bearReview, undefined);
+
+  // The last night runs past midnight: the window closes the day after `end`.
+  assert.equal((await run({ ...brunch, startDate: new Date('2026-11-02T05:30:00.000Z') })).result.length, 1);
+  assert.equal((await run({ ...brunch, startDate: new Date('2026-11-05T16:00:00.000Z') })).result.length, 0, 'the week after');
+  assert.equal((await run({ ...brunch, startDate: new Date('2026-06-06T16:00:00.000Z') })).result.length, 0, 'a pride is not a bear run');
+
+  // An unsure event is no longer a maybe inside the run.
+  const unsure = await run({ ...brunch, startDate: new Date('2026-10-30T16:00:00.000Z') }, { verdict: 'unsure', reason: 'thin' });
+  assert.equal(unsure.result[0].bearSource, 'tagged (bear-run: Spooky Bear)');
+  assert.equal(unsure.result[0].bearReview, undefined);
+
+  const bigCity = await run({ ...brunch, city: 'nyc', bar: 'Rockbar', startDate: new Date('2026-09-18T23:00:00.000Z') });
+  assert.equal(bigCity.result.length, 0, 'NYC during Urban Bear: not necessarily bear');
+
+  // A festival's own reach line overrules its town, both ways.
+  const stated = festivals.map(item => item.key === 'urban-bear-nyc' ? { ...item, reach: 'venues', venues: ['Rockbar'] } : item.key === 'spooky-bear' ? { ...item, reach: 'none' } : item);
+  const venueCore = new SharedCore({ ptown: { timezone: 'America/New_York', patterns: ['provincetown'], destination: true }, nyc: { timezone: 'America/New_York', patterns: ['new york'] } }, { eventSchema: EventSchema, festivals: stated });
+  const atVenue = await venueCore.filterBearEvents([{ ...brunch, city: 'nyc', bar: 'The Rockbar', startDate: new Date('2026-09-18T23:00:00.000Z') }], bearCheckConfig('enforce'), buildTagAwareAdapter(notBear));
+  assert.equal(atVenue.length, 1);
+  assert.equal(atVenue[0].bearSource, 'tagged (bear-run: Urban Bear NYC)');
+  const elsewhere = await venueCore.filterBearEvents([{ ...brunch, city: 'nyc', bar: 'Stonewall', startDate: new Date('2026-09-18T23:00:00.000Z') }], bearCheckConfig('enforce'), buildTagAwareAdapter(notBear));
+  assert.equal(elsewhere.length, 0);
+  const none = await venueCore.filterBearEvents([{ ...brunch, startDate: new Date('2026-10-31T16:00:00.000Z') }], bearCheckConfig('enforce'), buildTagAwareAdapter(notBear));
+  assert.equal(none.length, 0, 'reach: none');
+});
+
+test('keeps: the owner\'s stored verdict and a source allowlist are never overruled by a bear run or a keeping tag', async () => {
+  const festivals = [{ key: 'spooky-bear', name: 'Spooky Bear', category: 'bear-run', cityKey: 'ptown', nextDates: { start: '2026-10-29', end: '2026-11-01' } }];
+  const event = { title: 'Leather Cabaret Brunch', description: 'show tunes', bar: 'Crown & Anchor', city: 'ptown', timezone: 'America/New_York', startDate: new Date('2026-10-31T16:00:00.000Z') };
+  const core = createDestinationCore(festivals);
+  const adapter = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'x' }, { leather: { applies: true, eventEvidence: ['Leather'], reason: 'leather' } });
+  const decision = await core.attachEventTagsToBearDecision({ result: 'not_bear', provenance: 'allowlist: not on the list' }, { ...event }, bearCheckConfig('enforce'), adapter);
+  assert.equal(decision.result, 'not_bear', 'the source\'s own allowlist stands');
+  const bear = await core.attachEventTagsToBearDecision({ result: 'bear', provenance: 'keyword' }, { ...event }, bearCheckConfig('enforce'), adapter);
+  assert.equal(bear.result, 'bear', 'a bear verdict is never re-labelled');
+  assert.equal(bear.bearRun, undefined);
+});

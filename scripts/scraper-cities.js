@@ -115,6 +115,7 @@ const scraperCities = {
       "desert hot springs",
       "greater palm springs"
     ],
+    "destination": true,
     "coordinates": {
       "lat": 33.8303,
       "lng": -116.5453
@@ -224,6 +225,7 @@ const scraperCities = {
     "patterns": [
       "sitges"
     ],
+    "destination": true,
     "coordinates": {
       "lat": 41.2379,
       "lng": 1.8057
@@ -262,6 +264,7 @@ const scraperCities = {
       "provincetown",
       "ptown"
     ],
+    "destination": true,
     "coordinates": {
       "lat": 42.0526,
       "lng": -70.1865
@@ -313,6 +316,7 @@ const scraperCities = {
       "pv",
       "p.v"
     ],
+    "destination": true,
     "coordinates": {
       "lat": 20.6534,
       "lng": -105.2253
@@ -421,6 +425,7 @@ const scraperCities = {
       "cherry grove",
       "fire island pines"
     ],
+    "destination": true,
     "coordinates": {
       "lat": 40.6482,
       "lng": -73.085
@@ -785,6 +790,7 @@ const scraperCities = {
       "playa del ingles",
       "playa del inglés"
     ],
+    "destination": true,
     "coordinates": {
       "lat": 27.7606,
       "lng": -15.586

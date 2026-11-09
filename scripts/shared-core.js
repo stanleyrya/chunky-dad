@@ -14254,11 +14254,12 @@ class SharedCore {
                 // isBearEvent stays the pipeline's "belongs on the calendar"
                 // flag; bearSource says it was the tags that earned the place.
                 counts.tagged++;
-                const tagList = Array.isArray(decision.tags) ? decision.tags.join(', ') : '';
+                const tagList = decision.bearRun ? `bear-run (${decision.bearRun})` : Array.isArray(decision.tags) ? decision.tags.join(', ') : '';
                 console.log(`🏷️ BEAR CHECK${tag}: "${title}" → KEEP, tagged ${tagList} — not bear (${decision.provenance})`);
                 const bearSource = decision.manualStore
                     ? SharedCore.buildBearVerdictStoreSource('tagged', decision.storedVerdictEntry && decision.storedVerdictEntry.stampedAt)
-                    : SharedCore.buildTaggedBearSource(decision.provenance);
+                    : decision.bearRun ? `tagged (bear-run: ${String(decision.bearRun).slice(0, 60)})`
+                        : SharedCore.buildTaggedBearSource(decision.provenance);
                 kept.push({...event, isBearEvent: true, bearSource, ...this.buildEventTagsPatch(decision)});
             } else if (decision.result === 'not_bear' && (!trusted || decision.manualStore === true)) {
                 // A stored manual not_bear drops even TRUSTED (alwaysBear /
@@ -14455,13 +14456,49 @@ class SharedCore {
             console.log(`🏷️ TAGS: "${title}" — candidates ${machine.candidates.map(describe).join('; ')}; ${parts.join('; ')}`);
         }
         decision.tags = tags;
-        // Not bear, but tagged: kept. An allowlist miss is the source's own
-        // rule ("only these events from this site") and is never overruled.
+        // Not bear, but kept — for one of two reasons, and only these
+        // (owner, 2026-11-09: "save bear and leather but not a lot of the
+        // other events"):
+        //   1. a tag that KEEPS (EventSchema.EVENT_TAGS `keeps`: leather).
+        //      Every other machine tag is description: it rides on an event
+        //      that is there for another reason and never earns a place.
+        //   2. a bear run in a destination town: the run takes the town over,
+        //      so every event inside its window is kept (bear-run is derived,
+        //      never stored — the provenance names the run).
+        // An allowlist miss is the source's own rule ("only these events
+        // from this site") and is never overruled.
         const promotable = decision.result === 'not_bear' || decision.result === 'unsure';
-        if (tags.length > 0 && promotable && !String(decision.provenance || '').startsWith('allowlist:')) {
+        if (!promotable || String(decision.provenance || '').startsWith('allowlist:')) return decision;
+        const bearRun = typeof schema.findBearRunForEvent === 'function'
+            ? schema.findBearRunForEvent(event, this.festivals, { destinations: this.cities || {} })
+            : null;
+        if (bearRun) {
+            const window = bearRun.nextDates || {};
+            console.log(`🏕️ BEAR RUN: "${title}" kept — inside ${bearRun.name || bearRun.key} (${event.city}, ${window.start}–${window.end || window.start}); was ${decision.result} (${decision.provenance})`);
             decision.result = 'tagged';
-            decision.provenance = `tagged: ${tags.join(', ')} — ${decision.provenance}`;
+            decision.bearRun = bearRun.name || bearRun.key || '';
+            decision.provenance = `tagged: bear-run (${bearRun.name || bearRun.key}) — ${decision.provenance}`;
+            return decision;
         }
+        const keeping = typeof schema.keepingEventTags === 'function' ? schema.keepingEventTags(tags) : tags;
+        if (keeping.length === 0) {
+            if (tags.length > 0) console.log(`🏷️ TAGS: "${title}" — ${tags.join(', ')} describe it but do not keep a ${decision.result} event`);
+            return decision;
+        }
+        // A leather night held for another crowd is not this calendar's
+        // (owner: "leather + trans — probably not unless it's about everyone
+        // inclusive"; "FLW – WOMEN'S LEATHER NIGHT" was kept on 2026-11-09).
+        // Asked only here, where the tag alone is what keeps the event; no
+        // answer, or an answer without the event's own words, keeps it.
+        const audience = await this.getAiAudienceVerdict(event, parserConfig, httpAdapter);
+        if (audience && audience.audience === 'another-group') {
+            console.log(`🏷️ TAGS: "${title}" — ${keeping.join(', ')} would keep it, but it is held for another crowd ("${audience.evidence[0]}") — not kept`);
+            decision.provenance = `${keeping.join(', ')} for another crowd ("${audience.evidence[0]}") — ${decision.provenance}`;
+            decision.audience = 'another-group';
+            return decision;
+        }
+        decision.result = 'tagged';
+        decision.provenance = `tagged: ${keeping.join(', ')} — ${decision.provenance}`;
         return decision;
     }
 
@@ -14727,6 +14764,75 @@ class SharedCore {
             return { applies: parsed.applies, evidence, reason };
         })().catch(() => null);
         this._tagVerdictMemo.set(memoKey, pending);
+        return pending;
+    }
+
+    // Who an event is held for — asked only when a tag alone would keep a
+    // not-bear event (attachEventTagsToBearDecision). The calendar is gay
+    // men's bear and leather nightlife; a leather night for women, or for a
+    // trans and non-binary crowd specifically, is somebody else's calendar,
+    // while "all genders welcome" is everyone's.
+    buildAudienceCheckPrompt(event) {
+        const title = String(event.title || '').trim();
+        const description = String(event.description || '').trim();
+        const bar = String(event.bar || '').trim();
+        return [
+            'You are sorting events for a calendar of gay men\'s bear and leather nightlife. One question about one event: who is it held FOR?',
+            '',
+            'Event:',
+            `- Title: ${title}`,
+            `- Venue: ${bar || 'unknown'}`,
+            `- City: ${event.city || 'unknown'}`,
+            `- Description: ${description ? description.slice(0, 600) : '(none)'}`,
+            '',
+            'Answer with one of:',
+            '- "another-group": the event\'s own words say it is held for a group other than men — a women\'s, lesbian, dyke, sapphic or femme night, a FLINTA night, or a night specifically for trans or non-binary people.',
+            '- "everyone": the event\'s own words welcome all genders or everybody, even when it also names such a group.',
+            '- "men": the event\'s own words say it is for men, guys, daddies, boys or similar.',
+            '- "unstated": the event does not say. Most events do not say; never guess from the venue, the city or the kind of party.',
+            '',
+            'Respond with ONLY this JSON object, no other text:',
+            '{"audience": "another-group" | "everyone" | "men" | "unstated", "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}',
+            '',
+            'eventEvidence is checked automatically: every string must be copied WORD FOR WORD from the Title or the Description. When nothing in them states the audience, the answer is "unstated" and eventEvidence is empty.'
+        ].join('\n');
+    }
+
+    // { audience, evidence, reason } or null (no AI / unusable answer). An
+    // "another-group" without a quote that occurs in the event's own text is
+    // read as "unstated": the check fails OPEN, because its only effect is to
+    // take away a keep.
+    async getAiAudienceVerdict(event, parserConfig, httpAdapter) {
+        if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return null;
+        const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
+        if (rawAi.enabled === false) return null;
+        const resolved = this.resolveAiConfig(rawAi);
+        if (!resolved.enabled || !resolved.endpoint) return null;
+        const title = String(event.title || '').trim();
+        const description = String(event.description || '').trim();
+        const bar = String(event.bar || '').trim();
+        const memoKey = `${title}|${description}|${bar}`;
+        if (!this._audienceVerdictMemo) this._audienceVerdictMemo = new Map();
+        if (this._audienceVerdictMemo.has(memoKey)) return this._audienceVerdictMemo.get(memoKey);
+        const prompt = this.buildAudienceCheckPrompt(event);
+        const config = { ...resolved, temperature: 0, numPredict: Math.min(Number(resolved.numPredict) || 200, 200) };
+        const pending = (async () => {
+            const rawResponse = await this.callAiGenerate(config, prompt, 'audience-check', httpAdapter);
+            if (!rawResponse) return null;
+            let parsed = null;
+            try { parsed = JSON.parse(this.extractFirstJsonObject(rawResponse) || rawResponse); } catch (_) { return null; }
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+            const stated = String(parsed.audience || '').trim().toLowerCase();
+            if (!['another-group', 'everyone', 'men', 'unstated'].includes(stated)) return null;
+            const claimed = Array.isArray(parsed.eventEvidence) ? parsed.eventEvidence.filter(item => typeof item === 'string') : [];
+            const evidence = this.verifyBearEvidenceQuotes(claimed, event);
+            const reason = typeof parsed.reason === 'string' ? parsed.reason.trim() : '';
+            if (stated !== 'unstated' && evidence.length === 0) {
+                return { audience: 'unstated', evidence: [], reason: `"${stated}" without the event's own words${reason ? ` — ${reason}` : ''}` };
+            }
+            return { audience: stated, evidence, reason };
+        })().catch(() => null);
+        this._audienceVerdictMemo.set(memoKey, pending);
         return pending;
     }
 

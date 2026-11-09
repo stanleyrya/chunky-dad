@@ -2422,16 +2422,18 @@ class DynamicCalendarLoader extends CalendarCore {
 
     // Try multiple free CORS proxies to fetch Google Calendar ICS
     // Derived tags are computed here, never stored: an event inside a bear
-    // run's window (festivals.json nextDates + reach) wears `bear-run` for as
-    // long as the data says so. EventSchema.deriveFestivalTags holds the rule.
+    // run's window (festivals.json nextDates) in a destination town (city
+    // config `destination`) wears `bear-run` for as long as the data says so.
+    // EventSchema.deriveFestivalTags holds the rule.
     applyDerivedEventTags(events, festivals, cityKey) {
         const schema = typeof window !== 'undefined' ? window.EventSchema : null;
         if (!schema || typeof schema.deriveFestivalTags !== 'function' || !Array.isArray(events)) return;
         const list = Array.isArray(festivals) ? festivals : (festivals && Array.isArray(festivals.festivals) ? festivals.festivals : []);
+        const destinations = (typeof window !== 'undefined' && window.CITY_CONFIG) ? window.CITY_CONFIG : {};
         let stamped = 0;
         events.forEach(event => {
             if (!event || typeof event !== 'object') return;
-            const derived = schema.deriveFestivalTags(event, list, { cityKey, timezone: this.calendarTimezone || '' });
+            const derived = schema.deriveFestivalTags(event, list, { cityKey, timezone: this.calendarTimezone || '', destinations });
             if (derived.length === 0) return;
             event.tags = schema.mergeEventTags(event.tags, derived);
             stamped += 1;

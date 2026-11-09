@@ -185,7 +185,13 @@ const DESCRIPTION_KEYS = {
     typicaltiming: 'typicalTiming',
     emoji: 'emoji',
     estimated: 'estimated',
-    recurring: 'recurring'
+    recurring: 'recurring',
+    // How far a bear run spreads over its town (EventSchema.findBearRunForEvent):
+    // "reach: city" / "reach: venues" + "venues: Bar A, Bar B" / "reach: none".
+    // Normally absent — the town's own `destination` flag (js/city-config.js)
+    // decides; a line here overrules it for this one festival.
+    reach: 'reach',
+    venues: 'venues'
 };
 
 function parseDescriptionKeys(descriptionText) {
@@ -344,6 +350,7 @@ function nextYearlyOccurrence(baseRange, cutoffStr) {
 // ---------------------------------------------------------------------------
 
 const KNOWN_CATEGORIES = ['bear-run', 'pride', 'kink', 'festival'];
+const KNOWN_REACHES = ['city', 'venues', 'none'];
 
 function buildEntry(event, range, rawBlock, warnings) {
     const descKeys = parseDescriptionKeys(event.unprocessedDescription);
@@ -370,6 +377,17 @@ function buildEntry(event, range, rawBlock, warnings) {
     }
     if (descKeys.instagram) entry.instagram = descKeys.instagram;
     if (descKeys.emoji) entry.emoji = descKeys.emoji;
+    const reach = String(descKeys.reach || '').trim().toLowerCase();
+    if (reach) {
+        if (KNOWN_REACHES.includes(reach)) {
+            entry.reach = reach;
+            const venues = String(descKeys.venues || '').split(',').map(item => item.trim()).filter(Boolean);
+            if (reach === 'venues') entry.venues = venues;
+            if (reach === 'venues' && venues.length === 0) warnings.push(`"${name}": reach "venues" with no venues line — nothing around it will be tagged`);
+        } else {
+            warnings.push(`"${name}": unknown reach "${reach}" (expected one of ${KNOWN_REACHES.join(', ')}) — ignored`);
+        }
+    }
     if (dated) {
         entry.nextDates = { start: fmtPlainDate(range.start), end: fmtPlainDate(range.end) };
     }
@@ -558,7 +576,7 @@ function convertEvents(events, rawBlocks, todayStr, cutoffStr, previousEntries =
 // (2-space indent, nextDates inline on one line, trailing newline)
 // ---------------------------------------------------------------------------
 
-const FIELD_ORDER = ['key', 'name', 'category', 'cityKey', 'location', 'typicalTiming', 'recurring', 'website', 'instagram', 'emoji'];
+const FIELD_ORDER = ['key', 'name', 'category', 'cityKey', 'location', 'typicalTiming', 'recurring', 'website', 'instagram', 'emoji', 'reach', 'venues'];
 
 function serializeFestivals(entries) {
     const entryBlocks = entries.map(entry => {
