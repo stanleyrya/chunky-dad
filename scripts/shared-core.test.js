@@ -30129,3 +30129,63 @@ test('tags: the bare word "gear" names leather only in a title; a description ha
   assert.equal(result.length, 0);
   assert.equal(adapter.calls.filter(call => /^Tag: /m.test(call.prompt)).length, 0, 'no candidate, no question');
 });
+
+// ---------------------------------------------------------------------------
+// An aggregator's shrug is not a discovery (2026-11-09)
+// ---------------------------------------------------------------------------
+
+test('aggregator: a listing site row the model can say nothing about goes to the Not-bear pile, not onto the plan with a flag', async () => {
+  const unsure = { verdict: 'unsure', reason: "The title 'PONPON' and lack of description provide no bear-specific evidence." };
+  const aggregator = bearCheckConfig('enforce', { name: 'whereto.party', siteRole: 'Aggregator ' });
+
+  // The listing site: dropped, and the drop is visible in the collector.
+  const drops = [];
+  const kept = await createCore().filterBearEvents([{ title: 'PONPON', bar: 'Club Nine' }], aggregator, buildBearVerdictAdapter(unsure), drops);
+  assert.equal(kept.length, 0, 'an aggregator shrug is not kept');
+  assert.equal(drops.length, 1, 'it is in the Not-bear pile');
+  assert.match(drops[0].reason, /\[listing site, no bear evidence\]$/);
+  assert.equal(drops[0].event.title, 'PONPON', 'the whole record rides along, so it can be recovered');
+
+  // The same answer on a venue's or promoter's own page is still a question.
+  const firstParty = await createCore().filterBearEvents([{ title: 'PONPON', bar: 'Club Nine' }], bearCheckConfig('enforce'), buildBearVerdictAdapter(unsure), []);
+  assert.equal(firstParty.length, 1);
+  assert.match(firstParty[0].bearReview, /^unsure — ai: /);
+
+  // Report mode changes nothing and collects nothing.
+  const reportDrops = [];
+  await createCore().filterBearEvents([{ title: 'PONPON' }], bearCheckConfig('report', { siteRole: 'aggregator' }), buildBearVerdictAdapter(unsure), reportDrops);
+  assert.equal(reportDrops.length, 0);
+});
+
+test('aggregator: a real lead keeps its flag — a bear answer the evidence gate demoted, and a missing judge', async () => {
+  const aggregator = bearCheckConfig('enforce', { name: 'whereto.party', siteRole: 'aggregator' });
+
+  // The model said BEAR but quoted nothing: demoted to unsure, still a lead.
+  const demoted = await createCore().filterBearEvents(
+    [{ title: 'Meat Rack', bar: 'Club Nine' }], aggregator,
+    buildBearVerdictAdapter({ verdict: 'bear', reason: 'a known bear night', eventEvidence: [] }), []);
+  assert.equal(demoted.length, 1);
+  assert.match(demoted[0].bearReview, /\[evidence gate: no event-level evidence quoted\]$/);
+
+  // No judge ran: never drop on a missing judge.
+  const drops = [];
+  const noJudge = await createCore().filterBearEvents(
+    [{ title: 'Meat Rack', bar: 'Club Nine' }], aggregator, buildBearVerdictAdapter(null, { fail: true }), drops);
+  assert.equal(noJudge.length, 1);
+  assert.equal(noJudge[0].bearReview, 'unsure — fallback: ai unavailable');
+  assert.equal(drops.length, 0);
+
+  // A bear word still decides before any of this.
+  const bear = await createCore().filterBearEvents([{ title: 'Bear Night', bar: 'Club Nine' }], aggregator, buildBearVerdictAdapter({ verdict: 'unsure', reason: 'x' }), []);
+  assert.equal(bear[0].isBearEvent, true);
+});
+
+test('aggregator: a not-bear held because the row names a usually-bear promoter is a lead, not a shrug', () => {
+  const core = createCore();
+  const base = { result: 'not_bear', aiAnswer: 'not_bear', provenance: 'ai: no bear wording' };
+  const held = { ...base, result: 'unsure', provenance: `${base.provenance} — held: the event's own title names HOT TAKE, a usually-bear promoter` };
+  assert.equal(core.isAggregatorShrug(held, false, { siteRole: 'aggregator' }), false);
+  assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, false, { siteRole: 'aggregator' }), true);
+  assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, true, { siteRole: 'aggregator' }), false, 'a trusted promoter is never dropped here');
+  assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, false, { siteRole: 'venue' }), false);
+});

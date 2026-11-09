@@ -14270,12 +14270,19 @@ class SharedCore {
                     : decision.bearRun ? `tagged (bear-run: ${String(decision.bearRun).slice(0, 60)})`
                         : SharedCore.buildTaggedBearSource(decision.provenance);
                 kept.push({...event, isBearEvent: true, bearSource, ...this.buildEventTagsPatch(decision)});
-            } else if (decision.result === 'not_bear' && (!trusted || decision.manualStore === true)) {
+            } else if ((decision.result === 'not_bear' && (!trusted || decision.manualStore === true))
+                || this.isAggregatorShrug(decision, trusted, parserConfig)) {
                 // A stored manual not_bear drops even TRUSTED (alwaysBear /
                 // promoter-always) events: the owner's explicit verdict wins
                 // in both directions, like the calendar-record demote path.
+                //
+                // AN AGGREGATOR'S SHRUG IS NOT A DISCOVERY (isAggregatorShrug):
+                // a listing site's row the model could say nothing about goes
+                // to the Not-bear pile, where it stays visible and recoverable,
+                // instead of onto the plan with a review flag.
                 counts.dropped++;
-                console.log(`🐻 BEAR CHECK${tag}: "${title}" → DROP (${decision.provenance})`);
+                const shrug = decision.result === 'unsure' ? ' — a listing site\'s row with nothing bear in it; kept in the Not-bear pile, not flagged onto the plan' : '';
+                console.log(`🐻 BEAR CHECK${tag}: "${title}" → DROP (${decision.provenance})${shrug}`);
                 // Flag, don't drop silently: enforce-mode drops are surfaced to
                 // the results UI (and prep-time manual-override rescue) via the
                 // caller's collector. Report mode changes nothing.
@@ -14287,7 +14294,7 @@ class SharedCore {
                         title,
                         startDate: event.startDate || event.date || null,
                         venue: event.bar || event.venue || '',
-                        reason: decision.provenance,
+                        reason: decision.result === 'unsure' ? `${decision.provenance} [listing site, no bear evidence]` : decision.provenance,
                         host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
                         event: { ...event }
                     }
@@ -14365,6 +14372,24 @@ class SharedCore {
         console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.tagged} tagged (kept, not bear), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}`);
 
         return mode === 'report' ? legacyFilter() : kept;
+    }
+
+    // "Unsure" from a first-party source is worth a question: the venue or
+    // promoter put the night on its own page, so it is kept with a review flag.
+    // From an AGGREGATOR it is not. A listing site carries every party in town
+    // (whereto.party 2026-11-09: 285 rows, 38 of them title-only club nights —
+    // "ZONA: Liu Lee", "PONPON", "Strawberry Fields 2026" — each kept, flagged
+    // and 17 offered to the owner as new events). Aggregators are discovery
+    // only, and a row the model can say nothing about discovered nothing.
+    //
+    // Only the model's OWN "unsure" counts. A bear answer the evidence gate
+    // demoted, or a not-bear held because the row names a usually-bear
+    // promoter, is a real lead and keeps its flag; so does "ai unavailable"
+    // (no judge ran — never drop on a missing judge).
+    isAggregatorShrug(decision, trusted, parserConfig) {
+        if (!decision || decision.result !== 'unsure' || trusted) return false;
+        if (!parserConfig || String(parserConfig.siteRole || '').trim().toLowerCase() !== 'aggregator') return false;
+        return decision.aiAnswer === 'unsure';
     }
 
     // `{ tags: 'leather' }` for a decision that carries tags, `{}` otherwise —
@@ -14575,7 +14600,10 @@ class SharedCore {
 
         const aiVerdict = await this.getAiBearVerdict(event, parserConfig, httpAdapter);
         if (aiVerdict) {
-            const aiDecision = { result: aiVerdict.verdict, provenance: `ai: ${aiVerdict.reason || 'no reason given'}` };
+            // aiAnswer = what the MODEL said, before the evidence gate or the
+            // usually-bear hold rewrite the result. filterBearEvents reads it
+            // to tell "the model saw nothing" from "something was held".
+            const aiDecision = { result: aiVerdict.verdict, aiAnswer: aiVerdict.verdict, provenance: `ai: ${aiVerdict.reason || 'no reason given'}` };
             return this.holdUsuallyBearSeriesFromDrop(
                 this.applyBearEvidenceGate(aiDecision, event, parserConfig, aiVerdict.evidence), event, trust);
         }
@@ -14615,6 +14643,7 @@ class SharedCore {
         if (evidence !== 'title' && evidence !== 'organizer') return decision;
         console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — AI said not bear, but its own ${evidence} names ${trust.promoter} (usually-bear); held for review, not dropped`);
         return {
+            ...decision,
             result: 'unsure',
             provenance: `${decision.provenance} — held: the event's own ${evidence} names ${trust.promoter}, a usually-bear promoter`
         };
@@ -15081,6 +15110,7 @@ class SharedCore {
             : 'no event-level evidence quoted';
         console.log(`🐻 BEAR CHECK: evidence gate demoted "${event && event.title ? event.title : 'Unknown'}" from bear to unsure — ${detail} (venue/promoter reputation is context, not evidence)`);
         return {
+            ...decision,
             result: 'unsure',
             provenance: `${decision.provenance} [evidence gate: ${detail}]`
         };
