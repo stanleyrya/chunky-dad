@@ -30189,3 +30189,84 @@ test('aggregator: a not-bear held because the row names a usually-bear promoter 
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, true, { siteRole: 'aggregator' }), false, 'a trusted promoter is never dropped here');
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, false, { siteRole: 'venue' }), false);
 });
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): an iCalendar series row carries the nights
+// the feed itself cancelled (EXDATE) or moved (a RECURRENCE-ID record of the
+// same UID), written in the series' own clock.
+// ---------------------------------------------------------------------------
+// Trimmed from the XL Bears public Google Calendar as cached 2026-11-08:
+// "Game Night" is every 2nd Sunday; the 2026-11-08 night was moved to 11-15.
+const GAME_NIGHT_UID = '_6hhjgohh68q3cb9mcop3ib9k6gsjib9pcks64bb660sm6dhhccojce1n68_R20230709T230000@google.com';
+const GAME_NIGHT_ICS = [
+  'BEGIN:VCALENDAR', 'PRODID:-//Google Inc//Google Calendar 70.9054//EN', 'VERSION:2.0',
+  'BEGIN:VEVENT',
+  'DTSTART;TZID=America/Los_Angeles:20261115T160000',
+  'DTEND;TZID=America/Los_Angeles:20261115T210000',
+  `UID:${GAME_NIGHT_UID}`,
+  'RECURRENCE-ID;TZID=America/Los_Angeles:20261108T160000',
+  'DESCRIPTION:Moved to 11/15 due to MTG Prerelease at Phoenix on 11/08',
+  'LOCATION:Phoenix Comics & Games\\, 113 Broadway E\\, Seattle\\, WA 98102',
+  'STATUS:CONFIRMED', 'SUMMARY:Game Night',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'DTSTART;TZID=America/Los_Angeles:20230709T160000',
+  'DTEND;TZID=America/Los_Angeles:20230709T210000',
+  'RRULE:FREQ=MONTHLY;BYDAY=2SU',
+  'EXDATE;TZID=America/Los_Angeles:20240609T160000',
+  'EXDATE;TZID=America/Los_Angeles:20241110T160000',
+  `UID:${GAME_NIGHT_UID}`,
+  'DESCRIPTION:Come join us bears & friends at Phoenix Comics & Games for board games',
+  'LOCATION:Phoenix Comics & Games\\, 113 Broadway E\\, Seattle\\, WA 98102',
+  'STATUS:CONFIRMED', 'SUMMARY:Game Night',
+  'END:VEVENT',
+  'END:VCALENDAR'
+].join('\r\n');
+
+test('feed fidelity: an iCalendar series row carries its EXDATEs and the nights another record of its UID replaces', () => {
+  const core = createCore();
+  const door = core.readMachineDoorBody(GAME_NIGHT_ICS, 'https://calendar.example/public/basic.ics');
+  assert.equal(door.kind, 'ics');
+  const rows = JSON.parse(door.body).events;
+  const series = rows.find(row => row.rrule);
+  assert.ok(series, 'the series row is read (no UNTIL — still running)');
+  assert.deepEqual(series.exdates, ['2024-06-09T16:00:00', '2024-11-10T16:00:00', '2026-11-08T16:00:00'],
+    'its own EXDATEs, then the RECURRENCE-ID of the override — all in the wall clock its start is written in');
+  assert.equal(series.start, '2023-07-09T16:00:00');
+  // The override is collected from ALL records, so it still takes its night
+  // off the series once it has itself aged into the archive.
+  for (const row of rows.filter(row => !row.rrule)) {
+    assert.equal(row.exdates, undefined, 'an override row is a plain night and carries no exception list');
+    assert.equal(row.start, '2026-11-15T16:00:00');
+  }
+  // The exception list does not count as a field the row says about its event.
+  const plain = core.readMachineDoorBody(GAME_NIGHT_ICS.replace(/EXDATE[^\r]*\r\n/g, '').replace(/RECURRENCE-ID[^\r]*\r\n/, ''), 'https://calendar.example/public/basic.ics');
+  assert.equal(door.richness, plain.richness);
+});
+
+test('feed fidelity: an exception is written in the clock of its series whatever form the feed used', () => {
+  const start = (params, value) => SharedCore.parseIcsDateValue(params, value);
+  const la = start(';TZID=America/Los_Angeles', '20230709T160000');
+  // Same zone: the wall clock as written.
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start(';TZID=America/Los_Angeles', '20261108T160000'), la), '2026-11-08T16:00:00');
+  // A UTC value beside a TZID series names the same night (00:00Z on the 9th is 16:00 PST on the 8th).
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start('', '20261109T000000Z'), la), '2026-11-08T16:00:00');
+  // …and across the DST change (PDT: 23:00Z is 16:00).
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start('', '20260712T230000Z'), la), '2026-07-12T16:00:00');
+  // A UTC series is compared on instants.
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start(';TZID=America/Los_Angeles', '20261108T160000'), start('', '20230709T230000Z')), '2026-11-09T00:00:00.000Z');
+  // All-day values name a day.
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start(';VALUE=DATE', '20261108'), start(';VALUE=DATE', '20230709')), '2026-11-08');
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start(';VALUE=DATE', '20261108'), la), '2026-11-08', 'an all-day exception of a timed series names the whole day');
+  assert.equal(SharedCore.icsExclusionInSeriesClock(null, la), '');
+});
+
+test('feed fidelity: a cancelled iCalendar record says so on its row', () => {
+  const core = createCore();
+  const ics = GAME_NIGHT_ICS.replace('STATUS:CONFIRMED', 'STATUS:CANCELLED');
+  const rows = JSON.parse(core.readMachineDoorBody(ics, 'https://calendar.example/public/basic.ics').body).events;
+  const series = rows.find(row => row.rrule);
+  assert.ok(series.exdates.includes('2026-11-08T16:00:00'), 'a cancelled override still takes its night off the series');
+  assert.equal(series.status, undefined);
+  for (const row of rows.filter(row => !row.rrule)) assert.equal(row.status, 'cancelled');
+});

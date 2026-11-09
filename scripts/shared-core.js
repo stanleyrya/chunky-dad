@@ -21507,8 +21507,21 @@ class SharedCore {
         if (current.length < records.length) {
             console.log(`📅 ICS FEED: ${doorUrl} — ${records.length - current.length} of ${records.length} record(s) ended more than ${ICS_FEED_HISTORY_DAYS} days ago (the calendar's archive) — ${current.length} read`);
         }
-        const rows = current.map(record => this.icsRecordToFeedRow(record, doorUrl)).filter(Boolean);
-        return { kind: 'ics', count: rows.length, richness: this.machineDoorRowRichness(rows), body: JSON.stringify({ events: rows }) };
+        // The nights a series does NOT have, as the feed itself states them:
+        // its own EXDATEs, and every occurrence another record of the same
+        // UID replaces (RECURRENCE-ID — that record is the real night and is
+        // read as its own row). Collected over ALL records, archive
+        // included: an override filed long ago still cancels its night.
+        const replacedByUid = new Map();
+        for (const record of records) {
+            if (!record || !record.uid || !record.recurrenceId) continue;
+            if (!replacedByUid.has(record.uid)) replacedByUid.set(record.uid, []);
+            replacedByUid.get(record.uid).push(record.recurrenceId);
+        }
+        const rows = current.map(record => this.icsRecordToFeedRow(record, doorUrl, replacedByUid.get(record.uid) || [])).filter(Boolean);
+        // Richness measures what a row says about its EVENT; the exception
+        // list is bookkeeping and must not tip a door comparison.
+        return { kind: 'ics', count: rows.length, richness: this.machineDoorRowRichness(rows.map(({ exdates, ...rest }) => rest)), body: JSON.stringify({ events: rows }) };
     }
 
     // A VEVENT whose span ended more than ICS_FEED_HISTORY_DAYS ago and
@@ -21530,7 +21543,9 @@ class SharedCore {
         return untilMs < cutoff;
     }
 
-    icsRecordToFeedRow(record, doorUrl) {
+    // `replaced`: the RECURRENCE-ID values of the other records sharing this
+    // record's UID (see readMachineDoorBody) — only a series row uses them.
+    icsRecordToFeedRow(record, doorUrl, replaced = []) {
         if (!record || !record.start) return null;
         const pad = (value) => String(value).padStart(2, '0');
         const wallIso = (entry) => `${entry.wall.year}-${pad(entry.wall.month)}-${pad(entry.wall.day)}T${pad(entry.wall.hour)}:${pad(entry.wall.minute)}:${pad(entry.wall.second)}`;
@@ -21565,10 +21580,53 @@ class SharedCore {
             address: leadingIsVenue ? segments.slice(1).join(', ') : location,
             all_day: Boolean(record.isAllDay)
         };
+        // A cancelled record says so in the feed's own word; the reader
+        // skips a row whose status says cancelled (and a cancelled
+        // RECURRENCE-ID record still takes its night off the series).
+        if (record.status === 'CANCELLED') row.status = 'cancelled';
         if (record.rrule) row.rrule = record.rrule;
+        // A series row carries the nights it does not have (XL Bears'
+        // "Game Night", 2nd Sundays: the feed moved 2026-11-08 to 11-15 with
+        // a RECURRENCE-ID record and the expansion kept both, audit
+        // 2026-11-09). Each is written in the SERIES' own clock — the one
+        // its `start` is written in — so the reader compares like with
+        // like whatever form the feed used for the exclusion (a UTC
+        // RECURRENCE-ID beside a TZID DTSTART names the same night).
+        if (record.rrule && !record.recurrenceId) {
+            const excluded = [];
+            for (const entry of [...(Array.isArray(record.exdates) ? record.exdates : []), ...(Array.isArray(replaced) ? replaced : [])]) {
+                const value = SharedCore.icsExclusionInSeriesClock(entry, record.start);
+                if (value && !excluded.includes(value)) excluded.push(value);
+            }
+            if (excluded.length > 0) row.exdates = excluded;
+        }
         const tzid = record.start.tzid;
         if (tzid && tzid !== 'UTC' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(tzid)) row.timezone = tzid;
         return row;
+    }
+
+    // One EXDATE / RECURRENCE-ID value (a parseIcsDateValue record) as text
+    // in the clock of the series it belongs to: a bare day for an all-day
+    // series or an all-day exclusion (it names the whole day), a Z instant
+    // for a UTC series, otherwise the offset-less wall clock in the series'
+    // zone. '' when it cannot be placed (the night is then kept — fail open).
+    static icsExclusionInSeriesClock(exclusion, seriesStart) {
+        if (!exclusion || !exclusion.wall || !seriesStart || !seriesStart.wall) return '';
+        const pad = (value) => String(value).padStart(2, '0');
+        const day = (wall) => `${wall.year}-${pad(wall.month)}-${pad(wall.day)}`;
+        const clock = (wall) => `${day(wall)}T${pad(wall.hour)}:${pad(wall.minute)}:${pad(wall.second)}`;
+        if (exclusion.isDateOnly || seriesStart.isDateOnly) {
+            // A timed exclusion of an all-day series names the day it falls
+            // on where it was written.
+            return day(exclusion.wall);
+        }
+        const instant = exclusion.date instanceof Date && !isNaN(exclusion.date.getTime()) ? exclusion.date : null;
+        if (!instant) return '';
+        if (seriesStart.tzid === 'UTC') return instant.toISOString();
+        if ((exclusion.tzid || null) === (seriesStart.tzid || null)) return clock(exclusion.wall);
+        // Floating series (no zone at all): its wall clock was read as UTC.
+        const inSeriesZone = SharedCore.instantToZonedWallClockRecord(instant, seriesStart.tzid || 'UTC');
+        return inSeriesZone ? clock(inSeriesZone.wall) : '';
     }
 
     // Crawl-queue guard: obvious static assets are never pages, so the crawl
@@ -24062,6 +24120,7 @@ class SharedCore {
                     case 'LOCATION': record.location = SharedCore.unescapeIcsText(value).trim(); break;
                     case 'URL': record.url = value.trim(); break;
                     case 'RRULE': record.rrule = value.trim(); break;
+                    case 'STATUS': record.status = value.trim().toUpperCase(); break;
                     case 'DTSTART': record.start = SharedCore.parseIcsDateValue(params, value); break;
                     case 'DTEND': record.end = SharedCore.parseIcsDateValue(params, value); break;
                     case 'RECURRENCE-ID': record.recurrenceId = SharedCore.parseIcsDateValue(params, value); break;

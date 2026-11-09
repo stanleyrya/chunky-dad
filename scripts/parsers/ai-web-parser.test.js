@@ -23484,3 +23484,87 @@ test('session lines on a day-dated event page: a Squarespace 00:01 start with "F
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T04:00:00Z'), timezone: 'America/New_York' }), '2026-10-30');
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T23:00:00Z'), timezone: 'America/New_York' }), '');
 });
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): series expansion subtracts the nights the
+// feed itself cancelled or moved. XL Bears "Game Night" (2nd Sundays) was kept
+// on 2026-11-08 although a RECURRENCE-ID record moved that night to 11-15;
+// Lodge NY "Manhole" likewise on 11-15 / 11-22.
+// ---------------------------------------------------------------------------
+function feedFidelityWeeklySeries() {
+  // A weekly series that began four weeks ago at 16:00 wall clock; the rows
+  // are in the shape shared-core's icsRecordToFeedRow hands over.
+  const day = 24 * 60 * 60 * 1000;
+  const first = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - 28, 16, 0, 0));
+  const wall = (date) => date.toISOString().slice(0, 19);
+  const night = (weeks) => new Date(first.getTime() + weeks * 7 * day);
+  const series = {
+    uid: 'game-night@calendar.example', title: 'Game Night', description: 'Board games for bears & friends',
+    start: wall(first), end: wall(new Date(first.getTime() + 5 * 60 * 60 * 1000)),
+    venue: 'Phoenix Comics & Games', address: '113 Broadway E, Seattle, WA 98102', all_day: false,
+    rrule: 'FREQ=WEEKLY', timezone: 'America/Los_Angeles'
+  };
+  return { day, first, wall, night, series };
+}
+
+test('feed fidelity: a series night another record replaces is emitted once, as the override says', () => {
+  const parser = createParser();
+  const { day, wall, night, series } = feedFidelityWeeklySeries();
+  const moved = night(5);
+  const movedTo = new Date(moved.getTime() + day + 2 * 60 * 60 * 1000); // next day, 18:00
+  const cancelled = night(7);
+  const payload = { events: [
+    { ...series, exdates: [wall(cancelled), wall(moved)] },
+    { uid: series.uid, title: 'Game Night (moved)', description: 'Moved a day for the prerelease', start: wall(movedTo), end: wall(new Date(movedTo.getTime() + 3 * 60 * 60 * 1000)), venue: 'The Other Shop', address: '500 Pine St, Seattle, WA 98101', all_day: false, timezone: 'America/Los_Angeles' }
+  ] };
+  let events;
+  const logs = captureLogs(() => { events = parser.extractEventsFromJsonApiPayload(payload, 'https://calendar.example/public/basic.ics', null); });
+  const starts = events.map(event => event.startDate.toISOString());
+  assert.ok(!starts.includes(moved.toISOString()), 'the night that was moved away is not an event');
+  assert.ok(!starts.includes(cancelled.toISOString()), 'the EXDATE night is not an event');
+  assert.ok(starts.includes(night(6).toISOString()) && starts.includes(night(8).toISOString()), 'the nights around them stay');
+  const override = events.filter(event => event.startDate.toISOString() === movedTo.toISOString());
+  assert.equal(override.length, 1, 'the override row is the real night, once');
+  assert.equal(override[0].title, 'Game Night (moved)');
+  assert.equal(override[0].bar, 'The Other Shop');
+  assert.equal(override[0].endDate.toISOString(), new Date(movedTo.getTime() + 3 * 60 * 60 * 1000).toISOString());
+  assert.ok(logs.some(line => line.includes('🔁 SERIES: "Game Night"') && line.includes('2 night(s) the feed itself cancelled or moved are not events')
+    && line.includes(moved.toISOString().slice(0, 10)) && line.includes(cancelled.toISOString().slice(0, 10))), logs.join('\n'));
+  for (const event of events) {
+    assert.equal(event._jsonApiSeriesExclusions, undefined, 'the exception list never leaves the expander');
+    assert.equal(event.recurrence, undefined, 'the scraper writes nights, never a series');
+  }
+  // Without the exception list the expansion is what it was.
+  const before = parser.extractEventsFromJsonApiPayload({ events: [series] }, 'https://calendar.example/public/basic.ics', null);
+  assert.ok(before.map(event => event.startDate.toISOString()).includes(moved.toISOString()));
+});
+
+test('feed fidelity: exception values are read in every form a feed writes them', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.readJsonApiSeriesExclusions(['2026-11-08T16:00:00', '2026-11-08', '20261108T160000', '20261108', '2026-11-09T00:00:00.000Z', '', 'soon', 7]), [
+    { ms: Date.UTC(2026, 10, 8, 16), dayOnly: false },
+    { ms: Date.UTC(2026, 10, 8), dayOnly: true },
+    { ms: Date.UTC(2026, 10, 8, 16), dayOnly: false },
+    { ms: Date.UTC(2026, 10, 8), dayOnly: true },
+    { ms: Date.UTC(2026, 10, 9), dayOnly: false }
+  ]);
+  assert.deepEqual(parser.readJsonApiSeriesExclusions('20261108T160000,20261213T160000').map(entry => entry.ms), [Date.UTC(2026, 10, 8, 16), Date.UTC(2026, 11, 13, 16)]);
+  assert.deepEqual(parser.readJsonApiSeriesExclusions(null), []);
+});
+
+test('feed fidelity: an all-day exception takes the whole day; a series with every night excepted is no event', () => {
+  const parser = createParser();
+  const { night, series } = feedFidelityWeeklySeries();
+  const base = { title: 'Game Night', startDate: night(0), endDate: new Date(night(0).getTime() + 5 * 3600000), _jsonApiRrule: 'FREQ=WEEKLY' };
+  const dayOnly = parser.expandJsonApiSeriesRow({ ...base, _jsonApiSeriesExclusions: [{ ms: Date.UTC(night(5).getUTCFullYear(), night(5).getUTCMonth(), night(5).getUTCDate()), dayOnly: true }] });
+  assert.ok(!dayOnly.map(event => event.startDate.toISOString()).includes(night(5).toISOString()));
+  assert.ok(dayOnly.map(event => event.startDate.toISOString()).includes(night(6).toISOString()));
+  // A timed exception at another hour of the same day excepts nothing.
+  const otherHour = parser.expandJsonApiSeriesRow({ ...base, _jsonApiSeriesExclusions: [{ ms: night(5).getTime() + 3600000, dayOnly: false }] });
+  assert.ok(otherHour.map(event => event.startDate.toISOString()).includes(night(5).toISOString()));
+  // Every night in the window excepted (a two-night run): nothing is left, and the first night is not resurrected.
+  const until = night(5).toISOString().slice(0, 10).replace(/-/g, '');
+  const all = parser.expandJsonApiSeriesRow({ ...base, _jsonApiRrule: `FREQ=WEEKLY;UNTIL=${until}T235959Z`, _jsonApiSeriesExclusions: [4, 5].map(week => ({ ms: night(week).getTime(), dayOnly: false })) });
+  assert.deepEqual(all, []);
+  assert.equal(series.rrule, 'FREQ=WEEKLY');
+});

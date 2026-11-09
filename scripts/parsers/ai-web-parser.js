@@ -16376,6 +16376,32 @@ class AiWebParser {
     // JSON_API_SERIES_MAX_OCCURRENCES), each a copy of the row with the
     // occurrence's own start (end shifted by the row's duration). A rule the
     // expander does not support leaves the row as it is.
+    // A series row's excluded nights → [{ ms, dayOnly }] in the clock the
+    // row's own start is read in. A bare day ("2026-11-08", an all-day
+    // exclusion) excludes whatever the rule yields on that day; a timed
+    // value excludes exactly that start. Unreadable values are skipped (the
+    // night is kept — fail open).
+    readJsonApiSeriesExclusions(value) {
+        const values = Array.isArray(value) ? value : (typeof value === 'string' ? value.split(/[,;\s]+(?=\d{4}-?\d{2}-?\d{2})/) : []);
+        const excluded = [];
+        for (const entry of values) {
+            const text = typeof entry === 'string' ? entry.trim() : '';
+            if (!text) continue;
+            // iCalendar's compact form ("20261108T160000", "20261108").
+            const compact = text.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/);
+            const iso = compact
+                ? `${compact[1]}-${compact[2]}-${compact[3]}${compact[4] ? `T${compact[4]}:${compact[5]}:${compact[6] || '00'}${compact[7] || ''}` : ''}`
+                : text;
+            const dayOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
+            const candidate = dayOnly
+                ? { date: new Date(`${iso}T00:00:00Z`) }
+                : this.jsonApiScalarDateCandidate(iso);
+            if (!candidate || !(candidate.date instanceof Date) || Number.isNaN(candidate.date.getTime())) continue;
+            excluded.push({ ms: candidate.date.getTime(), dayOnly });
+        }
+        return excluded;
+    }
+
     expandJsonApiSeriesRow(event) {
         const rrule = event && typeof event._jsonApiRrule === 'string' ? event._jsonApiRrule : '';
         if (!rrule || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return [event];
@@ -16393,10 +16419,31 @@ class AiWebParser {
             occurrences = null;
         }
         if (!Array.isArray(occurrences)) return [event];
-        const starts = occurrences
+        // THE FEED'S OWN EXCEPTIONS COME OFF FIRST. A rule says "every 2nd
+        // Sunday"; the feed also says which of those nights were cancelled
+        // (EXDATE) or moved (a RECURRENCE-ID record, which is read as its
+        // own row with its own date, time, title and place). Expanding the
+        // rule alone kept the night that was moved away AND the night it
+        // moved to (XL Bears "Game Night" on 2026-11-08 and 11-15, Lodge NY
+        // "Manhole" on 11-15 and 11-22 — audit 2026-11-09).
+        const exclusions = Array.isArray(event._jsonApiSeriesExclusions) ? event._jsonApiSeriesExclusions : [];
+        const excludedStarts = new Set(exclusions.filter(entry => !entry.dayOnly).map(entry => entry.ms));
+        const excludedDays = new Set(exclusions.filter(entry => entry.dayOnly).map(entry => new Date(entry.ms).toISOString().slice(0, 10)));
+        const allStarts = occurrences
             .map(entry => (entry instanceof Date ? entry : (entry && entry.date instanceof Date ? entry.date : (entry && entry.start instanceof Date ? entry.start : null))))
-            .filter(date => date && !Number.isNaN(date.getTime()))
+            .filter(date => date && !Number.isNaN(date.getTime()));
+        const leftOut = allStarts.filter(date => excludedStarts.has(date.getTime()) || excludedDays.has(date.toISOString().slice(0, 10)));
+        const starts = allStarts
+            .filter(date => !leftOut.includes(date))
             .slice(0, JSON_API_SERIES_MAX_OCCURRENCES);
+        if (leftOut.length > 0) {
+            console.log(`🔁 SERIES: "${event.title}" (${rrule}) — ${leftOut.length} night(s) the feed itself cancelled or moved are not events: ${leftOut.map(date => date.toISOString().slice(0, 10)).join(', ')}`);
+        }
+        if (starts.length === 0 && leftOut.length > 0) {
+            // Every night the rule has in the window is excepted: nothing of
+            // the series is an event — its first night least of all.
+            return [];
+        }
         if (starts.length === 0) {
             // A rule whose UNTIL has passed is a series that has ENDED: its
             // first night (the row's own start, months or years back) is not
@@ -16423,6 +16470,7 @@ class AiWebParser {
             const copy = { ...event, startDate: start };
             copy.endDate = durationMs > 0 ? new Date(start.getTime() + durationMs) : null;
             delete copy._jsonApiRrule;
+            delete copy._jsonApiSeriesExclusions;
             return copy;
         });
     }
@@ -17418,6 +17466,16 @@ class AiWebParser {
         const rruleValue = firstValue(/^(rrule|recurrence_rule|repeat_rule)$/,
             (value) => typeof value === 'string' && /^(RRULE:)?FREQ=/i.test(value.trim()));
         if (rruleValue) event._jsonApiRrule = rruleValue.trim();
+        // …and the nights the feed says that rule does NOT have (iCalendar
+        // EXDATE, and the RECURRENCE-ID of every override record — carried
+        // onto the series row by shared-core's icsRecordToFeedRow). Read
+        // with the same reader as the row's own start, so both sit in one
+        // clock. Internal field.
+        if (rruleValue) {
+            const excluded = this.readJsonApiSeriesExclusions(firstValue(/^(exdates?|excluded_dates|exception_dates)$/,
+                (value) => (Array.isArray(value) && value.length > 0) || isNonEmptyString(value)));
+            if (excluded.length > 0) event._jsonApiSeriesExclusions = excluded;
+        }
         // imageSource provenance (notes-serialized like pinSource): structured
         // data the API itself published. Absent image → no stamp (fail open).
         // An image set that publishes only IDS (owner + asset + dimensions,
