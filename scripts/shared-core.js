@@ -14455,11 +14455,19 @@ class SharedCore {
         const schema = this.eventSchema;
         const title = (event && event.title) || 'Unknown';
         // A stored owner verdict carries the owner's tags — exactly those,
-        // nothing the machine would add on top.
+        // nothing the machine would add on top. One exception: a stored BEAR
+        // verdict given with no tags said nothing about tags at all (every
+        // verdict stored before tags existed is one — BLUF, Gear Night and
+        // Fetish Friday: GEAR sat on the calendar untagged, 2026-11-09), and
+        // on a bear event a tag only describes, it decides nothing. The
+        // machine reads those exactly as it reads any other bear event.
         if (decision.manualStore === true) {
             const entry = decision.storedVerdictEntry || {};
-            decision.tags = schema.normalizeEventTags(entry.tags);
-            return decision;
+            const ownerTags = schema.normalizeEventTags(entry.tags);
+            if (decision.result !== 'bear' || ownerTags.length > 0) {
+                decision.tags = ownerTags;
+                return decision;
+            }
         }
         const machine = this.collectMachineEventTags(event);
         let tags = [];

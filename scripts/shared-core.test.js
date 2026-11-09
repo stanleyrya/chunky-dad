@@ -30189,3 +30189,26 @@ test('aggregator: a not-bear held because the row names a usually-bear promoter 
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, true, { siteRole: 'aggregator' }), false, 'a trusted promoter is never dropped here');
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, false, { siteRole: 'venue' }), false);
 });
+
+test('tags: a stored bear verdict given without tags is described by the machine like any bear event; a stored not-bear is never rescued', async () => {
+  const stored = [
+    { verdict: 'bear', stampedAt: '2030-01-02T00:00:00Z', title: 'Fetish Friday: Leather Night', venue: 'Eagle NYC', city: 'nyc' },
+    { verdict: 'bear', tags: ['bear-crowd'], stampedAt: '2030-01-02T00:00:00Z', title: 'Leather Social', venue: 'Eagle NYC', city: 'nyc' },
+    { verdict: 'not_bear', stampedAt: '2030-01-02T00:00:00Z', title: 'Leather Mart', venue: 'Eagle NYC', city: 'nyc' }
+  ];
+  const events = [
+    { title: 'Fetish Friday: Leather Night', bar: 'Eagle NYC', city: 'nyc' },
+    { title: 'Leather Social', bar: 'Eagle NYC', city: 'nyc' },
+    { title: 'Leather Mart', bar: 'Eagle NYC', city: 'nyc' }
+  ];
+  const drops = [];
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, bearVerdicts: stored });
+  const result = await core.filterBearEvents(events, bearCheckConfig('enforce'),
+    buildTagAwareAdapter({ verdict: 'not_bear', reason: 'mixed crowd' }, { leather: { applies: true, eventEvidence: ['Leather'] } }), drops);
+  assert.deepEqual(result.map(event => event.title), ['Fetish Friday: Leather Night', 'Leather Social']);
+  assert.equal(result[0].bearSource, 'manual-bear (verdict store 2030-01-02)');
+  assert.equal(result[0].tags, 'leather', 'the owner said bear and nothing about tags: the machine describes it');
+  assert.equal(result[1].tags, 'bear-crowd', 'the owner gave tags: exactly those');
+  assert.equal(drops.length, 1, 'a stored not-bear is the owner\'s word; a tag does not overrule it');
+  assert.match(drops[0].reason, /^manual store: not_bear/);
+});
