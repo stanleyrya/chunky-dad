@@ -92,9 +92,11 @@ const LISTED_OCCURRENCE_MIN_SPAN_DAYS = 8;
 // How many images to CONSIDER per page. Not an OCR budget — the budget below
 // counts only uncached reads — just a bound on scanning an enormous document.
 const OCR_CANDIDATE_SCAN_LIMIT = 300;
-// Page-identity scans (JSON-LD, meta tags, brand names, footer text) read at
-// most this many characters of the raw HTML — a bound on scanning an
-// enormous document, not a content window.
+// Page scans (JSON-LD, meta tags, brand names, footer text, the prompt's
+// body text) read at most this many characters of the page — a bound on
+// scanning an enormous document, not a content window. The bound counts what
+// those scans can READ, not what the template pads the page with: see
+// boundHtmlForScan.
 const HTML_SCAN_MAX_CHARS = 500000;
 // The smallest HTML budget an extraction prompt is ever built with, whatever
 // aiConfig.maxHtmlChars says.
@@ -20821,6 +20823,53 @@ class AiWebParser {
         return `${section.label}\n${section.lines.join('\n')}`;
     }
 
+    // The scan bound counts CONTENT, not padding. Every scan that takes the
+    // bounded page reads its title, meta tags, JSON-LD and body text — and
+    // nothing else — so what none of them can read is removed BEFORE the
+    // bound is applied: <style> blocks, <script> blocks other than JSON-LD,
+    // comments, and runs of whitespace (a run holding a line break stays one
+    // line break, so the page's lines are the same lines).
+    //
+    // gruntparty.monster/goodbyegrunt, 2026-11-08: an 873,845-character
+    // Squarespace page of which ~670,000 are indentation INSIDE four
+    // template tags (<header … data-current-styles="{ … }"> is 239,502
+    // characters, 234,560 of them whitespace). The raw 500,000-character cut
+    // landed inside the second of those tags, 142,000 characters short of
+    // "NOVEMBER 28 at THE STUD … (1123 FOLSOM STREET, SF, CA)": the prompt
+    // held the page title and 70 lines of the cut tag's attribute JSON, every
+    // pass answered blank and the season closer read as 0 events on every run
+    // (the blank answers are cached under that broken prompt). Of the 177
+    // cached pages over the bound that day, 134 lost body text to it.
+    //
+    // A page at or under the bound is returned untouched, so nothing changes
+    // for a page that was already read whole. A cut that still lands inside
+    // a tag drops that tag's orphaned opener instead of leaving its
+    // attributes behind as page text.
+    boundHtmlForScan(html) {
+        const source = String(html || '');
+        if (source.length <= HTML_SCAN_MAX_CHARS) return source;
+        const memo = this._boundHtmlForScanMemo;
+        if (memo && memo.source === source) return memo.bounded;
+        let bounded = source
+            .replace(/<script\b([^>]*)>[\s\S]*?<\/script[^>]*>/gi, (block, attributes) => (
+                /type=["']application\/ld\+json["']/i.test(attributes) ? block : ' '
+            ))
+            .replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ')
+            .replace(/<!--[\s\S]*?-->/g, ' ')
+            .replace(/\s{2,}/g, (run) => (run.indexOf('\n') >= 0 ? '\n' : ' '));
+        const readable = bounded.length;
+        if (bounded.length > HTML_SCAN_MAX_CHARS) {
+            bounded = bounded.slice(0, HTML_SCAN_MAX_CHARS);
+            const lastOpen = bounded.lastIndexOf('<');
+            if (lastOpen > bounded.lastIndexOf('>') && /^<[a-z\/!]/i.test(bounded.slice(lastOpen, lastOpen + 2))) {
+                bounded = bounded.slice(0, lastOpen);
+            }
+            console.log(`🤖 AI Web: Page scan bound reached — ${readable} readable characters (of ${source.length}), the last ${readable - bounded.length} are not scanned for title, meta, JSON-LD or prompt text`);
+        }
+        this._boundHtmlForScanMemo = { source, bounded };
+        return bounded;
+    }
+
     // The 500,000-char corpus cap can slice through the middle of a <script>,
     // <style> or comment block, orphaning its opening tag. Every corpus
     // stripper matches open→close PAIRS, so an orphaned opener means the
@@ -20866,7 +20915,7 @@ class AiWebParser {
     }
 
     getPromptSectionBundle(html, aiConfig = {}) {
-        const source = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
+        const source = this.sealTruncatedHtmlBlocks(this.boundHtmlForScan(html));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -21883,7 +21932,7 @@ class AiWebParser {
         if (!htmlData || typeof htmlData !== 'object') return [];
         if (Array.isArray(htmlData._collectionNames)) return htmlData._collectionNames;
         const names = [];
-        const html = typeof htmlData.html === 'string' ? htmlData.html.slice(0, HTML_SCAN_MAX_CHARS) : '';
+        const html = typeof htmlData.html === 'string' ? this.boundHtmlForScan(htmlData.html) : '';
         const regex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
         const collectionTypes = /^(?:https?:\/\/schema\.org\/)?(?:CollectionPage|ItemList|SearchResultsPage|Collection)$/i;
         const visit = (node, depth) => {
@@ -21949,7 +21998,7 @@ class AiWebParser {
         if (!htmlData || typeof htmlData !== 'object') return false;
         if (typeof htmlData.hasEventTypedJsonLd === 'boolean') return htmlData.hasEventTypedJsonLd;
         const html = typeof htmlData.html === 'string' ? htmlData.html : '';
-        const result = this.extractJsonLdParts(String(html).slice(0, HTML_SCAN_MAX_CHARS))
+        const result = this.extractJsonLdParts(this.boundHtmlForScan(html))
             .some(part => this.containsEventType(part));
         if (Object.isExtensible(htmlData)) {
             htmlData.hasEventTypedJsonLd = result;
@@ -22470,7 +22519,7 @@ class AiWebParser {
     cleanHtml(html, aiConfig = {}) {
         if (!html) return '';
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
-        const source = this.sealTruncatedHtmlBlocks(String(html).slice(0, HTML_SCAN_MAX_CHARS));
+        const source = this.sealTruncatedHtmlBlocks(this.boundHtmlForScan(html));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -28590,7 +28639,7 @@ TEXT:
     }
 
     extractPageBrandNames(html) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const names = new Set();
         const addName = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -28659,7 +28708,7 @@ TEXT:
     }
 
     extractPageSiteTaglines(html) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const taglines = new Set();
         const addTagline = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -28790,7 +28839,7 @@ TEXT:
     // First og-style meta content for a key (e.g. 'og:title', 'og:site_name'),
     // entity-decoded and whitespace-collapsed. '' when absent.
     extractOgMetaContent(html, keyName) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const metaRegex = /<meta\b[^>]*>/gi;
         let match;
         while ((match = metaRegex.exec(source)) !== null) {
@@ -28811,7 +28860,7 @@ TEXT:
     // above answers only the first, so the rest were invisible. Same decoding, so
     // list[0] always equals extractOgMetaContent's answer.
     extractOgMetaContentAll(html, keyName) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const metaRegex = /<meta\b[^>]*>/gi;
         const values = [];
         let match;
@@ -28835,7 +28884,7 @@ TEXT:
     // skip-empty rule, so filtering the result to one key always equals
     // extractOgMetaContentAll's answer for that key.
     extractOgMetaEntriesAll(html, keyNames) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const wanted = new Set(keyNames);
         const metaRegex = /<meta\b[^>]*>/gi;
         const entries = [];
@@ -32502,7 +32551,7 @@ TEXT:
     }
 
     extractJsonLdSiteSignals(html) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const signals = { venueType: '', venueName: '', organizationTypeFound: false };
         const venueTypePattern = /^(NightClub|BarOrPub|EventVenue|MusicVenue)$/i;
         const organizerTypePattern = /^(Organization|PerformingGroup)$/i;
@@ -32572,7 +32621,7 @@ TEXT:
     // them, but "the venue's address in the site footer" is exactly the
     // signal the single-recurring-address fact needs).
     getPageTextForSiteRole(html) {
-        let text = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
+        let text = this.sealTruncatedHtmlBlocks(this.boundHtmlForScan(html));
         text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
         text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
         text = text.replace(/<!--[\s\S]*?-->/g, ' ');

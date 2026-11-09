@@ -23484,3 +23484,105 @@ test('session lines on a day-dated event page: a Squarespace 00:01 start with "F
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T04:00:00Z'), timezone: 'America/New_York' }), '2026-10-30');
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T23:00:00Z'), timezone: 'America/New_York' }), '');
 });
+
+// ---------------------------------------------------------------------------
+// Page-scan bound counts what a scan can READ, not template padding
+// (gruntparty.monster/goodbyegrunt, 2026-11-08: 873,845 characters, ~670,000
+// of them whitespace inside four template tags — the raw 500,000 cut landed
+// inside the second one, the party's date and venue were never read and the
+// orphaned tag's attribute JSON was served as the page's text; 0 events).
+// ---------------------------------------------------------------------------
+
+function paddedTemplatePage(bodyHtml, padChars) {
+  // The real shape, trimmed: a builder writes its header settings into a
+  // data attribute and indents every key with tens of thousands of blanks.
+  const pad = `\n${' '.repeat(padChars)}`;
+  const styles = `{${pad}&quot;layout&quot;: &quot;navRight&quot;,${pad}&quot;action&quot;: {${pad}&quot;buttonText&quot;: &quot;March 28 TIXXX&quot;,${pad}&quot;newWindow&quot;: true${pad}}${pad}}`;
+  return [
+    '<!doctype html><html><head><title>Season Closer — GRUNT</title>',
+    '<meta property="og:title" content="Season Closer — GRUNT"/>',
+    '</head><body>',
+    `<header class="header theme-col--primary${pad}" data-section-theme="" data-current-styles="${styles}">`,
+    '<a href="/">GRUNT</a></header>',
+    `<div class="header-menu header-menu--folder-list${pad}" data-section-theme="" data-current-styles="${styles}">`,
+    '</div>',
+    bodyHtml,
+    '</body></html>'
+  ].join('\n');
+}
+
+test('scan bound: whitespace padding inside template tags does not push the event text out of the scan', () => {
+  const parser = createParser();
+  const html = paddedTemplatePage([
+    '<main><h1>Season Closer</h1>',
+    '<p>Come to GRUNT to say goodbye, for now.</p>',
+    '<h2>NOVEMBER 28 at THE STUD</h2>',
+    '<p>At THE STUD (1123 FOLSOM STREET, SF, CA)</p></main>'
+  ].join('\n'), 40000);
+  assert.ok(html.length > 500000, 'the fixture must exceed the raw bound');
+  assert.ok(html.indexOf('NOVEMBER 28') > 500000, 'the event text sits past the raw bound, as on the real page');
+  assert.ok(html.slice(0, 500000).lastIndexOf('<div class="header-menu') > html.slice(0, 500000).lastIndexOf('">'),
+    'the raw cut lands inside the second template tag, as on the real page');
+
+  const bundle = parser.getPromptSectionBundle(html, {});
+  const contentLines = bundle.content ? bundle.content.lines.join('\n') : '';
+  assert.ok(contentLines.includes('NOVEMBER 28 at THE STUD'), `the date line is read: ${contentLines.slice(0, 300)}`);
+  assert.ok(contentLines.includes('At THE STUD (1123 FOLSOM STREET, SF, CA)'), 'the venue line is read');
+  assert.equal(/buttonText|navRight|header-menu/.test(contentLines), false, 'no tag attribute is served as page text');
+
+  const cleaned = parser.cleanHtml(html, {});
+  assert.ok(cleaned.includes('NOVEMBER 28 at THE STUD'));
+  assert.equal(cleaned.includes('buttonText'), false);
+  assert.equal(parser.extractOgMetaContent(html, 'og:title'), 'Season Closer — GRUNT');
+});
+
+test('scan bound: a page under the bound is scanned exactly as fetched; over it only unread markup is dropped', () => {
+  const parser = createParser();
+  const small = '<html><head><style>a{}</style><script>var a = 1;</script></head><body><!-- note --><p>hi   there</p></body></html>';
+  assert.equal(parser.boundHtmlForScan(small), small, 'under the bound nothing changes');
+  assert.equal(parser.boundHtmlForScan(''), '');
+  assert.equal(parser.boundHtmlForScan(null), '');
+
+  // Over the bound: inline scripts, styles and comments are not page text and
+  // go; an Event's JSON-LD (which the scans DO read) stays, wherever it sits.
+  const jsonLd = '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"Season Closer","startDate":"2026-11-28T22:00:00-08:00"}</script>';
+  const big = [
+    '<html><head><title>Season Closer</title>',
+    `<style>.a{color:red}/* ${'s'.repeat(200000)} */</style>`,
+    `<script>window.__boot = "${'x'.repeat(200000)}";</script>`,
+    `<!-- ${'c'.repeat(200000)} -->`,
+    jsonLd,
+    '</head><body><p>NOVEMBER 28 at THE STUD</p></body></html>'
+  ].join('\n');
+  assert.ok(big.indexOf('application/ld+json') > 500000);
+  const bounded = parser.boundHtmlForScan(big);
+  assert.ok(bounded.length < 2000, `only the readable page is left (${bounded.length})`);
+  assert.ok(bounded.includes(jsonLd), 'the JSON-LD block survives whole');
+  assert.equal(/__boot|color:red|ccccc/.test(bounded), false);
+  assert.ok(bounded.includes('<p>NOVEMBER 28 at THE STUD</p>'));
+  assert.equal(parser.pageHasEventTypedJsonLd({ url: 'https://example.com/closer', html: big }), true, 'an Event past the raw bound is still seen');
+  assert.equal(parser.boundHtmlForScan(big), bounded, 'the same page is bounded once');
+});
+
+test('scan bound: a page with more readable text than the bound is cut between tags, and says so', () => {
+  const parser = createParser();
+  const row = '<p class="row" data-kind="listing-row">row text that is really on the page</p>\n';
+  const html = `<html><body>${row.repeat(Math.ceil(520000 / row.length))}<p>LAST LINE</p></body></html>`;
+  let bounded = '';
+  const logs = captureLogs(() => { bounded = parser.boundHtmlForScan(html); });
+  assert.ok(bounded.length <= 500000);
+  assert.equal(bounded.includes('LAST LINE'), false, 'the bound still holds for real text');
+  assert.ok(bounded.lastIndexOf('<') < bounded.lastIndexOf('>'), 'no orphaned tag opener is left at the cut');
+  assert.ok(logs.some(line => line.includes('Page scan bound reached') && line.includes(`of ${html.length}`)),
+    `the cut is logged: ${JSON.stringify(logs)}`);
+});
+
+test('confidence retry: a retry that answers blank never erases what the first pass read', () => {
+  const parser = createParser();
+  const firstPass = { title: 'Season Closer — GRUNT', bar: 'THE STUD', address: '1123 FOLSOM STREET, SF, CA', startDate: '2026-11-28' };
+  const merged = parser.mergeAiEventFields(firstPass, { bar: '', address: null, startDate: '   ', city: 'san francisco' });
+  assert.equal(merged.bar, 'THE STUD');
+  assert.equal(merged.address, '1123 FOLSOM STREET, SF, CA');
+  assert.equal(merged.startDate, '2026-11-28');
+  assert.equal(merged.city, 'san francisco', 'a retry may still ADD a field');
+});
