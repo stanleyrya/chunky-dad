@@ -30709,3 +30709,62 @@ test('identity: the pair the promoter rung was built for still folds — a progr
   // Inherited on one side, named on the other: the same.
   assert.equal(core.getSameEventIdentitySignal(programmeRow({ _promoterEvidence: 'parser-site', _promoterEvidencePageUrl: 'https://www.ursamen.org/spookybear' }), crownRow()), 'promoter-exact-start');
 });
+
+// The promoter's own name is not the word two of its events share (run
+// 20261109-053706, same programme, Saturday 12:00): "23rd Folsom Europe
+// Streetfair", "Lockers @ FOLSOM EUROPE Street Fair" (its cloakroom) and
+// "Boxer Berlin @ Folsom" (a shop's stall; the venue line was read out of the
+// title). Two of the three NAME the promoter, so the shared-promoter test
+// passes honestly — and the only distinctive word the names share is that
+// promoter's name, the fact the rung had already counted. These were the 2
+// promoter-exact-start folds left on that programme after the two rules above.
+test('identity: the shared promoter\'s own name is not the distinctive word two of its events share', async () => {
+  const core = createRegistryCore(FOLSOM_REGISTRY);
+  const slot = '2026-09-12T10:00:00.000Z';
+  const lockers = stampedFolsomCard('Lockers @ FOLSOM EUROPE Street Fair', slot, { endDate: new Date('2026-09-12T18:30:00.000Z'),
+    ticketUrl: 'https://shop.eventjet.at/en/folsomeurope', _promoterEvidence: 'title' });
+  const stall = stampedFolsomCard('Boxer Berlin @ Folsom', slot, { endDate: new Date('2026-09-12T19:00:00.000Z'), bar: 'Folsom',
+    ticketUrl: 'https://ems.switchedapp.com/url/d544a8db-20d5-41e5-29d1-08dd7b5a063d?isource=WebProgramme' });
+  const fair = stampedFolsomCard('23rd Folsom Europe Streetfair', slot, { endDate: new Date('2026-09-12T19:00:00.000Z'),
+    ticketUrl: 'https://ems.switchedapp.com/url/2dbe9883-e3fd-4ff6-29d2-08dd7b5a063d?isource=WebProgramme', _promoterEvidence: 'title' });
+  const listing = { excludedUrlIdentityHostPaths: new Set([core.getEventPageUrlIdentity(fair).hostPath]) };
+
+  // The plain name test is unchanged: these names do share a word…
+  assert.equal(core.namesHaveAffinity(lockers, stall), true);
+  assert.equal(core.namesHaveAffinity(fair, stall), true);
+  // …and it is the promoter's.
+  const brandNames = core.getPromoterBrandNames(core.getEventPromoterEntry(lockers));
+  assert.deepEqual([...brandNames].sort(), ['FOLSOM EUROPE', 'Folsom Berlin', 'Folsom Europe', 'Folsom Europe e.V.']);
+  assert.equal(core.namesHaveAffinity(lockers, stall, { brandNames }), false);
+  assert.equal(core.namesHaveAffinity(fair, stall, { brandNames }), false);
+  assert.equal(core.namesHaveAffinity(fair, lockers, { brandNames }), false, '"Streetfair" and "Street Fair" are generic words here, not a shared name');
+
+  assert.equal(core.getSameEventIdentitySignal(lockers, stall, listing), null);
+  assert.equal(core.getSameEventIdentitySignal(stall, lockers, listing), null);
+  assert.equal(core.getSameEventIdentitySignal(fair, stall, listing), null);
+
+  // The real path: registry pass, then the real fold — three cards stay three.
+  const cards = [
+    folsomCard('Lockers @ FOLSOM EUROPE Street Fair', slot, { endDate: new Date('2026-09-12T18:30:00.000Z'), ticketUrl: 'https://shop.eventjet.at/en/folsomeurope' }),
+    folsomCard('Boxer Berlin @ Folsom', slot, { endDate: new Date('2026-09-12T19:00:00.000Z'), bar: 'Folsom', ticketUrl: 'https://ems.switchedapp.com/url/d544a8db-20d5-41e5-29d1-08dd7b5a063d?isource=WebProgramme' }),
+    folsomCard('23rd Folsom Europe Streetfair', slot, { endDate: new Date('2026-09-12T19:00:00.000Z'), ticketUrl: 'https://ems.switchedapp.com/url/2dbe9883-e3fd-4ff6-29d2-08dd7b5a063d?isource=WebProgramme' })
+  ];
+  const restore = silenceConsole();
+  let folded;
+  try {
+    core.applyPromoterRegistryMatches(cards, { name: 'Folsom Europe', urls: ['https://ems.switchedapp.com/programme/folsomeurope'] }, ENFORCE_REGISTRY_CONFIG);
+    assert.deepEqual(cards.map(card => card._promoterEvidence), ['title', 'url', 'title']);
+    folded = await core.deduplicateEvents(cards, null);
+  } finally { restore(); }
+  assert.deepEqual(folded.map(event => event.title).sort(), ['23rd Folsom Europe Streetfair', 'Boxer Berlin @ Folsom', 'Lockers @ FOLSOM EUROPE Street Fair']);
+
+  // A pair that shares a word of the EVENT's still folds: the registry knows "Spooky Bear", and the two rows share "HalloQueen".
+  const spooky = createRegistryCore([{ name: 'Spooky Bear', keywords: ['spooky bear', 'spookybear'], shortName: 'SPOOKY BEAR', website: 'https://www.ursamen.org/spookybear' }]);
+  const brunchSlot = new Date('2026-10-30T14:30:00Z');
+  const programmeRow = { title: 'HALLOQUEEN BURNER BRUNCH', city: 'dallas', startDate: brunchSlot, _promoter: 'Spooky Bear', _promoterEvidence: 'url', url: 'https://www.ursamen.org/spookybear' };
+  const crownRow = { title: 'HalloQueen Burner Brunch – 10:30 AM – Spooky Bear', bar: 'Crown & Anchor', address: '247 Commercial St, Provincetown, MA 02657', city: 'dallas',
+    startDate: brunchSlot, _promoter: 'Spooky Bear', _promoterEvidence: 'title', url: 'https://onlyatthecrown.com/event/burner-brunch-1030-am-seating/' };
+  assert.equal(spooky.getSameEventIdentitySignal(programmeRow, crownRow), 'promoter-exact-start');
+  // …and a row that is ONLY the promoter's name beside a venue row that only mentions it does not.
+  assert.equal(spooky.getSameEventIdentitySignal({ ...programmeRow, title: 'SPOOKY BEAR' }, { ...crownRow, title: 'Tea Dance – Spooky Bear' }), null);
+});

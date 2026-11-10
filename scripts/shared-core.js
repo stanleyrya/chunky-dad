@@ -6632,6 +6632,16 @@ class SharedCore {
         return this.isPageOffParserSite(page, parserConfig);
     }
 
+    // Every name the registry knows a promoter by: its name, aliases, title
+    // keywords and the short brand forms. [] for no entry.
+    getPromoterBrandNames(entry) {
+        if (!entry || typeof entry !== 'object') return [];
+        return [entry.name, entry.shortName, entry.shorterName,
+            ...(Array.isArray(entry.aliases) ? entry.aliases : []),
+            ...(Array.isArray(entry.keywords) ? entry.keywords : [])]
+            .filter(value => typeof value === 'string' && value.trim());
+    }
+
     // Strength of a promoter stamp as a statement about the EVENT: its own
     // words (or a stamp with no recorded kind) > an address on the record >
     // inheritance from the parser's site. 0 = no stamp.
@@ -28292,7 +28302,15 @@ class SharedCore {
             && !this.hasMissingTimeStartPlaceholder(newEvent, existingEvent)
             && this.recordsSharePromoter(newEvent, existingEvent)
             && (this.isPlacelessRecord(incoming) !== this.isPlacelessRecord(existing))
-            && this.namesHaveAffinity(newEvent, existingEvent)) {
+            // …and the word the names share must be the EVENT's, not the
+            // promoter's: the shared promoter is already this rung's first
+            // condition, so its own name inside both titles is that same fact
+            // counted twice ("23rd Folsom Europe Streetfair" / "Lockers @
+            // FOLSOM EUROPE Street Fair" / "Boxer Berlin @ Folsom" — the
+            // fair, its cloakroom and a shop's stall, one slot, run
+            // 20261109-053706).
+            && this.namesHaveAffinity(newEvent, existingEvent,
+                { brandNames: this.getPromoterBrandNames(this.getEventPromoterEntry(newEvent)) })) {
             return 'promoter-exact-start';
         }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
@@ -28710,7 +28728,21 @@ class SharedCore {
     // buildIdentityComparisonShape applies: on the programme above all 110
     // cards carried shortName "FOLSOM EUROPE", so every pair "shared a
     // distinctive word" and this test could never say no.
-    namesHaveAffinity(eventA, eventB) {
+    // `options.brandNames`: names whose words are NOT the event's own for
+    // this comparison (a caller that has already established the shared
+    // brand by other means passes it here, so the brand cannot also be the
+    // name the two records share).
+    namesHaveAffinity(eventA, eventB, options = {}) {
+        const brandWords = new Set();
+        for (const brandName of (options && Array.isArray(options.brandNames) ? options.brandNames : [])) {
+            if (typeof brandName !== 'string') continue;
+            const lower = this.decodeBasicHtmlEntities(brandName).replace(/\u00AD/g, '').toLowerCase();
+            for (const word of lower.replace(/[^a-z0-9]+/g, ' ').split(' ')) {
+                if (word) brandWords.add(word);
+            }
+            const squashed = lower.replace(/[^a-z0-9]+/g, '');
+            if (squashed) brandWords.add(squashed);
+        }
         const generic = new Set(['party', 'night', 'nights', 'weekend', 'event', 'events', 'bears', 'presents', 'annual',
             'friday', 'saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'tickets', 'dance', 'social', 'happy', 'hour']);
         const ownShortName = (event) => {
@@ -28726,12 +28758,12 @@ class SharedCore {
             for (const name of names) {
                 const lower = this.decodeBasicHtmlEntities(name).toLowerCase();
                 for (const word of lower.replace(/[^a-z0-9]+/g, ' ').split(' ')) {
-                    if (word.length >= 5 && !generic.has(word) && !/^\d+$/.test(word)) out.add(word);
+                    if (word.length >= 5 && !generic.has(word) && !/^\d+$/.test(word) && !brandWords.has(word)) out.add(word);
                 }
                 // The whole name squashed: an OCR slip that inserts
                 // punctuation ("GOLDII.OXX") splits the word it misread.
                 const squashed = lower.replace(/[^a-z0-9]+/g, '');
-                if (squashed.length >= 6) out.add(squashed);
+                if (squashed.length >= 6 && !brandWords.has(squashed)) out.add(squashed);
             }
             return [...out];
         };
