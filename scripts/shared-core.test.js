@@ -30509,3 +30509,13 @@ test('lone crawl fold: the dedup pass folds the lone page into the real party an
   const { logs: approvedLogs } = await withLogsAsync(() => core.mergeParsedEvents(loneCrawlFoldFixtures().party, approved));
   assert.ok(!approvedLogs.some(l => l.includes('folded into')), 'an approved record is not a guess any more');
 });
+
+// 2026-11-09 audit, crawl-junk 1d. bearitmtl.com, run 20261109-053706: every
+// page links itself as "?currency=CAD" and four pages were read twice.
+test('currency twins: a currency selector is not part of a link\'s identity, like a language selector; a parameter that selects content is', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const plain = 'https://www.bearitmtl.com/event/furry-takeover/';
+  assert.equal(core.getUrlDedupeKey(`${plain}?currency=CAD`), core.getUrlDedupeKey(plain));
+  assert.equal(core.isSameLinkTarget(`${plain}?currency=CAD`, plain), true);
+  assert.notEqual(core.getUrlDedupeKey(`${plain}?paged=2`), core.getUrlDedupeKey(plain));
+});

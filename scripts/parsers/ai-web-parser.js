@@ -1001,7 +1001,13 @@ class AiWebParser {
         // eaglemanchester.com/event-details/hellbent-12?lang=de beside the
         // plain page and the model then picked the "more canonical" ?lang=de
         // as the event's url. Mirrors SharedCore.localeParamPattern.
-        this.localeParamPattern = /^(lang|locale|hl|language)$/i;
+        //
+        // A currency selector is the same kind of parameter: it names the
+        // money the prices are shown in, never a different page. Run
+        // 20261109-053706 crawled four bearitmtl.com pages a second time as
+        // "?currency=CAD" (each declaring the plain URL as its canonical) and
+        // read the listing's events twice.
+        this.localeParamPattern = /^(lang|locale|hl|language|currency)$/i;
         // Detects lines that are primarily CSS content (e.g. leaked from unclosed or inline <style> blocks).
         // Matches 3+ occurrences of a CSS property name immediately followed by ":" with no space before the colon.
         this.cssContentLineRegex = /\b(cursor|color|background-color|background-image|background-size|font-size|font-weight|font-family|font-style|border-radius|border-color|border-width|border-style|margin|margin-top|margin-bottom|margin-left|margin-right|padding|padding-top|padding-bottom|padding-left|padding-right|display|position|overflow|z-index|box-sizing|box-shadow|flex|flex-shrink|flex-grow|flex-basis|align-items|justify-content|line-height|text-decoration|text-align|text-transform|opacity|min-width|max-width|min-height|max-height|width|height|top|left|right|bottom|transform|transition|animation|white-space|word-break|word-wrap|outline|visibility|pointer-events|vertical-align|letter-spacing|gap):/gi;
@@ -19948,6 +19954,16 @@ class AiWebParser {
             const segments = lowerPath.split('/').filter(Boolean);
             const last = segments.length > 0 ? segments[segments.length - 1] : '';
             if (/^(?:resend|refund|refunds|transfer|transfers|order|orders|order-status|receipt|receipts|confirm|confirmation|waitlist|unsubscribe|print|share|embed)$/.test(last)) {
+                return { valid: false, reason: 'ticket-utility-page' };
+            }
+            // The sign-up form OF a page ("/event-details/<slug>/form",
+            // "…/rsvp") is that page's plumbing too: it repeats the name and
+            // none of the facts. eaglemanchester.com, run 20261109-053706:
+            // four …/form pages were read as events of their own, dated by a
+            // cadence phrase to a night the parent page does not state, and
+            // each won as its event's link. Only as a CHILD segment — a
+            // site's top-level "/rsvp" is left to the page classifier.
+            if (segments.length >= 2 && /^(?:form|rsvp)$/.test(last)) {
                 return { valid: false, reason: 'ticket-utility-page' };
             }
         }

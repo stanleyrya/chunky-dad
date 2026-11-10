@@ -23856,3 +23856,65 @@ test('byline rows: a compact row that prints its year hands it on as the stated 
     assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "/ Stud SF" is a byline fragment')), logs.join('\n'));
   } finally { console.log = quiet; console.warn = quietWarn; }
 });
+
+// ── 2026-11-09 audit, crawl-junk 1d: a page's sign-up form and its currency twin are not pages of their own ──
+// eaglemanchester.com, run 20261109-053706: the home page's embedded event
+// data names each event's "registrationUrl" (…/event-details/<slug>/form);
+// the raw scan queued four of them, each was read as an event of its own
+// ("Spank Guys" dated to a night its parent page does not state) and each
+// won as its event's link.
+test('form pages: the sign-up form of a page is ticket plumbing — never crawled; the page itself still is', () => {
+  const parser = createParser();
+  const home = 'https://www.eaglemanchester.com/';
+  const html = `<html><body>
+    <a href="https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00">Spank Guys</a>
+    <script type="application/json">{"events":[{"title":"Spank Guys","scheduleStartTimeFormatted":"13:00","registrationUrl":"https:\\/\\/www.eaglemanchester.com\\/event-details\\/spank-guys-2026-12-19-13-00\\/form","scheduleTbd":false}]}</script>
+  </body></html>`;
+  const quiet = console.log;
+  console.log = () => {};
+  let links;
+  try { links = parser.extractAdditionalUrls(html, home, {}); } finally { console.log = quiet; }
+  assert.ok(links.includes('https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00'), JSON.stringify(links));
+  assert.deepEqual(links.filter((link) => /\/form(?:[/?#]|$)/.test(link)), [], JSON.stringify(links));
+
+  const reason = (url) => parser.validateEventUrl(url, home, { urls: [home] }).reason;
+  assert.equal(reason('https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00/form'), 'ticket-utility-page');
+  assert.equal(reason('https://www.eaglemanchester.com/event-details/collared-manchester-2026-12-05-19-00/form/'), 'ticket-utility-page');
+  assert.equal(reason('https://bears.example/weekend-2027/rsvp'), 'ticket-utility-page');
+  // Only as the last segment of a deeper page: a name that merely contains
+  // the word, or a page under it, is not the form.
+  assert.equal(parser.validateEventUrl('https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00', home, { urls: [home] }).valid, true);
+  assert.equal(parser.validateEventUrl('https://bears.example/events/free-form-friday', 'https://bears.example/', { urls: ['https://bears.example/'] }).valid, true);
+  assert.notEqual(reason('https://bears.example/form'), 'ticket-utility-page', 'a top-level page is left to the page classifier');
+});
+
+// bearitmtl.com, run 20261109-053706: every page carries
+// <a href="?currency=CAD">Utilisez Dollar canadien à la place.</a>; four
+// pages were crawled a second time under that address (each declaring the
+// plain URL as its canonical) and the listing's events were read twice.
+test('currency twins: a currency selector names how prices are shown, never another page — it is dropped from crawl URLs and link identity like a language selector', () => {
+  const parser = createParser();
+  const plain = 'https://www.bearitmtl.com/events/';
+  assert.equal(parser.stripTrackingParams(`${plain}?currency=CAD`), plain);
+  assert.equal(parser.stripLocaleParams(`${plain}?currency=CAD`), plain);
+  assert.equal(parser.getUrlDedupeKey(`${plain}?currency=CAD`), parser.getUrlDedupeKey(plain));
+  assert.equal(parser.core.getUrlDedupeKey(`${plain}?currency=CAD`), parser.core.getUrlDedupeKey(plain));
+  // A parameter that selects content stays.
+  assert.notEqual(parser.getUrlDedupeKey(`${plain}?paged=2`), parser.getUrlDedupeKey(plain));
+  assert.equal(parser.stripTrackingParams(`${plain}?paged=2&currency=CAD`), `${plain}?paged=2`);
+
+  const html = `<html><head><link rel="canonical" href="${plain}" /></head><body>
+    <a href="?currency=CAD">Utilisez Dollar canadien à la place.</a>
+    <a href="https://www.bearitmtl.com/event/furry-takeover/?currency=CAD">FURRY TAKEOVER</a>
+    <a href="https://www.bearitmtl.com/event/furry-takeover/">FURRY TAKEOVER</a>
+    <a href="https://www.bearitmtl.com/event/apero-ours-novembre/?currency=CAD">APÉRO OURS</a>
+  </body></html>`;
+  const quiet = console.log;
+  console.log = () => {};
+  let links;
+  try { links = parser.extractAdditionalUrls(html, plain, {}); } finally { console.log = quiet; }
+  assert.deepEqual(links.filter((link) => /currency=/i.test(link)), [], JSON.stringify(links));
+  assert.equal(links.filter((link) => /furry-takeover/.test(link)).length, 1, 'one page, not two');
+  assert.ok(links.includes('https://www.bearitmtl.com/event/apero-ours-novembre/'), JSON.stringify(links));
+  assert.ok(!links.some((link) => parser.getUrlDedupeKey(link) === parser.getUrlDedupeKey(plain)), 'the page does not queue itself');
+});

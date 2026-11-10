@@ -702,8 +702,9 @@ class SharedCore {
         // target as the plain URL. Run 20260924-055217: the model was handed
         // eaglemanchester.com/event-details/hellbent-12 and its ?lang=de twin
         // as two candidates and picked the "more canonical" ?lang=de one.
-        // Mirrors AiWebParser.localeParamPattern.
-        this.localeParamPattern = /^(lang|locale|hl|language)$/i;
+        // Mirrors AiWebParser.localeParamPattern (language AND currency
+        // selectors: neither names a different page).
+        this.localeParamPattern = /^(lang|locale|hl|language|currency)$/i;
         
         // URL-to-parser mapping for automatic parser detection (parser: "auto").
         // Only scheme URLs resolve to a specific parser; every http(s) URL falls
