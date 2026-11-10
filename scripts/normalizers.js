@@ -137,10 +137,25 @@ class BaseNormalizer {
     // Internal whitespace is collapsed on both sides, preserving the `\s+`
     // tolerance the old regex had for multi-word patterns like
     // "puerto vallarta" split across a line break.
-    matchesCityPattern(foldedText, foldedPattern) {
+    //
+    // A SHORT ALIAS INSIDE A LONGER PLACE NAME IS NOT THE ALIAS (2026-11-09,
+    // whereto.party: "Ho Chi Minh City" carries the word "chi", an alias of
+    // another city — whole-word clean, so the boundary check passes — and a
+    // Saigon night was filed under that city and its clock). In PLACE-SHAPED
+    // text (an address, a city field: options.placeName) the words around a
+    // token are the rest of a name, so an alias of three letters or fewer
+    // with a name word joined on BOTH sides (space or hyphen, no comma
+    // between) is a syllable of that longer name, never the abbreviation
+    // (placeTextHoldsShortAliasOnlyInsideNames; options.rawText is the same
+    // text before folding, whose capitals tell an abbreviation apart).
+    // Free text (titles) is not asked: there the neighbours are just words
+    // ("FURBALL NYC PRIDE").
+    matchesCityPattern(foldedText, foldedPattern, options = {}) {
         const text = String(foldedText || '').replace(/\s+/g, ' ');
         const pattern = String(foldedPattern || '').replace(/\s+/g, ' ').trim();
         if (!text || !pattern) return false;
+        if (options && options.placeName
+            && this.placeTextHoldsShortAliasOnlyInsideNames(options.rawText || text, pattern)) return false;
 
         const isWordChar = (character) => character >= 'a' && character <= 'z'
             || character >= '0' && character <= '9';
@@ -161,6 +176,41 @@ class BaseNormalizer {
             index = text.indexOf(pattern, index + 1);
         }
         return false;
+    }
+
+    // Does this PLACE text spell the short alias only as a syllable of a
+    // longer name? True when every whole-token occurrence has a name word
+    // joined on BOTH sides (space or hyphen, no comma between) — "Ho Chi
+    // Minh City" — and is not written as an abbreviation: capitals inside
+    // mixed-case text ("398 12th St SF CA") are how an abbreviation is
+    // written, a title-cased "Chi" is how a syllable is. Text all in one
+    // case says nothing by its letters, so there the neighbours decide.
+    // False when the alias is not short, is absent, or stands once.
+    placeTextHoldsShortAliasOnlyInsideNames(rawText, foldedAlias) {
+        const alias = String(foldedAlias || '');
+        if (!/^[a-z]{1,3}$/.test(alias)) return false;
+        const cased = String(rawText || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!cased) return false;
+        const mixedCase = /\p{Ll}/u.test(cased) && /\p{Lu}/u.test(cased);
+        const finder = new RegExp(`(^|[^\\p{L}\\p{N}])(${alias})(?![\\p{L}\\p{N}])`, 'giu');
+        let found = 0;
+        let match = finder.exec(cased);
+        while (match) {
+            const start = match.index + match[1].length;
+            const end = start + match[2].length;
+            const token = match[2];
+            const writtenAsAbbreviation = mixedCase && token === token.toUpperCase();
+            const insideName = /\p{L}[ -]+$/u.test(cased.slice(0, start)) && /^[ -]+\p{L}/u.test(cased.slice(end));
+            if (writtenAsAbbreviation || !insideName) return false;
+            found += 1;
+            finder.lastIndex = end;
+            match = finder.exec(cased);
+        }
+        return found > 0;
     }
 
     // First configured city whose patterns match the given text, word-boundary
@@ -758,10 +808,13 @@ class LocationNormalizer extends BaseNormalizer {
         const urlValueBefore = event.url;
 
         // Extract and normalize city
-        const extractedCity = this.extractCityFromEvent(event);
-        if (extractedCity) {
-            event.city = extractedCity;
+        const cityRead = this.readCityFromEvent(event);
+        if (cityRead.city) {
+            event.city = cityRead.city;
         }
+        // A city read from a word of the title or of the venue's name stands
+        // only when the door, the site and the page do not say otherwise.
+        this.settleNameWordCity(event, cityRead, options);
 
         // Unrecognized-city gate — runs BEFORE the two curated backfills below
         // precisely so they get their chance (see refuseUnrecognizedCity).
@@ -1097,7 +1150,7 @@ class LocationNormalizer extends BaseNormalizer {
                 // matchesCityPattern) — the old `\b${pattern}\b` regex could
                 // never match a pattern ending in punctuation, which is why
                 // "ZONA ROMÁNTICA, EMILIANO ZAPATA, P.V." resolved to nothing.
-                if (this.matchesCityPattern(lowerAddress, this.foldDiacritics(pattern))) {
+                if (this.matchesCityPattern(lowerAddress, this.foldDiacritics(pattern), { placeName: true, rawText: address })) {
                     return city;
                 }
             }
@@ -1115,7 +1168,7 @@ class LocationNormalizer extends BaseNormalizer {
                     if (cityName === foldedPattern) {
                         return city;
                     }
-                    if (this.matchesCityPattern(cityName, foldedPattern)) {
+                    if (this.matchesCityPattern(cityName, foldedPattern, { placeName: true, rawText: part })) {
                         return city;
                     }
                 }
@@ -1381,6 +1434,31 @@ class LocationNormalizer extends BaseNormalizer {
         }
         if (!result) return event;
         const title = event.title || 'unknown';
+        // ON A VENUE'S OWN SITE, THE VENUE'S OWN NAME IS THE VENUE
+        // (2026-11-09, sf-eagle.com: the listing wrote its venue as "Eagle
+        // Bar", "398 12th St" — the one curated bar of that exact name is in
+        // another country, and three rows were filed there and re-clocked
+        // while the site-identity rung, one step below, never got its turn).
+        // A match by NAME ALONE in a city other than the site's is a
+        // namesake when the name, without its venue word, is a name the
+        // site's OWN curated bar carries ("eagle" in "SF Eagle"): the site is
+        // calling itself by its family name. The door (name + street line)
+        // answering to the other city is what would make it a party out of
+        // town; a name the site's own bar does not share ("Guest Takeover" at
+        // another curated bar) still decides as before.
+        if (!byDoor && result.city && !result.ambiguousCities && !result.genericStem) {
+            const site = this.siteIdentityCity(event);
+            if (site && site.city !== String(result.city).toLowerCase() && this.siteOwnBarSharesName(site, barName)) {
+                const door = typeof this.core.findCuratedBarCityByDoor === 'function'
+                    ? this.core.findCuratedBarCityByDoor(barName, event.address)
+                    : null;
+                const doorConfirms = Boolean(door && !door.ambiguousCities && door.city === result.city);
+                if (!doorConfirms) {
+                    console.log(`🗺️ LocationNormalizer: City backfill skipped for "${title}" — "${barName}" matches the curated "${result.bar.name}" in ${result.city} by name only, and the row is on ${site.hostKey}, the site of a curated venue in ${site.city} whose own name it shares — a namesake; the site decides`);
+                    return event;
+                }
+            }
+        }
         // The page NAMED a city we do not cover ("seoul", parked on
         // _unrecognizedCity): a bar of the same name curated elsewhere is a
         // namesake, not this venue — whereto.party's Seoul nights at "Bear
@@ -1524,16 +1602,151 @@ class LocationNormalizer extends BaseNormalizer {
     // by curated bars of exactly one city (the same lookup, same order, as
     // backfillCityFromIdentitySignals' first rung).
     siteIdentityNamesOneCity(event) {
+        return Boolean(this.siteIdentityCity(event));
+    }
+
+    // …and which city, on which host: { city, hostKey, bars } or null (no
+    // curated claimant, or claimants in more than one city).
+    siteIdentityCity(event) {
         if (!event || !this.core || typeof this.core.findCuratedCityByWebsiteHost !== 'function'
-            || typeof this.core.getWebsiteHostKey !== 'function') return false;
+            || typeof this.core.getWebsiteHostKey !== 'function') return null;
         for (const candidate of [event.website, event.url, event._sourcePageUrl]) {
             const hostKey = this.core.getWebsiteHostKey(candidate);
             if (!hostKey) continue;
             const match = this.core.findCuratedCityByWebsiteHost(hostKey);
             if (!match) continue;
-            return !match.ambiguousCities && Boolean(match.city);
+            if (match.ambiguousCities || !match.city) return null;
+            return { city: String(match.city).toLowerCase(), hostKey, bars: Array.isArray(match.bars) ? match.bars : [] };
         }
-        return false;
+        return null;
+    }
+
+    // Is this venue name one the site's own curated bar carries? The name's
+    // bare key (SharedCore.bareBarNameKey: one venue word — bar, pub, club…
+    // — dropped) is contained in the key of a bar that claims the site.
+    siteOwnBarSharesName(site, barName) {
+        if (!site || !Array.isArray(site.bars) || !this.core || typeof this.core.normalizeBarNameKey !== 'function') return false;
+        const key = this.core.normalizeBarNameKey(barName);
+        const bareOf = this.core.constructor && typeof this.core.constructor.bareBarNameKey === 'function'
+            ? this.core.constructor.bareBarNameKey
+            : null;
+        const bare = bareOf && key ? bareOf(barName, key) : key;
+        if (!bare || bare.length < 4) return false;
+        return site.bars.some(bar => {
+            const ownKey = bar && typeof bar.name === 'string' ? this.core.normalizeBarNameKey(bar.name) : '';
+            return Boolean(ownKey) && ownKey.includes(bare);
+        });
+    }
+
+    // A CITY READ FROM A NAME WORD IS THE WEAKEST READING (2026-11-09). A
+    // title carries a guest's home town, a brand or a drag word as often as a
+    // place; a venue's name carries its neighbourhood. Before such a reading
+    // stands, three things the source itself says are asked, in this order:
+    //   1. THE DOOR — the venue name and the numbered street line together
+    //      answer to curated bars of exactly one city
+    //      (SharedCore.findCuratedBarCityByDoor). theurbanbear.com: venue
+    //      "FLEX HK" (Hell's Kitchen), "455 WEST 51 ST" — "hk" read as
+    //      another city's alias, calendar and clock, while the door is a
+    //      curated bar's.
+    //   2. THE SITE (title words only) — the page is on the site of curated
+    //      bars of exactly one city. thelumberyardbar.com: "Two Queens Brunch
+    //      at Lumberyard" was filed under the city that has a borough of that
+    //      name. The city is reset to unknown and the site-identity rung
+    //      below fills city and venue, as for every other row of that site.
+    //      A venue-name word is NOT overruled by the site: a venue site
+    //      naming another city's venue is announcing a party out of town.
+    //   3. THE PAGE — the page has a home city (options.pageCities, read by
+    //      SharedCore.readPageCities: most of its placed rows are in one
+    //      city), no other row of the page is in the named city, and the
+    //      VENUE is known to be in the home city:
+    //      - a title word: this row's venue is the venue of another row that
+    //        IS in the home city. bearssitges.org: "NOCHE BLANCA con PRAGUE
+    //        BEARS en Bear-Village" — the guests' home town, at the village
+    //        every other night of the programme is held in. A venue is in
+    //        one place; a tour date at its own venue is left alone.
+    //      - a venue-name word: the venue's name WITHOUT that word is the
+    //        full name of a curated bar of the home city. theurbanbear.com:
+    //        "FLEX HK" on a page whose other rows are all in the city that
+    //        curates "FLEX" — the word is the bar's neighbourhood, written
+    //        the way another city's alias is.
+    // Every outcome leaves a line. Returns true when the reading was changed.
+    settleNameWordCity(event, read, options = {}) {
+        if (!event || !read || !this.core) return false;
+        if (read.source !== 'title' && read.source !== 'venue-name') return false;
+        const named = String(read.city || '').toLowerCase();
+        if (!named || named === 'unknown') return false;
+        const title = event.title || 'unknown';
+        const where = read.source === 'title' ? 'its title' : `its venue name "${String(event.bar || '').trim()}"`;
+        const barName = typeof event.bar === 'string' ? event.bar.trim() : '';
+
+        if (barName && typeof this.core.findCuratedBarCityByDoor === 'function') {
+            const door = this.core.findCuratedBarCityByDoor(barName, event.address);
+            if (door && !door.ambiguousCities && door.city && door.city !== named) {
+                event.city = door.city;
+                event._citySource = 'curated-door';
+                console.log(`🗺️ LocationNormalizer: "${title}" names ${named} in ${where}, but "${barName}" at "${String(event.address || '').trim()}" is the door of the curated "${door.bar.name}" in ${door.city} — the door decides`);
+                this.fillVenueFromCuratedDoor(event, door.bar, title);
+                return true;
+            }
+            if (door && !door.ambiguousCities && door.city === named) return false;
+        }
+
+        if (read.source === 'title') {
+            const site = this.siteIdentityCity(event);
+            if (site && site.city !== named) {
+                event.city = 'unknown';
+                console.log(`🗺️ LocationNormalizer: "${title}" names ${named} in its title, but it is listed on ${site.hostKey}, the site of a curated venue in ${site.city} — a title word does not outrank the site; the site decides`);
+                return true;
+            }
+            if (site) return false;
+        }
+
+        const page = options && options.pageCities && typeof options.pageCities === 'object' ? options.pageCities : null;
+        const home = page && page.home && typeof page.home.city === 'string' ? page.home : null;
+        if (!home || home.city === named || !barName) return false;
+        if (page.counts && page.counts[named] > 1) return false;
+        const share = `${home.count} of the page's ${home.placed} placed rows`;
+        if (read.source === 'title') {
+            const barKey = typeof this.core.normalizeBarNameKey === 'function' ? this.core.normalizeBarNameKey(barName) : '';
+            const venueIsAtHome = Boolean(barKey && Array.isArray(page.venuesAtHome) && page.venuesAtHome.includes(barKey));
+            if (!venueIsAtHome) return false;
+            event.city = home.city;
+            event._citySource = 'page-home';
+            console.log(`🗺️ LocationNormalizer: "${title}" names ${named} in its title, but its venue "${barName}" is in ${home.city} on another row of the same page, where ${share} are — a venue is in one place; filed under ${home.city}`);
+            return true;
+        }
+        const homeBar = this.findHomeCityBarBehindCityWord(barName, named, home.city);
+        if (!homeBar) return false;
+        event.city = home.city;
+        event._citySource = 'page-home';
+        console.log(`🗺️ LocationNormalizer: "${title}" names ${named} in its venue name "${barName}", but without that word the name is the curated "${homeBar.name}" in ${home.city}, where ${share} are — the word is part of the bar's name, not its city; filed under ${home.city}`);
+        return true;
+    }
+
+    // The curated bar of homeCity whose full name is this venue name with
+    // the words that read as namedCity taken out ("FLEX HK" → "FLEX").
+    // Exact name match only (SharedCore.findCuratedBarByName); null when the
+    // name is nothing but the city word, or no curated bar answers.
+    findHomeCityBarBehindCityWord(barName, namedCity, homeCity) {
+        if (!this.core || !this.core.cityMappings || !this.core.bars
+            || typeof this.core.findCuratedBarByName !== 'function') return null;
+        const homeBars = this.core.bars[homeCity];
+        if (!Array.isArray(homeBars) || homeBars.length === 0) return null;
+        const folded = this.foldDiacritics(barName).replace(/\s+/g, ' ');
+        for (const [patterns, city] of Object.entries(this.core.cityMappings)) {
+            if (city !== namedCity) continue;
+            for (const pattern of patterns.split('|')) {
+                const foldedPattern = this.foldDiacritics(pattern).replace(/\s+/g, ' ').trim();
+                if (!foldedPattern || !this.matchesCityPattern(folded, foldedPattern)) continue;
+                const at = (` ${folded} `).indexOf(` ${foldedPattern} `);
+                if (at < 0) continue;
+                const rest = (folded.slice(0, at) + ' ' + folded.slice(at + foldedPattern.length)).replace(/\s+/g, ' ').trim();
+                if (!rest) continue;
+                const bar = this.core.findCuratedBarByName(homeBars, rest);
+                if (bar) return bar;
+            }
+        }
+        return null;
     }
 
     backfillCityFromIdentitySignals(event, options = {}) {
@@ -1717,12 +1930,25 @@ class LocationNormalizer extends BaseNormalizer {
     }
 
     extractCityFromEvent(event) {
+        return this.readCityFromEvent(event).city;
+    }
+
+    // The city AND the rung that gave it: 'stated' (the record's own city
+    // field), 'venue-name' (a word of the venue's name), 'venue-address',
+    // 'address', 'title' (a word of the title), 'text' (prose, context-free
+    // records only) or '' (unknown). The two NAME-WORD readings are the
+    // weakest — a title names a guest, a brand or a tour as often as a place,
+    // a venue's name carries its neighbourhood — and settleNameWordCity gives
+    // the door, the site and the page their say before one stands.
+    // options.quiet: a probe (the page pre-pass) — no log lines, no warning.
+    readCityFromEvent(event, options = {}) {
+        const quiet = Boolean(options && options.quiet);
         if (event.city) {
-            const normalizedCity = this.normalizeCityName(String(event.city));
-            return normalizedCity;
+            const normalizedCity = quiet ? this.resolveCityKeyQuietly(String(event.city)) : this.normalizeCityName(String(event.city));
+            return { city: normalizedCity, source: 'stated' };
         }
 
-        if (!this.core || !this.core.cityMappings) return 'unknown';
+        if (!this.core || !this.core.cityMappings) return { city: 'unknown', source: '' };
 
         // Diacritic-folded on BOTH sides so "Montréal" in a title/venue
         // matches the unaccented "montreal" pattern (run 20260727-145617),
@@ -1736,24 +1962,24 @@ class LocationNormalizer extends BaseNormalizer {
 
         const cityFromVenueName = this.matchCityInText(event.bar);
         if (cityFromVenueName) {
-            return cityFromVenueName;
+            return { city: cityFromVenueName, source: 'venue-name' };
         }
 
         if (event.venue?.address) {
             const address = event.venue.address;
             const cityFromAddress = address.city || address.localized_area_display || '';
             if (cityFromAddress) {
-                return this.normalizeCityName(cityFromAddress);
+                return { city: quiet ? this.resolveCityKeyQuietly(cityFromAddress) : this.normalizeCityName(cityFromAddress), source: 'venue-address' };
             }
         }
 
         if (event.address) {
             const cityFromAddress = this.extractCityFromAddress(event.address);
             if (cityFromAddress) {
-                if (cityFromTitle && cityFromTitle !== cityFromAddress) {
+                if (!quiet && cityFromTitle && cityFromTitle !== cityFromAddress) {
                     console.log(`🗺️ LocationNormalizer: "${String(event.title || '').trim()}" names ${cityFromTitle} but its address is in ${cityFromAddress} — the address decides`);
                 }
-                return cityFromAddress;
+                return { city: cityFromAddress, source: 'address' };
             }
         }
 
@@ -1776,7 +2002,7 @@ class LocationNormalizer extends BaseNormalizer {
         // still get their turn at it. Only a truly context-free event (no
         // venue name, no address of any kind) falls through to the prose.
         if (cityFromTitle) {
-            return cityFromTitle;
+            return { city: cityFromTitle, source: 'title' };
         }
 
         const hasVenueContext = Boolean(
@@ -1787,8 +2013,8 @@ class LocationNormalizer extends BaseNormalizer {
 
         if (hasVenueContext) {
             const title = String(event.title || event.name || '').trim();
-            console.log(`🗺️ LocationNormalizer: No city from title/venue/address for "${title || 'untitled'}" — description text is not authoritative for routing, leaving city unknown`);
-            return 'unknown';
+            if (!quiet) console.log(`🗺️ LocationNormalizer: No city from title/venue/address for "${title || 'untitled'}" — description text is not authoritative for routing, leaving city unknown`);
+            return { city: 'unknown', source: '' };
         }
 
         // The site the event came from is context too. A card on a curated
@@ -1799,16 +2025,16 @@ class LocationNormalizer extends BaseNormalizer {
         // to one city, the prose stays out of it and the identity backfill
         // below fills city AND venue.
         if (this.siteIdentityNamesOneCity(event)) {
-            return 'unknown';
+            return { city: 'unknown', source: '' };
         }
 
         const searchText = `${event.title || event.name || ''} ${event.description || ''} ${event.bar || ''}`;
         const cityFromText = this.extractCityFromText(searchText);
         if (cityFromText) {
-            return cityFromText;
+            return { city: cityFromText, source: 'text' };
         }
 
-        return 'unknown';
+        return { city: 'unknown', source: '' };
     }
 
     // Silent half of normalizeCityName: mapping resolution with NO warning.

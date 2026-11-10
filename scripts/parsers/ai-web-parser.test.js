@@ -23551,3 +23551,46 @@ test('stated name: a model title that is a trim of the card\'s own line keeps th
   assert.ok(branded, 'the page is still read');
   assert.equal(branded._statedTitles, undefined, 'a site name after a separator is not part of the event\'s name');
 });
+
+// ---------------------------------------------------------------------------
+// A SHORT CITY ALIAS INSIDE A LONGER PLACE NAME (whereto.party, run
+// 20261109-053706): the row's place "Ho Chi Minh City" carries the whole word
+// "chi" — an alias of another configured city — and a Saigon night was given
+// that city's key and clock.
+// ---------------------------------------------------------------------------
+
+test('city alias: a short alias that is a syllable of a longer place name names no city in place-shaped text', () => {
+  const parser = createParser();
+  const cityConfig = {
+    chicago: { timezone: 'America/Chicago', patterns: ['chicago', 'chi'] },
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] },
+    'hong-kong': { timezone: 'Asia/Hong_Kong', patterns: ['hong kong', 'hk'] }
+  };
+  const place = { placeName: true };
+  assert.equal(parser.findCityKeyInText('Ho Chi Minh City, Vietnam', cityConfig, place), '');
+  assert.equal(parser.findCityKeyInText('HO CHI MINH CITY', cityConfig, place), '');
+  assert.equal(parser.findCityKeyInText('District 1, Ho Chi Minh', cityConfig, place), '');
+  // The abbreviation written as one is still the city: alone, after a comma,
+  // or in capitals inside mixed-case text.
+  assert.equal(parser.findCityKeyInText('Chi', cityConfig, place), 'chicago');
+  assert.equal(parser.findCityKeyInText('3160 N Clark St, Chi, IL', cityConfig, place), 'chicago');
+  assert.equal(parser.findCityKeyInText('123 Main St NYC NY 10001', cityConfig, place), 'nyc');
+  assert.equal(parser.findCityKeyInText('3160 N Clark St, Chicago, IL', cityConfig, place), 'chicago');
+  // Free text keeps its reading: the mode is only for place-shaped fields.
+  assert.equal(parser.findCityKeyInText('FURBALL NYC PRIDE', cityConfig), 'nyc');
+
+  // The real row, trimmed (in__ho-chi-minh-city flight data).
+  const row = {
+    id: '787461f1-a783-4c74-8e5c-545c5e1ae526',
+    slug: 'on-ao-vol3-presents-skin-on-skin-sai-gon',
+    name: 'Ồn Ào Vol.3 presents Skin On Skin - Sài Gòn',
+    start_date: '2026-11-14', end_date: null, start_time: '20:30:00', end_time: '03:00:00',
+    ticketing_url: 'https://tally.so/r/NpKkBB',
+    city: { name: 'Ho Chi Minh City', time_zone: 'Asia/Ho_Chi_Minh' },
+    place: { name: 'Panorama studio rental & setdesign' }
+  };
+  const event = parser.buildEventFromJsonApiObject(row, 'https://whereto.party/in/ho-chi-minh-city', cityConfig);
+  assert.ok(event, 'the row is still read');
+  assert.notEqual(event.city, 'chicago');
+  assert.notEqual(event.timezone, 'America/Chicago');
+});

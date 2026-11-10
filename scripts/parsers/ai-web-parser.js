@@ -11836,7 +11836,7 @@ class AiWebParser {
             // The heading IS the place: "DC" names dc outright even though a
             // two-letter alias is too short to be found inside running text.
             const exact = cityConfig && cityText ? this.findCityConfigEntry(cityText, cityConfig) : null;
-            const cityKey = exact ? exact.key : (cityConfig && cityText ? this.findCityKeyInText(cityText, cityConfig) : '');
+            const cityKey = exact ? exact.key : (cityConfig && cityText ? this.findCityKeyInText(cityText, cityConfig, { placeName: true }) : '');
             const timezone = zoneFor(cityKey, cityText);
             const make = (startParsed, endParsed) => {
                 const event = {
@@ -14258,7 +14258,7 @@ class AiWebParser {
         // and timezone from it directly so nothing downstream has to guess. Address only:
         // bar names produce false city matches ("Brooklyn Bowl" in Vegas).
         if (address && cityConfig) {
-            const cityKey = this.findCityKeyInText(address, cityConfig);
+            const cityKey = this.findCityKeyInText(address, cityConfig, { placeName: true });
             if (cityKey) {
                 event.city = cityKey;
                 const timezone = this.getTimezoneForCity(cityKey, cityConfig);
@@ -16987,7 +16987,7 @@ class AiWebParser {
                 event.address = hit.address;
                 console.log(`🚪 SPA DOOR: "${event.title}" address ← the app's own venue directory ("${hit.name}"): ${hit.address}`);
                 if (!event.city && cityConfig) {
-                    const cityKey = this.findCityKeyInText(hit.address, cityConfig);
+                    const cityKey = this.findCityKeyInText(hit.address, cityConfig, { placeName: true });
                     if (cityKey) {
                         event.city = cityKey;
                         if (!event.timezone) {
@@ -17526,8 +17526,8 @@ class AiWebParser {
             // "Folsom Street Fair"), and that label names a place either in
             // its own words or as a curated festival that has one.
             const groupLabel = clean(firstValue(/^(region|group|category|section)_(label|name|title)$/, isNonEmptyString));
-            const cityKey = (address ? this.findCityKeyInText(address, cityConfig) : '')
-                || (placeText ? this.findCityKeyInText(placeText, cityConfig) : '')
+            const cityKey = (address ? this.findCityKeyInText(address, cityConfig, { placeName: true }) : '')
+                || (placeText ? this.findCityKeyInText(placeText, cityConfig, { placeName: true }) : '')
                 || (groupLabel ? (this.findCityKeyInText(groupLabel, cityConfig) || this.findCityKeyForFestivalLabel(groupLabel, cityConfig)) : '');
             if (cityKey) {
                 event.city = cityKey;
@@ -17830,7 +17830,7 @@ class AiWebParser {
         if (record.city && isEmpty(event.city)) {
             // Only configured city keys, resolved through the same alias matching
             // the rest of the parser uses — never invent a key from raw Wix text.
-            const cityKey = this.findCityKeyInText(record.city, cityConfig);
+            const cityKey = this.findCityKeyInText(record.city, cityConfig, { placeName: true });
             if (cityKey) {
                 event.city = cityKey;
                 filled.push('city');
@@ -26862,7 +26862,7 @@ TEXT:
             this.getTimezoneForCity(parserConfig && parserConfig.city, cityConfig),
             // Fallback: the address often names the city even when the city field was
             // dropped by evidence validation (e.g. flyer only says "NYC").
-            this.getTimezoneForCity(this.findCityKeyInText(address, cityConfig), cityConfig),
+            this.getTimezoneForCity(this.findCityKeyInText(address, cityConfig, { placeName: true }), cityConfig),
             ''
         );
         // URL-field sanity gate (see isPlausibleEventUrlValue): only
@@ -27930,18 +27930,63 @@ TEXT:
     }
 
     // Find a configured city referenced inside free text (e.g. a street address).
-    findCityKeyInText(text, cityConfig) {
+    //
+    // options.placeName: the text is PLACE-SHAPED — an address, a place or
+    // city field — so the words around a token are the rest of a name, and a
+    // short alias that is only a syllable of a longer place name is not the
+    // alias (2026-11-09, whereto.party: the place "Ho Chi Minh City, Vietnam"
+    // carries the whole word "chi", and a Saigon night was given another
+    // city's key and clock). Mirrors LocationNormalizer.matchesCityPattern.
+    findCityKeyInText(text, cityConfig, options = {}) {
         const map = this.getCityConfigMap(cityConfig);
         if (!map || typeof map !== 'object') return '';
         const normalizedText = this.normalizeEvidenceText(text);
         if (!normalizedText) return '';
+        const placeName = Boolean(options && options.placeName);
         for (const [key, cityData] of Object.entries(map)) {
             const matched = this.getCityAliasList(key, cityData).some(alias =>
                 alias.length >= 3 && this.textContainsCityAlias(normalizedText, alias)
+                && !(placeName && this.placeTextHoldsShortAliasOnlyInsideNames(text, alias))
             );
             if (matched) return key;
         }
         return '';
+    }
+
+    // Does this PLACE text spell the short alias only as a syllable of a
+    // longer name? True when every whole-token occurrence has a name word
+    // joined on BOTH sides (space or hyphen, no comma between) — "Ho Chi
+    // Minh City" — and is not written as an abbreviation: capitals inside
+    // mixed-case text ("398 12th St SF CA") are how an abbreviation is
+    // written, a title-cased "Chi" is how a syllable is. Text all in one
+    // case says nothing by its letters, so there the neighbours decide.
+    // False when the alias is not short, is absent, or stands once.
+    placeTextHoldsShortAliasOnlyInsideNames(rawText, foldedAlias) {
+        const alias = String(foldedAlias || '');
+        if (!/^[a-z]{1,3}$/.test(alias)) return false;
+        const cased = String(rawText || '')
+            .replace(/&(amp|nbsp|#39|apos|quot);/gi, ' ')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!cased) return false;
+        const mixedCase = /\p{Ll}/u.test(cased) && /\p{Lu}/u.test(cased);
+        const finder = new RegExp(`(^|[^\\p{L}\\p{N}])(${alias})(?![\\p{L}\\p{N}])`, 'giu');
+        let found = 0;
+        let match = finder.exec(cased);
+        while (match) {
+            const start = match.index + match[1].length;
+            const end = start + match[2].length;
+            const token = match[2];
+            const writtenAsAbbreviation = mixedCase && token === token.toUpperCase();
+            const insideName = /\p{L}[ -]+$/u.test(cased.slice(0, start)) && /^[ -]+\p{L}/u.test(cased.slice(end));
+            if (writtenAsAbbreviation || !insideName) return false;
+            found += 1;
+            finder.lastIndex = end;
+            match = finder.exec(cased);
+        }
+        return found > 0;
     }
 
     hasExplicitTimezoneInfo(dateValue) {
@@ -31825,7 +31870,7 @@ TEXT:
             const candidate = entry.addresses[consensusKey];
             const consensusAddress = candidate.display;
             console.log(`🤖 AI Web: Venue-site address consensus for ${host}: "${consensusAddress}" (${candidate.pages.size} page(s))`);
-            const cityKey = this.findCityKeyInText(consensusAddress, cityConfig);
+            const cityKey = this.findCityKeyInText(consensusAddress, cityConfig, { placeName: true });
             for (const event of eventList) {
                 if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
                 const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
@@ -33552,7 +33597,7 @@ TEXT:
         if (!pair) return event;
         const extractedEntry = this.findCityConfigEntry(extractedCity, cityConfig);
         const extractedKey = extractedEntry ? extractedEntry.key : extractedCity.toLowerCase();
-        const resolvedKey = this.findCityKeyInText(pair.place, cityConfig);
+        const resolvedKey = this.findCityKeyInText(pair.place, cityConfig, { placeName: true });
         if (resolvedKey) {
             if (resolvedKey === extractedKey) return event; // page agrees — nothing to do
             event.city = resolvedKey;

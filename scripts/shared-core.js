@@ -5918,6 +5918,50 @@ class SharedCore {
         return count / placed >= SOURCE_HOME_MIN_SHARE ? { city, count, placed } : null;
     }
 
+    // WHERE ONE PAGE'S ROWS ARE, read before any of them is placed
+    // (2026-11-09): the cities the rows state for themselves — a quiet probe
+    // of the location normalizer's own reading, nothing is written — and,
+    // when most placed rows are in one city (the getSourceHomeCity
+    // thresholds), that home and the venues the page itself puts there.
+    // LocationNormalizer.settleNameWordCity asks it before a city read from a
+    // TITLE WORD stands. An aggregator's page lists everybody's events and
+    // has no home; null when nothing can be said.
+    readPageCities(events, parserConfig, normalizerPipeline) {
+        if (!Array.isArray(events) || events.length === 0) return null;
+        if (parserConfig && String(parserConfig.siteRole || '').trim().toLowerCase() === 'aggregator') return null;
+        const normalizers = normalizerPipeline && Array.isArray(normalizerPipeline.normalizers) ? normalizerPipeline.normalizers : [];
+        const reader = normalizers.find(normalizer => normalizer && typeof normalizer.readCityFromEvent === 'function');
+        if (!reader) return null;
+        const reads = [];
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            if (String(event._pageSiteRole || '').trim().toLowerCase() === 'aggregator') return null;
+            let read = null;
+            try {
+                read = reader.readCityFromEvent(event, { quiet: true });
+            } catch (error) {
+                read = null;
+            }
+            const city = read && typeof read.city === 'string' ? read.city.trim().toLowerCase() : '';
+            reads.push({ event, city });
+        }
+        const counts = {};
+        for (const { city } of reads) {
+            if (!city || city === 'unknown' || !this.cities || !this.cities[city]) continue;
+            counts[city] = (counts[city] || 0) + 1;
+        }
+        const home = this.getSourceHomeCity(reads.map(({ city }) => ({ city })));
+        const venuesAtHome = [];
+        if (home) {
+            for (const { event, city } of reads) {
+                if (city !== home.city || typeof event.bar !== 'string' || !event.bar.trim()) continue;
+                const key = this.normalizeBarNameKey(event.bar);
+                if (key && !venuesAtHome.includes(key)) venuesAtHome.push(key);
+            }
+        }
+        return { counts, home, venuesAtHome };
+    }
+
     placeVirtualEventsAtSourceHome(events, parserConfig) {
         if (!Array.isArray(events) || events.length === 0) return 0;
         if (parserConfig && String(parserConfig.siteRole || '').trim().toLowerCase() === 'aggregator') return 0;
@@ -13732,8 +13776,13 @@ class SharedCore {
         // normalizer's city backfill (an event whose page named neither a
         // venue nor a city still belongs to the city its parser declares).
         const parserCity = parserConfig && typeof parserConfig.city === 'string' ? parserConfig.city : '';
+        // pageCities: where this page's other rows are — asked before a city
+        // read from a title word stands (readPageCities).
+        const pageCities = pipelineToUse ? this.readPageCities(filteredEvents, parserConfig, pipelineToUse) : null;
+        const pipelineOptions = { geocodeVerification: globalConfig.geocodeVerification, parserCity };
+        if (pageCities) pipelineOptions.pageCities = pageCities;
         const enrichedEvents = pipelineToUse
-            ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter, { geocodeVerification: globalConfig.geocodeVerification, parserCity })
+            ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter, pipelineOptions)
             : filteredEvents.map(event => this.normalizeEventTextFields(event));
 
         enrichedEvents.forEach((event, index) => {

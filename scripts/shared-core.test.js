@@ -30326,3 +30326,82 @@ test('title tail: one word shared with the bar is not the bar — the tail must 
   assert.equal(core.stripVenueSuffixFromTitle('BEAST (A Pre-Halloween at the Black Eagle)', 'Black Eagle Toronto'), 'BEAST (A Pre-Halloween at the Black Eagle)');
   assert.equal(core.stripVenueSuffixFromTitle('BEAST (Pre-Halloween) at the Black Eagle', 'Black Eagle Toronto'), 'BEAST (Pre-Halloween)');
 });
+
+// ---------------------------------------------------------------------------
+// WHERE ONE PAGE'S ROWS ARE (2026-11-09): the page's home city is read before
+// any row is placed, so a city read from a word of a title or of a venue's
+// name can be weighed against the rest of the page (bearssitges.org's two
+// guest-club nights; theurbanbear.com's "FLEX HK").
+// ---------------------------------------------------------------------------
+
+function createPageCitiesCore() {
+  const { NormalizerPipeline: Pipeline } = require('./normalizers');
+  const cities = {
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] },
+    sitges: { timezone: 'Europe/Madrid', patterns: ['sitges'] },
+    prague: { timezone: 'Europe/Prague', patterns: ['prague'] },
+    'palm-springs': { timezone: 'America/Los_Angeles', patterns: ['palm springs'] }
+  };
+  const core = new SharedCore(cities, { eventSchema: EventSchema });
+  const pipeline = new Pipeline(core);
+  if (typeof pipeline.setCore === 'function') pipeline.setCore(core);
+  return { core, pipeline };
+}
+
+// Rows of the real programme page, trimmed to title / venue / address.
+const SITGES_PROGRAMME_ROWS = () => [
+  { title: 'Bears Sitges Week 2026 Opening (cava & aperitif)', bar: 'Hotel Calipolis', address: 'Av. Sofia 2-6, 08870 Sitges' },
+  { title: 'BBQ & Music – POP-Air', bar: 'Le Patio', address: 'c/ JOAN TARRIDA 23, SITGES' },
+  { title: 'Bears Sitges MARKET', bar: 'Hotel Calipolis' },
+  { title: 'Mr. BEAR SITGES 2026', bar: 'Bear-Village' },
+  { title: '25th anniBEARsary Bears Sitges', bar: 'BEARS DISCO' },
+  { title: '1h a 06h BEEFMINCE DISCO Party', bar: 'The Bear Cave', address: 'Carrer de Bonaire 12, 08870 Sitges' },
+  { title: 'OPENING «EARLY-VILLAGE» 2026', bar: 'Bear-Village' },
+  { title: '20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en', bar: 'Bear-Village' },
+  { title: '30h a 03h NOCHE ESPECIAL «IBC Palm Springs» con DJ Retro', bar: 'Bear-Village' }
+];
+
+test('page cities: the home city of a page is read off its own rows, with the venues the page puts there; an aggregator has none', () => {
+  const { core, pipeline } = createPageCitiesCore();
+  const restore = silenceConsole();
+  try {
+    const page = core.readPageCities(SITGES_PROGRAMME_ROWS(), { name: 'Bears Sitges Week' }, pipeline);
+    assert.deepEqual(page.counts, { sitges: 6, prague: 1, 'palm-springs': 1 });
+    assert.equal(page.home, null, 'six of eight is under the source-home share');
+    // One more home row (the real page has seventeen) and the page has a home.
+    const rows = [...SITGES_PROGRAMME_ROWS(), { title: 'Sitges Drag Brunch', bar: 'Le Patio' }, { title: 'Bears Sitges PACKS', bar: 'Hotel Calipolis' }];
+    const full = core.readPageCities(rows, { name: 'Bears Sitges Week' }, pipeline);
+    assert.deepEqual(full.home, { city: 'sitges', count: 8, placed: 10 });
+    assert.deepEqual(full.venuesAtHome, ['hotelcalipolis', 'lepatio', 'bearvillage', 'bearsdisco', 'bearcave']);
+    // Nothing is written on the rows by the probe.
+    assert.ok(rows.every(row => row.city === undefined && row._citySource === undefined));
+    // An aggregator lists everybody's events: never asked.
+    assert.equal(core.readPageCities(rows, { name: 'Listings', siteRole: 'aggregator' }, pipeline), null);
+    assert.equal(core.readPageCities(rows.map(row => ({ ...row, _pageSiteRole: 'aggregator' })), {}, pipeline), null);
+    // No location reader in the pipeline: nothing can be said.
+    assert.equal(core.readPageCities(rows, {}, { normalizers: [] }), null);
+  } finally { restore(); }
+});
+
+test('page cities: prepareParsedEvents weighs a title-word city against the page — guest-club nights at the page\'s own venue stay home, a tour date does not move', async () => {
+  const { core, pipeline } = createPageCitiesCore();
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  let prepared;
+  try {
+    const rows = [
+      ...SITGES_PROGRAMME_ROWS(),
+      { title: 'Sitges Drag Brunch', bar: 'Le Patio' },
+      { title: 'Bears Sitges PACKS', bar: 'Hotel Calipolis' }
+    ];
+    prepared = await core.prepareParsedEvents(rows, { name: 'Bears Sitges Week' }, {}, 'multi-event-page', pipeline, null, 'https://bearssitges.org/bears-sitges-week/');
+  } finally { console.log = originalLog; }
+  const byTitle = title => prepared.find(event => event.title.includes(title));
+  assert.equal(byTitle('PRAGUE BEARS').city, 'sitges');
+  assert.equal(byTitle('PRAGUE BEARS')._citySource, 'page-home');
+  assert.equal(byTitle('IBC Palm Springs').city, 'sitges');
+  assert.equal(byTitle('Mr. BEAR SITGES').city, 'sitges');
+  assert.ok(lines.some(line => line.includes('names prague in its title') && line.includes('filed under sitges')), 'the move leaves a line');
+  assert.ok(lines.some(line => line.includes('names palm-springs in its title') && line.includes('filed under sitges')));
+});
