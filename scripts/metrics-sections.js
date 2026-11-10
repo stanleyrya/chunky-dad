@@ -499,12 +499,26 @@ function assessSourceHealth(records, options = {}) {
     byHost.forEach((lines, host) => {
         lines.sort((a, b) => String(a.finished_at || '').localeCompare(String(b.finished_at || '')) || String(a.run_id || '').localeCompare(String(b.run_id || '')));
         const latest = lines[lines.length - 1];
-        const earlier = lines.slice(0, -1).filter((line) => line.status === 'ok').slice(-baselineRuns);
+        // NOT READ is not EMPTY. A line whose configured URL could not be
+        // read that run (line.not_read — refused by politeness, the browser
+        // budget spent, an HTTP error) says nothing about the site: it is no
+        // baseline, and when it is the latest line the volume verdicts
+        // (stopped, shrunk, empty, vanished) are not concluded from it. The
+        // row wears an "unread" flag chip with the reason instead, and
+        // "quiet" counts from the last line that WAS read. `status` keeps
+        // its meaning ('dead' = every fetch failed stays dead).
+        const lineUnread = (line) => Array.isArray(line.not_read) && line.not_read.length > 0;
+        const notRead = lineUnread(latest) ? latest.not_read : [];
+        const unread = notRead.length > 0 && latest.status !== 'dead';
+        const earlier = lines.slice(0, -1).filter((line) => line.status === 'ok' && !lineUnread(line)).slice(-baselineRuns);
         const baseline = medianOf(earlier.map((line) => Number(line.extracted) || 0));
         const latestExtracted = Number(latest.extracted) || 0;
         const vanished = Array.isArray(latest.vanished) ? latest.vanished : [];
         const ageMs = now.getTime() - new Date(latest.finished_at || 0).getTime();
         const ageDays = Number.isFinite(ageMs) ? ageMs / 86400000 : Infinity;
+        const lastRead = unread ? lines.filter((line) => !lineUnread(line)).pop() : latest;
+        const readAgeMs = lastRead ? now.getTime() - new Date(lastRead.finished_at || 0).getTime() : Infinity;
+        const readAgeDays = Number.isFinite(readAgeMs) ? readAgeMs / 86400000 : Infinity;
         // Lost = open "expected future events gone" series on the latest line
         // (lines written before the field existed simply have none). The
         // audit's "still on the site?" verdict rides on each series — from
@@ -514,11 +528,18 @@ function assessSourceHealth(records, options = {}) {
         const auditHosts = options.audit && options.audit.hosts && typeof options.audit.hosts === 'object' ? options.audit.hosts : null;
         const audit = auditHosts && auditHosts[host] && typeof auditHosts[host] === 'object' ? auditHosts[host] : null;
         const stillByTitle = new Map((audit && Array.isArray(audit.still) ? audit.still : []).map((item) => [String(item.title || '').toLowerCase(), item]));
+        // "Removed by the site" counts only with its proof (2026-11-09: the
+        // audit used to say it whenever the title's words were missing from
+        // one page, whatever month that page showed). A stamp that names no
+        // proof — every stamp written before that day — reads as "unknown":
+        // open, ours to explain.
         const lost = (Array.isArray(latest.lost) ? latest.lost : []).filter((entry) => entry && Array.isArray(entry.days) && entry.days.length).map((entry) => {
             const fromAudit = stillByTitle.get(String(entry.title || '').toLowerCase());
-            const still = fromAudit && fromAudit.verdict ? fromAudit.verdict : (entry.still || '');
+            let still = fromAudit && fromAudit.verdict ? fromAudit.verdict : (entry.still || '');
             const stillAt = fromAudit && fromAudit.checked_at ? fromAudit.checked_at : (entry.still_at || '');
-            return Object.assign({}, entry, still ? { still, still_at: stillAt } : {});
+            const proof = fromAudit && fromAudit.verdict ? (fromAudit.proof || '') : (entry.still_proof || '');
+            if (still === 'site-removed' && !proof) still = 'unknown';
+            return Object.assign({}, entry, still ? { still, still_at: stillAt } : {}, proof ? { still_proof: proof } : {});
         });
         // Not our miss: the site removed it, or the run holds it under the
         // bear check's verdict or another title ("set-aside" — the audit
@@ -534,11 +555,11 @@ function assessSourceHealth(records, options = {}) {
         const suspected = Number(latest.suspected) || 0;
         const hasLoss = openLost.length > 0 || listingGone;
         // Slow decline: the last few ok runs all well under the window's peak.
-        const okLines = lines.filter((line) => line.status === 'ok');
+        const okLines = lines.filter((line) => line.status === 'ok' && !lineUnread(line));
         const recentOk = okLines.slice(-SLOW_DECLINE_RUNS);
         const peakWindow = okLines.slice(0, Math.max(0, okLines.length - SLOW_DECLINE_RUNS)).slice(-SLOW_DECLINE_WINDOW);
         const peak = peakWindow.reduce((max, line) => Math.max(max, Number(line.extracted) || 0), 0);
-        const slowDecline = latest.status === 'ok' && recentOk.length === SLOW_DECLINE_RUNS && peak >= SLOW_DECLINE_MIN_PEAK
+        const slowDecline = latest.status === 'ok' && !unread && recentOk.length === SLOW_DECLINE_RUNS && peak >= SLOW_DECLINE_MIN_PEAK
             && recentOk.every((line) => (Number(line.extracted) || 0) < peak * SLOW_DECLINE_RATIO);
         const underHalf = (line) => baseline !== null && baseline >= 4 && (Number(line.extracted) || 0) < baseline / 2;
         const sparse = assessSparseFields([...earlier, latest]);
@@ -547,9 +568,9 @@ function assessSourceHealth(records, options = {}) {
         let since = null;
         if (latest.status === 'dead') {
             verdict = 'dead';
-        } else if (latestExtracted === 0 && baseline > 0) {
+        } else if (!unread && latestExtracted === 0 && baseline > 0) {
             verdict = 'stopped';
-        } else if (underHalf(latest) || slowDecline) {
+        } else if (!unread && (underHalf(latest) || slowDecline)) {
             verdict = 'shrunk';
         } else if (sparse && !aggregator) {
             verdict = 'sparse';
@@ -557,11 +578,11 @@ function assessSourceHealth(records, options = {}) {
             verdict = 'drift';
         } else if (hasLoss && !aggregator) {
             verdict = 'lost';
-        } else if (latestExtracted === 0 && latest.status === 'empty') {
+        } else if (!unread && latestExtracted === 0 && latest.status === 'empty') {
             verdict = 'empty';
-        } else if (vanished.length > 0) {
+        } else if (!unread && vanished.length > 0) {
             verdict = 'vanished';
-        } else if (ageDays > staleAfterDays) {
+        } else if ((unread ? readAgeDays : ageDays) > staleAfterDays) {
             verdict = 'quiet';
         }
         if (verdict === 'dead' || verdict === 'stopped' || verdict === 'shrunk' || verdict === 'empty') {
@@ -588,12 +609,22 @@ function assessSourceHealth(records, options = {}) {
         const flags = [];
         if (hasLoss && verdict !== 'lost') flags.push('lost');
         if (sparse && verdict !== 'sparse') flags.push('sparse');
+        // Two more chips, never verdicts of their own: "unread" (above) and
+        // "collapse" — the ledger found a batch of expected future events
+        // missing together (SharedCore.SOURCE_COLLAPSE_RULE): the source is
+        // degraded, our problem until proven otherwise, and every "gone
+        // from the source" card for it is held.
+        const collapse = latest.collapse && typeof latest.collapse === 'object' && Number(latest.collapse.missing) > 0 ? latest.collapse : null;
+        if (notRead.length > 0) flags.push('unread');
+        if (collapse) flags.push('collapse');
         const parsers = Array.isArray(latest.parsers) ? latest.parsers : [];
         rows.push({
             host,
             parsers,
             verdict,
             flags,
+            notRead,
+            collapse,
             since,
             baseline,
             sparse,
@@ -606,7 +637,7 @@ function assessSourceHealth(records, options = {}) {
             lostRemoved,
             lostSetAside,
             lostStillListed,
-            audit: audit ? { date: audit.date || '', run_id: audit.run_id || '', missing: Array.isArray(audit.missing) ? audit.missing : [], fake: Array.isArray(audit.fake) ? audit.fake : [], wrong: Array.isArray(audit.wrong) ? audit.wrong : [], still: Array.isArray(audit.still) ? audit.still : [], note: audit.note || '', ai: audit.ai || '', reason: audit.reason || '', page: audit.page || null } : null,
+            audit: audit ? { date: audit.date || '', run_id: audit.run_id || '', missing: Array.isArray(audit.missing) ? audit.missing : [], fake: Array.isArray(audit.fake) ? audit.fake : [], wrong: Array.isArray(audit.wrong) ? audit.wrong : [], still: (Array.isArray(audit.still) ? audit.still : []).map((item) => (item && item.verdict === 'site-removed' && !item.proof ? Object.assign({}, item, { verdict: 'unknown', why: 'an older check: the title was not in the text read, which proves nothing about that day' }) : item)), note: audit.note || '', ai: audit.ai || '', reason: audit.reason || '', page: audit.page || null } : null,
             auditOpen: !!audit && ((Array.isArray(audit.missing) && audit.missing.length > 0) || (Array.isArray(audit.fake) && audit.fake.length > 0) || (Array.isArray(audit.wrong) && audit.wrong.length > 0) || lostStillListed > 0),
             suspected,
             listingGone,
@@ -703,7 +734,10 @@ function assessSourceHealth(records, options = {}) {
 // the display's stylesheet (class verdict-<verdict>); this module only names
 // the class.
 
+// 'unread' and 'collapse' are flag chips only (never in SOURCE_VERDICT_ORDER).
 const SOURCE_VERDICT_LABELS = {
+    unread: 'Not read',
+    collapse: 'Degraded',
     dead: 'Dead',
     stopped: 'Stopped',
     shrunk: 'Shrunk',
@@ -902,6 +936,25 @@ function formatLostNote(row) {
     return parts.join(' · ');
 }
 
+// The reason behind the "Not read" and "Degraded" chips, in words:
+// "not read this run — /calendar: not requested (browser allowance spent)" /
+// "degraded — 12 expected events missing together (18%) since 12 Oct · removal cards held".
+function formatReadNote(row) {
+    if (!row) return '';
+    const parts = [];
+    const notRead = Array.isArray(row.notRead) ? row.notRead : [];
+    if (notRead.length > 0) {
+        const first = notRead[0] || {};
+        const where = String(first.url || '').replace(/^https?:\/\/[^/]+/i, '') || '/';
+        parts.push(`not read this run — ${where.slice(0, 40)}: ${String(first.reason || 'no reason recorded').slice(0, 80)}${notRead.length > 1 ? ` (+${notRead.length - 1} more)` : ''} · not counted as empty, no removal cards`);
+    }
+    if (row.collapse) {
+        const share = Math.round((Number(row.collapse.share) || 0) * 100);
+        parts.push(`degraded — ${Number(row.collapse.missing) || 0} expected events missing together (${share}%)${row.collapse.since ? ` since ${formatSourceRun(row.collapse.since)}` : ' this run'} · removal cards held`);
+    }
+    return parts.join(' · ');
+}
+
 // The Sources table: one row per host (trouble first unless sortState says
 // otherwise). options.hostUrl(row) → deep link, options.faviconUrl(row) → icon.
 // The latest extracted · bear · upcoming share one cell so the table fits a
@@ -928,9 +981,10 @@ function buildSourcesTableHtml(health, options = {}) {
             ? `fed by ${row.companionOf.join(', ')}`
             : '';
         const lostLabel = formatLostNote(row);
+        const readLabel = formatReadNote(row);
         const verdictNote = row.verdict === 'lost'
-            ? [lostLabel, sinceLabel].filter(Boolean).join(' · ')
-            : [sinceLabel || vanishedLabel || companionLabel, lostLabel].filter(Boolean).join(' · ');
+            ? [lostLabel, sinceLabel, readLabel].filter(Boolean).join(' · ')
+            : [sinceLabel || vanishedLabel || companionLabel, lostLabel, readLabel].filter(Boolean).join(' · ');
         const flagChips = (Array.isArray(row.flags) ? row.flags : [])
             .map((flag) => buildVerdictChipHtml(flag, { label: flag === 'lost' && row.aggregator ? 'Lost · aggregator' : (flag === 'sparse' ? formatSparseLabel(row) : sourceVerdictLabel(flag)) }))
             .join('');
@@ -2515,6 +2569,7 @@ const MetricsSections = {
     buildVanishedListHtml,
     buildLostListHtml,
     formatLostNote,
+    formatReadNote,
     QUALITY_THRESHOLDS,
     assessSourceQuality,
     summarizeOwnerDecisions,
@@ -2586,6 +2641,7 @@ if (typeof module !== 'undefined' && module.exports) {
         buildVanishedListHtml,
         buildLostListHtml,
         formatLostNote,
+        formatReadNote,
         QUALITY_THRESHOLDS,
         assessSourceQuality,
         summarizeOwnerDecisions,

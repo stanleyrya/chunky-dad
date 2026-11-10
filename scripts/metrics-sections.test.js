@@ -957,15 +957,15 @@ test('quality chips on the Sources table and tiles on the host page', () => {
 function auditLedger() {
   const pig = (extra = {}) => Object.assign({ title: 'Bearded Pig Disco', bear: true, since: '20261007-050000', seen: 4, days: ['2026-10-11', '2026-10-18'], new: 0 }, extra);
   return [
-    buildLedgerLine({ host: 'removed.example', parsers: ['Removed'], lost: [pig({ still: 'site-removed', still_at: '2026-10-08T06:00:00Z' })] }),
-    buildLedgerLine({ host: 'ours.example', parsers: ['Ours'], lost: [pig({ still: 'still-listed', still_at: '2026-10-08T06:00:00Z' }), { title: 'Gone Party', bear: false, since: '20261007-050000', seen: 3, days: ['2026-11-01'], new: 0, still: 'site-removed' }] }),
+    buildLedgerLine({ host: 'removed.example', parsers: ['Removed'], lost: [pig({ still: 'site-removed', still_proof: 'listing-covers', still_at: '2026-10-08T06:00:00Z' })] }),
+    buildLedgerLine({ host: 'ours.example', parsers: ['Ours'], lost: [pig({ still: 'still-listed', still_at: '2026-10-08T06:00:00Z' }), { title: 'Gone Party', bear: false, since: '20261007-050000', seen: 3, days: ['2026-11-01'], new: 0, still: 'site-removed', still_proof: 'listing-covers' }] }),
     buildLedgerLine({ host: 'overlay.example', parsers: ['Overlay'], lost: [pig()] }),
     buildLedgerLine({ host: 'unchecked.example', parsers: ['Unchecked'], lost: [pig()] })
   ];
 }
 
 const AUDIT = { version: 1, hosts: {
-  'overlay.example': { date: '2026-10-08', run_id: '20261008-050000', verdict: 'lost', badges: [], page: { url: 'https://overlay.example/events/', fetchedAt: '2026-10-08T05:00:00Z', chars: 1200 }, still: [{ title: 'bearded pig disco', verdict: 'site-removed', checked_at: '2026-10-08T06:00:00Z', line: '' }], missing: [{ title: 'Sunday Beer Bust', date: 'Oct 12' }], fake: [{ title: 'View Event →', reason: 'a button' }], note: 'One miss.', ai: 'ok' }
+  'overlay.example': { date: '2026-10-08', run_id: '20261008-050000', verdict: 'lost', badges: [], page: { url: 'https://overlay.example/events/', fetchedAt: '2026-10-08T05:00:00Z', chars: 1200 }, still: [{ title: 'bearded pig disco', verdict: 'site-removed', proof: 'listing-covers', days: ['2026-10-11', '2026-10-18'], checked_at: '2026-10-08T06:00:00Z', line: '' }], missing: [{ title: 'Sunday Beer Bust', date: 'Oct 12' }], fake: [{ title: 'View Event →', reason: 'a button' }], note: 'One miss.', ai: 'ok' }
 } };
 
 test('assessSourceHealth with the audit: site-removed series drop out of the lost numbers and the verdict; still-listed stays lost; the audit file overlays the line for today', () => {
@@ -1198,4 +1198,94 @@ test('buildSourceYieldTableHtml: one row per host with bear/extracted, yield %, 
   assert.ok(!html.includes('NaN') && !html.includes('undefined'));
   assert.ok(MetricsSections.buildSourceYieldTableHtml({ runs: [], rows: [] }).includes('No source ledger yet'));
   assert.ok(MetricsSections.buildFieldBarsHtml(null).includes('not judged'));
+});
+
+// ---------------------------------------------------------------------------
+// Not read is not empty, a collapse is ours, "removed" needs proof
+// (2026-11-09). Eagle LA's later months stopped being read on 2026-10-12
+// (our month-feed cache key); the ledger counted the nights "lost", an audit
+// stamped them "removed by the site" off a page showing another month, and
+// the dashboard filed them under "not our miss".
+// ---------------------------------------------------------------------------
+function readLedger(latestExtra, earlierExtra = () => ({})) {
+  const runs = ['20261104-050000', '20261105-050000', '20261106-050000', '20261107-050000', '20261108-050000', '20261109-050000'];
+  return runs.map((runId, index) => buildLedgerLine(Object.assign({
+    run_id: runId, finished_at: `2026-11-0${index + 4}T13:00:00.000Z`, host: 'eagle.example', parsers: ['Eagle'], extracted: 60, events: 40, bear: 30, upcoming: 55,
+    lost: [], suspected: 0, listing_gone: false, aggregator: false, url: 'https://eagle.example/calendar/'
+  }, index === runs.length - 1 ? latestExtra : earlierExtra(index))));
+}
+
+test('assessSourceHealth: a line whose url was not read is neither "stopped" nor "empty" nor "shrunk" — the row wears a "Not read" chip with the reason, and unread lines are no baseline', () => {
+  const now = new Date('2026-11-09T14:00:00.000Z');
+  const notRead = [{ url: 'https://eagle.example/calendar/', reason: 'browser budget spent for this run' }];
+  // Before the rule this line read "stopped": 0 extracted against a baseline of 60.
+  const control = MetricsSections.assessSourceHealth(readLedger({ extracted: 0, events: 0, bear: 0, upcoming: 0, status: 'empty' }), { now }).rows[0];
+  assert.equal(control.verdict, 'stopped', 'the same line without the field is still a stopped source');
+  const health = MetricsSections.assessSourceHealth(readLedger({ extracted: 0, events: 0, bear: 0, upcoming: 0, status: 'empty', not_read: notRead }), { now });
+  const row = health.rows[0];
+  assert.equal(row.verdict, 'ok', 'nothing is concluded from a read that did not happen');
+  assert.deepEqual(row.flags, ['unread']);
+  assert.deepEqual(row.notRead, notRead);
+  assert.equal(MetricsSections.formatReadNote(row), 'not read this run — /calendar/: browser budget spent for this run · not counted as empty, no removal cards');
+  const table = MetricsSections.buildSourcesTableHtml(health);
+  assert.ok(table.includes('Not read'), 'the chip');
+  assert.ok(table.includes('not read this run — /calendar/: browser budget spent for this run'), 'and the reason, on the page');
+  // A partial read (one url of two refused, 20 events from the other) is not "shrunk".
+  assert.equal(MetricsSections.assessSourceHealth(readLedger({ extracted: 20, not_read: notRead }), { now }).rows[0].verdict, 'ok');
+  assert.equal(MetricsSections.assessSourceHealth(readLedger({ extracted: 20 }), { now }).rows[0].verdict, 'shrunk', 'control');
+  // Unread lines are no baseline: three of them at 0 do not drag the median down and hide a real stop later.
+  const afterUnread = MetricsSections.assessSourceHealth(readLedger({ extracted: 0, events: 0, bear: 0, upcoming: 0, status: 'empty' }, (index) => (index >= 2 ? { extracted: 0, status: 'empty', not_read: notRead } : {})), { now }).rows[0];
+  assert.equal(afterUnread.baseline, 60, 'the baseline is the runs that read the source');
+  assert.equal(afterUnread.verdict, 'stopped');
+  // Every fetch failed: dead stays dead, and still says what was not read.
+  const dead = MetricsSections.assessSourceHealth(readLedger({ extracted: 0, status: 'dead', not_read: notRead }), { now }).rows[0];
+  assert.equal(dead.verdict, 'dead');
+  assert.deepEqual(dead.flags, ['unread']);
+  // Quiet counts from the last line that WAS read.
+  // 2026-11-09 13:00 unread, last read 2026-11-08 13:00: with a two-day window, 2026-11-11 is quiet by the READ line, not by the unread one.
+  const unreadLatest = readLedger({ extracted: 0, status: 'empty', not_read: notRead });
+  assert.equal(MetricsSections.assessSourceHealth(unreadLatest, { now: new Date('2026-11-10T12:00:00.000Z'), staleAfterDays: 2 }).rows[0].verdict, 'ok');
+  assert.equal(MetricsSections.assessSourceHealth(unreadLatest, { now: new Date('2026-11-11T12:00:00.000Z'), staleAfterDays: 2 }).rows[0].verdict, 'quiet');
+  assert.ok(!MetricsSections.SOURCE_VERDICT_ORDER.includes('unread') && !MetricsSections.SOURCE_VERDICT_ORDER.includes('collapse'), 'chips, never verdicts');
+  assert.equal(MetricsSections.formatReadNote(null), '');
+  assert.equal(MetricsSections.formatReadNote(control), '');
+});
+
+test('assessSourceHealth: a ledger line with a collapse wears a "Degraded" chip that says how many expected events went missing together and that removal cards are held', () => {
+  const now = new Date('2026-11-09T14:00:00.000Z');
+  const health = MetricsSections.assessSourceHealth(readLedger({ collapse: { missing: 10, upcoming: 55, share: 0.15, since: '20261012-214806' } }), { now });
+  const row = health.rows[0];
+  assert.deepEqual(row.flags, ['collapse']);
+  assert.deepEqual(row.collapse, { missing: 10, upcoming: 55, share: 0.15, since: '20261012-214806' });
+  const note = MetricsSections.formatReadNote(row);
+  assert.match(note, /^degraded — 10 expected events missing together \(15%\) since .+ · removal cards held$/);
+  const table = MetricsSections.buildSourcesTableHtml(health);
+  assert.ok(table.includes('Degraded') && table.includes('removal cards held'));
+  const starting = MetricsSections.assessSourceHealth(readLedger({ collapse: { missing: 12, upcoming: 53, share: 0.18, since: '' } }), { now }).rows[0];
+  assert.match(MetricsSections.formatReadNote(starting), /12 expected events missing together \(18%\) this run/);
+  assert.deepEqual(MetricsSections.assessSourceHealth(readLedger({}), { now }).rows[0].flags, []);
+});
+
+test('assessSourceHealth: "removed by the site" without its proof is "unknown" — the series stays in the lost numbers (ours to explain) instead of dropping out as "not our miss"', () => {
+  const now = new Date('2026-11-09T14:00:00.000Z');
+  const bash = (extra) => Object.assign({ title: 'EAGLE LA NEW YEARS BASH!!', bear: true, since: '20261012-214806', seen: 4, days: ['2026-12-31'], new: 0 }, extra);
+  const guess = MetricsSections.assessSourceHealth(readLedger({ lost: [bash({ still: 'site-removed', still_at: '2026-11-09T12:40:00Z' })] }), { now }).rows[0];
+  assert.equal(guess.lost[0].still, 'unknown');
+  assert.equal(guess.lostRemoved, 0);
+  assert.equal(guess.lostDays, 1);
+  assert.equal(guess.verdict, 'lost');
+  const proven = MetricsSections.assessSourceHealth(readLedger({ lost: [bash({ still: 'site-removed', still_proof: 'listing-covers', still_at: '2026-11-09T12:40:00Z' })] }), { now }).rows[0];
+  assert.equal(proven.lost[0].still, 'site-removed');
+  assert.equal(proven.lost[0].still_proof, 'listing-covers');
+  assert.equal(proven.lostRemoved, 1);
+  assert.equal(proven.verdict, 'ok');
+  // The audit file from before the rule overlays the same way, and says why on the host page.
+  const oldAudit = { version: 1, hosts: { 'eagle.example': { date: '2026-11-09', run_id: '20261109-050000', still: [{ title: 'EAGLE LA NEW YEARS BASH!!', verdict: 'site-removed', checked_at: '2026-11-09T12:40:00Z', line: '' }], missing: [], fake: [], wrong: [], note: '', ai: 'ok' } } };
+  const overlaid = MetricsSections.assessSourceHealth(readLedger({ lost: [bash({})] }), { now, audit: oldAudit }).rows[0];
+  assert.equal(overlaid.lost[0].still, 'unknown');
+  assert.equal(overlaid.verdict, 'lost');
+  assert.equal(overlaid.audit.still[0].verdict, 'unknown');
+  assert.match(overlaid.audit.still[0].why, /an older check/);
+  oldAudit.hosts['eagle.example'].still[0].proof = 'listing-covers';
+  assert.equal(MetricsSections.assessSourceHealth(readLedger({ lost: [bash({})] }), { now, audit: oldAudit }).rows[0].lost[0].still, 'site-removed');
 });
