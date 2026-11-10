@@ -30563,3 +30563,149 @@ test('promoter evidence carries across merges, and the stronger account of one p
   assert.equal(carried._promoterEvidencePageUrl, 'https://twotonsoffun.co.uk/');
   assert.equal(core.getEventBearTrust(carried, TWO_TONS_PARSER).affinity, 'always');
 });
+
+// ---------------------------------------------------------------------------
+// THE LISTING'S PROMOTER IS NOT THE EVENT'S IDENTITY (run 20261109-053706).
+//
+// Folsom Europe's programme (ems.switchedapp.com/programme/folsomeurope): 110
+// cards, 107 of them stamped "Folsom Europe" because the PAGE address carries
+// the promoter's token, every one wearing the registry's shortName "FOLSOM
+// EUROPE". The promoter-exact-start rung (a promoter's placeless programme
+// row beside the venue's listing of the same slot) asked "same promoter?" —
+// true of every pair on the page — and "do the names share a distinctive
+// word?" — the pasted shortName, so also true of every pair. "Deduplicated
+// 110 → 86": 'Aftermatch: Dance Your Ass Off' into 'Quälgeist', 'Lab.oratory'
+// into 'BEAR DANCE FOLSOM', 'Sniff My Pits' into 'PrideART @ The Knast' …
+// Offline replay of that run's cached programme: 22 promoter-exact-start
+// folds before, 2 after these two rules.
+// ---------------------------------------------------------------------------
+const FOLSOM_REGISTRY = [{
+  name: 'Folsom Europe',
+  aliases: ['Folsom Europe e.V.', 'Folsom Berlin'],
+  shortName: 'FOLSOM EUROPE',
+  instagram: 'https://www.instagram.com/folsomeurope',
+  website: 'https://folsomeurope.berlin',
+  urlPatterns: ['folsomeurope.berlin', 'ems.switchedapp.com/programme/folsomeurope']
+}];
+// A programme card as the Switched door builds it, before the registry pass (trimmed).
+function folsomCard(title, start, extra = {}) {
+  return {
+    title,
+    startDate: new Date(start),
+    city: 'dallas',
+    source: 'ai-web',
+    website: 'https://ems.switchedapp.com/programme/folsomeurope',
+    _sourcePageUrl: 'https://ems.switchedapp.com/programme/folsomeurope',
+    _pageClassification: 'multi-event-page',
+    _pageOrigin: 'listing',
+    ...extra
+  };
+}
+// The same card after the registry pass of that run.
+function stampedFolsomCard(title, start, extra = {}) {
+  return folsomCard(title, start, {
+    shortName: 'FOLSOM EUROPE',
+    instagram: 'https://www.instagram.com/folsomeurope',
+    _promoter: 'Folsom Europe',
+    _promoterEvidence: 'url',
+    _staticFields: { shortName: 'FOLSOM EUROPE', instagram: 'https://www.instagram.com/folsomeurope' },
+    ...extra
+  });
+}
+const FOLSOM_AFTERMATCH = { endDate: new Date('2026-09-11T00:30:00.000Z'), bar: 'Mikropol Berlin', address: 'Nollendorfplatz 5 10777 Berlin Germany',
+  ticketUrl: 'https://shop.eventjet.at/en/meetfighters/event/49574f0b-dbd9-4ef8-8e91-cbe42a25776b' };
+
+test('namesHaveAffinity: a shortName the registry pasted on is branding, not a name the page stated', () => {
+  const core = createRegistryCore(FOLSOM_REGISTRY);
+  const slot = '2026-09-10T18:00:00.000Z';
+  const aftermatch = stampedFolsomCard('Aftermatch: Dance Your Ass Off', slot, FOLSOM_AFTERMATCH);
+  const quaelgeist = stampedFolsomCard('Quälgeist', slot, { ticketUrl: 'https://quaelgeist.sm/' });
+  assert.equal(core.namesHaveAffinity(aftermatch, quaelgeist), false, 'the only word the two share is the stamp');
+  // A merge drops _staticFields; the registry still knows whose shortName that is.
+  const bare = (event) => { const copy = { ...event }; delete copy._staticFields; return copy; };
+  assert.equal(core.namesHaveAffinity(bare(aftermatch), bare(quaelgeist)), false);
+  // The titles are still compared.
+  assert.equal(core.namesHaveAffinity(
+    stampedFolsomCard('Aftermatch: Dance Your Ass Off', slot),
+    stampedFolsomCard('AFTERMATCH by MeetFighters', slot)), true);
+  // A shortName the PAGE gave an event (no stamp, no registry entry of that name) is still one of its names.
+  assert.equal(createCore().namesHaveAffinity({ title: 'DALLAS FREEDOM TEA', shortName: 'FUR-BALL' }, { title: 'FURBALL' }), true);
+});
+
+test('recordsSharePromoter: two stamps earned from an address or by inheritance say "same listing", not "same event"', () => {
+  const core = createRegistryCore(FOLSOM_REGISTRY);
+  const stamped = (evidence, promoter = 'Folsom Europe') => ({ title: 'x', _promoter: promoter, ...(evidence ? { _promoterEvidence: evidence } : {}) });
+  const expectations = [
+    ['url', 'url', false],
+    ['parser-site', 'parser-site', false],
+    ['url', 'parser-site', false],
+    ['url', 'title', true],
+    ['organizer', 'parser-site', true],
+    ['title', 'title', true],
+    ['', 'url', true],   // a stamp with no recorded kind counts as the event's own, as it always did
+    ['', '', true]
+  ];
+  for (const [a, b, expected] of expectations) {
+    assert.equal(core.recordsSharePromoter(stamped(a), stamped(b)), expected, `${a || 'no kind'} + ${b || 'no kind'}`);
+    assert.equal(core.recordsSharePromoter(stamped(b), stamped(a)), expected, `${b || 'no kind'} + ${a || 'no kind'}`);
+  }
+  assert.equal(core.recordsSharePromoter(stamped('title'), stamped('title', 'Bearracuda')), false);
+  assert.equal(core.recordsSharePromoter(stamped('title'), { title: 'x' }), false);
+});
+
+test('identity: two cards of one programme in one time slot are not one event because the page address names the promoter', async () => {
+  const core = createRegistryCore(FOLSOM_REGISTRY);
+  const slot = '2026-09-10T18:00:00.000Z';
+  const aftermatch = stampedFolsomCard('Aftermatch: Dance Your Ass Off', slot, FOLSOM_AFTERMATCH);
+  const quaelgeist = stampedFolsomCard('Quälgeist', slot, { ticketUrl: 'https://quaelgeist.sm/' });
+  const classic = stampedFolsomCard('CLASSIC meets FETISH', slot, { endDate: new Date('2026-09-10T21:00:00.000Z'), ticketUrl: 'https://classic-meets-fetish.de/tickets-2' });
+  // As the fold calls the ladder for a page of many cards: the listing's own address, worn by every card, is no event page.
+  const listing = { excludedUrlIdentityHostPaths: new Set([core.getEventPageUrlIdentity(aftermatch).hostPath]) };
+  for (const placeless of [quaelgeist, classic]) {
+    assert.equal(core.getSameEventIdentitySignal(placeless, aftermatch, listing), null, `"${placeless.title}" is not "${aftermatch.title}"`);
+    assert.equal(core.getSameEventIdentitySignal(aftermatch, placeless, listing), null);
+    assert.equal(core.getSameEventIdentitySignal(placeless, aftermatch, { ...listing, requireCloseStartTimes: false }), null);
+  }
+
+  // The whole path the run took: registry pass, then the real fold.
+  const cards = [
+    folsomCard('Quälgeist', slot, { ticketUrl: 'https://quaelgeist.sm/' }),
+    folsomCard('CLASSIC meets FETISH', slot, { endDate: new Date('2026-09-10T21:00:00.000Z'), ticketUrl: 'https://classic-meets-fetish.de/tickets-2' }),
+    folsomCard('Aftermatch: Dance Your Ass Off', slot, FOLSOM_AFTERMATCH),
+    folsomCard('Mister B', '2026-09-11T09:00:00.000Z', { endDate: new Date('2026-09-11T19:00:00.000Z'), ticketUrl: 'https://www.misterb.com/en/' }),
+    folsomCard('Friday Gathering', '2026-09-11T09:00:00.000Z')
+  ];
+  const restore = silenceConsole();
+  let folded;
+  try {
+    core.applyPromoterRegistryMatches(cards, { name: 'Folsom Europe', urls: ['https://ems.switchedapp.com/programme/folsomeurope'] }, ENFORCE_REGISTRY_CONFIG);
+    assert.deepEqual(cards.map(card => [card._promoter, card._promoterEvidence, card.shortName]),
+      cards.map(() => ['Folsom Europe', 'url', 'FOLSOM EUROPE']), 'every card is stamped from the page address, as in the run');
+    folded = await core.deduplicateEvents(cards, null);
+  } finally { restore(); }
+  assert.deepEqual(folded.map(event => event.title).sort(),
+    ['Aftermatch: Dance Your Ass Off', 'CLASSIC meets FETISH', 'Friday Gathering', 'Mister B', 'Quälgeist']);
+  assert.equal(folded.find(event => event.title === 'Aftermatch: Dance Your Ass Off').bar, 'Mikropol Berlin');
+  assert.equal(folded.find(event => event.title === 'Quälgeist').bar, undefined, 'no card took another card\'s venue');
+});
+
+test('identity: the pair the promoter rung was built for still folds — a programme row stamped from its page beside the venue\'s row that names the promoter', async () => {
+  const core = createRegistryCore([{ name: 'Spooky Bear', keywords: ['spooky bear', 'spookybear'], shortName: 'SPOOKY BEAR', website: 'https://www.ursamen.org/spookybear' }]);
+  const slot = new Date('2026-10-30T14:30:00Z');
+  // Run 20261030-181225: the festival's schedule row names no room; the Crown's own feed row does, and its title names the festival.
+  const programmeRow = (extra = {}) => ({ title: 'HALLOQUEEN BURNER BRUNCH', city: 'dallas', startDate: slot, endDate: new Date('2026-10-30T17:30:00Z'),
+    _promoter: 'Spooky Bear', _promoterEvidence: 'url', _sourcePageUrl: 'https://www.ursamen.org/spookybear', url: 'https://www.ursamen.org/spookybear', ...extra });
+  const crownRow = (extra = {}) => ({ title: 'HalloQueen Burner Brunch – 10:30 AM – Spooky Bear', bar: 'Crown & Anchor', address: '247 Commercial St, Provincetown, MA 02657', city: 'dallas',
+    startDate: slot, endDate: new Date('2026-10-30T16:30:00Z'), _promoter: 'Spooky Bear', _promoterEvidence: 'title',
+    url: 'https://onlyatthecrown.com/event/burner-brunch-1030-am-seating/', ...extra });
+  assert.equal(core.getSameEventIdentitySignal(programmeRow(), crownRow()), 'promoter-exact-start');
+  const restore = silenceConsole();
+  try {
+    const folded = await core.deduplicateEvents([programmeRow(), crownRow()], null);
+    assert.equal(folded.length, 1, 'one brunch seating');
+    assert.equal(folded[0].bar, 'Crown & Anchor');
+    assert.equal(folded[0]._promoterEvidence, 'title', 'and the merged event keeps the stronger account of its promoter');
+  } finally { restore(); }
+  // Inherited on one side, named on the other: the same.
+  assert.equal(core.getSameEventIdentitySignal(programmeRow({ _promoterEvidence: 'parser-site', _promoterEvidencePageUrl: 'https://www.ursamen.org/spookybear' }), crownRow()), 'promoter-exact-start');
+});

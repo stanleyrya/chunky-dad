@@ -28673,15 +28673,25 @@ class SharedCore {
         return a.some(key => b.has(key));
     }
 
-    // TRUE when the two names share a distinctive word (5+ letters, not
-    // generic event vocabulary) or a pair of such words one OCR slip apart
-    // ("GOLDII.OXX" / "GOLDILOXX Chicago").
     // Both records stamped with the same curated promoter (the registry's
-    // _promoter, stamped from each record's own text or link).
+    // _promoter) — AND at least one of them by its OWN words. A stamp earned
+    // from an address (the listing page's URL carries the promoter's token)
+    // or inherited from the parser's site is the LISTING's identity: every
+    // row of that listing wears it, so two such stamps say "these rows sat on
+    // one programme", which is true of every pair on the page. Run
+    // 20261109-053706, a street fair's programme of 110 cards (107 stamped
+    // from the page URL): "Aftermatch: Dance Your Ass Off" was matched to
+    // "CLASSIC meets FETISH", "Mister B" to "Friday Gathering" — different
+    // parties in one time slot, one of them without a place. The pair this
+    // rung was built for still passes: a programme row stamped from its page
+    // address beside the venue's own listing whose TITLE names the promoter
+    // ("HalloQueen Burner Brunch – 10:30 AM – Spooky Bear"). A stamp with no
+    // recorded kind counts as the event's own, as it always did.
     recordsSharePromoter(eventA, eventB) {
         const key = (event) => this.normalizeIdentityText(String((event && event._promoter) || ''));
         const a = key(eventA);
-        return Boolean(a) && a === key(eventB);
+        if (!a || a !== key(eventB)) return false;
+        return this.isPromoterStampEventLevel(eventA) || this.isPromoterStampEventLevel(eventB);
     }
 
     // No place evidence at all: no bar, no address, no coordinates.
@@ -28690,11 +28700,28 @@ class SharedCore {
         return !(String(record.bar || '').trim() || String(record.address || '').trim() || String(record.location || '').trim());
     }
 
+    // TRUE when the two names share a distinctive word (5+ letters, not
+    // generic event vocabulary) or a pair of such words one OCR slip apart
+    // ("GOLDII.OXX" / "GOLDILOXX Chicago").
+    // The names compared are the ones the PAGE stated. A shortName the
+    // registry pasted on (statically stamped, or — once a merge has dropped
+    // the stamp — equal to a curated promoter's shortName) is branding worn
+    // by every record of that promoter, the same ruling
+    // buildIdentityComparisonShape applies: on the programme above all 110
+    // cards carried shortName "FOLSOM EUROPE", so every pair "shared a
+    // distinctive word" and this test could never say no.
     namesHaveAffinity(eventA, eventB) {
         const generic = new Set(['party', 'night', 'nights', 'weekend', 'event', 'events', 'bears', 'presents', 'annual',
             'friday', 'saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'tickets', 'dance', 'social', 'happy', 'hour']);
+        const ownShortName = (event) => {
+            const value = event && event.shortName;
+            if (typeof value !== 'string' || !value.trim()) return null;
+            const staticFields = event._staticFields && typeof event._staticFields === 'object' ? event._staticFields : {};
+            if (Object.prototype.hasOwnProperty.call(staticFields, 'shortName')) return null;
+            return this.isCuratedPromoterShortName(value) ? null : value;
+        };
         const tokens = (event) => {
-            const names = [event && event.title, event && event.shortName, event && event.name].filter(value => typeof value === 'string');
+            const names = [event && event.title, ownShortName(event), event && event.name].filter(value => typeof value === 'string');
             const out = new Set();
             for (const name of names) {
                 const lower = this.decodeBasicHtmlEntities(name).toLowerCase();
