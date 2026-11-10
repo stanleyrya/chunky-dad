@@ -3146,7 +3146,12 @@ class AiWebParser {
         // schedule notice is not an event; reject it here at the single
         // normalization choke point so every extraction path (segments,
         // single pages, detail crawls) is covered.
-        if (this.isVenueHoursNoticeTitle(event.title)) {
+        // Every title-shape guard below reads the name the PAGE stated: the
+        // brand prefixer runs inside normalizeAiEvent, before them, and a
+        // prefixed label ("Bear Jamboree: Hotel", run 20261109-053706) is
+        // no longer the shape any of them tests (see pageStatedTitle).
+        const statedTitle = this.pageStatedTitle(event);
+        if (this.isVenueHoursNoticeTitle(statedTitle)) {
             console.log(`🤖 AI Web: Skipped venue-hours notice "${event.title}" — not an event`);
             return null;
         }
@@ -3156,7 +3161,7 @@ class AiWebParser {
         // through to preview). Same linguistic-generic contract as the
         // venue-hours gate above: shape classes only, no site rules, and only
         // a title that is NOTHING but a postal code is rejected.
-        if (this.isPostalCodeOnlyTitle(event.title)) {
+        if (this.isPostalCodeOnlyTitle(statedTitle)) {
             console.log(`🤖 AI Web: Skipped degenerate event "${event.title}" — title is a postal code, not an event`);
             return null;
         }
@@ -3164,14 +3169,14 @@ class AiWebParser {
         // rejectDayHeaderEchoPassFields gate): if every pass still left a
         // weekday heading as the title, the segment named no real activity —
         // a schedule heading is not an event.
-        if (this.isDayHeaderEchoTitle(event.title)) {
+        if (this.isDayHeaderEchoTitle(statedTitle)) {
             console.log(`🤖 AI Web: Skipped day-header echo "${event.title}" — weekday heading, not an event name`);
             return null;
         }
         // Collection-name backstop (same class as the pass-level gate in
         // rejectPageTitleEchoPassFields): a title that is the page's own
         // JSON-LD CollectionPage/ItemList name is the listing, not a night.
-        if (this.titleIsPageCollectionName(event.title, htmlData)) {
+        if (this.titleIsPageCollectionName(statedTitle, htmlData)) {
             console.log(`🤖 AI Web: Skipped collection-page name "${event.title}" — the page's own name (JSON-LD CollectionPage/ItemList), not an event`);
             return null;
         }
@@ -3185,7 +3190,7 @@ class AiWebParser {
         // Night" — anything with a non-chrome word — never qualifies, and a
         // chrome-named listing that really does state a time or a cover is
         // kept and left for a human.
-        if (this.isSiteChromeTitle(event.title)) {
+        if (this.isSiteChromeTitle(statedTitle)) {
             if (this.hasScheduleOrPriceSignal(event)) {
                 console.log(`🤖 AI Web: Site-chrome title "${event.title}" carries a time/price signal — kept, verify manually`);
             } else {
@@ -3461,18 +3466,58 @@ class AiWebParser {
             .some(url => this.getUrlDedupeKey(this.normalizeUrl(url, url)) === this.getUrlDedupeKey(sourceUrl));
         if (configured) return;
         if (!(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return;
+        // The name is looked for as the page stated it — the brand
+        // prefixer's "Brand: <name>" is on no page ("Bear Jamboree: Sunday
+        // tea dance" was reported as "its name is not in the page's text").
+        const statedTitle = this.pageStatedTitle(event);
         // A date the page's own structured data or a stated rule produced
         // is not the model's guess.
-        if (event._barFromJsonLd || event._startDateRawText || event._dateOrigin || event._extractionSource === 'jsonld') return;
+        if (event._barFromJsonLd || event._startDateRawText || event._extractionSource === 'jsonld') return;
+        if (event._dateOrigin) {
+            // …with one exception. The rule may rest on nothing but a
+            // cadence phrase read off the WHOLE page (an unsplit page has
+            // no row to look in), and the name may be nothing but a label
+            // of the page's own menu: bearjamboree.com/hotel on run
+            // 20261109-053706 — the menu says "Hotel", the <title> says
+            // "Hotel | Bear Jamboree", a sentence about the pool's opening
+            // hours says "Sunday nights", and "Bear Jamboree: Hotel" became
+            // a weekly Sunday party. The page named no event and stated no
+            // date; the same shape can also be a real weekly night with a
+            // menu entry of its own, so it is shown to the owner, not
+            // dropped. A page that prints the name as a line of its own
+            // outside the menu (a heading) is untouched.
+            const origin = event._dateOrigin;
+            const cadenceOffWholePage = origin && origin.kind === 'rrule-fallback' && origin.vouchKind === 'cadence'
+                && origin.window === 'page' && !origin.statedFutureDate;
+            const pageHtml = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+            if (!cadenceOffWholePage || !this.titleIsOnlyAMenuLabel(statedTitle, pageHtml)) return;
+            const menuDayParts = this.localDateParts(event.startDate, event._timezoneUnresolved ? 'UTC' : (event.timezone || null));
+            const phrase = String(origin.vouchedBy || '').trim();
+            const menuReason = `the only event read from a page the crawl reached, named only by a label of the page's own menu, and dated only by ${phrase ? `the words "${phrase}"` : 'a cadence phrase'} somewhere on the page`;
+            const foldLine = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+            const pageLines = this.decodeBasicEntities(this.stripTags(pageHtml
+                .replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+                .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt)>/gi, '$&\n')))
+                .split('\n').map(line => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+            const phraseAt = phrase ? pageLines.findIndex(line => foldLine(line).includes(foldLine(phrase))) : -1;
+            event._loneCrawlWithheld = {
+                page: sourceUrl,
+                day: menuDayParts ? `${menuDayParts.year}-${String(menuDayParts.month).padStart(2, '0')}-${String(menuDayParts.day).padStart(2, '0')}` : '',
+                reason: menuReason,
+                near: (phraseAt >= 0 ? pageLines.slice(Math.max(0, phraseAt - 3), phraseAt + 4) : []).map(line => line.slice(0, 160))
+            };
+            console.log(`🧭 LONE EVENT: "${event.title}" on ${sourceUrl} — ${menuReason}; withheld for the owner`);
+            return;
+        }
         // Block boundaries are line breaks: "beside the name" is measured in
         // the page's own lines, not in whatever whitespace the markup had.
         const lined = htmlData && typeof htmlData.html === 'string'
             ? { ...htmlData, html: htmlData.html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt)>/gi, '$&\n') }
             : htmlData;
-        const windowInfo = this.undatedRowWindow(lined, event.title);
+        const windowInfo = this.undatedRowWindow(lined, statedTitle);
         if (!windowInfo) return;
         const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
-        const title = fold(event.title);
+        const title = fold(statedTitle);
         const lines = windowInfo.lines.slice(1); // the first entry is the title itself (undatedRowWindow prepends it)
         let at = -1;
         for (let i = 0; i < lines.length; i++) { if (title && fold(lines[i]).includes(title)) { at = i; break; } }
@@ -3580,7 +3625,7 @@ class AiWebParser {
         const prose = ` ${fold(furniture.prose)} `;
         const kept = [];
         for (const event of list) {
-            const title = fold(event.title);
+            const title = fold(this.pageStatedTitle(event));
             if (!title || prose.includes(` ${title} `)) { kept.push(event); continue; }
             let reason = '';
             if (furniture.buttons.has(title)) reason = 'the label of a button';
@@ -3638,11 +3683,46 @@ class AiWebParser {
         return '';
     }
 
+    // The name the page stated for this record: the title as it stood
+    // before the brand prefixer rewrote it, else the title. Every
+    // furniture test reads this — "Bear Jamboree: Hotel" is no shape at
+    // all, "Hotel" is the page's menu label (run 20261109-053706).
+    pageStatedTitle(event) {
+        const stated = event && typeof event._titleBeforeBrandPrefix === 'string' ? event._titleBeforeBrandPrefix.trim() : '';
+        return stated || (event && typeof event.title === 'string' ? event.title : '');
+    }
+
+    // Is this title page furniture by its shape alone — and which kind?
+    // One answer for the brand prefixer (which never dresses furniture up
+    // as "Brand: <label>") from the same shape rules the drops use.
+    describeFurnitureTitle(title) {
+        const shape = AiWebParser.furnitureTitleShape(title);
+        if (shape) return shape;
+        if (this.isVenueHoursNoticeTitle(title)) return 'an opening-hours notice';
+        if (this.isPostalCodeOnlyTitle(title)) return 'a postal code';
+        if (this.isDayHeaderEchoTitle(title)) return 'a weekday heading';
+        if (this.isSiteChromeTitle(title)) return 'a navigation or account link';
+        return '';
+    }
+
+    // The title is the label of a link in the page's own menu (<nav>, or
+    // role=navigation) and stands as a line of its own nowhere outside
+    // that menu: the page never names an event by it — the model took the
+    // name from the menu, or from the <title> tag the menu label repeats.
+    titleIsOnlyAMenuLabel(title, html) {
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+        const key = fold(title);
+        if (!key) return false;
+        const furniture = this.collectPageFurnitureTexts(html);
+        return furniture.menuLabels.has(key) && !furniture.linesOutsideMenu.has(key);
+    }
+
     dropFurnitureShapedTitles(events, sourceUrl = '') {
         const list = Array.isArray(events) ? events.filter(Boolean) : [];
         const kept = [];
         for (const event of list) {
-            const reason = AiWebParser.furnitureTitleShape(event.title);
+            const reason = AiWebParser.furnitureTitleShape(this.pageStatedTitle(event));
             if (!reason) { kept.push(event); continue; }
             console.log(`🪑 FURNITURE: "${event.title}" is ${reason} on ${sourceUrl || 'this page'} — not an event`);
         }
@@ -3665,8 +3745,36 @@ class AiWebParser {
         };
         const buttons = new Set();
         const captions = [];
+        // The page's own menu: the label of every link inside <nav> or a
+        // role=navigation element, and the page's lines with those menus
+        // (and the <head>) removed — so "named only by the menu" can be
+        // asked (see titleIsOnlyAMenuLabel).
+        const menuLabels = new Set();
+        const linesOutsideMenu = new Set();
+        if (source && /<nav\b|role\s*=\s*["']navigation["']/i.test(source)) {
+            let outside = source.replace(/<head\b[\s\S]*?<\/head>/gi, ' ')
+                .replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ');
+            const takeMenu = (inner) => {
+                String(inner || '').replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, (whole, label) => {
+                    const text = textOf(label);
+                    if (text) menuLabels.add(text);
+                    return ' ';
+                });
+                return '\n';
+            };
+            outside = outside.replace(/<nav\b[^>]*>([\s\S]*?)<\/nav>/gi, (whole, inner) => takeMenu(inner));
+            outside = outside.replace(/<([a-z][a-z0-9]*)\b[^>]*\brole\s*=\s*["']navigation["'][^>]*>([\s\S]*?)<\/\1>/gi, (whole, name, inner) => takeMenu(inner));
+            if (menuLabels.size > 0) {
+                outside.replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt|a|span|button)>/gi, '$&\n')
+                    .split('\n').forEach(line => {
+                        const text = textOf(line);
+                        if (text) linesOutsideMenu.add(text);
+                    });
+            }
+        }
         if (!source || !/<(?:button|figcaption|input)\b|role\s*=\s*["']button["']/i.test(source)) {
-            return { buttons, captions, prose: '' };
+            return { buttons, captions, prose: '', menuLabels, linesOutsideMenu };
         }
         let prose = source.replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ');
         prose = prose.replace(/<button\b([^>]*)>([\s\S]*?)<\/button>/gi, (whole, tag, inner) => {
@@ -3693,7 +3801,7 @@ class AiWebParser {
             if (caption) captions.push(caption);
             return ' ';
         });
-        return { buttons, captions, prose: this.decodeBasicEntities(this.stripTags(prose)) };
+        return { buttons, captions, prose: this.decodeBasicEntities(this.stripTags(prose)), menuLabels, linesOutsideMenu };
     }
 
     foldSubheadingEvents(events, sourceUrl = '') {
@@ -33806,6 +33914,15 @@ TEXT:
             .filter(token => token && !this.titleContainsPageBrandName(token, pageBrandNames))
             .join(' ');
         if (!/[a-z0-9]/i.test(withoutBrandTokens)) return '';
+        // Page furniture is never dressed up as the promoter's party: a
+        // prefixed label ("Brand: comprar entradas", "Brand: 2. To apply")
+        // is the shape no furniture rule tests, so the prefix would carry
+        // it past every one of them.
+        const furnitureReason = this.describeFurnitureTitle(text);
+        if (furnitureReason) {
+            console.log(`🪑 FURNITURE: "${text}" is ${furnitureReason} — the page brand is not prefixed to it`);
+            return '';
+        }
         const organizerDisplay = this.normalizeWhitespace(this.getOrganizerDisplayName(pageBrandNames, htmlData));
         if (!/[a-z0-9]/i.test(organizerDisplay)) return '';
         if (organizerDisplay.length > 24 || organizerDisplay.split(/\s+/).length > 3) return '';

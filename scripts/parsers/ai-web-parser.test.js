@@ -23594,3 +23594,153 @@ test('city alias: a short alias that is a syllable of a longer place name names 
   assert.notEqual(event.city, 'chicago');
   assert.notEqual(event.timezone, 'America/Chicago');
 });
+
+// ---------------------------------------------------------------------------
+// Furniture reads the name the PAGE stated (run 20261109-053706,
+// bearjamboree.com): the brand prefixer ran before every furniture test, so
+// a menu label left as "Bear Jamboree: Hotel" — a shape none of them tests.
+// ---------------------------------------------------------------------------
+
+// bearjamboree.com/hotel as cached on 2026-11-08, trimmed: the <title>, the
+// site's <nav> (verbatim structure, attributes removed) and the body lines
+// that carry the word "hotel" and the phrase the date was taken from.
+const HOTEL_MENU_PAGE = '<html><head><title>Hotel | Bear Jamboree</title>'
+  + '<meta property="og:site_name" content="Bear Jamboree"/></head><body>'
+  + '<header><a href="https://www.bearjamboree.com/booking"><span>book hotel</span></a>'
+  + '<nav><ul><li><div><a href="https://www.bearjamboree.com"><div><span>Home</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/about"><div><span>About</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/bear-tea-dance"><div><span>Sunday tea dance</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/hotel"><div><span>Hotel</span></div></a><div><button><svg width="0" height="0"></svg></button></div></div>'
+  + '<div role="group"><div><div><ul><li><div><a href="https://www.bearjamboree.com/booking"><div><span>Booking</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/travel"><div><span>Travel</span></div></a></div></li></ul></div></div></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/gallery"><div><span>Gallery</span></div></a></div></li></ul></nav></header>'
+  + '<main><h2>100% BUYOUT OF the OFFICIAL HOST HOTEL</h2>'
+  + '<p>Balance play, and relaxation AT the bj host hotel, FT. plush bedding, a sofa nook, and a spacious workstation.</p>'
+  + '<a href="https://www.bearjamboree.com/booking"><span>book hotel</span></a>'
+  + '<h3>rooms</h3>'
+  + '<p>Rooms right in the action of the daily Bearchella Pool Parties (running 11:00 AM &ndash; 8:00 PM on Friday, and extending until 2:00 AM on Saturday and Sunday nights).</p>'
+  + '<p>Cityview: Rooms facing the exterior of the property for a quieter stay.</p></main></body></html>';
+// The record as run 20261109-053706 kept it (stamps verbatim).
+const hotelMenuRecord = () => ({
+  title: 'Bear Jamboree: Hotel',
+  _titleBeforeBrandPrefix: 'Hotel',
+  startDate: new Date('2026-11-15T00:00:00.000Z'),
+  recurrenceRule: 'FREQ=WEEKLY;BYDAY=SU',
+  _timezoneUnresolved: true,
+  _dateOrigin: { kind: 'rrule-fallback', rrule: 'FREQ=WEEKLY;BYDAY=SU', source: 'day-phrase', derivedDate: '2026-11-15', real: true,
+    vouchedBy: 'sunday nights', vouchKind: 'cadence', matchesRule: true, window: 'page', statedFutureDate: '' },
+  source: 'ai-web'
+});
+
+test('menu label: the only event of a crawled page, named only by a label of the page\'s own menu and dated only by a cadence phrase somewhere on the page, is withheld for the owner with a reason; a page that prints the name as its own line is left alone', () => {
+  const parser = createParser();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const parserConfig = { urls: ['https://www.bearjamboree.com/events'] };
+    const url = 'https://www.bearjamboree.com/hotel';
+    assert.equal(parser.titleIsOnlyAMenuLabel('Hotel', HOTEL_MENU_PAGE), true, 'the menu says Hotel; the body only says "host hotel" and "book hotel"');
+    assert.equal(parser.titleIsOnlyAMenuLabel('Rooms', HOTEL_MENU_PAGE), false, 'a body heading is not a menu label');
+    assert.equal(parser.titleIsOnlyAMenuLabel('Bearchella Pool Parties', HOTEL_MENU_PAGE), false);
+
+    const hotel = hotelMenuRecord();
+    parser.markLoneCrawlEvent([hotel], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.ok(hotel._loneCrawlWithheld, 'withheld');
+    assert.equal(hotel._loneCrawlWithheld.page, url);
+    assert.equal(hotel._loneCrawlWithheld.day, '2026-11-15');
+    assert.match(hotel._loneCrawlWithheld.reason, /label of the page's own menu/);
+    assert.match(hotel._loneCrawlWithheld.reason, /"sunday nights"/);
+    assert.ok(hotel._loneCrawlWithheld.near.some((line) => /Sunday nights/.test(line)), 'the deck is shown the line the date was read from');
+    assert.ok(logs.some((line) => line.includes('🧭 LONE EVENT: "Bear Jamboree: Hotel"') && line.includes('menu')), logs.join('\n'));
+
+    // The same page with the name as a heading of its own: the page names
+    // the night, the stated rule dates it — untouched (a bar's weekly night
+    // with a menu entry and a page of its own).
+    const headed = HOTEL_MENU_PAGE.replace('<main>', '<main><h1>Hotel</h1>');
+    const named = hotelMenuRecord();
+    parser.markLoneCrawlEvent([named], { html: headed, url }, parserConfig, url, 'event-page');
+    assert.equal(named._loneCrawlWithheld, undefined, 'a heading outside the menu names it');
+
+    // Not a menu label: a cadence-dated event of a crawled page keeps the
+    // exemption it had.
+    const pool = { ...hotelMenuRecord(), title: 'Bear Jamboree: Bearchella Pool Parties', _titleBeforeBrandPrefix: 'Bearchella Pool Parties' };
+    parser.markLoneCrawlEvent([pool], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.equal(pool._loneCrawlWithheld, undefined);
+
+    // A rule the row itself vouched for (a card's own window), or a stated
+    // future date, is the page's statement even under a menu label.
+    const rowVouched = hotelMenuRecord();
+    rowVouched._dateOrigin.window = 'card';
+    parser.markLoneCrawlEvent([rowVouched], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.equal(rowVouched._loneCrawlWithheld, undefined);
+
+    // The configured page and a page with two events are never judged.
+    const configured = hotelMenuRecord();
+    parser.markLoneCrawlEvent([configured], { html: HOTEL_MENU_PAGE, url }, { urls: [url] }, url, 'event-page');
+    assert.equal(configured._loneCrawlWithheld, undefined);
+    const first = hotelMenuRecord(); const second = hotelMenuRecord();
+    parser.markLoneCrawlEvent([first, second], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.equal(first._loneCrawlWithheld, undefined);
+  } finally { console.log = quiet; }
+});
+
+test('menu label: the lone-event check looks for the name the page stated, not the brand-prefixed title', () => {
+  const parser = createParser();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const parserConfig = { urls: ['https://www.bearjamboree.com/events'] };
+    const url = 'https://www.bearjamboree.com/bear-tea-dance';
+    // "Bear Jamboree: Sunday tea dance" (run 20261109-053706) was reported
+    // as "its name is not in the page's text"; the page says "Sunday tea
+    // dance" and states the day beside it.
+    const page = '<html><body><h1>Sunday tea dance</h1><p>Sunday, November 15, 2026</p><p>4pm at the pool</p></body></html>';
+    const dated = { title: 'Bear Jamboree: Sunday tea dance', _titleBeforeBrandPrefix: 'Sunday tea dance', startDate: new Date('2026-11-15T21:00:00.000Z'), timezone: 'America/New_York', source: 'ai-web' };
+    parser.markLoneCrawlEvent([dated], { html: page, url }, parserConfig, url, 'multi-event-page');
+    assert.equal(dated._loneCrawlWithheld, undefined, 'the date sits beside the stated name');
+    const undated = { ...dated, _loneCrawlWithheld: undefined };
+    parser.markLoneCrawlEvent([undated], { html: page.replace('<p>Sunday, November 15, 2026</p>', ''), url }, parserConfig, url, 'multi-event-page');
+    assert.ok(undated._loneCrawlWithheld, 'no date beside the name');
+    assert.match(undated._loneCrawlWithheld.reason, /no date is stated within six lines of its name/, 'the name WAS found — the reason is the missing date');
+  } finally { console.log = quiet; }
+});
+
+test('furniture: the brand prefixer never runs on a furniture title, and both furniture drops read the title as it stood before the prefix', () => {
+  const parser = createChunkParser();
+  const brands = parser.getPageBrandNames(CHUNK_PAGE());
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const prefix = (title) => parser.buildBrandPrefixedTitle(title, brands, CHUNK_PAGE(), CHUNK_CONFIG);
+    // Shapes verbatim from run 20261018-161635 (PR #1907) and the guards
+    // beside them: each stays unprefixed, and says why.
+    for (const title of ['comprar entradas', '2. To apply', 'Events for July 27, 2026', 'Little West 12th St.', 'en-US', 'My Account', 'H2K 1X7']) {
+      logs.length = 0;
+      assert.equal(prefix(title), '', title);
+      assert.ok(logs.some((line) => line.includes('🪑 FURNITURE:') && line.includes(`"${title}"`) && line.includes('not prefixed')), `${title}: ${logs.join(' / ')}`);
+    }
+    // A real name is prefixed as before.
+    assert.equal(prefix('The RETURN'), 'CHUNK: The RETURN');
+    assert.equal(prefix('2 Bears 1 Cave'), 'CHUNK: 2 Bears 1 Cave');
+
+    // A record that was prefixed anyway (an older route, a stamp from a
+    // cached answer) is still read by its stated name.
+    logs.length = 0;
+    const prefixed = [
+      { title: 'CHUNK: comprar entradas', _titleBeforeBrandPrefix: 'comprar entradas' },
+      { title: 'CHUNK: The RETURN', _titleBeforeBrandPrefix: 'The RETURN' }
+    ];
+    assert.deepEqual(parser.dropFurnitureShapedTitles(prefixed, 'https://www.chunk-party.com/x').map((event) => event.title), ['CHUNK: The RETURN']);
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "CHUNK: comprar entradas" is a call to action')), logs.join('\n'));
+
+    logs.length = 0;
+    const html = '<html><body><h1>The RETURN</h1><p>Doors at ten.</p><button>Load More</button></body></html>';
+    const buttoned = [
+      { title: 'CHUNK: Load More', _titleBeforeBrandPrefix: 'Load More' },
+      { title: 'CHUNK: The RETURN', _titleBeforeBrandPrefix: 'The RETURN' }
+    ];
+    assert.deepEqual(parser.dropPageFurnitureTitledEvents(buttoned, html, 'https://www.chunk-party.com/x').map((event) => event.title), ['CHUNK: The RETURN']);
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "CHUNK: Load More" is the label of a button')), logs.join('\n'));
+    assert.equal(parser.pageStatedTitle({ title: 'CHUNK: The RETURN' }), 'CHUNK: The RETURN', 'no stamp: the title itself');
+  } finally { console.log = quiet; }
+});
