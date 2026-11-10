@@ -1566,6 +1566,11 @@ class AiWebParser {
                         console.log(`🤖 AI Web: Stripped leading date from title "${event.title}" → "${strippedTitle}"`);
                         event.title = strippedTitle;
                     }
+                    const unclockedTitle = this.stripLeadingClockFromTitle(event.title);
+                    if (unclockedTitle !== event.title) {
+                        console.log(`🤖 AI Web: Stripped leading clock from title "${event.title}" → "${unclockedTitle}"`);
+                        event.title = unclockedTitle;
+                    }
                     // …and the redundant-date strip, for the same reason. Only
                     // the leading-phrase strip was copied here originally, so
                     // JSON-LD titles that print the date as a SUFFIX ("CHUNK
@@ -3127,9 +3132,16 @@ class AiWebParser {
             // over; when the model returns nothing for it, the row itself is
             // the extraction. furball.nyc's ticker lost Boston this way
             // (title returned, startdate null on both passes).
-            const compactRow = this.readCompactListingRow(promptHtmlData);
+            const compactRowParts = this.readCompactListingRowParts(promptHtmlData);
+            const compactRow = compactRowParts
+                ? { title: compactRowParts.title, startDate: compactRowParts.startDate, bar: compactRowParts.bar }
+                : null;
             const rowEvent = compactRow
-                ? this.normalizeAiEvent({ ...compactRow }, parserConfig, promptHtmlData, cityConfig, promptFields)
+                ? this.normalizeAiEvent({
+                    ...compactRow,
+                    // The year the row printed is the page's statement.
+                    ...(compactRowParts.statedYear ? { __explicitSourceYears: { start: compactRowParts.statedYear } } : {})
+                }, parserConfig, promptHtmlData, cityConfig, promptFields)
                 : null;
             if (rowEvent && rowEvent.title && rowEvent.startDate) {
                 console.log(`🤖 AI Web: Compact listing row read as the event: "${compactRow.title}" on ${compactRow.startDate}${compactRow.bar ? ` at ${compactRow.bar}` : ''}`);
@@ -3680,6 +3692,10 @@ class AiWebParser {
                 || new RegExp(`^${STREET_FIRST}\\.?\\s+(?:[\\p{L}.'-]+\\s){1,4}\\d{1,4}[a-z]?$`, 'iu').test(line))) return 'a street line';
         // A locale tag or a bare language name from a feed.
         if (/^[a-z]{2}(?:[-_][A-Z]{2})?$/.test(line)) return 'a locale tag';
+        // What is left of a post's byline once its date is read off the
+        // front: "June 25, 2021 / Stud SF" → "/ Stud SF" (studsf.com/podcast,
+        // run 20261109-053706, thirteen "events"). No name opens with a slash.
+        if (/^[\/\\]\s*\S/.test(line)) return 'a byline fragment';
         return '';
     }
 
@@ -3987,7 +4003,10 @@ class AiWebParser {
         if (tokens.length === 0) return false;
         let hasTimeMarker = false;
         for (const rawToken of tokens) {
-            const token = rawToken.replace(/[.,;]+$/, '');
+            // A programme line ends its clock range with a colon before the
+            // name it introduces ("10h a 21h:" on its own line —
+            // bearssitges.org, run 20261109-053706, kept as an event title).
+            const token = rawToken.replace(/[.,;:]+$/, '');
             if (!token) continue;
             if (/^(?:am|pm|h|hrs?)$/i.test(token)) {
                 hasTimeMarker = true;
@@ -4706,6 +4725,17 @@ class AiWebParser {
     // leading date token, then the name, then an optional " - VENUE" /
     // " @ VENUE" tail. Returns {title, startDate, bar} or null.
     readCompactListingRow(htmlData) {
+        const row = this.readCompactListingRowParts(htmlData);
+        return row ? { title: row.title, startDate: row.startDate, bar: row.bar } : null;
+    }
+
+    // The row, plus the year its own date token printed (0 when it printed
+    // none). A printed year is a STATED year: the caller hands it to
+    // normalizeAiEvent as an explicit source year, so a past one is an
+    // archived line and is never walked forward. studsf.com/podcast, run
+    // 20261109-053706: "April 06, 2021 / Stud SF" — a blog post's byline —
+    // was read as a row and its 2021 date shipped as 2027-04-06.
+    readCompactListingRowParts(htmlData) {
         const source = htmlData && typeof htmlData.segmentText === 'string' && htmlData.segmentText.trim()
             ? htmlData.segmentText
             : (htmlData && typeof htmlData.html === 'string' ? htmlData.html.replace(/<[^>]+>/g, '\n') : '');
@@ -4726,7 +4756,9 @@ class AiWebParser {
         if (!/[a-z]{3}/i.test(title) || this.isTimeOnlyLineText(title)) return null;
         const startDate = this.compactListingDateToIso(dateToken[1]);
         if (!startDate) return null;
-        return { title, startDate, bar };
+        const printsYear = /(?:[\/.-]\d{2}|[\/.-]\d{4}|,?\s\d{4})$/.test(this.normalizeWhitespace(dateToken[1]))
+            && !/^\d{1,2}[\/.-]\d{1,2}$/.test(this.normalizeWhitespace(dateToken[1]));
+        return { title, startDate, bar, statedYear: printsYear ? Number(startDate.slice(0, 4)) : 0 };
     }
 
     // "10/10", "Oct 3", "September 5, 2026" → YYYY-MM-DD, the form the
@@ -21887,6 +21919,57 @@ class AiWebParser {
         return title;
     }
 
+    // Leading clock or clock range on an event TITLE. A day programme
+    // prints the hours before every name — bearssitges.org, run
+    // 20261109-053706: "20:30h a 03h Especial NOCHE BLANCA con PRAGUE
+    // BEARS", "1h a 06h BEEFMINCE DISCO Party", "13h Sitges Drag Brunch"
+    // were kept under those titles (and the trim pass then cut one to "30h
+    // a 03h NOCHE ESPECIAL…"). The hours have their own fields; the name
+    // starts after them.
+    //
+    // The line-level reader is activityTextAfterTimePrefix (it cuts a
+    // programme LINE into its activity); a title needs more care, because
+    // names open with numbers too.
+    //
+    // Fail closed, shapes only:
+    // - a clock counts only with an explicit marker — "h", am/pm, or
+    //   ":mm" — and a real hour (0–23): "5 à 7", "9 to 5", "2 Bears 1
+    //   Cave" and "24h Party" are names, never clocks;
+    // - a RANGE needs a marker on at least one side, and a name with a
+    //   real word after it;
+    // - a SINGLE clock needs two words of name after it ("2AM Club" and
+    //   "12h Rave" stay whole);
+    // - a remainder that opens with a range word ("9pm til late") means
+    //   the hours were not fully read — the title stays whole.
+    stripLeadingClockFromTitle(title) {
+        const original = String(title || '');
+        const text = this.normalizeWhitespace(original.replace(/[\u200b\u200e\u200f\ufeff]/g, ' '));
+        // Same opening test the day-programme splitter uses for a timed
+        // line; everything below only makes it safe for a NAME.
+        if (!text || !this.isTimePrefixedActivityLine(text)) return original;
+        const CLOCK = '(\\d{1,2})(?:([:.])(\\d{2}))?\\s?(h|hrs?|am|pm|a\\.m\\.|p\\.m\\.)?(?![\\p{L}\\p{N}])\\.?';
+        const RANGE_WORD = '(?:-|–|—|a|à|al|to|til{1,2}|until|bis)';
+        const match = text.match(new RegExp(`^${CLOCK}(?:\\s*${RANGE_WORD}\\s*${CLOCK})?\\s*[:\\-–—|,]?\\s+(\\S.*)$`, 'iu'));
+        if (!match) return original;
+        const clock = (hour, separator, minutes, marker) => {
+            if (hour === undefined) return null;
+            const valid = Number(hour) <= 23 && (minutes === undefined || Number(minutes) <= 59);
+            return { valid, marked: Boolean(marker) || (separator === ':' && minutes !== undefined) };
+        };
+        const first = clock(match[1], match[2], match[3], match[4]);
+        const second = clock(match[5], match[6], match[7], match[8]);
+        const rest = this.normalizeWhitespace(match[9]).replace(/^[\s:\-–—|,.]+/, '');
+        if (!first.valid || (second && !second.valid)) return original;
+        if (!(second ? (first.marked || second.marked) : first.marked)) return original;
+        if (!/\p{L}{3}/u.test(rest) || this.isTimeOnlyLineText(rest)) return original;
+        // What follows must open like a name: "11PM-5AM @ The Eagle" and
+        // "9pm at the bar" are a time and a place, with no name to keep.
+        if (!/^[\p{L}\p{N}"'«“‘(\[¡¿]/u.test(rest) || /^at\s/i.test(rest)) return original;
+        if (new RegExp(`^${RANGE_WORD}(?![\\p{L}\\p{N}])`, 'iu').test(rest)) return original;
+        if (!second && rest.split(' ').filter(word => /\p{L}/u.test(word)).length < 2) return original;
+        return rest;
+    }
+
     // Leading date phrase on an event TITLE, e.g. the Bear Cave's
     // "Wednesday 9th September – BEEFMINCE MEET MARKET". The day-header gate
     // above correctly KEEPS these (there is a real name after the date), so
@@ -26775,6 +26858,14 @@ TEXT:
             ].filter(candidate => !(typeof candidate === 'string' && this.isTimeOnlyLineText(candidate)));
             title = this.firstNonEmpty(...nonTimeCandidates, '');
         }
+        // A title that is nothing but a one- or two-digit number is a day of
+        // the month or a fragment of an ordinal ("25" cut from "CENA OFICIAL
+        // 25º aniBEARSari" — bearssitges.org, run 20261109-053706, kept and
+        // flagged "title contains no letters"). Same treatment as a time.
+        if (title && /^\d{1,2}$/.test(this.normalizeWhitespace(String(title)))) {
+            console.log(`🤖 AI Web: Title "${title}" is only a number — treating the title as missing`);
+            title = '';
+        }
         // A title that is nothing but a navigation label ("NEXT", "NEXT (UK):",
         // "UPCOMING EVENTS") is a site's signpost to an event, never the
         // event's name. beefmince.com/events renders its listings client-side,
@@ -26837,6 +26928,15 @@ TEXT:
             if (strippedTitle !== title) {
                 console.log(`🤖 AI Web: Stripped leading date from title "${title}" → "${strippedTitle}"`);
                 title = strippedTitle;
+            }
+        }
+        // …and a leading clock or clock range, which a programme prints
+        // before every name (see stripLeadingClockFromTitle).
+        if (title) {
+            const unclockedTitle = this.stripLeadingClockFromTitle(title);
+            if (unclockedTitle !== title) {
+                console.log(`🤖 AI Web: Stripped leading clock from title "${title}" → "${unclockedTitle}"`);
+                title = unclockedTitle;
             }
         }
         const aiDescription = this.firstNonEmpty(aiEvent.description, aiEvent.desc, '');

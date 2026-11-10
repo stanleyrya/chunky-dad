@@ -23744,3 +23744,115 @@ test('furniture: the brand prefixer never runs on a furniture title, and both fu
     assert.equal(parser.pageStatedTitle({ title: 'CHUNK: The RETURN' }), 'CHUNK: The RETURN', 'no stamp: the title itself');
   } finally { console.log = quiet; }
 });
+
+// ── 2026-11-09 audit, crawl-junk 1c: titles that are hours, numbers or a byline ──
+// bearssitges.org, run 20261109-053706: the day programme prints the hours
+// before every name, and eight records kept them in the title ("1h a 06h
+// BEEFMINCE DISCO Party", "13h Sitges Drag Brunch", "10h a 21h:", "25").
+test('clock titles: a leading clock or clock range is cut from a title, with a log line; a name that opens with a number stays whole', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const strip = (title) => parser.stripLeadingClockFromTitle(title);
+  // The page's own lines.
+  assert.equal(strip('1h a 06h BEEFMINCE DISCO Party'), 'BEEFMINCE DISCO Party');
+  assert.equal(strip('20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village'), 'Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village');
+  assert.equal(strip('21:30h to 03:30h 25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village'), '25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village');
+  assert.equal(strip('20:30h. a 03:00h BEARS on CRUISE Special Night'), 'BEARS on CRUISE Special Night');
+  assert.equal(strip('20:30h a 03h: EARLY-VILLAGE 2026'), 'EARLY-VILLAGE 2026');
+  assert.equal(strip('20 h: CENA OFICIAL 25º aniBEARSari'), 'CENA OFICIAL 25º aniBEARSari');
+  assert.equal(strip('13h Sitges Drag Brunch'), 'Sitges Drag Brunch');
+  assert.equal(strip('10 PM – 4 AM | FURBALL NYC'), 'FURBALL NYC');
+  // Names, not hours: no marker, not an hour, one word of name, or a
+  // remainder that is a place or the rest of the hours.
+  for (const name of ['2AM Club', '12h Rave', '24h Party', '5 à 7 des Ours', '9 to 5 Party', '2 Bears 1 Cave',
+    '10 Years of Bearracuda', '3 Dollar Bill', '21+ Bear Night', '501 Party Night', '6-9 Beer Bust',
+    '8:00 Showtime', '10.30 Brunch Club', '4pm to the Floor party', '9pm til late', '9pm-late Bear Night',
+    '11PM-5AM @ The Eagle', '10pm at the bar', 'BEEFMINCE DISCO Party', '']) {
+    assert.equal(strip(name), name, name);
+  }
+
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const day = (lines) => ({ segmentText: lines.join('\n'), html: lines.join('\n'), segmentCardLines: lines });
+    const disco = parser.normalizeAiEvent({ title: '1h a 06h BEEFMINCE DISCO Party', startDate: '2026-09-10', startTime: '01:00' }, {},
+      day(['JUEVES - 10', '1h a 06h BEEFMINCE DISCO Party en «BEARCAVE» compra tus entradas AQUÍ']), null, null);
+    assert.equal(disco.title, 'BEEFMINCE DISCO Party');
+    assert.ok(logs.some((line) => line.includes('Stripped leading clock from title "1h a 06h BEEFMINCE DISCO Party" → "BEEFMINCE DISCO Party"')), logs.join('\n'));
+    // A real name that opens with a number goes through untouched.
+    const cave = parser.normalizeAiEvent({ title: '2 Bears 1 Cave', startDate: '2026-09-10', startTime: '21:00' }, {},
+      day(['JUEVES - 10', '2 Bears 1 Cave']), null, null);
+    assert.equal(cave.title, '2 Bears 1 Cave');
+  } finally { console.log = quiet; }
+});
+
+test('clock titles: a title that is only a clock range ending in a colon, or only a one- or two-digit number, is no title — the record is not kept under it, and the log says why', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  assert.equal(parser.isTimeOnlyLineText('10h a 21h:'), true);
+  assert.equal(parser.isTimeOnlyLineText('10h a 21h'), true, 'as before');
+  assert.equal(parser.isTimeOnlyLineText('CENA OFICIAL:'), false);
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const day = (lines) => ({ segmentText: lines.join('\n'), html: lines.join('\n'), segmentCardLines: lines });
+    // VIERNES - 11 / 10h a 21h: / 20 h: CENA OFICIAL 25º aniBEARSari …
+    assert.equal(parser.normalizeAiEvent({ title: '10h a 21h:', startDate: '2026-09-11', startTime: '10:00' }, {},
+      day(['VIERNES - 11', '10h a 21h:']), null, null), null);
+    assert.ok(logs.some((line) => line.includes('Title "10h a 21h:" is only a time of day')), logs.join('\n'));
+    logs.length = 0;
+    assert.equal(parser.normalizeAiEvent({ title: '25', startDate: '2026-09-11', startTime: '20:00' }, {},
+      day(['VIERNES - 11', '20 h: CENA OFICIAL 25º aniBEARSari en «HOTEL CALIPOLIS»']), null, null), null);
+    assert.ok(logs.some((line) => line.includes('Title "25" is only a number')), logs.join('\n'));
+    // Three digits, or a number with a word, is still a name.
+    logs.length = 0;
+    const named = parser.normalizeAiEvent({ title: '501 Night', startDate: '2026-09-11', startTime: '20:00' }, {},
+      day(['VIERNES - 11', '501 Night']), null, null);
+    assert.equal(named.title, '501 Night');
+    assert.ok(!logs.some((line) => line.includes('is only a number')));
+  } finally { console.log = quiet; }
+});
+
+// studsf.com/podcast, run 20261109-053706: the coverage audit handed thirteen
+// post bylines to extraction as one-line windows ("April 06, 2021 / Stud
+// SF"); the compact-row reader read each as a party called "/ Stud SF" and
+// the year repair walked 2021 forward to 2026-27.
+test('byline rows: a compact row that prints its year hands it on as the stated year, so a past one is an archived line and is never walked forward; what is left of a byline is furniture', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const byline = { segmentText: 'April 06, 2021 / Stud SF' };
+  assert.deepEqual(parser.readCompactListingRowParts(byline), { title: '/ Stud SF', startDate: '2021-04-06', bar: '', statedYear: 2021 });
+  assert.deepEqual(parser.readCompactListingRow(byline), { title: '/ Stud SF', startDate: '2021-04-06', bar: '' }, 'the row itself reads as before');
+  assert.equal(parser.readCompactListingRowParts({ segmentText: 'September 5, 2026 FURBALL NOLA - Santos Bar' }).statedYear, 2026);
+  assert.equal(parser.readCompactListingRowParts({ segmentText: '10/10 FURBALL Boston - Legacy' }).statedYear, 0, 'no year printed, none stated');
+  assert.equal(parser.readCompactListingRowParts({ segmentText: '1/15/27 FURBALL Boston - Legacy' }).statedYear, 2027);
+
+  const logs = [];
+  const quiet = console.log;
+  const quietWarn = console.warn;
+  console.log = (line) => logs.push(String(line));
+  console.warn = (line) => logs.push(String(line));
+  try {
+    const window = { segmentText: byline.segmentText, html: byline.segmentText };
+    const parts = parser.readCompactListingRowParts(window);
+    const stated = parser.normalizeAiEvent({ title: parts.title, startDate: parts.startDate, bar: parts.bar, __explicitSourceYears: { start: parts.statedYear } }, {}, window, null, null);
+    assert.equal(stated, null, 'a row dated 2021 by its own words is not an upcoming event');
+    assert.ok(logs.some((line) => line.includes('Dropping "/ Stud SF"') && line.includes('explicit 2021 date') && line.includes('archived event')), logs.join('\n'));
+    // A row that states this year's date is read as before.
+    const nola = { segmentText: 'September 5, 2026 FURBALL NOLA - Santos Bar', html: 'September 5, 2026 FURBALL NOLA - Santos Bar' };
+    const kept = parser.normalizeAiEvent({ title: 'FURBALL NOLA', startDate: '2026-09-05', bar: 'Santos Bar', __explicitSourceYears: { start: 2026 } }, {}, nola, null, null);
+    assert.equal(kept.title, 'FURBALL NOLA');
+    assert.equal(new Date(kept.startDate).toISOString().slice(0, 10), '2026-09-05');
+
+    // The shape rule, for any route that still produces the fragment.
+    assert.equal(AiWebParser.furnitureTitleShape('/ Stud SF'), 'a byline fragment');
+    assert.equal(AiWebParser.furnitureTitleShape('AC/DC Night'), '');
+    assert.equal(AiWebParser.furnitureTitleShape('Bears / Cubs'), '');
+    logs.length = 0;
+    const rows = [{ title: '/ Stud SF', startDate: '2027-04-06' }, { title: 'Bear Happy Hour SF', startDate: '2026-11-12' }];
+    assert.deepEqual(parser.dropFurnitureShapedTitles(rows, 'https://www.studsf.com/podcast').map((event) => event.title), ['Bear Happy Hour SF']);
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "/ Stud SF" is a byline fragment')), logs.join('\n'));
+  } finally { console.log = quiet; console.warn = quietWarn; }
+});
