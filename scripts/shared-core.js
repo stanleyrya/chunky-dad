@@ -14078,7 +14078,7 @@ class SharedCore {
             if (!url || typeof url !== 'string') {
                 continue;
             }
-            const key = this.getUrlDedupeKey(url);
+            const key = this.getCrawlPageKey(url);
             if (!key) {
                 continue;
             }
@@ -14143,13 +14143,27 @@ class SharedCore {
         return roots.some(root => depth(root) === depth(url));
     }
 
+    // The crawl's name for a PAGE: the dedupe key with the http and https
+    // spellings folded into one. A site answers both with the same document
+    // (http redirects to https), and its own markup still writes the old
+    // spelling — a Squarespace canonical, an RSS <link>, a footer link. Run
+    // 20261109-053706: blackeagletoronto.com's RSS twin linked
+    // http://www.blackeagletoronto.com/, the crawl took it for a new page and
+    // read the home page — widget calendar and all — a second time (114
+    // events twice); bearsevents.com and beefdip.com/tags/ were read twice
+    // the same way. Only the VISITED SET folds: the URL that is fetched and
+    // the URL an event keeps are the spelling the crawl met first.
+    getCrawlPageKey(url) {
+        return this.getUrlDedupeKey(url).replace(/^http:\/\//, 'https://');
+    }
+
     hasProcessedUrl(processedUrls, url) {
-        const key = this.getUrlDedupeKey(url);
+        const key = this.getCrawlPageKey(url);
         return !!key && processedUrls.has(key);
     }
 
     markProcessedUrl(processedUrls, url, ownerName = '') {
-        const key = this.getUrlDedupeKey(url);
+        const key = this.getCrawlPageKey(url);
         if (key) {
             processedUrls.add(key);
             // Every parser that read the page, in order: the first names
@@ -14165,7 +14179,7 @@ class SharedCore {
 
     // The parser that first processed this URL in the run ('' when unknown).
     getProcessedUrlOwner(url) {
-        const key = this.getUrlDedupeKey(url);
+        const key = this.getCrawlPageKey(url);
         const readers = key && this._processedUrlOwners instanceof Map ? this._processedUrlOwners.get(key) : null;
         return Array.isArray(readers) && readers.length > 0 ? readers[0] : '';
     }
@@ -14175,7 +14189,7 @@ class SharedCore {
     // URL is read again (once).
     isOwnSitePageProcessedByAnother(url, parserConfig) {
         if (!parserConfig) return false;
-        const key = this.getUrlDedupeKey(url);
+        const key = this.getCrawlPageKey(url);
         const readers = key && this._processedUrlOwners instanceof Map ? this._processedUrlOwners.get(key) : null;
         if (!Array.isArray(readers) || readers.length === 0) return false;
         const ownName = typeof parserConfig.name === 'string' ? parserConfig.name : '';

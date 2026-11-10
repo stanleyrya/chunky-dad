@@ -23668,3 +23668,178 @@ test('feed fidelity: the feed gate names every row it does not keep', () => {
   assert.deepEqual(quiet, []);
   assert.deepEqual(parser.keepPlacedFeedRows(null, feedUrl), []);
 });
+
+// ---------------------------------------------------------------------------
+// FEED FIDELITY — ONE FEED QUERY IS ASKED ONCE PER RUN. precinctdtla.com, run
+// 20261109-053706: the home page and /calendar/ both carry the venue's
+// EventON calendar (the same endpoint, the same shortcode), each replayed the
+// same months, and the run built 77 events twice. The claim is on the QUERY —
+// endpoint + the shortcode fields that select rows + the month — so a
+// differently-filtered calendar elsewhere on the site is still read.
+// Fixtures: the two pages' frames as cached on 2026-11-08, shortcodes trimmed.
+// ---------------------------------------------------------------------------
+const feedEvoSc = (overrides = {}) => ({ accord: 'no', calendar_type: 'fullcal', day_incre: 0, event_location: 'all', event_order: 'ASC', event_past_future: 'all', event_type: 'all', event_type_2: 'all', fixed_day: '7', fixed_month: '11', fixed_year: '2026', focus_end_date_range: '1796111999', focus_start_date_range: '1793516400', hide_past: 'no', lang: 'L1', month_incre: 0, number_of_months: '1', ...overrides });
+const feedEvoPage = (origin, frames) => `<html><body><nav><a href="/menu/">Menu</a><a href="/calendar/">Calendar</a><a href="/lostandfound/">Lost and Found</a></nav>
+<script>var evo_general_params = {"is_admin":"","ajaxurl":"${origin}/wp-admin/admin-ajax.php","evo_ajax_url":"/?evo-ajax=%%endpoint%%","ajax_method":"endpoint","n":"4e064a44c4","evo_v":"5.0.2"};</script>
+<h2>THIS MONTH</h2>
+${frames.map(frame => `<div id='${frame.id}' class='ajde_evcal_calendar sev cev color esty_2 etttc_custom evofc_nolist evoFC ajax_loading_cal' data-cal=''><div class='evo_cal_data' data-sc="${JSON.stringify(frame.sc).replace(/"/g, '&quot;')}"></div></div>`).join('\n')}
+<footer><h4>HOURS</h4><p>Monday: Closed</p><p>Tues-Friday: 6pm-2am</p><p>Saturday: 5pm-2am</p><p>Sunday: 3pm-12am</p><h4>ADDRESS</h4><p>357 S Broadway</p><p>Los Angeles, CA 90013</p></footer>
+</body></html>`;
+// The home page: a day strip and the month grid. /calendar/: this month's grid and next month's.
+const FEED_EVO_HOME = [{ id: 'evcal_calendar_269', sc: feedEvoSc({ calendar_type: 'daily', fixed_day: '8', dv_view_style: 'def' }) }, { id: 'evcal_calendar_579', sc: feedEvoSc() }];
+const FEED_EVO_CALENDAR = [{ id: 'evcal_calendar_678', sc: feedEvoSc() }, { id: 'evcal_calendar_476', sc: feedEvoSc({ fixed_month: '12', month_incre: '+1', focus_start_date_range: '1796112000', focus_end_date_range: '1798790399' }) }];
+function feedEvoAdapter({ refuse = () => false } = {}) {
+  const posts = [];
+  return {
+    posts,
+    postForm: async (endpoint, body, options) => {
+      const frames = Array.from(new Set((decodeURIComponent(body).match(/cals\[([^\]]+)\]/g) || []).map(m => m.slice(5, -1))));
+      const field = (id, name) => (decodeURIComponent(body).split('&').find(pair => pair.startsWith(`cals[${id}][sc][${name}]=`)) || '=').split('=')[1];
+      const monthOf = (id) => `${field(id, 'fixed_year')}-${String(field(id, 'fixed_month')).padStart(2, '0')}`;
+      posts.push({ endpoint, frames, cacheUrl: options.cacheUrl });
+      if (refuse(options.cacheUrl)) return { ok: true, status: 200, text: '{"status":"bad","msg":"Nonce validation failed"}' };
+      const cals = {};
+      for (const id of frames) cals[id] = { sc: {}, json: [], html: eventOnCard(`${id.slice(-3)}${monthOf(id).replace('-', '')}`, `Bear Night ${monthOf(id)}`, `${monthOf(id)}-14T21:00-8:00`, `${monthOf(id)}-15T02:00-8:00`) };
+      return { ok: true, status: 200, text: JSON.stringify({ cals }) };
+    },
+    fetchData: async (requestUrl) => ({ html: '<html><body>no calendar here now</body></html>', url: requestUrl })
+  };
+}
+
+test('feed fidelity: a calendar another page of the site already asked for is not asked again — the page that read it is named', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', calendarLookaheadMonths: 1 };
+  const adapter = feedEvoAdapter();
+  const home = 'https://bar.example/';
+  const calendar = 'https://bar.example/calendar/';
+  const first = await parser.collectEventOnCalendarHtml({ url: home, html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  assert.deepEqual(adapter.posts.map(p => p.cacheUrl), ['https://bar.example/?eventon_month=2026-11', 'https://bar.example/?eventon_month=2026-12'], 'the first page asks as before, under the same cache names');
+  assert.deepEqual(adapter.posts[0].frames, ['evcal_calendar_269', 'evcal_calendar_579'], 'a day strip and a month grid are two questions');
+  assert.ok(first.includes('Bear Night 2026-11') && first.includes('Bear Night 2026-12'));
+  let second;
+  const lines = await captureLogsAsync(async () => {
+    second = await parser.collectEventOnCalendarHtml({ url: calendar, html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, config, adapter);
+  });
+  assert.equal(adapter.posts.length, 2, 'the same grid for the same months: nothing is asked');
+  assert.equal(second, '');
+  assert.deepEqual(lines.filter(line => line.startsWith('📅 EVENTON:')), [
+    `📅 EVENTON: the calendar on ${calendar} is the one already read on ${home} (same endpoint, same shortcode) — month(s) 2026-11, 2026-12 not asked for again`
+  ]);
+  // Being a configured page buys no turn of its own: the question is the same whoever asks.
+  const configured = { ...config, urls: [home, calendar] };
+  assert.equal(await parser.collectEventOnCalendarHtml({ url: calendar, html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, configured, adapter), '');
+  assert.equal(adapter.posts.length, 2);
+  // The page that asked may ask again (a retry of its own read).
+  await parser.collectEventOnCalendarHtml({ url: home, html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  assert.equal(adapter.posts.length, 4);
+  // Another source reading the same site keeps its own read (twins fold in dedup).
+  await parser.collectEventOnCalendarHtml({ url: calendar, html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, { name: 'Another Source', calendarLookaheadMonths: 1 }, adapter);
+  assert.equal(adapter.posts.length, 5);
+  // Its http spelling is the page that read, visited again.
+  const twin = await captureLogsAsync(async () => {
+    assert.equal(await parser.collectEventOnCalendarHtml({ url: 'http://www.bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter), '');
+  });
+  assert.equal(adapter.posts.length, 5);
+  assert.ok(twin.some(line => line.includes(`the calendar on http://www.bar.example/ is the one already read on ${home}`)), twin.join('\n'));
+});
+
+test('feed fidelity: a differently-filtered calendar on another page is another feed and is read; a page mixing both asks only for the new one', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', calendarLookaheadMonths: 1 };
+  const adapter = feedEvoAdapter();
+  await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  assert.equal(adapter.posts.length, 2);
+  // Same host, same endpoint, one selecting field different: the rows differ, so it is read.
+  const bears = [{ id: 'evcal_calendar_101', sc: feedEvoSc({ event_type: '12' }) }];
+  const html = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/bear-nights/', html: feedEvoPage('https://bar.example', bears) }, config, adapter);
+  assert.deepEqual(adapter.posts.slice(2).map(p => p.cacheUrl), ['https://bar.example/bear-nights/?eventon_month=2026-11', 'https://bar.example/bear-nights/?eventon_month=2026-12']);
+  assert.ok(html.includes('Bear Night 2026-11'));
+  // Where the frame is opened (its month, its focused day) is not part of what it asks for; what it selects is.
+  assert.equal(parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', FEED_EVO_CALENDAR[0].sc),
+    parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', FEED_EVO_CALENDAR[1].sc));
+  assert.notEqual(parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', feedEvoSc()),
+    parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', feedEvoSc({ event_type: '12' })));
+  assert.notEqual(parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', feedEvoSc()),
+    parser.getEventOnFeedIdentity('https://other.example/?evo-ajax=eventon_init_load', feedEvoSc()));
+  // A page with the grid already read AND a calendar of its own: only the new one is asked for,
+  // and the shorter request is remembered under its own name (the whole-page answer holds both frames).
+  const mixed = [{ id: 'evcal_calendar_678', sc: feedEvoSc() }, { id: 'evcal_calendar_202', sc: feedEvoSc({ event_location: '44' }) }];
+  const before = adapter.posts.length;
+  let mixedHtml;
+  const lines = await captureLogsAsync(async () => {
+    mixedHtml = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/patio/', html: feedEvoPage('https://bar.example', mixed) }, config, adapter);
+  });
+  const asked = adapter.posts.slice(before);
+  assert.deepEqual(asked.map(p => p.frames), [['evcal_calendar_202'], ['evcal_calendar_202']]);
+  assert.match(asked[0].cacheUrl, /^https:\/\/bar\.example\/patio\/\?eventon_month=2026-11&eventon_asked=[0-9a-f]{8}$/);
+  assert.equal(asked[1].cacheUrl, 'https://bar.example/patio/?eventon_month=2026-12', 'the later months walk one frame, as before');
+  assert.ok(mixedHtml.includes('Bear Night 2026-11'));
+  assert.ok(lines.some(line => line.includes('the calendar on https://bar.example/patio/ is the one already read on https://bar.example/ (same endpoint, same shortcode) — month(s) 2026-11 not asked for again')), lines.join('\n'));
+  assert.ok(!(parser.feedReadElsewhere instanceof Map) || !parser.feedReadElsewhere.has(parser.getUrlDedupeKey('https://bar.example/patio/')), 'a page that read something is read as usual');
+});
+
+test('feed fidelity: a calendar request that failed gives the question back to the next page that carries it', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', calendarLookaheadMonths: 1 };
+  // The home page's requests are refused (and stay refused after the one fresh read).
+  const adapter = feedEvoAdapter({ refuse: cacheUrl => cacheUrl.startsWith('https://bar.example/?') });
+  let first;
+  const failed = await captureLogsAsync(async () => {
+    first = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  });
+  assert.equal(first, '');
+  assert.ok(failed.some(line => line.includes('month 2026-11 failed for https://bar.example/')), failed.join('\n'));
+  const before = adapter.posts.length;
+  const second = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/calendar/', html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, config, adapter);
+  assert.deepEqual(adapter.posts.slice(before).map(p => p.frames), [['evcal_calendar_678', 'evcal_calendar_476']], 'the next page asks for the whole calendar');
+  assert.ok(second.includes('Bear Night 2026-11') && second.includes('Bear Night 2026-12'));
+  assert.ok(!(parser.feedReadElsewhere instanceof Map) || parser.feedReadElsewhere.size === 0);
+});
+
+test('feed fidelity: the page whose calendar was read elsewhere builds no events again and sends no empty frame to OCR or the AI; its links are still followed', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', urls: ['https://bar.example/'], calendarLookaheadMonths: 1 };
+  const adapter = feedEvoAdapter();
+  let aiCalls = 0;
+  parser.extractOcrFromAllImages = async () => { aiCalls++; throw new Error('no OCR'); };
+  parser.callAi = async () => { aiCalls++; throw new Error('no AI'); };
+  parser.core.callAiGenerate = async () => { aiCalls++; throw new Error('no AI'); };
+  const home = await parser.parseEvents({ url: 'https://bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, null, 'link-aggregator', adapter);
+  assert.deepEqual(home.events.map(e => e.title).sort(), ['Bear Night 2026-11', 'Bear Night 2026-12'], 'the day strip repeats the grid\'s card: one event per night');
+  assert.equal(home.extractionSummary.source, 'eventon');
+  let second;
+  const lines = await captureLogsAsync(async () => {
+    second = await parser.parseEvents({ url: 'https://bar.example/calendar/', html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, config, null, 'multi-event-page', adapter);
+  });
+  assert.equal(adapter.posts.length, 2, 'two months, asked once');
+  assert.deepEqual(second.events, []);
+  assert.equal(second.extractionSummary.source, 'eventon');
+  assert.equal(aiCalls, 0, 'the opening-hours shell around the empty frame is not sent for extraction');
+  assert.ok(second.additionalLinks.some(link => /\/menu\/$/.test(link)) && second.additionalLinks.some(link => /\/lostandfound\/$/.test(link)), JSON.stringify(second.additionalLinks));
+  assert.ok(lines.some(line => line.startsWith('📅 EVENTON: https://bar.example/calendar/ is read through its calendar, and that calendar was read on https://bar.example/ — no events built here again')
+    && / \d+ link\(s\) still followed$/.test(line)), lines.join('\n'));
+});
+
+test('feed fidelity: at a once-per-host door the http spelling of the page that read is that page again — not read twice, configured or not', () => {
+  const parser = createParser();
+  // blackeagletoronto.com, run 20261109-053706: the site's RSS twin links the http home page.
+  const config = { name: 'Venue', urls: ['http://www.venue.example/', 'https://www.venue.example/'] };
+  for (const kind of ['elfsight', 'dice', 'squarespace-collection', 'wix']) {
+    assert.equal(parser.claimHostDoor(kind, 'https://www.venue.example/', config, 'door-1'), '');
+    assert.equal(parser.claimHostDoor(kind, 'http://www.venue.example/', config, 'door-1'), 'https://www.venue.example/', `${kind}: the other spelling`);
+    assert.equal(parser.claimHostDoor(kind, 'http://venue.example', config, 'door-1'), 'https://www.venue.example/', `${kind}: without www`);
+    assert.equal(parser.claimHostDoor(kind, 'https://www.venue.example/', config, 'door-1'), '', `${kind}: the page that read may read again`);
+  }
+  assert.equal(parser.isSchemeTwinPage('https://venue.example/a', 'http://venue.example/a'), true);
+  assert.equal(parser.isSchemeTwinPage('https://venue.example/a', 'https://venue.example/a'), false);
+  assert.equal(parser.isSchemeTwinPage('https://venue.example/a', 'http://venue.example/b'), false);
+  assert.equal(parser.isSchemeTwinPage('', ''), false);
+  // A feed claim is on the feed alone: it takes no host-wide claim with it.
+  const other = createParser();
+  assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/', config), '');
+  assert.equal(other.claimFeedDoor('eventon', 'feed-b-2026-11', 'https://venue.example/shows/', config), '', 'another feed on the host');
+  assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/shows/', config), 'https://venue.example/');
+  assert.equal(other.claimFeedDoor('eventon', '', 'https://venue.example/shows/', config), '', 'no identity, no claim');
+  other.releaseHostDoor('eventon', 'https://venue.example/', 'feed-a-2026-11');
+  assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/shows/', config), '', 'a released question may be asked');
+});

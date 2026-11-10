@@ -30319,3 +30319,65 @@ test('feed fidelity: a number inside a name is not a street address', () => {
   // The everyday word does name a street once a locality follows it.
   assert.equal(core.readAddressTailFromTitle('Bear Brunch 12 Castro Place, San Francisco, CA').address, '12 Castro Place, San Francisco, CA');
 });
+
+// ---------------------------------------------------------------------------
+// FEED FIDELITY — ONE PAGE UNDER EITHER SCHEME. Run 20261109-053706:
+// blackeagletoronto.com's RSS twin links http://www.blackeagletoronto.com/,
+// the crawl's visited set kept the protocol in its key, took the http
+// spelling for a new page and read the home page — widget calendar and all —
+// a second time (114 events, twice; bearsevents.com and beefdip.com/tags/
+// were read twice the same way). The visited set names a page without its
+// scheme; nothing else about a URL changes.
+// ---------------------------------------------------------------------------
+test('feed fidelity: the crawl\'s visited set knows a page under either scheme — the first spelling met is the one kept', () => {
+  const core = createCore();
+  const visited = new Set();
+  core._processedUrlOwners = new Map(); // a run keeps who read each page
+  core.markProcessedUrl(visited, 'https://www.blackeagletoronto.com/', 'Black Eagle');
+  assert.equal(core.hasProcessedUrl(visited, 'http://www.blackeagletoronto.com/'), true);
+  assert.equal(core.hasProcessedUrl(visited, 'http://blackeagletoronto.com'), true);
+  assert.equal(core.hasProcessedUrl(visited, 'http://www.blackeagletoronto.com/events'), false, 'another page of the site is another page');
+  assert.equal(core.getProcessedUrlOwner('http://www.blackeagletoronto.com/'), 'Black Eagle');
+  // Marked under http first: the https spelling is the same page too.
+  core.markProcessedUrl(visited, 'http://bearsevents.example/agenda', 'Agenda');
+  assert.equal(core.hasProcessedUrl(visited, 'https://www.bearsevents.example/agenda/'), true);
+  assert.equal(visited.size, 2, 'one entry per page');
+  // A batch of links: read pages drop out, twins inside the batch fold, the first spelling is the one fetched.
+  assert.deepEqual(core.deduplicateUrls([
+    'http://www.blackeagletoronto.com/',
+    'http://www.blackeagletoronto.com/events',
+    'https://www.blackeagletoronto.com/events',
+    'https://www.blackeagletoronto.com/welcome?format=rss'
+  ], visited), ['http://www.blackeagletoronto.com/events', 'https://www.blackeagletoronto.com/welcome?format=rss']);
+  // Only the visited set folds: a URL's own key still tells the spellings apart.
+  assert.notEqual(core.getUrlDedupeKey('http://www.blackeagletoronto.com/'), core.getUrlDedupeKey('https://www.blackeagletoronto.com/'));
+  assert.equal(core.getCrawlPageKey('http://www.blackeagletoronto.com/'), core.getCrawlPageKey('https://blackeagletoronto.com'));
+  assert.equal(core.getCrawlPageKey(''), '');
+});
+
+test('feed fidelity: a page that links its own http spelling is read once', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const night = { title: 'Bear Night', startDate: new Date(Date.now() + 5 * 86400000) };
+  const pages = {
+    // The home page lists the calendar and links its feed twin; the twin links the old spelling of the home page.
+    'https://www.venue.example/': { events: [night], additionalLinks: ['https://www.venue.example/calendar', 'http://www.venue.example/', 'http://www.venue.example/calendar'] },
+    'https://www.venue.example/calendar': { additionalLinks: ['http://www.venue.example/', 'http://www.venue.example/calendar'] },
+    'http://www.venue.example/': { events: [night], additionalLinks: [] },
+    'http://www.venue.example/calendar': { additionalLinks: [] }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  await core.processParser(
+    { name: 'Venue', urls: ['https://www.venue.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.deepEqual(fetched, ['https://www.venue.example/', 'https://www.venue.example/calendar'], 'neither http spelling is fetched');
+  // Both spellings configured (clubchubusa.com lists its http root too): still one read.
+  const again = createCore();
+  const second = createCrawlHarness(pages);
+  await again.processParser(
+    { name: 'Venue', urls: ['https://www.venue.example/', 'http://www.venue.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, second.httpAdapter, createDisplayAdapterStub(), second.parsers
+  );
+  assert.equal(second.fetched.filter(url => /^https?:\/\/www\.venue\.example\/$/.test(url)).length, 1, JSON.stringify(second.fetched));
+});
