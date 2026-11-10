@@ -178,3 +178,170 @@ test('runSourceAudit: when the pages\u2019 readable text names none of the extra
   assert.ok(logs.some(line => /shell\.example — ai no-page \(page-names-no-events\)/.test(line)), logs.join('\n'));
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+// ---------------------------------------------------------------------------
+// "Removed by the site" needs proof (2026-11-09). Until then a title whose
+// words were missing from ONE listing page was stamped site-removed. Eagle
+// LA's calendar page prints the current month's grid only; seven December
+// and January parties our own read had stopped seeing (a month-feed cache
+// key) were stamped "removed" off a page that shows November, and nine
+// removal cards went to the review deck. The fixtures below are that page's
+// readable text and BeefDip's programme page, trimmed.
+// ---------------------------------------------------------------------------
+const GRID_NIGHTS = { 1: ['SUNDAY BEER BUST', 'SUNDAY SWAP MEAT'], 5: ['BEAR HAPPY HOUR', 'B BAR'], 6: ['CUBSCOUT'], 14: ['MEAT RACK'], 20: ['BLUF LA', 'HOT BOOTS GEAR NIGHT'], 21: ['CRUISE LA', 'HELL BENT'], 27: ['LOST PUPPY'], 29: ['BEARS LA MAC AND CHEESE COOK OFF', 'SUNDAY BEER BUST'] };
+// The month view as the cached page reads: neighbours' names, "<Month>
+// <Year>" alone on a line, weekday heads, each day number alone on a line
+// followed by that day's titles, then the next month's first cells.
+function monthGridText(nights = GRID_NIGHTS) {
+  const lines = ['Home', 'Calendar', 'October', 'November 2026', 'December', 'SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+  for (let day = 1; day <= 30; day += 1) { lines.push(String(day)); (nights[day] || []).forEach(title => lines.push(title)); }
+  return lines.concat(['1', '2', '3', '4', '5', '©2021 Eagle LA, inc']).join('\n');
+}
+function monthGridHtml(nights = GRID_NIGHTS) {
+  const cells = [];
+  for (let day = 1; day <= 30; day += 1) cells.push(`<dt class="mec-calendar-day"><div>${day}</div>${(nights[day] || []).map(title => `<a href="#"><h4 class="mec-event-title">${title}</h4></a>`).join('')}</dt>`);
+  return `<html><body><div class="mec-previous-month"><a>October</a></div><div class="mec-calendar-header"><h2>November 2026</h2></div><div class="mec-next-month"><a>December</a></div><dl>${cells.join('')}${[1, 2, 3, 4, 5].map(day => `<dt class="mec-table-nullday"><div>${day}</div></dt>`).join('')}</dl></body></html>`;
+}
+const PROGRAMME_TEXT = [
+  'BeefDip Bear Week 2026', 'Jan 23 – 31 • Puerto Vallarta', 'BEEFDIP BEAR WEEK PV 2027 OFFICIAL PROGRAM', 'FULL SCHEDULE',
+  'SATURDAY JANUARY 23, 2027', 'PRE WELCOME PARTY', 'Saturday, Jan 23 • 9PM – Midnight • The Tryst Hotel RoofTop',
+  'SUNDAY JANUARY 24, 2027', 'WELCOME PARTY', 'Sun Jan 24 • 3PM–Midnight • Blue Chairs Rooftop',
+  'MONDAY JANUARY 25, 2027', 'BOOZE CRUISE', 'Mon Jan 25 • 10AM • Los Muertos Pier',
+  'SUNDAY JANUARY 31, 2027', 'FAREWELL POOL PARTY', 'Sun Jan 31 • Noon • Blue Chairs Rooftop'
+].join('\n');
+
+test('listingPrintedDays / listingCoversDay: a month grid covers every day of ITS month and no other; dated rows cover the day they print and the days between two of them; a date with no year is never rolled forward', () => {
+  const grid = sourceAudit.listingPrintedDays(monthGridText(), '2026-11-09');
+  assert.equal(grid.grid.size, 30, 'the whole of November, empty cells too');
+  assert.deepEqual(sourceAudit.listingCoversDay(grid, '2026-11-13'), { how: 'grid', from: '2026-11-01', to: '2026-11-30' }, 'an empty cell of the grid is covered');
+  assert.equal(sourceAudit.listingCoversDay(grid, '2026-12-03'), null, 'the next month\'s first cells behind the 30 are not December');
+  assert.equal(sourceAudit.listingCoversDay(grid, '2026-12-31'), null, 'the "December" link next to the header covers nothing');
+  assert.equal(sourceAudit.listingCoversDay(grid, '2027-01-18'), null);
+  // A strip of one week under a month heading is not the month.
+  const week = sourceAudit.listingPrintedDays(['November 2026', '1', 'BEER BUST', '2', '3', '4', '5', '6', '7'].join('\n'), '2026-11-09');
+  assert.equal(week.grid.size, 0, 'seven numbers are not a month grid');
+  // Cells of the month before, ahead of the 1, are passed over.
+  const lead = ['December 2026', '29', '30', '1'];
+  for (let day = 2; day <= 31; day += 1) lead.push(String(day));
+  assert.equal(sourceAudit.listingPrintedDays(lead.concat(['1', '2']).join('\n'), '2026-11-09').grid.size, 31);
+
+  const rows = sourceAudit.listingPrintedDays(PROGRAMME_TEXT, '2026-11-09');
+  assert.equal(rows.grid.size, 0);
+  assert.ok(rows.rows.has('2027-01-23') && rows.rows.has('2027-01-24') && rows.rows.has('2027-01-25') && rows.rows.has('2027-01-31'), [...rows.rows].join(','));
+  assert.ok(rows.rows.has('2026-01-24') && !rows.rows.has('2028-01-24'), '"Sun Jan 24" with no year is this year\'s, never next January');
+  assert.deepEqual(sourceAudit.listingCoversDay(rows, '2027-01-24'), { how: 'printed', from: '2027-01-24', to: '2027-01-24' });
+  assert.deepEqual(sourceAudit.listingCoversDay(rows, '2027-01-28'), { how: 'between', from: '2027-01-25', to: '2027-01-31' }, 'the list runs through the day');
+  assert.equal(sourceAudit.listingCoversDay(rows, '2027-02-06'), null, 'nothing printed after it');
+  assert.equal(sourceAudit.listingCoversDay(rows, '2027-04-01'), null);
+  assert.equal(sourceAudit.listingCoversDay(rows, 'soon'), null);
+  // Only real month words: "maybe 12", "mark 3", a clock and a price are not dates.
+  const noise = sourceAudit.listingPrintedDays('maybe 12 of us\nmark 3 down\nDoors 9:30 · $12\nDecor 5 stars\n2026-11-14 ISO row\n14 November 2026\nNov. 15th, 2026', '2026-11-09');
+  assert.deepEqual([...noise.rows].sort(), ['2026-11-14', '2026-11-15']);
+  assert.equal(sourceAudit.LISTING_BRACKET_DAYS, 31);
+});
+
+test('stillOnSite: missing words alone are "unknown" — "site-removed" needs the text to be the listing that covers the lost day AND to name what the run read there (Eagle LA 2026-11-09: December and January parties judged off a November grid)', () => {
+  const text = monthGridText();
+  const today = '2026-11-09';
+  const runRows = [{ title: 'MEAT RACK', day: '2026-11-14' }, { title: 'BLUF LA', day: '2026-11-20' }, { title: 'LOST PUPPY', day: '2026-11-27' }, { title: 'CUBSCOUT', day: '2026-11-06' }];
+  // The seven of the deck: every one a day the page does not show.
+  [['EAGLE LA NEW YEARS BASH!!', '2026-12-31'], ['HAPPY HOLIDAYS FROM THE MEN OF EAGLE LA', '2026-12-25'], ['MLK BUST', '2027-01-18'], ['BEARS LA NAUGHY BEAR', '2026-12-13']].forEach(([title, day]) => {
+    const out = sourceAudit.stillOnSite(title, text, { days: [day], today, events: runRows });
+    assert.equal(out.verdict, 'unknown', title);
+    assert.equal(out.proof, undefined);
+    assert.match(out.why, new RegExp(`does not cover ${day}`), out.why);
+  });
+  // A November night the grid shows without the title, the run's November rows all on it: removed, with the proof.
+  const removed = sourceAudit.stillOnSite('CALF B&B EVENT', text, { days: ['2026-11-20'], today, events: runRows });
+  assert.equal(removed.verdict, 'site-removed');
+  assert.equal(removed.proof, 'listing-covers');
+  assert.deepEqual(removed.days, ['2026-11-20']);
+  // No options at all (an older caller): never "removed".
+  assert.equal(sourceAudit.stillOnSite('CALF B&B EVENT', text).verdict, 'unknown');
+  assert.match(sourceAudit.stillOnSite('CALF B&B EVENT', text).why, /no lost day ahead/);
+  assert.equal(sourceAudit.stillOnSite('CALF B&B EVENT', text, { days: ['2026-11-02'], today, events: runRows }).verdict, 'unknown', 'a lost day already past proves nothing about today\'s page');
+  // The run read nothing from the site in the window: nothing shows this text is the listing it reads.
+  const nothingRead = sourceAudit.stillOnSite('CALF B&B EVENT', text, { days: ['2026-11-20'], today, events: [{ title: 'BLUF LA', day: '2026-12-18' }] });
+  assert.equal(nothingRead.verdict, 'unknown');
+  assert.match(nothingRead.why, /the run read no event from the site between 2026-11-01 and 2026-11-30/);
+  // A row the run read in the window is not on the text: it is not the whole listing (a "featured" strip, a filtered view).
+  const partial = sourceAudit.stillOnSite('CALF B&B EVENT', text, { days: ['2026-11-20'], today, events: runRows.concat([{ title: 'Tightwad Tuesday', day: '2026-11-17' }]) });
+  assert.equal(partial.verdict, 'unknown');
+  assert.match(partial.why, /does not name "Tightwad Tuesday" \(2026-11-17\)/);
+  // Rows of the run before today are not asked of today's page.
+  assert.equal(sourceAudit.stillOnSite('CALF B&B EVENT', text, { days: ['2026-11-20'], today, events: runRows.concat([{ title: 'Tightwad Tuesday', day: '2026-11-03' }]) }).verdict, 'site-removed');
+  // Text cut short, or a listing page of the host that could not be read: unknown.
+  assert.match(sourceAudit.stillOnSite('CALF B&B EVENT', text, { days: ['2026-11-20'], today, events: runRows, truncated: true }).why, /cut short/);
+  const incomplete = sourceAudit.stillOnSite('CALF B&B EVENT', text, { days: ['2026-11-20'], today, events: runRows, incomplete: 'HTTP 403' });
+  assert.equal(incomplete.verdict, 'unknown');
+  assert.match(incomplete.why, /could not be read \(HTTP 403\)/);
+  // A weekly night gone from the November grid, its December nights shown nowhere: unknown, and the days vouched for are named.
+  const mixed = sourceAudit.stillOnSite('CALF B&B EVENT', text, { days: ['2026-11-20', '2026-11-27', '2026-12-04'], today, events: runRows });
+  assert.equal(mixed.verdict, 'unknown');
+  assert.equal(mixed.proof, 'listing-covers');
+  assert.deepEqual(mixed.days, ['2026-11-20', '2026-11-27']);
+  assert.match(mixed.why, /does not cover 2026-12-04/);
+  // Still listed is unchanged, whatever the day.
+  assert.equal(sourceAudit.stillOnSite('BLUF LA', text, { days: ['2026-12-18'], today, events: runRows }).verdict, 'still-listed');
+  assert.equal(sourceAudit.stillOnSite('Bears LA Mac and Cheese Cook Off', text, { days: ['2026-11-29'], today }).verdict, 'still-listed');
+  assert.equal(sourceAudit.stillOnSite('!!', text, { days: ['2026-11-20'], today }).verdict, 'unknown');
+  // Dated rows (BeefDip's programme, 2026-11-09): "Welcome T-Dance" is off a page that prints its day with another party.
+  const programme = sourceAudit.stillOnSite('Welcome T-Dance', PROGRAMME_TEXT.replace('WELCOME PARTY', 'KICKOFF'), { days: ['2027-01-24'], today, events: [{ title: 'Kickoff', day: '2027-01-24' }] });
+  assert.equal(programme.verdict, 'site-removed');
+  assert.deepEqual(programme.days, ['2027-01-24']);
+  // refineStillVerdict carries proof, days and the reason along.
+  assert.deepEqual(sourceAudit.refineStillVerdict({ title: 'CALF B&B EVENT', days: ['2026-11-20'] }, removed, []), { verdict: 'site-removed', line: removed.line, proof: 'listing-covers', days: ['2026-11-20'] });
+  assert.match(sourceAudit.refineStillVerdict({ title: 'MLK BUST', days: ['2027-01-18'] }, sourceAudit.stillOnSite('MLK BUST', text, { days: ['2027-01-18'], today, events: runRows }), []).why, /does not cover 2027-01-18/);
+});
+
+test('runSourceAudit: the verdict stamped into the loss state carries the proof and the days it vouches for; a party of a month the page does not show is stamped unknown with the reason; the store keeps both through a normalize round trip', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-audit-proof-'));
+  const event = (title, day) => ({ title, startDate: `${day}T05:00:00.000Z`, bar: 'Eagle LA', timezone: 'America/Los_Angeles', isBearEvent: true, website: `https://grid.example/events/${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/` });
+  // startDate 05:00Z is 21:00 the evening before in Los Angeles: the local days are 11-14, 11-20, 11-27, 12-31.
+  const steady = [event('MEAT RACK', '2026-11-15'), event('BLUF LA', '2026-11-21'), event('LOST PUPPY', '2026-11-28')];
+  const parsers = (extra) => [{ name: 'Grid', totalEvents: steady.length + extra.length, config: { urls: ['https://grid.example/calendar/'] }, urlClassifications: { 'https://grid.example/calendar/': 'multi-event-page' }, events: steady.concat(extra) }];
+  const both = [event('CALF NIGHT', '2026-11-21'), event('NEW YEARS BASH', '2027-01-01')];
+  seedLedger(dir, [
+    ['20261106-050000', '2026-11-06', payloadFor('20261106-050000', '2026-11-06', parsers(both))],
+    ['20261107-050000', '2026-11-07', payloadFor('20261107-050000', '2026-11-07', parsers(both))],
+    ['20261108-050000', '2026-11-08', payloadFor('20261108-050000', '2026-11-08', parsers([]))],
+    ['20261109-050000', '2026-11-09', payloadFor('20261109-050000', '2026-11-09', parsers([]))]
+  ]);
+  const before = JSON.parse(fs.readFileSync(path.join(dir, 'metrics', 'source-upcoming.json'), 'utf8'));
+  assert.deepEqual(Object.keys(before.hosts['grid.example'].lost).sort(), ['calf night', 'new years bash'], 'both confirmed lost on the fourth run');
+  const adapter = { fetchData: async (url) => ({ url, fetchedAt: '2026-11-09T05:40:00.000Z', statusCode: 200, html: monthGridHtml() }) };
+  const ai = { generate: async () => '{"missing":[],"fake":[],"wrong":[],"note":"ok"}' };
+  const logs = [];
+  const summary = await sourceAudit.runSourceAudit({ sharedRoot: dir, results: payloadFor('20261109-050000', '2026-11-09', parsers([])), runId: '20261109-050000', adapter, ai, today: '2026-11-09', now: new Date('2026-11-09T12:00:00Z'), hosts: ['grid.example'], log: line => logs.push(line) });
+  assert.deepEqual(summary.errors, []);
+  assert.deepEqual(summary.audited, ['grid.example']);
+  const store = sourceAudit.loadSourceAudit(sourceAudit.getSourceAuditPath(dir));
+  const still = Object.fromEntries(store.hosts['grid.example'].still.map(item => [item.title, item]));
+  assert.equal(still['CALF NIGHT'].verdict, 'site-removed');
+  assert.equal(still['CALF NIGHT'].proof, 'listing-covers');
+  assert.deepEqual(still['CALF NIGHT'].days, ['2026-11-20']);
+  assert.equal(still['NEW YEARS BASH'].verdict, 'unknown', 'the page shows November; nothing was read about 31 December');
+  assert.match(still['NEW YEARS BASH'].why, /does not cover 2026-12-31/);
+  assert.equal(still['NEW YEARS BASH'].proof, undefined);
+  const state = JSON.parse(fs.readFileSync(path.join(dir, 'metrics', 'source-upcoming.json'), 'utf8')).hosts['grid.example'].lost;
+  assert.equal(state['calf night'].still.verdict, 'site-removed');
+  assert.equal(state['calf night'].still.proof, 'listing-covers');
+  assert.deepEqual(state['calf night'].still.days, ['2026-11-20']);
+  assert.deepEqual(Object.keys(state['new years bash'].still).sort(), ['at', 'verdict'], 'no proof, no days');
+  assert.equal(state['new years bash'].still.verdict, 'unknown');
+  assert.ok(logs.some(line => /grid\.example — "CALF NIGHT" removed by the site: its listing covers/.test(line)), logs.join('\n'));
+  assert.ok(logs.some(line => /grid\.example — "NEW YEARS BASH" not found in the text read, but that proves nothing: .*does not cover 2026-12-31/.test(line)), logs.join('\n'));
+  const normalized = sourceAudit.normalizeSourceAuditStore(JSON.parse(fs.readFileSync(sourceAudit.getSourceAuditPath(dir), 'utf8')));
+  const kept = Object.fromEntries(normalized.hosts['grid.example'].still.map(item => [item.title, item]));
+  assert.equal(kept['CALF NIGHT'].proof, 'listing-covers');
+  assert.deepEqual(kept['CALF NIGHT'].days, ['2026-11-20']);
+  assert.match(kept['NEW YEARS BASH'].why, /does not cover/);
+  // The next ledger line says which "removed" rests on proof.
+  const next = SharedCore.buildSourceLedger(payloadFor('20261110-050000', '2026-11-10', parsers([])), { runId: '20261110-050000', previousUpcoming: JSON.parse(fs.readFileSync(path.join(dir, 'metrics', 'source-upcoming.json'), 'utf8')), now: new Date('2026-11-10T12:00:00Z') });
+  const lost = Object.fromEntries(next.records.find(record => record.host === 'grid.example').lost.map(item => [item.title, item]));
+  assert.equal(lost['CALF NIGHT'].still, 'site-removed');
+  assert.equal(lost['CALF NIGHT'].still_proof, 'listing-covers');
+  assert.equal(lost['NEW YEARS BASH'].still, 'unknown');
+  assert.equal(lost['NEW YEARS BASH'].still_proof, undefined);
+  fs.rmSync(dir, { recursive: true, force: true });
+});

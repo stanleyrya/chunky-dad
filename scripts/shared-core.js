@@ -2327,7 +2327,16 @@ class SharedCore {
             lost[series] = { title: entry.title || series, bear: entry.bear === true, seen: Number(entry.seen) || 0, days: Object.assign({}, entry.days || {}) };
             // The audit's "still on the site?" verdict rides with the series
             // (tools/source-audit.js stamps it into the state).
-            if (entry.still && typeof entry.still === 'object' && entry.still.verdict) lost[series].still = { verdict: String(entry.still.verdict), at: String(entry.still.at || '') };
+            if (entry.still && typeof entry.still === 'object' && entry.still.verdict) {
+                lost[series].still = { verdict: String(entry.still.verdict), at: String(entry.still.at || '') };
+                // What the verdict rests on: `proof` names the positive
+                // evidence a "site-removed" needs ('listing-covers' = the
+                // listing as read covered these `days` and did not carry
+                // the title). A stamp without it is a guess from before
+                // the rule and proves nothing.
+                if (entry.still.proof) lost[series].still.proof = String(entry.still.proof);
+                if (Array.isArray(entry.still.days) && entry.still.days.length) lost[series].still.days = entry.still.days.map((day) => String(day));
+            }
         });
         const todayKey = String(current.todayKey || '');
         const runId = String(current.runId || '');
@@ -2403,7 +2412,11 @@ class SharedCore {
             const days = Object.keys(entry.days).sort();
             const since = days.map((day) => entry.days[day]).sort()[0] || '';
             const item = { title: entry.title, bear: entry.bear, since, seen: entry.seen, days, new: ok ? days.filter((day) => entry.days[day] === runId).length : 0 };
-            if (entry.still && entry.still.verdict) { item.still = entry.still.verdict; item.still_at = entry.still.at || ''; }
+            if (entry.still && entry.still.verdict) {
+                item.still = entry.still.verdict;
+                item.still_at = entry.still.at || '';
+                if (entry.still.proof) item.still_proof = entry.still.proof;
+            }
             return item;
         }).sort((a, b) => (b.bear ? 1 : 0) - (a.bear ? 1 : 0) || b.days.length - a.days.length || a.since.localeCompare(b.since) || a.title.localeCompare(b.title));
         return {
@@ -2413,6 +2426,71 @@ class SharedCore {
             listing_gone: listingGone,
             lost_new: list.reduce((sum, entry) => sum + entry.new, 0)
         };
+    }
+
+    // ── A collapse is our problem until proven otherwise ────────────────
+    // THE threshold, stated once: a source is DEGRADED while one batch of
+    // at least `minEvents` expected future event-days is missing together
+    // and that batch is at least `share` of what the source should be
+    // showing (the batch + what it shows now). Eagle LA, run
+    // 20261012-180543: 12 expected future nights missing at once against 53
+    // still shown (18%) — a month feed our own read had broken, which the
+    // gone-from-source check then offered for removal for four weeks.
+    static get SOURCE_COLLAPSE_RULE() {
+        return { minEvents: 5, share: 0.10 };
+    }
+
+    // null, or { missing, upcoming, share, since } for the largest batch of
+    // expected future event-days of one host's loss state
+    // (advanceSourceLoss's `state`) that went missing TOGETHER: the days
+    // one run confirmed lost, or the first misses not yet confirmed
+    // (`since` '' — this run). Sticky by construction: it lasts while those
+    // days stay missing and in the future, and clears by itself when they
+    // are read again or pass. A day stops counting only on PROOF: the
+    // audit found the listing covers that day without the title (proof
+    // 'listing-covers' and the day in still.days), or found the event in
+    // the run under another name (set-aside). "Still listed", a bare
+    // "unknown" and a "site-removed" that names no proof are our read's
+    // problem and keep counting.
+    static assessSourceCollapse(lossState, upcomingCount, todayKey) {
+        const rule = SharedCore.SOURCE_COLLAPSE_RULE;
+        const state = lossState && typeof lossState === 'object' ? lossState : {};
+        const today = String(todayKey || '');
+        const lost = state.lost && typeof state.lost === 'object' ? state.lost : {};
+        const misses = state.misses && typeof state.misses === 'object' ? state.misses : {};
+        const batches = new Map();
+        Object.keys(lost).forEach((series) => {
+            const entry = lost[series] && typeof lost[series] === 'object' ? lost[series] : {};
+            const still = entry.still && typeof entry.still === 'object' ? entry.still : null;
+            const verdict = still ? String(still.verdict || '') : '';
+            const provenDays = still && verdict !== 'still-listed' && still.proof && Array.isArray(still.days) ? still.days.map((day) => String(day)) : [];
+            const days = entry.days && typeof entry.days === 'object' ? entry.days : {};
+            Object.keys(days).forEach((day) => {
+                if (today && day < today) return;
+                if (verdict === 'set-aside' || provenDays.includes(day)) return;
+                const since = String(days[day] || '');
+                batches.set(since, (batches.get(since) || 0) + 1);
+            });
+        });
+        let pending = 0;
+        Object.keys(misses).forEach((id) => {
+            const cut = id.lastIndexOf('|');
+            if (cut < 0) return;
+            const day = id.slice(cut + 1);
+            const series = lost[id.slice(0, cut)];
+            if (today && day < today) return;
+            if (series && series.days && series.days[day]) return;
+            pending += 1;
+        });
+        let missing = 0;
+        let since = '';
+        batches.forEach((count, run) => { if (count > missing) { missing = count; since = run; } });
+        if (pending > missing) { missing = pending; since = ''; }
+        const upcoming = Math.max(0, Number(upcomingCount) || 0);
+        if (missing < rule.minEvents) return null;
+        const share = missing / (missing + upcoming);
+        if (share < rule.share) return null;
+        return { missing, upcoming, share: Math.round(share * 100) / 100, since };
     }
 
     // Error text → class for the per-host quality block.
@@ -2894,7 +2972,7 @@ class SharedCore {
                     host, parsers: [], pages: 0, outbound_pages: 0, page_errors: 0, errors: [],
                     extracted: 0, events: 0, bear: 0, tagged: 0, upcoming: 0, duration_ms: 0,
                     proposals: { new: 0, merge: 0 }, newUpcoming: 0, upcomingKeys: {}, eventKeyIndex: new Set(),
-                    roles: [], url: '', signals: { structured: 0, ai: 0 },
+                    roles: [], url: '', signals: { structured: 0, ai: 0 }, not_read: [],
                     quality: { n: 0, time: 0, place: 0, coords: 0, url: 0, image: 0, desc: 0, keys: new Set(), maxDay: '', flags: {}, aiDropped: 0, manualDropped: 0, dropReasons: new Map(), dedupRemoved: 0, merges: 0, changed: 0, churnFields: {}, errors: {}, renamed: 0, renamedExamples: [] }
                 });
             }
@@ -2923,6 +3001,16 @@ class SharedCore {
                 }
             });
             const primaryRow = hostOf(primary);
+            // Configured urls this run could not read (processParser's
+            // `unreadUrls`): charged to the url's own host.
+            (Array.isArray(parser.unreadUrls) ? parser.unreadUrls : []).forEach((entry) => {
+                const url = String(entry && typeof entry === 'object' ? entry.url || '' : entry || '').trim();
+                if (!url) return;
+                const urlHost = SharedCore.hostOfUrl(url);
+                const row = homeHosts.includes(urlHost) ? hostOf(urlHost) : primaryRow;
+                if (row.not_read.some((known) => known.url === url)) return;
+                row.not_read.push({ url, reason: String((entry && entry.reason) || 'not read').replace(/\s+/g, ' ').trim().slice(0, 160) });
+            });
             primaryRow.duration_ms += Number.isFinite(parser.durationMs) ? parser.durationMs : 0;
             // totalEvents = everything the parser extracted before the bear
             // gate; events[] = what it kept. A site that yields plenty but
@@ -3063,8 +3151,16 @@ class SharedCore {
             const status = row.extracted > 0 || row.events > 0 ? 'ok' : (row.page_errors > 0 ? 'dead' : 'empty');
             const prev = previous[row.host] && typeof previous[row.host] === 'object' ? previous[row.host] : null;
             const prevUpcoming = prev && prev.upcoming && typeof prev.upcoming === 'object' ? prev.upcoming : {};
+            // A configured url that was not read this run (refused, blocked,
+            // failed): the host was NOT READ, which is not "empty" and not a
+            // statement about any event. `status` keeps its meaning; the new
+            // `not_read` field says it, and the run neither confirms nor
+            // clears a loss, compares nothing against the previous snapshot,
+            // and leaves that snapshot (and the quality history) standing.
+            const notRead = row.not_read.length > 0;
+            const readStatus = notRead ? 'not-read' : status;
             const vanished = [];
-            if (status !== 'dead') {
+            if (status !== 'dead' && !notRead) {
                 Object.keys(prevUpcoming).forEach((key) => {
                     const entry = prevUpcoming[key] || {};
                     if (!entry.day || entry.day < todayKey) return;
@@ -3077,29 +3173,32 @@ class SharedCore {
             // host) are discovery only: their losses are recorded, never alerted.
             const aggregator = row.roles.length > 0 && row.roles.every((role) => role === 'aggregator');
             const loss = SharedCore.advanceSourceLoss(prev, {
-                runId, status, todayKey, extracted: row.extracted, upcomingKeys: row.upcomingKeys
+                runId, status: readStatus, todayKey, extracted: row.extracted, upcomingKeys: row.upcomingKeys
             });
+            // Degraded: one batch of expected future event-days missing
+            // together (SharedCore.SOURCE_COLLAPSE_RULE).
+            const collapse = SharedCore.assessSourceCollapse(loss.state, row.upcoming, todayKey);
             // Runs since the host last proposed a NEW event (ok runs only);
             // the kept-set identities ride in the snapshot for the next
             // run's stability figure.
             const previousRunsSinceNew = prev && Number.isFinite(prev.runs_since_new) ? prev.runs_since_new : null;
             let runsSinceNew = previousRunsSinceNew;
-            if (status === 'ok') runsSinceNew = row.proposals.new > 0 ? 0 : (previousRunsSinceNew === null ? 1 : previousRunsSinceNew + 1);
+            if (readStatus === 'ok') runsSinceNew = row.proposals.new > 0 ? 0 : (previousRunsSinceNew === null ? 1 : previousRunsSinceNew + 1);
             const quality = SharedCore.buildSourceQuality(row, {
                 todayKey,
                 previousKeys: prev && Array.isArray(prev.keys) ? prev.keys : null,
                 runsSinceNew
             });
-            const qualityState = status === 'ok'
+            const qualityState = readStatus === 'ok'
                 ? { keys: [...row.quality.keys], runs_since_new: runsSinceNew }
                 : { keys: prev && Array.isArray(prev.keys) ? prev.keys : [], runs_since_new: runsSinceNew };
             // Signals and drift (SharedCore.assessHostDrift): what the host
             // gave besides rows, against its last seven ok runs.
             const signals = { structured: row.signals.structured, ai: row.signals.ai, pages: row.pages, extracted: row.extracted };
-            const drift = status === 'ok' ? SharedCore.assessHostDrift(prev, signals) : [];
+            const drift = readStatus === 'ok' ? SharedCore.assessHostDrift(prev, signals) : [];
             const previousSignals = prev && Array.isArray(prev.signals_history) ? prev.signals_history : [];
-            qualityState.signals_history = status === 'ok' ? previousSignals.slice(-6).concat([signals]) : previousSignals;
-            records.push({
+            qualityState.signals_history = readStatus === 'ok' ? previousSignals.slice(-6).concat([signals]) : previousSignals;
+            const record = {
                 v: 1,
                 run_id: runId,
                 finished_at: finishedAt,
@@ -3129,8 +3228,12 @@ class SharedCore {
                 quality,
                 signals,
                 drift
-            });
-            hosts[row.host] = status === 'dead' && prev
+            };
+            // New fields, written only when they say something.
+            if (notRead) record.not_read = row.not_read;
+            if (collapse) record.collapse = collapse;
+            records.push(record);
+            hosts[row.host] = (status === 'dead' || notRead) && prev
                 ? Object.assign({}, prev, loss.state, qualityState)
                 : Object.assign({ run_id: runId, finished_at: finishedAt, upcoming: row.upcomingKeys }, loss.state, qualityState);
         });
@@ -9305,6 +9408,9 @@ class SharedCore {
         // into results.permanentlyGone instead of results.errors so a dead
         // ticketing page stops inflating the run's error count.
         const crawlGoneCollector = [];
+        // Configured urls this run could not read ({ url, reason }): the
+        // source is "not read", which is not "empty" (see crawlUrlsForEvents).
+        const unreadUrlCollector = [];
         // Events found on another org's site and NOT ingested (cross-org crawl
         // guard) — flagged, never silently dropped.
         const foreignOrgDropCollector = [];
@@ -9338,6 +9444,7 @@ class SharedCore {
             enrichDropCollector,
             crawlErrorCollector,
             crawlGoneCollector,
+            unreadUrlCollector,
             foreignOrgDropCollector,
             icsFeedCollector,
             undatedDropCollector
@@ -9554,6 +9661,10 @@ class SharedCore {
 
         if (crawlGoneCollector.length > 0) {
             result.crawlGoneUrls = crawlGoneCollector;
+        }
+
+        if (unreadUrlCollector.length > 0) {
+            result.unreadUrls = unreadUrlCollector;
         }
 
         if (foreignOrgDropCollector.length > 0) {
@@ -11844,6 +11955,13 @@ class SharedCore {
         // lines, header said "errors":0 — crawl failures were log-only).
         crawlErrorCollector = null,
         crawlGoneCollector = null,
+        // CONFIGURED urls (depth 0) this run could not read, with the reason
+        // — refused by the politeness gate, an HTTP error, a transport
+        // failure. A source that was not read is not an empty source:
+        // `result.unreadUrls` keeps it out of the gone-from-source
+        // comparison and the ledger records `not_read`. Passed at depth 0
+        // only; a crawl page that failed is a page error, as before.
+        unreadUrlCollector = null,
         // Events dropped by the cross-org crawl guard (flag, don't drop):
         // collected per host with the owning org so the run surfaces them.
         foreignOrgDropCollector = null,
@@ -11876,6 +11994,11 @@ class SharedCore {
             // one — see processEvents, which turns this into results.networkTruncated.
             if (this.networkResilience && this.networkResilience.isGivenUp()) {
                 await displayAdapter.logWarn(`SYSTEM: Network gave up — abandoning ${urlsToProcess.length - i} remaining URL(s) at depth ${currentDepth}`);
+                if (currentDepth === 0 && Array.isArray(unreadUrlCollector)) {
+                    urlsToProcess.slice(i).forEach((abandoned) => {
+                        if (typeof abandoned === 'string' && /^https?:\/\//i.test(abandoned)) unreadUrlCollector.push({ url: abandoned, reason: 'not requested (the network gave up this run)' });
+                    });
+                }
                 break;
             }
             const rawUrl = urlsToProcess[i];
@@ -12668,6 +12791,10 @@ class SharedCore {
                 // no dead-end learning, no failure note, no run error.
                 if (error && error.politeness) {
                     await displayAdapter.logInfo(`SYSTEM: 🚦 POLITE: ${currentDepth === 0 ? 'URL' : 'crawl page'} ${url} not requested (${error.politeness.reason})`);
+                    if (currentDepth === 0 && Array.isArray(unreadUrlCollector)) {
+                        unreadUrlCollector.push({ url: String(url), reason: `not requested (${String(error.politeness.reason || 'politeness gate').slice(0, 120)})` });
+                        await displayAdapter.logWarn(`SYSTEM: 🚫 NOT READ: configured URL ${url} was not requested this run (${error.politeness.reason}) — the source counts as NOT READ, never as empty; no "gone from the source" card is raised for it`);
+                    }
                     continue;
                 }
                 // Bot-wall responses (401/403) are permanent for this client:
@@ -12733,6 +12860,10 @@ class SharedCore {
                     crawlGoneCollector.push(failureRecord);
                 } else if (Array.isArray(crawlErrorCollector)) {
                     crawlErrorCollector.push(failureRecord);
+                }
+                if (currentDepth === 0 && Array.isArray(unreadUrlCollector)) {
+                    unreadUrlCollector.push({ url: String(url), reason: (failureStatusCode ? `HTTP ${failureStatusCode}` : String(message).replace(/\s+/g, ' ').trim()).slice(0, 120) });
+                    await displayAdapter.logWarn(`SYSTEM: 🚫 NOT READ: configured URL ${url} could not be read this run (${failureStatusCode ? `HTTP ${failureStatusCode}` : message}) — the source counts as NOT READ, never as empty; no "gone from the source" card is raised for it`);
                 }
                 if (currentDepth === 0) {
                     await displayAdapter.logError(`SYSTEM: Failed to process URL ${url}: ${message}`);
@@ -17611,6 +17742,10 @@ class SharedCore {
             const events = Array.isArray(result.events) ? result.events.filter(Boolean) : [];
             if (events.length === 0) continue;
             if (Array.isArray(result.crawlErrors) && result.crawlErrors.length > 0) continue;
+            // A configured url that could not be read this run (refused,
+            // blocked, failed): the source was not read, and a source that
+            // was not read states nothing about what is absent.
+            if (Array.isArray(result.unreadUrls) && result.unreadUrls.length > 0) continue;
             const dropped = (Array.isArray(result.bearDroppedEvents) ? result.bearDroppedEvents : [])
                 .map(entry => entry && typeof entry === 'object' ? entry.event : null)
                 .filter(Boolean);
@@ -17621,9 +17756,12 @@ class SharedCore {
             // atlantaeagle.com/event/southern-bears-bar-night/ (Nov 14), a
             // page it never fetched (run 20261012-180543).
             const pagesRead = new Set();
+            // The configured pages themselves: listings, never one event's
+            // own page.
+            const listings = new Set();
             for (const url of Array.isArray(config.urls) ? config.urls : []) {
                 const key = SharedCore.getPointerPageKey(url);
-                if (key) pagesRead.add(key);
+                if (key) { pagesRead.add(key); listings.add(key); }
             }
             for (const record of [...events, ...dropped]) {
                 for (const field of ['url', 'website', 'ticketUrl']) {
@@ -17645,11 +17783,18 @@ class SharedCore {
                     segments: platform ? parts.segments.map(segment => segment.toLowerCase()) : [],
                     events,
                     dropped,
-                    pagesRead
+                    pagesRead,
+                    listings
                 });
             }
         }
         return coverage;
+    }
+
+    // How old a "the listing covers that day and does not carry it" finding
+    // may be and still count as proof for a removal card.
+    static get GONE_PROOF_MAX_AGE_DAYS() {
+        return 14;
     }
 
     // The first-party coverage entry an aggregator record's links point
@@ -17703,11 +17848,29 @@ class SharedCore {
     // merge ladder did not fold) and the same name on other nights (a date
     // move), so the owner decides with both sides' facts.
     //
+    // "We did not see it" is not "the site removed it" (2026-11-09: nine
+    // Eagle LA nights offered for removal for four weeks because our own
+    // read of the December and January month feeds was broken). A removal
+    // card needs POSITIVE proof; everything else is held, counted and
+    // listed in `held` with its reason, and the streak keeps its place:
+    //   - NOT READ: a source with a configured url this run could not read
+    //     (`unreadUrls`) covers nothing and no card is raised for it;
+    //   - COLLAPSE: a source with a batch of expected future events missing
+    //     together (SharedCore.SOURCE_COLLAPSE_RULE) is degraded — our
+    //     problem until proven otherwise — and every card for it is held;
+    //   - PROOF: a "gone" / "date-moved" card needs the event's own page
+    //     answering 404/410 (the dead-end store, an origin statement, never
+    //     the shape presumption and never a site whose printed links are
+    //     dead by habit) or the audit's finding that the listing as read
+    //     COVERS that day and does not carry it (`still.proof`). A
+    //     "duplicate" / "moved" card already rests on what the site listed
+    //     that night in this run.
+    //
     // `savedByCity`: { city: { events: [{ identifier, uid?, title,
     // startDate, endDate, location, notes, url, isAllDay, series? }] } }
     // from the adapter (the phone snapshot or the published ICS on the Mac).
-    // Returns { candidates, state, summary }; `state` is the next run's
-    // `previousUpcoming.gone`.
+    // Returns { candidates, state, summary, identityMisses, held };
+    // `state` is the next run's `previousUpcoming.gone`.
     buildGoneFromSourceCandidates(results, savedByCity, options = {}) {
         const run = results && typeof results === 'object' ? results : {};
         const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
@@ -17720,9 +17883,11 @@ class SharedCore {
         const parserResults = Array.isArray(run.parserResults) ? run.parserResults : [];
         const analyzedEvents = Array.isArray(run.analyzedEvents) ? run.analyzedEvents : [];
         const cityConfigs = options.cities && typeof options.cities === 'object' ? options.cities : (this.cities || {});
-        const summary = { cities: 0, saved: 0, attributed: 0, seen: 0, firstMisses: 0, candidates: 0, duplicates: 0, identityMisses: 0, beyondHorizon: 0, series: 0, suppressedThin: 0, suppressedDrift: 0, sites: 0 };
+        const summary = { cities: 0, saved: 0, attributed: 0, seen: 0, firstMisses: 0, candidates: 0, duplicates: 0, identityMisses: 0, beyondHorizon: 0, series: 0, suppressedThin: 0, suppressedDrift: 0, sites: 0, notRead: 0, suppressedCollapse: 0, heldNoProof: 0 };
         const cities = savedByCity && typeof savedByCity === 'object' ? savedByCity : {};
         const identityMisses = [];
+        // Every record whose card was due and was held back, with why.
+        const held = [];
         const iso = (value) => {
             const ms = SharedCore.toEpochMillis(value);
             return ms === null ? null : new Date(ms).toISOString();
@@ -17747,8 +17912,35 @@ class SharedCore {
         const coverage = this.buildFirstPartySiteCoverage(parserResults);
         const checkedCities = new Set();
 
+        // Sources NOT READ this run (a configured url refused, blocked or
+        // failed): registrable domain → [{ source, reasons }]. They cover
+        // nothing; a saved record pointing into one keeps its streak.
+        const notReadSites = new Map();
+        parserResults.forEach((parser) => {
+            const config = parser && parser.config && typeof parser.config === 'object' ? parser.config : null;
+            if (!config || String(config.siteRole || '').trim().toLowerCase() === 'aggregator') return;
+            const unread = (Array.isArray(parser.unreadUrls) ? parser.unreadUrls : []).filter((entry) => entry && entry.url);
+            if (unread.length === 0) return;
+            const source = String(config.name || parser.name || '');
+            const reasons = unread.map((entry) => `${entry.url} — ${entry.reason || 'not read'}`);
+            (Array.isArray(config.urls) ? config.urls : []).forEach((url) => {
+                const domain = this.getRegistrableDomainFromUrl(url);
+                if (!domain) return;
+                if (!notReadSites.has(domain)) notReadSites.set(domain, []);
+                if (!notReadSites.get(domain).some((known) => known.source === source)) notReadSites.get(domain).push({ source, reasons });
+            });
+        });
+
+        // Each host as this run's ledger line will see it: the collapse
+        // verdict is the ledger's own (same loss state, same threshold).
+        const collapseByHost = new Map();
+        SharedCore.buildSourceLedger(run, { now, previousUpcoming: previous }).records.forEach((record) => {
+            if (record && record.collapse) collapseByHost.set(record.host, record.collapse);
+        });
+
         // Per source: its host, the furthest night it showed, its upcoming
-        // count against the host's recent median (thin), its drift.
+        // count against the host's recent median (thin), its drift, its
+        // collapse.
         const signalsByHost = SharedCore.collectHostSignals(run);
         const sourceFacts = new Map();
         parserResults.forEach((parser) => {
@@ -17771,8 +17963,36 @@ class SharedCore {
             const thin = usual !== null && usual >= 4 && upcoming < usual / 2;
             const signals = Object.assign({ structured: 0, ai: 0, pages: 0 }, signalsByHost.get(hosts.primary) || {}, { extracted: hosts.events.length });
             const drift = SharedCore.assessHostDrift(prevHost, signals);
-            sourceFacts.set(name, { source: name, host: hosts.primary, horizonDay, extracted: hosts.events.length, upcoming, usual, thin, drift });
+            sourceFacts.set(name, { source: name, host: hosts.primary, horizonDay, extracted: hosts.events.length, upcoming, usual, thin, drift, collapse: collapseByHost.get(hosts.primary) || null });
         });
+
+        // Proof 1 — the event's OWN page answers "not found": every link
+        // of the saved record into the site that names a page (deeper than
+        // the covered root, not one of the source's listings) is held by
+        // the dead-end store as an origin-stated 404/410. Never the shape
+        // presumption (derived), and never on a site that prints links of
+        // that shape it answers "not found" for — there the answer is the
+        // site's habit, not a statement about this event.
+        const deadLinks = this.getDeadLinkKnowledge();
+        const pageGoneProof = (siteLinks, target) => {
+            if (!deadLinks) return null;
+            const pages = siteLinks.filter((candidateLink) => {
+                const key = SharedCore.getPointerPageKey(candidateLink);
+                if (!key || (target.listings instanceof Set && target.listings.has(key))) return false;
+                const parts = this.getUrlRuleParts(candidateLink);
+                return Boolean(parts) && parts.segments.length > (Array.isArray(target.segments) ? target.segments.length : 0);
+            });
+            if (pages.length === 0) return null;
+            let newest = null;
+            for (const page of pages) {
+                const { entry } = this.findDeadEndUrlEntry(deadLinks, page);
+                if (!this.isStatedGoneEntry(deadLinks, entry)) return null;
+                if (this.getGoneShapePresumption(page)) return null;
+                if (!newest || String(entry.lastSeen) > String(newest.at)) newest = { url: page, status: Number(entry.lastStatus), at: String(entry.lastSeen || '') };
+            }
+            return newest ? { kind: 'page-gone', url: newest.url, status: newest.status, at: newest.at, detail: `its own page answers HTTP ${newest.status} (${newest.url}, ${newest.at.slice(0, 10)})` } : null;
+        };
+        const proofMaxAgeMs = SharedCore.GONE_PROOF_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
 
         // Every saved record this run's analysis matched (merge target,
         // conflict, slot) — by identifier and by its uid.
@@ -17849,20 +18069,48 @@ class SharedCore {
                         || (segments.length >= candidate.segments.length && candidate.segments.every((segment, index) => segment === segments[index])));
                     if (found) { target = Object.assign({}, found, { site: domain }); link = candidateLink; break; }
                 }
-                if (!target) return;
+                const prior = previousCity[uid] && typeof previousCity[uid] === 'object' ? previousCity[uid] : null;
+                const priorMisses = prior && Number.isFinite(Number(prior.misses)) ? Number(prior.misses) : 0;
+                const hold = (reason, detail, extra = {}) => {
+                    // Listed only when a card was due this run.
+                    if (priorMisses + 1 < confirmAfter) return;
+                    held.push(Object.assign({ city, uid, title: String(record.title || ''), day, reason, detail: String(detail || ''), misses: priorMisses + 1 }, extra));
+                };
+                if (!target) {
+                    // Its site is one this run did NOT read: nothing is
+                    // concluded, and the streak keeps its place.
+                    for (const candidateLink of links) {
+                        const domain = this.getRegistrableDomainFromUrl(candidateLink);
+                        const unreadSources = domain ? notReadSites.get(domain) : null;
+                        if (!unreadSources || unreadSources.length === 0) continue;
+                        if (matched.has(uid) || (identifier && matched.has(identifier))) break;
+                        summary.notRead += 1;
+                        if (prior) cityState[uid] = prior;
+                        hold('not-read', `${unreadSources[0].source} was not read this run (${unreadSources[0].reasons[0]})`, { host: SharedCore.hostOfUrl(candidateLink), source: unreadSources[0].source });
+                        break;
+                    }
+                    return;
+                }
                 const facts = sourceFacts.get(target.source) || null;
                 if (!facts) return;
                 summary.attributed += 1;
                 sitesUsed.add(target.site);
                 if (facts.horizonDay && day > facts.horizonDay) { summary.beyondHorizon += 1; return; }
-                const prior = previousCity[uid] && typeof previousCity[uid] === 'object' ? previousCity[uid] : null;
                 if (matched.has(uid) || (identifier && matched.has(identifier))) { summary.seen += 1; return; }
                 if (facts.thin || facts.drift.length > 0) {
                     if (facts.thin) summary.suppressedThin += 1; else summary.suppressedDrift += 1;
                     if (prior) cityState[uid] = prior;
                     return;
                 }
-                const misses = (prior && Number.isFinite(Number(prior.misses)) ? Number(prior.misses) : 0) + 1;
+                // A collapsed source is degraded: our problem until proven
+                // otherwise. Every card for it is held and the streak frozen.
+                if (facts.collapse) {
+                    summary.suppressedCollapse += 1;
+                    if (prior) cityState[uid] = prior;
+                    hold('collapse', `${target.source} is degraded: ${facts.collapse.missing} expected future event(s) went missing together${facts.collapse.since ? ` (run ${facts.collapse.since})` : ' (this run)'} against ${facts.collapse.upcoming} still shown`, { host: facts.host, source: target.source });
+                    return;
+                }
+                const misses = priorMisses + 1;
                 const savedTitleFold = fold(record.title);
                 const savedPlace = placeKeyOf(fields.bar, fields.address);
                 const sameNight = [];
@@ -17932,11 +18180,49 @@ class SharedCore {
                 const lost = prevHost && prevHost.lost && typeof prevHost.lost === 'object' ? prevHost.lost : null;
                 if (lost) {
                     const series = lost[savedTitleFold] || Object.keys(lost).map((key) => lost[key]).find((item) => item && similarTitles(fold(item.title), savedTitleFold));
-                    if (series && series.still && series.still.verdict) deepCheck = { verdict: String(series.still.verdict), at: String(series.still.at || '') };
+                    if (series && series.still && series.still.verdict) {
+                        deepCheck = { verdict: String(series.still.verdict), at: String(series.still.at || '') };
+                        // Proof 2 — the listing as read covers this day and
+                        // does not carry the title: stamped by the audit
+                        // with the days it vouches for (a series can be
+                        // vouched for on its November nights and unknown
+                        // for December), the day still lost in the ledger,
+                        // and the finding recent.
+                        const stampedDays = Array.isArray(series.still.days) ? series.still.days.map((value) => String(value)) : [];
+                        const atMs = Date.parse(deepCheck.at);
+                        if (series.still.proof) deepCheck.proof = String(series.still.proof);
+                        deepCheck.proven = deepCheck.proof === 'listing-covers'
+                            && stampedDays.includes(day) && Boolean(series.days && series.days[day])
+                            && Number.isFinite(atMs) && (now.getTime() - atMs) <= proofMaxAgeMs;
+                    }
                 }
                 if (deepCheck && (deepCheck.verdict === 'still-listed' || deepCheck.verdict === 'set-aside')) {
                     summary.identityMisses += 1;
                     identityMisses.push({ city, uid, title: String(record.title || ''), day, bar: String(fields.bar || ''), host: facts.host, source: target.source, listed: '', proposal: deepCheck.verdict });
+                    return;
+                }
+                // POSITIVE proof, or no card. "Duplicate" and "moved" rest
+                // on what the site listed that night in this run; "gone"
+                // and "date-moved" say the site no longer lists it that
+                // day, which our not seeing it does not prove.
+                let proof = null;
+                if (reason === 'duplicate') {
+                    proof = { kind: 'duplicate', detail: `the site lists it that night and the run gave that row to "${duplicateOf.title || duplicateOf.uid}"` };
+                } else if (reason === 'moved') {
+                    const row = sameNight.find((candidateRow) => candidateRow.similar);
+                    proof = { kind: 'listed-elsewhere', detail: `the site lists "${row ? row.title : ''}" that night${row && row.bar ? ` at ${row.bar}` : ''}` };
+                } else {
+                    const siteLinks = links.filter((candidateLink) => this.getRegistrableDomainFromUrl(candidateLink) === target.site);
+                    proof = pageGoneProof(siteLinks, target);
+                    if (!proof && deepCheck && deepCheck.proven) {
+                        proof = { kind: 'listing-covers', at: deepCheck.at, detail: `the site's listing covers ${day} and does not carry it (checked ${deepCheck.at.slice(0, 10)})` };
+                    }
+                }
+                if (!proof) {
+                    summary.heldNoProof += 1;
+                    const why = !deepCheck ? 'no check of the listing yet'
+                        : (deepCheck.verdict === 'site-removed' ? 'an older "site removed" verdict that rests on no proof for that day' : `the listing check says "${deepCheck.verdict}"`);
+                    hold('no-proof', `not seen for ${misses} run(s), but nothing proves the site removed it — its own page does not answer 404/410, and ${why}`, { host: facts.host, source: target.source });
                     return;
                 }
                 summary.candidates += 1;
@@ -17971,6 +18257,7 @@ class SharedCore {
                     misses,
                     firstMiss: stateEntry.first_miss,
                     deepCheck,
+                    proof,
                     instead: { sameNight: sameNight.slice(0, 6), sameTitle: sameTitle.slice(0, 6) }
                 });
             });
@@ -17985,7 +18272,7 @@ class SharedCore {
         });
         summary.sites = sitesUsed.size;
         candidates.sort((a, b) => b.misses - a.misses || String(a.startDate || '').localeCompare(String(b.startDate || '')));
-        return { candidates, state, summary, identityMisses };
+        return { candidates, state, summary, identityMisses, held };
     }
 
     // One key per page: scheme dropped, host lowercased without "www.", the

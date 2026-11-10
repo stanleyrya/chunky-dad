@@ -1205,9 +1205,12 @@ test('stillOnSite: the series title against the page text line by line — found
   assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco', page).line, 'bearded pig disco');
   assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco at Precinct', page).verdict, 'still-listed', 'two adjacent lines together');
   assert.equal(sourceAudit.stillOnSite('la cabane a sucre des ours', page).verdict, 'still-listed', 'accents folded');
-  assert.equal(sourceAudit.stillOnSite('ONYX', page).verdict, 'site-removed');
+  // 2026-11-09: words missing from the text are no longer "removed by the
+  // site" on their own — that needs the listing shown to cover the lost day
+  // (tests at the end of source-audit.test.js).
+  assert.equal(sourceAudit.stillOnSite('ONYX', page).verdict, 'unknown');
   assert.equal(sourceAudit.stillOnSite('Beer', page).verdict, 'still-listed', 'a one-token title needs its token on a line');
-  assert.equal(sourceAudit.stillOnSite('Furry Friday Underwear Party', page).verdict, 'site-removed', 'a stray shared word is not a match');
+  assert.equal(sourceAudit.stillOnSite('Furry Friday Underwear Party', page).verdict, 'unknown', 'a stray shared word is not a match');
   assert.equal(sourceAudit.stillOnSite('Bearded Pig Disco', '').verdict, 'unknown');
   assert.equal(sourceAudit.stillOnSite('', page).verdict, 'unknown');
 });

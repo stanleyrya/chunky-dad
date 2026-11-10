@@ -1128,9 +1128,19 @@ function renderReviewGoneCard(entry, ctx = {}) {
         const parts = reviewDateParts(row.startDate, tz);
         return `<li>${escapeHtmlText(row.title || '')}${parts ? ` <span class="muted">— ${escapeHtmlText(parts.day)}</span>` : ''}${row.bar ? ` <span class="muted">at ${escapeHtmlText(row.bar)}</span>` : ''}</li>`;
     }).join('');
-    const deep = p.deepCheck && p.deepCheck.verdict
-        ? `<div class="line muted">🔎 deep check${p.deepCheck.at ? ` (${escapeHtmlText(String(p.deepCheck.at).slice(0, 10))})` : ''}: ${escapeHtmlText(p.deepCheck.verdict === 'site-removed' ? 'the site removed it' : p.deepCheck.verdict)}</div>`
+    // Labels only. "The site removed it" is said when the check names its
+    // proof; a bare "site-removed" from before 2026-11-09 only ever meant
+    // "the title was not in the text read". The proof the card rests on
+    // (its own page answers 404/410, the listing covers the day, the site
+    // lists it elsewhere that night) gets its own line.
+    const deepWords = p.deepCheck && p.deepCheck.verdict === 'site-removed'
+        ? (p.deepCheck.proof ? 'the site removed it' : 'not found in the text read (no proof by itself)')
+        : (p.deepCheck ? p.deepCheck.verdict : '');
+    const deepLine = p.deepCheck && p.deepCheck.verdict
+        ? `<div class="line muted">🔎 deep check${p.deepCheck.at ? ` (${escapeHtmlText(String(p.deepCheck.at).slice(0, 10))})` : ''}: ${escapeHtmlText(deepWords)}</div>`
         : '';
+    const proofLine = p.proof && p.proof.detail ? `<div class="line">🧾 Proof: ${escapeHtmlText(String(p.proof.detail))}</div>` : '';
+    const deep = `${proofLine}${deepLine}`;
     const chips = [
         reviewChip(ctx, 'website', '🔗', p.url),
         reviewChip(ctx, 'tickets', '🎟', p.ticketUrl),
@@ -1542,7 +1552,7 @@ function renderSourceAuditPage(store, options = {}) {
     const quiet = hosts.filter((entry) => !sourceAudit.hostHasOpenFindings(entry)).sort((x, y) => String(y.date).localeCompare(String(x.date)) || x.host.localeCompare(y.host));
     const stillChip = (item) => item.verdict === 'still-listed'
         ? `<span class="badge still-listed">still listed — our miss</span>`
-        : (item.verdict === 'site-removed' ? '<span class="badge still-removed">site removed</span>'
+        : (item.verdict === 'site-removed' ? (item.proof ? '<span class="badge still-removed">site removed</span>' : '<span class="badge">unknown — not found, no proof</span>')
             : (item.verdict === 'set-aside' ? `<span class="badge still-removed">held by the run${item.how === 'bear-dropped' ? ' — bear check' : (item.how === 'renamed' ? ' — renamed' : '')}</span>` : '<span class="badge">unknown</span>'));
     const card = (entry) => `
 <div class="card${sourceAudit.hostHasOpenFindings(entry) ? ' open' : ''}">

@@ -1438,7 +1438,7 @@ test('source-audit routes: the findings page lists hosts with open findings firs
   fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(reviewRunFixture('20300101-051500')));
   fs.writeFileSync(path.join(dir, 'source-audit.json'), JSON.stringify({ version: 1, updatedAt: '2030-01-01T06:00:00Z', hosts: {
     'furball.nyc': { date: '2030-01-01', run_id: '20300101-051500', verdict: 'lost', badges: ['flags 2'], page: { url: 'https://furball.nyc/', fetchedAt: '2030-01-01T05:00:00Z', chars: 900 }, still: [{ title: 'FURBALL XL', verdict: 'still-listed', checked_at: '2030-01-01T06:00:00Z', line: 'furball xl nov 1' }], missing: [{ title: 'Furball Brunch', date: 'Sun Nov 2' }], fake: [{ title: 'Buy tickets', reason: 'a button' }], note: 'Two misses.', ai: 'ok' },
-    'quiet.example': { date: '2029-12-31', run_id: '20291231-051500', verdict: 'ok', badges: [], page: null, still: [{ title: 'Old Night', verdict: 'site-removed', checked_at: 'x', line: '' }], missing: [], fake: [], note: '', ai: 'ok' }
+    'quiet.example': { date: '2029-12-31', run_id: '20291231-051500', verdict: 'ok', badges: [], page: null, still: [{ title: 'Old Night', verdict: 'site-removed', proof: 'listing-covers', days: ['2030-02-01'], checked_at: 'x', line: '' }], missing: [], fake: [], note: '', ai: 'ok' }
   }, runs: [{ run_id: '20300101-051500', date: '2030-01-01', audited: ['furball.nyc'], losses: [], ms: 800 }] }));
   const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
   process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
@@ -2079,7 +2079,8 @@ test('review routes: a gone-from-source card renders with its reason and the Gon
       key: 'gone|nyc|UID9', kind: 'gone', city: 'nyc', uid: 'UID9', identifier: 'UID9', title: 'BLUF NYC HARD',
       startDate: '2030-10-11T02:00:00.000Z', endDate: '2030-10-11T06:00:00.000Z', timezone: 'America/New_York', bar: 'Eagle NYC', address: '554 W 28th St',
       host: 'eagle-ny.com', site: 'eagle-ny.com', source: 'Eagle NYC', siteEvents: 21, horizonDay: '2031-01-03', misses: 2, reason: 'gone',
-      deepCheck: { verdict: 'site-removed', at: '2030-01-01T00:00:00.000Z' },
+      deepCheck: { verdict: 'site-removed', at: '2030-01-01T00:00:00.000Z', proof: 'listing-covers', proven: true },
+      proof: { kind: 'listing-covers', at: '2030-01-01T00:00:00.000Z', detail: 'the site\'s listing covers 2030-10-10 and does not carry it (checked 2030-01-01)' },
       instead: { sameNight: [{ title: 'Bad Boy', startDate: '2030-10-11T02:00:00.000Z', day: '2030-10-10', bar: 'Eagle NYC', samePlace: true, similar: false, titleOverlap: 0 }], sameTitle: [] }
     }],
     state: {}, summary: { candidates: 1 }
@@ -2426,4 +2427,42 @@ test('review routes: the deck carries the run URL the phone fetches from, and th
     fs.rmSync(dir, { recursive: true, force: true });
     fs.rmSync(serverTmp, { recursive: true, force: true });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Labels of the removal card and the audit page (2026-11-09): the card says
+// what it rests on, and "the site removed it" is said only with proof — a
+// bare "site-removed" from before the rule meant "the title was not in the
+// text read" (Eagle LA's December parties judged off a November grid).
+// ---------------------------------------------------------------------------
+test('gone card and audit page: the proof the card rests on has its own line; a "site-removed" without proof is worded as not found, never as removed', () => {
+  const ctx = buildReviewCtx();
+  const proposal = (extra) => Object.assign({
+    key: 'gone|la|UID1', kind: 'gone', city: 'la', uid: 'UID1', identifier: 'UID1', title: 'CALF NIGHT', startDate: '2030-11-21T05:00:00.000Z', endDate: '2030-11-21T09:00:00.000Z',
+    timezone: 'America/Los_Angeles', bar: 'Eagle LA', host: 'eaglela.com', site: 'eaglela.com', source: 'Eagle LA', siteEvents: 55, horizonDay: '2031-01-30', misses: 30, reason: 'gone', instead: { sameNight: [], sameTitle: [] }
+  }, extra);
+  const listing = renderReviewCard({ kind: 'gone', key: 'gone|la|UID1', proposal: proposal({
+    deepCheck: { verdict: 'site-removed', at: '2030-11-09T12:40:00.000Z', proof: 'listing-covers', proven: true },
+    proof: { kind: 'listing-covers', at: '2030-11-09T12:40:00.000Z', detail: 'the site\'s listing covers 2030-11-20 and does not carry it (checked 2030-11-09)' }
+  }), display: {} }, ctx);
+  assert.ok(listing.includes('🧾 Proof: the site\'s listing covers 2030-11-20 and does not carry it (checked 2030-11-09)'), listing);
+  assert.ok(listing.includes('🔎 deep check (2030-11-09): the site removed it'));
+  const page = renderReviewCard({ kind: 'gone', key: 'gone|la|UID1', proposal: proposal({
+    proof: { kind: 'page-gone', url: 'https://eaglela.com/events/calf-night/', status: 404, at: '2030-11-09T12:00:00.000Z', detail: 'its own page answers HTTP 404 (https://eaglela.com/events/calf-night/, 2030-11-09)' }
+  }), display: {} }, ctx);
+  assert.ok(page.includes('🧾 Proof: its own page answers HTTP 404 (https://eaglela.com/events/calf-night/, 2030-11-09)'));
+  assert.ok(!page.includes('🔎 deep check'), 'no listing check ran: no line for one');
+  // A card from a run saved before the rule (the deck re-renders saved runs): the old stamp is not dressed up as proof.
+  const old = renderReviewCard({ kind: 'gone', key: 'gone|la|UID1', proposal: proposal({ deepCheck: { verdict: 'site-removed', at: '2030-11-09T12:40:00.000Z' } }), display: {} }, ctx);
+  assert.ok(old.includes('🔎 deep check (2030-11-09): not found in the text read (no proof by itself)'));
+  assert.ok(!old.includes('the site removed it') && !old.includes('🧾 Proof:'));
+
+  const audit = renderSourceAuditPage({ version: 1, runs: [], hosts: {
+    'grid.example': { date: '2030-11-09', run_id: '20301109-050000', verdict: 'lost', badges: [], page: null, missing: [], fake: [], wrong: [], note: '', ai: 'ok', still: [
+      { title: 'CALF NIGHT', verdict: 'site-removed', proof: 'listing-covers', days: ['2030-11-20'], checked_at: '2030-11-09T12:40:00Z', line: '' },
+      { title: 'NEW YEARS BASH', verdict: 'site-removed', checked_at: '2030-10-12T12:40:00Z', line: '' }
+    ] }
+  } });
+  assert.equal(audit.split('<span class="badge still-removed">site removed</span>').length - 1, 1, 'one proven removal');
+  assert.equal(audit.split('<span class="badge">unknown — not found, no proof</span>').length - 1, 1, 'one guess from before the rule');
 });
