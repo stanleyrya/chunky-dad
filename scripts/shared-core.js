@@ -9010,8 +9010,13 @@ class SharedCore {
         // .assessUndatedRow). Listed with the bear-check drops below so the
         // results drop list and the per-host ledger see them.
         const undatedDropCollector = [];
+        // Off-site pages that were not about this source, and the ticket
+        // vendor home pages never requested (flag, don't drop) — see
+        // judgeOffSiteListingPage.
+        const offSiteScope = { ticketVendorDomains: new Set(), drops: [] };
 
         await this.crawlUrlsForEvents({
+            offSiteScope,
             urls: effectiveParserConfig.urls || [],
             allEvents,
             parsers,
@@ -9248,6 +9253,10 @@ class SharedCore {
 
         if (foreignOrgDropCollector.length > 0) {
             result.foreignOrgDrops = foreignOrgDropCollector;
+        }
+
+        if (offSiteScope.drops.length > 0) {
+            result.offSiteListingDrops = offSiteScope.drops;
         }
 
         // Linked ICS feeds (report-only): summarize each feed against this
@@ -11547,9 +11556,17 @@ class SharedCore {
         // parent page already published (a row's own detail page, an event's
         // own ticket link). They are enrichment, not discovery, and spend
         // their own budget — see limitAdditionalUrls.
-        enrichmentUrlKeys = null
+        enrichmentUrlKeys = null,
+        // Off-site listing scope, shared by one parser's whole crawl:
+        // { ticketVendorDomains: Set, drops: [] } — see
+        // judgeOffSiteListingPage.
+        offSiteScope = null
     }) {
         const adaptiveCrawl = maxDepth === ADAPTIVE_CRAWL_DEPTH;
+        const offSite = offSiteScope && offSiteScope.ticketVendorDomains instanceof Set
+            ? offSiteScope
+            : { ticketVendorDomains: new Set(), drops: [] };
+        if (!Array.isArray(offSite.drops)) offSite.drops = [];
         const urlsToProcess = currentDepth > 0
             ? this.limitAdditionalUrls(urls, parserConfig, enrichmentUrlKeys)
             : (Array.isArray(urls) ? urls : []);
@@ -11899,6 +11916,21 @@ class SharedCore {
 
                 let pageEventsForEnrich = [];
                 let foreignOrgPage = false;
+                // Off-site listing rule: a page outside the configured site,
+                // reached by link-following (never an event's own ticket
+                // link — enrichContext), speaks for the source only when the
+                // PAGE is about the source. Judged by where the request
+                // LANDED when the adapter observed a redirect.
+                let offSiteChrome = currentDepth > 0 && !enrichContext
+                    ? this.judgeOffSiteListingPage({
+                        url,
+                        landingUrl: fetchedHtmlData && typeof fetchedHtmlData.finalUrl === 'string' ? fetchedHtmlData.finalUrl : '',
+                        html: htmlData && typeof htmlData.html === 'string' ? htmlData.html : '',
+                        pageClassification,
+                        parserConfig,
+                        ticketVendorDomains: offSite.ticketVendorDomains
+                    })
+                    : null;
                 if (!discoveryOnly) {
                     let parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter, url);
                     // Each event remembers the page it was actually extracted from
@@ -11991,6 +12023,37 @@ class SharedCore {
                         }
                         parsedEvents = [];
                     }
+                    // A ticket vendor's pathful page that lists an event the
+                    // source's own pages already published is the source's
+                    // organiser page there, whatever name it goes by.
+                    if (offSiteChrome && offSiteChrome.kind === 'vendor-directory' && parsedEvents.length > 0) {
+                        const ownEvents = allEvents.filter(event => event
+                            && this.isConfiguredSiteUrl(event._sourcePageUrl, parserConfig));
+                        const shared = parsedEvents.find(childEvent => ownEvents.some(ownEvent =>
+                            this.getSameEventIdentitySignal(childEvent, ownEvent, { requireCloseStartTimes: false })));
+                        if (shared) {
+                            await displayAdapter.logInfo(`SYSTEM: Off-site page: ${offSiteChrome.address} is read as this source's page on its ticket vendor — it lists "${shared.title || 'an event'}", which the configured site published too (off-site-listing)`);
+                            offSiteChrome = null;
+                        }
+                    }
+                    if (offSiteChrome && !foreignOrgPage) {
+                        const runningName = (parserConfig && parserConfig.name) || 'this parser';
+                        const withheld = parsedEvents.map(event => ({
+                            title: event.title || 'Untitled event',
+                            startDate: event.startDate
+                        }));
+                        const named = withheld.slice(0, 12).map(entry => `"${entry.title}"`).join(', ');
+                        await displayAdapter.logInfo(`SYSTEM: Off-site page: not ingesting ${withheld.length} event(s) from ${offSiteChrome.address} — ${offSiteChrome.detail}, and nothing on it names ${runningName} or links back to the configured site (off-site-listing)${withheld.length > 0 ? `: ${named}${withheld.length > 12 ? `, +${withheld.length - 12} more` : ''}` : ''}`);
+                        offSite.drops.push({
+                            host: this.getHostFromUrl(offSiteChrome.address) || offSiteChrome.domain,
+                            url,
+                            landingUrl: offSiteChrome.address,
+                            kind: offSiteChrome.kind,
+                            reason: offSiteChrome.detail,
+                            droppedEvents: withheld
+                        });
+                        parsedEvents = [];
+                    }
                     if (enrichContext && parsedEvents.length > 0) {
                         // Enrich-only page: keep ONLY events that are the same event
                         // as the originating (parent) event — same identity predicate
@@ -12027,6 +12090,13 @@ class SharedCore {
                         allEvents.push(...parsedEvents);
                     }
                     pageEventsForEnrich = parsedEvents;
+                    // Where the source's OWN pages send people to buy: learned
+                    // here, before this page's links are chosen, because the
+                    // same page that carries the ticket links carries the
+                    // vendor's logo link in its footer.
+                    if (!enrichContext) {
+                        this.noteSourceTicketVendorDomains(parsedEvents, url, parserConfig, offSite.ticketVendorDomains);
+                    }
                 }
 
                 // A root read through its feed is the site's own complete
@@ -12132,6 +12202,13 @@ class SharedCore {
                     linksToConsider = [];
                     adaptiveFollowBlocked = true;
                 }
+                // Nor from an off-site page that is not about the source: its
+                // links are the other site's menu.
+                if (offSiteChrome && !foreignOrgPage && linksToConsider.length > 0) {
+                    await displayAdapter.logInfo(`SYSTEM: Off-site page: not following ${linksToConsider.length} link(s) from ${url} (off-site-listing)`);
+                    linksToConsider = [];
+                    adaptiveFollowBlocked = true;
+                }
                 const shouldFollowLinks = adaptiveCrawl || currentDepth < maxDepth;
                 // Cross-host crawl scoping (generic — BEEFMINCE run 20260729-100804:
                 // dice.fm's promoter page exposed platform chrome that the adaptive
@@ -12152,6 +12229,32 @@ class SharedCore {
                         }
                         await displayAdapter.logInfo(`SYSTEM: Cross-host crawl scope at ${url} (host ${scope.pageDomain}, configured ${scope.configuredDomains.join(', ')}): kept ${scope.allowed.length} of ${linksToConsider.length} link(s), rejected ${scope.rejected.length} (cross-host-scope)`);
                         linksToConsider = scope.allowed;
+                    }
+                }
+                // Beside the scope filter, which only limits what is followed
+                // FROM an off-host page: the bare home page of the source's
+                // ticket vendor is never requested, from any page (see
+                // judgeOffSiteListingPage for the rule and its evidence).
+                if (linksToConsider.length > 0 && shouldFollowLinks && !adaptiveEnrichOnlyEventPage) {
+                    const vendorRoots = this.selectTicketVendorRootLinks(linksToConsider, parserConfig, offSite.ticketVendorDomains);
+                    if (vendorRoots.length > 0) {
+                        const runningName = (parserConfig && parserConfig.name) || 'this parser';
+                        const refused = new Set(vendorRoots.map(entry => entry.url));
+                        for (const entry of vendorRoots) {
+                            await displayAdapter.logInfo(`SYSTEM: Off-site scope: not following ${entry.url} from ${url} — the bare home page of ${entry.domain}, where ${runningName}'s own events sell their tickets, is the vendor's shop window, not a listing of this source (off-site-listing)`);
+                            offSite.drops.push({
+                                host: this.getHostFromUrl(entry.url) || entry.domain,
+                                url: entry.url,
+                                fromUrl: url,
+                                kind: 'vendor-root',
+                                reason: `bare home page of the ticket vendor ${entry.domain}`,
+                                droppedEvents: []
+                            });
+                        }
+                        linksToConsider = linksToConsider.filter(link => !refused.has(link));
+                        if (linksToConsider.length === 0 && additionalLinks.length > 0 && adaptiveCrawl && !adaptiveFollowBlocked) {
+                            adaptiveFollowBlocked = true;
+                        }
                     }
                 }
                 if (adaptiveCrawl && !adaptiveFollowBlocked) {
@@ -12234,7 +12337,8 @@ class SharedCore {
                             crawlGoneCollector,
                             foreignOrgDropCollector,
                             icsFeedCollector,
-                            undatedDropCollector
+                            undatedDropCollector,
+                            offSiteScope: offSite
                         });
                     }
                 }
@@ -12327,7 +12431,8 @@ class SharedCore {
                             crawlGoneCollector,
                             foreignOrgDropCollector,
                             icsFeedCollector,
-                            undatedDropCollector
+                            undatedDropCollector,
+                            offSiteScope: offSite
                         });
                     }
                 } else {
@@ -12795,6 +12900,194 @@ class SharedCore {
         result.allowed = allowed;
         result.rejected = rejected;
         return result;
+    }
+
+    // ------------------------------------------------------------------
+    // Off-site listings (generic — page-derived, no host lists).
+    // The cross-host scope above limits what is followed FROM an off-host
+    // page; it never asked whether the off-host page itself may speak for
+    // the source. Run 20261109-053706: twotonsoffun.co.uk's page links its
+    // ticket vendor's home page, https://www.outsavvy.com/ — read as a
+    // listing (10 events, none the source's), then 13 of its links and 8
+    // ticket links were followed. bearbrum.com reached dandyclub.uk/ (a
+    // venue's home page, 2 events) the same way.
+    //
+    // A page OUTSIDE the configured site, reached by link-following (never
+    // an event's own ticket link — those are enrich-only and keep nothing
+    // but their parent), contributes events and is crawled further only
+    // when the PAGE is about the source:
+    //   - a pathful page (an organiser, profile or event page) on a domain
+    //     that is not the source's ticket vendor — unchanged, the cross-host
+    //     scope governs it; or
+    //   - it names the source (its name, its own domain's label, its
+    //     handle) in its address or its text; or
+    //   - it links back to the configured site.
+    // A BARE ROOT reached cross-host that does neither is the other site's
+    // front door: chrome. The source's TICKET VENDOR — a registrable domain
+    // the ticket links of the source's own events point at — is judged
+    // harder: its bare home page is never requested, and its pathful pages
+    // that are not event pages (browse, category, directory) must be about
+    // the source too, or list an event the source's own pages published.
+    // Fails open where it cannot know: no configured urls, a configured-site
+    // page, an enrich-only page and a pathful page off the vendor all behave
+    // exactly as before.
+    // ------------------------------------------------------------------
+
+    // Is this configured url on a platform shared by many unrelated parties
+    // (the same test buildFirstPartySiteCoverage applies)? There the host
+    // names the platform and only the PATH names the source.
+    isSharedPlatformUrl(url) {
+        const parts = this.getUrlRuleParts(typeof url === 'string' ? url : '');
+        if (!parts || !parts.host) return false;
+        return isPlatformIdentityHost(parts.host) || this.isKnownTicketingPlatformHost(parts.host) || isLinkHubHost(parts.host);
+    }
+
+    // The words a page would use to name this source: the parser's name,
+    // the label of its own domain (bearbrum.com → "bearbrum"), its path on
+    // a shared platform (…/o/ccbc-resort-hotel-30560403776 → "ccbc resort
+    // hotel"), its curated website and social handles. Each as
+    // { words, squashed }; keys shorter than six letters name nothing.
+    getSourceNameKeys(parserConfig) {
+        const keys = [];
+        const add = (value) => {
+            const words = String(value === null || value === undefined ? '' : value)
+                .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+            const squashed = words.replace(/ /g, '');
+            if (squashed.length < 6 || /^\d+$/.test(squashed)) return;
+            if (!keys.some(key => key.squashed === squashed)) keys.push({ words, squashed });
+        };
+        const addSite = (siteUrl) => {
+            const parts = this.getUrlRuleParts(typeof siteUrl === 'string' ? siteUrl : '');
+            if (!parts || !parts.host) return;
+            if (this.isSharedPlatformUrl(siteUrl)) {
+                if (parts.segments.length > 0) add(parts.segments[parts.segments.length - 1].replace(/-\d+$/, ''));
+                return;
+            }
+            const domain = this.getRegistrableDomainFromUrl(siteUrl);
+            if (domain && domain.includes('.')) add(domain.split('.')[0]);
+        };
+        const name = parserConfig && typeof parserConfig.name === 'string' ? parserConfig.name : '';
+        add(name);
+        add(name.replace(/\([^)]*\)/g, ' '));
+        for (const configuredUrl of Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : []) addSite(configuredUrl);
+        const metadata = parserConfig && parserConfig.metadata && typeof parserConfig.metadata === 'object' ? parserConfig.metadata : {};
+        const metaValue = (field) => {
+            const entry = metadata[field];
+            const value = entry && typeof entry === 'object' ? entry.value : entry;
+            return typeof value === 'string' ? value.trim() : '';
+        };
+        if (metaValue('website')) addSite(metaValue('website'));
+        for (const field of ['instagram', 'facebook']) {
+            const handle = metaValue(field) ? this.socialHandleKey(metaValue(field)) : '';
+            if (handle && !/[/.]/.test(handle)) add(handle);
+        }
+        return keys;
+    }
+
+    // Why this page is about the source ('' when nothing on it says so):
+    // it links back to the configured site (on a shared platform: to the
+    // source's own path there), or its address or text names the source.
+    describePageAboutSource(html, pageAddress, parserConfig) {
+        const lower = String(html || '').toLowerCase().replace(/\\\//g, '/');
+        for (const configuredUrl of Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : []) {
+            const parts = this.getUrlRuleParts(typeof configuredUrl === 'string' ? configuredUrl : '');
+            if (!parts || !parts.host) continue;
+            if (this.isSharedPlatformUrl(configuredUrl)) {
+                if (parts.segments.length === 0) continue;
+                const needle = `${parts.host}/${parts.segments.join('/')}`.toLowerCase();
+                if (lower.includes(needle)) return `links back to ${needle}`;
+                continue;
+            }
+            const domain = this.getRegistrableDomainFromUrl(configuredUrl);
+            if (!domain) continue;
+            let from = 0;
+            while (from < lower.length) {
+                const at = lower.indexOf(domain, from);
+                if (at < 0) break;
+                from = at + domain.length;
+                const before = lower.slice(Math.max(0, at - 80), at);
+                const after = lower.charAt(at + domain.length);
+                // A host: reached straight from "//" through its labels, and
+                // ending where a host ends.
+                if (/\/\/(?:[a-z0-9-]+\.)*$/.test(before) && (after === '' || /[\/"'?#\s:&<>)\\]/.test(after))) {
+                    return `links back to ${domain}`;
+                }
+            }
+        }
+        const text = ` ${`${pageAddress || ''} ${lower}`.toLowerCase().replace(/[^a-z0-9]+/g, ' ')} `;
+        for (const key of this.getSourceNameKeys(parserConfig)) {
+            if (text.includes(` ${key.words} `)) return `names "${key.words}"`;
+            if (key.squashed !== key.words && text.includes(` ${key.squashed} `)) return `names "${key.squashed}"`;
+        }
+        return '';
+    }
+
+    // Registrable domains the source's OWN pages send people to for tickets:
+    // the ticketUrl of every event a configured-site page published, minus
+    // the configured site itself. Adds to `domains`; returns it.
+    noteSourceTicketVendorDomains(events, pageUrl, parserConfig, domains) {
+        if (!(domains instanceof Set)) return domains;
+        if (!this.isConfiguredSiteUrl(pageUrl, parserConfig)) return domains;
+        for (const event of Array.isArray(events) ? events : []) {
+            const ticketUrl = event && typeof event.ticketUrl === 'string' ? event.ticketUrl.trim() : '';
+            if (!/^https?:\/\//i.test(ticketUrl)) continue;
+            if (this.isConfiguredSiteUrl(ticketUrl, parserConfig)) continue;
+            const domain = this.getRegistrableDomainFromUrl(ticketUrl);
+            if (domain && domain.includes('.')) domains.add(domain);
+        }
+        return domains;
+    }
+
+    // The follow candidates that are the bare home page of the source's
+    // ticket vendor: [{ url, domain }]. Only the vendor's own front door
+    // (the registrable domain itself, with or without "www.", no path, no
+    // query) — a subdomain root can be an organiser's own box office and
+    // is judged as a page (judgeOffSiteListingPage).
+    selectTicketVendorRootLinks(links, parserConfig, ticketVendorDomains) {
+        if (!(ticketVendorDomains instanceof Set) || ticketVendorDomains.size === 0) return [];
+        const selected = [];
+        for (const link of Array.isArray(links) ? links : []) {
+            const parts = this.getUrlRuleParts(typeof link === 'string' ? link : '');
+            if (!parts || parts.segments.length > 0 || parts.hasQuery) continue;
+            const domain = this.getRegistrableDomainFromUrl(link);
+            if (!domain || parts.host !== domain || !ticketVendorDomains.has(domain)) continue;
+            if (this.isConfiguredSiteUrl(link, parserConfig)) continue;
+            selected.push({ url: link, domain });
+        }
+        return selected;
+    }
+
+    // Is this crawled page an off-site page that may NOT speak for the
+    // source? null when it may (or when the rule does not apply); otherwise
+    // { address, domain, kind: 'bare-root' | 'vendor-directory', detail }.
+    // The caller has already excluded configured roots and enrich-only pages.
+    judgeOffSiteListingPage({ url, landingUrl = '', html = '', pageClassification = '', parserConfig = null, ticketVendorDomains = null } = {}) {
+        const configuredUrls = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
+        if (configuredUrls.length === 0) return null;
+        const landed = typeof landingUrl === 'string' && /^https?:\/\//i.test(landingUrl.trim()) ? landingUrl.trim() : '';
+        const address = landed || url;
+        if (this.isConfiguredSiteUrl(address, parserConfig)) return null;
+        const parts = this.getUrlRuleParts(typeof address === 'string' ? address : '');
+        const domain = this.getRegistrableDomainFromUrl(address);
+        if (!parts || !domain) return null;
+        const bareRoot = parts.segments.length === 0 && !parts.hasQuery;
+        const vendor = ticketVendorDomains instanceof Set && ticketVendorDomains.has(domain);
+        if (!bareRoot && !vendor) return null;
+        if (!bareRoot && (pageClassification === 'event-page'
+            || this.isEventDetailShapedUrl(address)
+            || this.classifyUrlByRules(address) === 'event-page')) {
+            return null;
+        }
+        if (this.describePageAboutSource(html, `${url} ${address}`, parserConfig)) return null;
+        const landedNote = landed && landed !== url ? ` (where ${url} landed)` : '';
+        return {
+            address,
+            domain,
+            kind: bareRoot ? 'bare-root' : 'vendor-directory',
+            detail: bareRoot
+                ? `it is the bare home page of ${domain}${landedNote}, reached by following a link${vendor ? ' — and the ticket vendor of this source\'s own events' : ''}`
+                : `it is a directory page of ${domain}${landedNote}, the ticket vendor of this source's own events, not an event page`
+        };
     }
 
     // ------------------------------------------------------------------

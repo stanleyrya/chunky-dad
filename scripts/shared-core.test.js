@@ -30304,3 +30304,364 @@ test('enrich-only crawl: the context is found for the URL as requested even when
   assert.deepEqual(result.enrichOnlyDrops[0].droppedEvents.map(e => e.title), ['Tiki Tuesday Trivia', 'Luau Brunch']);
   assert.ok(!fetched.includes('https://boxoffice.example/events/another-night'), 'an enrich-only page is not crawled further');
 });
+
+// ── Off-site listings (run 20261109-053706) ───────────────────────────────
+// twotonsoffun.co.uk's footer reads "Tickets handled by <a
+// href="https://www.outsavvy.com">OutSavvy</a>": the crawl read the ticket
+// vendor's home page as a listing (10 events, none the promoter's), followed
+// 13 of its links and 8 ticket links — 37 off-site pages, 268 parsed records,
+// 114 of the 118 records in the promoter's result were other organisers'.
+// bearbrum.com/events reached dandyclub.uk/ (a club's home page) the same way.
+// Fixtures: the cached pages of that run, trimmed to the lines that matter.
+const TWO_TONS_HOME_HTML = `<!DOCTYPE html><html lang="en-GB"><head><title>Two Tons of Fun</title></head><body>
+<a href="https://link.outsavvy.com/twotonsoffun" class="btn btn-secondary" target="_blank" rel="noopener noreferrer" data-track="christmas-page-bookmark">View tickets</a>
+<footer><a data-track="footer-cookie-settings">Cookie settings</a> <span>Tickets handled by <a href="https://www.outsavvy.com" target="_blank" rel="noopener noreferrer">OutSavvy</a></span></footer>
+</body></html>`;
+const OUTSAVVY_HOME_HTML = `<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head id="Head1"><title>
+	OutSavvy - Create, Share, Discover & Attend Events. Help support LGBTQ+ charities | OutSavvy.com
+</title></head><body><a href="/events">Find events</a> <a href="/selltickets">Sell tickets</a>
+<a href="/event/40716/sewah-the-cock-tavern-november">SEWAH @ The Cock Tavern</a></body></html>`;
+const DANDY_HOME_HTML = `<!DOCTYPE html><html lang="en-GB"><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<title>Dandy | Alternative Queer Clubbing</title>
+<link rel="canonical" href="https://dandyclub.uk/" />
+<meta property="og:site_name" content="Dandy -" /><meta property="og:type" content="website" />
+<meta property="og:title" content="Dandy | Alternative Queer Clubbing" /></head>
+<body><a href="https://dandyclub.uk/parties/">Parties</a></body></html>`;
+const CCBC_HOME_HTML = `<!DOCTYPE html><html><head><title>68300 Gay Resort Drive, Cathedral City, CA 92234</title>
+<meta name="description" content="California's Largest Clothing Optional Gay Men's Resort"/></head><body>
+<ul aria-label="Social Bar"><li><a data-testid="linkElement" href="https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776" target="_blank" aria-label="Tickets &amp; Passes">Tickets</a></li></ul>
+</body></html>`;
+
+function createOffSiteCore(rules) {
+  return new SharedCore(CITIES, { eventSchema: EventSchema, pageClassificationRules: rules });
+}
+
+test('off-site listing: the bare home page of the source\'s ticket vendor is never requested', async () => {
+  const core = createOffSiteCore([
+    { pattern: /twotonsoffun\.co\.uk\/$/i, classification: 'multi-event-page' },
+    { pattern: /outsavvy\.com\/(?:twotonsoffun)?$/i, classification: 'multi-event-page' }
+  ]);
+  const display = createDisplayAdapterStub();
+  const soon = new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    'https://twotonsoffun.co.uk/': {
+      html: TWO_TONS_HOME_HTML,
+      events: [{ title: 'Two Tons of Christmas', startDate: soon, ticketUrl: 'https://link.outsavvy.com/twotonsoffun' }],
+      additionalLinks: ['https://www.outsavvy.com/']
+    },
+    // The promoter's own ticket link: an enrich-only page, untouched by the rule.
+    'https://link.outsavvy.com/twotonsoffun': {
+      events: [
+        { title: 'Two Tons of Christmas', startDate: soon },
+        { title: 'Soho School of Burlesque Scratch Show', startDate: new Date(soon.getTime() + 86400000) }
+      ]
+    },
+    'https://www.outsavvy.com/': {
+      html: OUTSAVVY_HOME_HTML,
+      events: [
+        { title: 'SEWAH @ The Cock Tavern', startDate: soon, ticketUrl: 'https://www.outsavvy.com/event/40716/sewah-the-cock-tavern-november' },
+        { title: 'Queer Reformer Pilates - Mixed Level', startDate: new Date(soon.getTime() + 2 * 86400000) }
+      ],
+      additionalLinks: ['https://www.outsavvy.com/event/40716/sewah-the-cock-tavern-november']
+    },
+    'https://www.outsavvy.com/event/40716/sewah-the-cock-tavern-november': {
+      events: [{ title: 'SEWAH @ The Cock Tavern', startDate: soon }]
+    }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const entry = { name: 'Two Tons of Fun', urls: ['https://twotonsoffun.co.uk/'], alwaysBear: true, ai: CRAWL_AI };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+
+  assert.ok(!fetched.includes('https://www.outsavvy.com/'), `the vendor's home page is not requested: ${JSON.stringify(fetched)}`);
+  assert.ok(!fetched.includes('https://www.outsavvy.com/event/40716/sewah-the-cock-tavern-november'), 'nor anything behind it');
+  assert.ok(fetched.includes('https://link.outsavvy.com/twotonsoffun'), 'the events\' own ticket link is still read (enrich-only)');
+  assert.deepEqual(result.events.map(e => e.title), ['Two Tons of Christmas']);
+  assert.ok(
+    display.logs.includes("SYSTEM: Off-site scope: not following https://www.outsavvy.com/ from https://twotonsoffun.co.uk/ — the bare home page of outsavvy.com, where Two Tons of Fun's own events sell their tickets, is the vendor's shop window, not a listing of this source (off-site-listing)"),
+    JSON.stringify(display.logs.filter(l => l.includes('Off-site'))));
+  assert.equal(result.offSiteListingDrops.length, 1);
+  assert.equal(result.offSiteListingDrops[0].kind, 'vendor-root');
+  assert.equal(result.offSiteListingDrops[0].url, 'https://www.outsavvy.com/');
+  assert.equal(result.offSiteListingDrops[0].fromUrl, 'https://twotonsoffun.co.uk/');
+});
+
+test('off-site listing: a bare root reached by following a link is chrome unless the page is about the source', async () => {
+  const core = createOffSiteCore([
+    { pattern: /bearbrum\.com\/events$/i, classification: 'multi-event-page' },
+    { pattern: /dandyclub\.uk\/(?:parties\/)?$/i, classification: 'multi-event-page' }
+  ]);
+  const display = createDisplayAdapterStub();
+  const soon = new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    'https://www.bearbrum.com/events': {
+      events: [{ title: 'BEAR BRUM WEEKEND PASS', startDate: soon }],
+      additionalLinks: ['https://dandyclub.uk/']
+    },
+    'https://dandyclub.uk/': {
+      html: DANDY_HOME_HTML,
+      events: [
+        { title: 'Dragula Viewing Parties', startDate: new Date(soon.getTime() + 86400000), ticketUrl: 'https://dandyclub.uk/parties/' },
+        { title: 'Dandy’s Dragula Viewing Party', startDate: new Date(soon.getTime() + 2 * 86400000) }
+      ],
+      additionalLinks: ['https://dandyclub.uk/event/dandys-dragula-viewing-party-11-11-26/']
+    },
+    'https://dandyclub.uk/parties/': { events: [{ title: 'Dandy New Year', startDate: soon }] },
+    'https://dandyclub.uk/event/dandys-dragula-viewing-party-11-11-26/': { events: [{ title: 'Dandy’s Dragula Viewing Party', startDate: soon }] }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const entry = {
+    name: 'Bear Brum',
+    urls: ['https://www.bearbrum.com/events'],
+    alwaysBear: true,
+    metadata: { website: { value: 'https://www.bearbrum.com' }, instagram: { value: 'https://www.instagram.com/bear_brum_festival' } },
+    ai: CRAWL_AI
+  };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+
+  // The page has to be read to be judged — what it says decides.
+  assert.ok(fetched.includes('https://dandyclub.uk/'));
+  assert.deepEqual(result.events.map(e => e.title), ['BEAR BRUM WEEKEND PASS']);
+  assert.ok(
+    display.logs.includes('SYSTEM: Off-site page: not ingesting 2 event(s) from https://dandyclub.uk/ — it is the bare home page of dandyclub.uk, reached by following a link, and nothing on it names Bear Brum or links back to the configured site (off-site-listing): "Dragula Viewing Parties", "Dandy’s Dragula Viewing Party"'),
+    JSON.stringify(display.logs.filter(l => l.includes('Off-site'))));
+  // No fan-out, and no ticket-link enrichment for records that were withheld.
+  assert.ok(!fetched.includes('https://dandyclub.uk/parties/'));
+  assert.ok(!fetched.includes('https://dandyclub.uk/event/dandys-dragula-viewing-party-11-11-26/'));
+  assert.ok(display.logs.includes('SYSTEM: Off-site page: not following 1 link(s) from https://dandyclub.uk/ (off-site-listing)'));
+  // Flag, don't drop: the run keeps the page, the reason and the titles.
+  assert.equal(result.offSiteListingDrops.length, 1);
+  assert.equal(result.offSiteListingDrops[0].kind, 'bare-root');
+  assert.equal(result.offSiteListingDrops[0].host, 'dandyclub.uk');
+  assert.deepEqual(result.offSiteListingDrops[0].droppedEvents.map(e => e.title), ['Dragula Viewing Parties', 'Dandy’s Dragula Viewing Party']);
+});
+
+test('off-site listing: a bare root that links back to the source still speaks for it', async () => {
+  // CCBC Resort Hotel is configured at its Eventbrite organiser page, which
+  // links the resort's own site; that home page links the organiser page back.
+  const organiser = 'https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776';
+  const core = createOffSiteCore([
+    { pattern: /eventbrite\.com\/o\//i, classification: 'multi-event-page' },
+    { pattern: /ccbcresorthotel\.com\/$/i, classification: 'multi-event-page' }
+  ]);
+  const display = createDisplayAdapterStub();
+  const soon = new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    [organiser]: {
+      events: [{ title: 'Bear Splash Weekend', startDate: soon }],
+      additionalLinks: ['https://www.ccbcresorthotel.com/']
+    },
+    'https://www.ccbcresorthotel.com/': {
+      html: CCBC_HOME_HTML,
+      events: [{ title: 'Leather Pool Party', startDate: new Date(soon.getTime() + 3 * 86400000) }],
+      additionalLinks: ['https://www.ccbcresorthotel.com/event/leather-pool-party']
+    },
+    'https://www.ccbcresorthotel.com/event/leather-pool-party': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const entry = { name: 'CCBC Resort Hotel', urls: [organiser], alwaysBear: true, ai: CRAWL_AI };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+
+  assert.deepEqual(result.events.map(e => e.title).sort(), ['Bear Splash Weekend', 'Leather Pool Party']);
+  assert.ok(fetched.includes('https://www.ccbcresorthotel.com/event/leather-pool-party'), 'and its event links are still followed');
+  assert.deepEqual(display.logs.filter(l => l.includes('(off-site-listing)')), []);
+  assert.equal(result.offSiteListingDrops, undefined);
+});
+
+test('off-site listing: a ticket vendor\'s directory page must be about the source; its organiser pages stay read', async () => {
+  const core = createOffSiteCore([
+    { pattern: /twotonsoffun\.co\.uk\/$/i, classification: 'multi-event-page' },
+    { pattern: /outsavvy\.com\/(?:events|organiser\/[^/]+)$/i, classification: 'multi-event-page' }
+  ]);
+  const display = createDisplayAdapterStub();
+  const soon = new Date(Date.now() + 7 * 86400000);
+  const later = (days) => new Date(soon.getTime() + days * 86400000);
+  const pages = {
+    'https://twotonsoffun.co.uk/': {
+      html: TWO_TONS_HOME_HTML,
+      events: [{ title: 'Two Tons of Christmas', startDate: soon, ticketUrl: 'https://www.outsavvy.com/event/12116/two-tons-of-fun' }],
+      additionalLinks: [
+        'https://www.outsavvy.com/events',                      // the vendor's browse page
+        'https://www.outsavvy.com/organiser/two-tons-of-fun',   // an organiser page that names the source
+        'https://www.outsavvy.com/organiser/ttof-presents'      // one that goes by another name
+      ]
+    },
+    'https://www.outsavvy.com/event/12116/two-tons-of-fun': { events: [{ title: 'Two Tons of Christmas', startDate: soon }] },
+    'https://www.outsavvy.com/events': {
+      html: OUTSAVVY_HOME_HTML,
+      events: [
+        { title: 'SEWAH @ The Cock Tavern', startDate: later(1) },
+        { title: 'Queer Reformer Pilates - Mixed Level', startDate: later(2) }
+      ],
+      additionalLinks: ['https://www.outsavvy.com/event/40716/sewah-the-cock-tavern-november']
+    },
+    'https://www.outsavvy.com/event/40716/sewah-the-cock-tavern-november': {},
+    'https://www.outsavvy.com/organiser/two-tons-of-fun': {
+      html: OUTSAVVY_HOME_HTML,
+      events: [{ title: 'Two Tons of Spring', startDate: later(30) }]
+    },
+    'https://www.outsavvy.com/organiser/ttof-presents': {
+      html: OUTSAVVY_HOME_HTML,
+      events: [
+        { title: 'Two Tons of Christmas', startDate: soon, ticketUrl: 'https://www.outsavvy.com/event/12116/two-tons-of-fun' },
+        { title: 'Two Tons of Summer', startDate: later(60) }
+      ]
+    }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const entry = { name: 'Two Tons of Fun', urls: ['https://twotonsoffun.co.uk/'], alwaysBear: true, ai: CRAWL_AI };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+  const titles = result.events.map(e => e.title).sort();
+
+  assert.deepEqual(titles, ['Two Tons of Christmas', 'Two Tons of Spring', 'Two Tons of Summer'], JSON.stringify(display.logs.filter(l => l.includes('Off-site'))));
+  assert.ok(
+    display.logs.includes('SYSTEM: Off-site page: not ingesting 2 event(s) from https://www.outsavvy.com/events — it is a directory page of outsavvy.com, the ticket vendor of this source\'s own events, not an event page, and nothing on it names Two Tons of Fun or links back to the configured site (off-site-listing): "SEWAH @ The Cock Tavern", "Queer Reformer Pilates - Mixed Level"'),
+    JSON.stringify(display.logs.filter(l => l.includes('Off-site'))));
+  assert.ok(!fetched.includes('https://www.outsavvy.com/event/40716/sewah-the-cock-tavern-november'));
+  assert.ok(
+    display.logs.includes('SYSTEM: Off-site page: https://www.outsavvy.com/organiser/ttof-presents is read as this source\'s page on its ticket vendor — it lists "Two Tons of Christmas", which the configured site published too (off-site-listing)'),
+    'a vendor page that lists the source\'s own event is the source\'s page there, whatever it is called');
+  assert.deepEqual(result.offSiteListingDrops.map(drop => `${drop.kind} ${drop.url}`), ['vendor-directory https://www.outsavvy.com/events']);
+});
+
+test('off-site listing: what names a source, what links back, and what the rule leaves alone', () => {
+  const core = createCore();
+  const bearBrum = {
+    name: 'Bear Brum',
+    urls: ['https://www.bearbrum.com/'],
+    metadata: { website: { value: 'https://www.bearbrum.com' }, instagram: { value: 'https://www.instagram.com/bear_brum_festival' } }
+  };
+  assert.deepEqual(core.getSourceNameKeys(bearBrum).map(key => key.words), ['bear brum', 'bear brum festival']);
+  // A shared platform's host names the platform; only the path names the source.
+  const ccbc = { name: 'CCBC Resort Hotel', urls: ['https://www.eventbrite.com/o/ccbc-resort-hotel-30560403776'] };
+  assert.deepEqual(core.getSourceNameKeys(ccbc).map(key => key.squashed), ['ccbcresorthotel']);
+  // Short names name nothing (a five-letter word turns up on any page).
+  assert.deepEqual(core.getSourceNameKeys({ name: 'CHUNK', urls: ['https://chunk-party.com/'] }).map(key => key.words), ['chunk party']);
+
+  assert.equal(core.describePageAboutSource(DANDY_HOME_HTML, 'https://dandyclub.uk/', bearBrum), '');
+  assert.equal(core.describePageAboutSource('<p>Part of BEAR-BRUM weekend</p>', 'https://dandyclub.uk/', bearBrum), 'names "bear brum"');
+  assert.equal(core.describePageAboutSource('<a href="https://instagram.com/bear_brum_festival">IG</a>', 'https://dandyclub.uk/', bearBrum), 'names "bear brum"');
+  assert.equal(core.describePageAboutSource('<a href="https:\\/\\/www.bearbrum.com\\/events">Bears</a>', 'https://dandyclub.uk/', bearBrum), 'links back to bearbrum.com');
+  // A host that merely contains the domain is not a link back (a source whose
+  // name is too short to be a name key, so only the link can speak).
+  const shortName = { name: 'BB', urls: ['https://bbuk.example/whats-on'] };
+  assert.deepEqual(core.getSourceNameKeys(shortName), []);
+  assert.equal(core.describePageAboutSource('<a href="https://notbbuk.example/">x</a> <a href="https://bbuk.example.evil.test/">y</a>', 'https://x.example/', shortName), '');
+  assert.equal(core.describePageAboutSource('<a href="https://www.bbuk.example/whats-on">Home</a>', 'https://x.example/', shortName), 'links back to bbuk.example');
+  assert.equal(core.describePageAboutSource(CCBC_HOME_HTML, 'https://www.ccbcresorthotel.com/', ccbc), 'links back to eventbrite.com/o/ccbc-resort-hotel-30560403776');
+  assert.equal(core.describePageAboutSource('<a href="https://www.eventbrite.com/o/someone-else-1">x</a>', 'https://venue.example/', ccbc), '',
+    'another organiser\'s page on the same platform is not a link back');
+
+  const vendors = new Set(['outsavvy.com']);
+  const twoTons = { name: 'Two Tons of Fun', urls: ['https://twotonsoffun.co.uk/'] };
+  // Only the vendor's own front door is refused unread; a subdomain root can
+  // be an organiser's box office and a pathful page is judged when read.
+  assert.deepEqual(
+    core.selectTicketVendorRootLinks(['https://www.outsavvy.com/', 'https://outsavvy.com', 'https://twotons.outsavvy.com/', 'https://www.outsavvy.com/events', 'https://www.outsavvy.com/?q=bears', 'https://other.example/'], twoTons, vendors).map(entry => entry.url),
+    ['https://www.outsavvy.com/', 'https://outsavvy.com']);
+  assert.deepEqual(core.selectTicketVendorRootLinks(['https://www.outsavvy.com/'], twoTons, new Set()), []);
+
+  // Vendor domains come from the configured site's own events only.
+  const learned = new Set();
+  core.noteSourceTicketVendorDomains([{ ticketUrl: 'https://link.outsavvy.com/twotonsoffun' }, { ticketUrl: 'https://twotonsoffun.co.uk/tickets' }, { ticketUrl: 'mailto:x@y.z' }], 'https://twotonsoffun.co.uk/', twoTons, learned);
+  core.noteSourceTicketVendorDomains([{ ticketUrl: 'https://tickets.elsewhere.example/1' }], 'https://www.outsavvy.com/event/1/x', twoTons, learned);
+  assert.deepEqual([...learned], ['outsavvy.com']);
+
+  const judge = (overrides) => core.judgeOffSiteListingPage({ html: OUTSAVVY_HOME_HTML, pageClassification: 'multi-event-page', parserConfig: twoTons, ticketVendorDomains: vendors, ...overrides });
+  assert.equal(judge({ url: 'https://www.outsavvy.com/' }).kind, 'bare-root');
+  assert.equal(judge({ url: 'https://www.outsavvy.com/events' }).kind, 'vendor-directory');
+  assert.equal(judge({ url: 'https://www.outsavvy.com/event/40716/sewah-the-cock-tavern-november' }), null, 'an event page is never a directory');
+  assert.equal(judge({ url: 'https://www.outsavvy.com/browse/london', pageClassification: 'event-page' }), null);
+  assert.equal(judge({ url: 'https://www.outsavvy.com/organiser/two-tons-of-fun' }), null, 'the address names the source');
+  assert.equal(judge({ url: 'https://twotonsoffun.co.uk/about' }), null, 'the configured site is never judged');
+  assert.equal(judge({ url: 'https://platform.example/promoters/promo-1' }), null, 'a pathful page off the vendor is unchanged');
+  assert.equal(judge({ url: 'https://www.outsavvy.com/', parserConfig: { name: 'Inline', urls: [] } }), null, 'no configured urls, no rule');
+  // Judged where the request LANDED: a short link that lands on someone's
+  // front door is that front door; one that lands on the configured site is ours.
+  const landed = judge({ url: 'https://short.example/abc', landingUrl: 'https://venue.example/' });
+  assert.equal(landed.kind, 'bare-root');
+  assert.ok(landed.detail.includes('the bare home page of venue.example (where https://short.example/abc landed)'), landed.detail);
+  assert.equal(judge({ url: 'https://short.example/abc', landingUrl: 'https://twotonsoffun.co.uk/' }), null);
+});
+
+test('off-site listing: an event\'s own ticket link is still read enrich-only and never judged as a listing, even when it is a bare root', async () => {
+  // bearssitges.org, run 20261109-053706: a row's ticket link was the
+  // party's own home page, https://popairparty.com/ (kept 0, dropped 2).
+  const core = createOffSiteCore([
+    { pattern: /bearssitges\.org\/$/i, classification: 'multi-event-page' },
+    { pattern: /popairparty\.com\/$/i, classification: 'multi-event-page' }
+  ]);
+  const display = createDisplayAdapterStub();
+  const soon = new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    'https://bearssitges.org/': {
+      events: [{ title: 'Pop Air Party', startDate: soon, ticketUrl: 'https://popairparty.com/' }],
+      additionalLinks: ['https://popairparty.com/']
+    },
+    'https://popairparty.com/': {
+      events: [
+        { title: 'Pop Air Party', startDate: soon, description: 'Inflatables, foam and pop anthems by the pool.' },
+        { title: 'Pop Air Ibiza', startDate: new Date(soon.getTime() + 30 * 86400000) }
+      ]
+    }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const entry = { name: 'Bears Sitges Week', urls: ['https://bearssitges.org/'], alwaysBear: true, ai: CRAWL_AI };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+
+  assert.deepEqual(fetched.filter(u => u === 'https://popairparty.com/').length, 1, 'the ticket link is read once, as the row\'s ticket link');
+  assert.deepEqual(result.events.map(e => e.title), ['Pop Air Party']);
+  // The enrich-only rules decide what that page may add (a bare root is not
+  // the row's own page, so today: nothing) — the listing rule does not speak.
+  assert.ok(display.logs.includes('SYSTEM: Enrich-only crawl: kept 0 matching event(s), dropped 2 sibling event(s) from popairparty.com (reached via ticket link from "Pop Air Party")'),
+    JSON.stringify(display.logs.filter(l => l.includes('Enrich-only') || l.includes('Off-site'))));
+  assert.deepEqual(display.logs.filter(l => l.includes('Off-site page')), []);
+  // The same root as a plain link is not a second, listing-style read.
+  assert.deepEqual(result.offSiteListingDrops.map(drop => `${drop.kind} ${drop.url}`), ['vendor-root https://popairparty.com/']);
+});
+
+test('off-site listing: a page is judged where the request landed, not where the link pointed', async () => {
+  // Bears Events (Sitges), run 20261109-053706: a pathful link on the
+  // configured site redirected to another site's bare home page, which was
+  // then read as a listing under the pathful address.
+  const core = createOffSiteCore([
+    { pattern: /promoter\.example\/events$/i, classification: 'multi-event-page' },
+    { pattern: /short\.example\/pool$/i, classification: 'multi-event-page' }
+  ]);
+  const display = createDisplayAdapterStub();
+  const soon = new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    'https://promoter.example/events': {
+      events: [{ title: 'Promoter Night', startDate: soon }],
+      additionalLinks: ['https://short.example/pool']
+    },
+    'https://short.example/pool': {
+      events: [{ title: 'Somebody Else Pool Party', startDate: soon }],
+      additionalLinks: ['https://venue.example/event/another-night']
+    },
+    'https://venue.example/event/another-night': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const landings = { 'https://short.example/pool': 'https://venue.example/' };
+  const redirectingAdapter = {
+    fetchData: async (url) => {
+      const data = await httpAdapter.fetchData(url);
+      return landings[url] ? { ...data, finalUrl: landings[url] } : data;
+    }
+  };
+  const entry = { name: 'Promoter Example Nights', urls: ['https://promoter.example/events'], alwaysBear: true, ai: CRAWL_AI };
+
+  const result = await core.processParser(entry, { parsers: [entry] }, redirectingAdapter, display, parsers);
+
+  assert.deepEqual(result.events.map(e => e.title), ['Promoter Night']);
+  assert.ok(!fetched.includes('https://venue.example/event/another-night'));
+  assert.ok(
+    display.logs.includes('SYSTEM: Off-site page: not ingesting 1 event(s) from https://venue.example/ — it is the bare home page of venue.example (where https://short.example/pool landed), reached by following a link, and nothing on it names Promoter Example Nights or links back to the configured site (off-site-listing): "Somebody Else Pool Party"'),
+    JSON.stringify(display.logs.filter(l => l.includes('Off-site'))));
+  assert.equal(result.offSiteListingDrops[0].url, 'https://short.example/pool');
+  assert.equal(result.offSiteListingDrops[0].landingUrl, 'https://venue.example/');
+});
