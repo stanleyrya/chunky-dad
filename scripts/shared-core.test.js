@@ -30189,3 +30189,58 @@ test('aggregator: a not-bear held because the row names a usually-bear promoter 
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, true, { siteRole: 'aggregator' }), false, 'a trusted promoter is never dropped here');
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, false, { siteRole: 'venue' }), false);
 });
+
+// 2026-11-09 — a source that was not read is not an empty source. A
+// configured URL the run could not read (the politeness gate refused it, the
+// server answered an error) is named on the parser result as `unreadUrls`, so
+// the ledger says "not read" and the gone-from-source builder raises no card
+// for the site. Only CONFIGURED urls count: a crawl page that failed is one
+// page of a site the run did read.
+test('processParser: a configured URL the run could not read is named in result.unreadUrls with the reason and a NOT READ log line — refused by the gate or failed by the server; a failed crawl page is not one', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const soon = (days) => new Date(Date.now() + days * 86400000);
+  const pages = {
+    'https://refused.example/calendar': {},
+    'https://broken.example/events': { fail: 'HTTP request failed: HTTP 503 error' },
+    'https://fine.example/events': {
+      events: [{ title: 'Bear Night', startDate: soon(6), bar: 'The Den' }],
+      additionalLinks: ['https://fine.example/events/bear-night-broken']
+    },
+    'https://fine.example/events/bear-night-broken': { fail: 'HTTP request failed: HTTP 503 error' }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const readPage = httpAdapter.fetchData;
+  httpAdapter.fetchData = async (url) => {
+    if (url === 'https://refused.example/calendar') {
+      const refusal = new Error('politeness: the browser allowance for this site is spent');
+      refusal.politeness = { reason: 'budget' };
+      refusal.retryable = false;
+      throw refusal;
+    }
+    return readPage(url);
+  };
+
+  const result = await core.processParser(
+    { name: 'Three Doors', urls: Object.keys(pages).slice(0, 3), alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+
+  const unread = result.unreadUrls || [];
+  assert.deepEqual(unread.map(entry => entry.url).sort(), ['https://broken.example/events', 'https://refused.example/calendar'],
+    'both configured urls that were not read are named; the one that was read and the failed crawl page are not');
+  const byUrl = Object.fromEntries(unread.map(entry => [entry.url, entry.reason]));
+  assert.match(byUrl['https://refused.example/calendar'], /^not requested \(budget\)$/);
+  assert.match(byUrl['https://broken.example/events'], /503/);
+  assert.equal(result.totalEvents, 1, 'the site that was read still gives its event');
+  const notRead = display.logs.filter(line => line.includes('NOT READ'));
+  assert.equal(notRead.length, 2, `one NOT READ line per unread configured url (got: ${notRead.join(' | ')})`);
+  assert.ok(notRead.every(line => /never as empty/.test(line)), 'and the line says what it means for the run');
+
+  // A run that read everything names nothing.
+  const clean = await core.processParser(
+    { name: 'One Door', urls: ['https://fine.example/events'], alwaysBear: true, ai: CRAWL_AI },
+    {}, createCrawlHarness({ 'https://fine.example/events': pages['https://fine.example/events'] }).httpAdapter, createDisplayAdapterStub(), parsers
+  );
+  assert.equal(clean.unreadUrls, undefined, 'no field at all when every configured url was read');
+});
