@@ -23918,3 +23918,47 @@ test('currency twins: a currency selector names how prices are shown, never anot
   assert.ok(links.includes('https://www.bearitmtl.com/event/apero-ours-novembre/'), JSON.stringify(links));
   assert.ok(!links.some((link) => parser.getUrlDedupeKey(link) === parser.getUrlDedupeKey(plain)), 'the page does not queue itself');
 });
+
+// akbarsilverlake.com, run 20261109-053706: /about-us/our-team/ — staff and DJ
+// biographies — was followed from the menu and gave six "events" dated from
+// the cadence words of a biography ("Experimental Cabaret", "Soundtrack
+// Sundays" were kept). "/about/" and "/contact/" were already never followed;
+// their other spellings and the people-and-hiring sections were.
+test('site sections: about-us / contact-us / team / staff pages are never followed, as whole path segments only', () => {
+  const parser = createParser();
+  const home = 'https://akbarsilverlake.com/';
+  const check = (url, source = home) => parser.validateEventUrl(url, source, { urls: [source] });
+  for (const url of [
+    'https://akbarsilverlake.com/about-us/',
+    'https://akbarsilverlake.com/about-us/our-team/',
+    'https://akbarsilverlake.com/contact-us/',
+    'https://campoutpoconos.com/team/',
+    'https://www.thelumberyardbar.com/about-us',
+    'https://bears.example/staff/',
+    'https://bears.example/team?ref=menu'
+  ]) {
+    const result = check(url, new URL(url).origin + '/');
+    assert.equal(result.valid, false, url);
+    assert.match(String(result.reason), /^blocked-pattern:/, url);
+  }
+  // A slug that merely contains one of the words is an event page.
+  for (const url of [
+    'https://akbarsilverlake.com/event/team-trivia-night/',
+    'https://akbarsilverlake.com/event/staff-picks-dance-party/',
+    'https://akbarsilverlake.com/events/press-play/',
+    'https://akbarsilverlake.com/upcoming-events/'
+  ]) {
+    assert.equal(check(url).valid, true, url);
+  }
+  const html = `<html><body><nav>
+    <a href="https://akbarsilverlake.com/upcoming-events/">Events</a>
+    <a href="https://akbarsilverlake.com/about-us/">About Us</a>
+    <a href="https://akbarsilverlake.com/about-us/our-team/">Our Team</a>
+    <a href="https://akbarsilverlake.com/contact-us/">Contact</a>
+  </nav></body></html>`;
+  const quiet = console.log;
+  console.log = () => {};
+  let links;
+  try { links = parser.extractAdditionalUrls(html, home, {}); } finally { console.log = quiet; }
+  assert.deepEqual(links, ['https://akbarsilverlake.com/upcoming-events/']);
+});

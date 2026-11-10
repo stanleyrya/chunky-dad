@@ -20026,6 +20026,15 @@ class AiWebParser {
             // WooCommerce account pages and the FR shop segment each got a
             // classify + AI extraction pass for 0 events.
             /\/(?:shop|store|merch|boutique|cart|checkout|contact|about|faq|account|my-account|lost-password|signin|signup)(?:\/|[?#]|$)/i,
+            // The same two sections under their other common spelling, and
+            // the people pages that hang off them (whole segments again). Run
+            // 20261109-053706 opened eight such pages on five sites for
+            // nothing — and one, akbarsilverlake.com/about-us/our-team/
+            // (staff and DJ biographies), gave six "events" dated from the
+            // "every 3rd Monday" / "Sundays" of a biography; two were kept.
+            // (/careers and /legal stay crawlable on a site's own host — see
+            // the cross-host list below.)
+            /\/(?:about-us|contact-us|our-team|team|staff)(?:\/|[?#]|$)/i,
             // Wix internal API endpoints (e.g. chunk-party.com/_api/...)
             '/_api/',
             // Eventbrite's Next.js image proxy (/e/_next/image?url=…) — an image
