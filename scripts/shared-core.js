@@ -2049,7 +2049,13 @@ class SharedCore {
     //
     // Record (v1): { v, run_id, finished_at, environment, trigger, host,
     //   parsers, pages, outbound_pages, page_errors, errors, extracted, events, bear,
-    //   upcoming, proposals:{new,merge}, duration_ms, status, vanished }
+    //   upcoming, proposals:{new,merge}, new_upcoming, duration_ms, status, vanished }
+    // new_upcoming: how many of proposals.new start today or later (the same
+    // day test as `upcoming`). proposals.new counts every record the run
+    // would create, finished nights included: Bears of San Francisco
+    // 2026-11-09 read 30 rows off its feed's past list and logged
+    // upcoming 0 beside proposals.new 30. Added beside the old fields, which
+    // keep their meaning; a line written before this field has none.
     // status: 'ok' (the site yielded rows, bear or not), 'dead' (nothing and
     // the site answered with errors), 'empty' (nothing, no errors — the
     // parser or the page shape may have broken).
@@ -2798,7 +2804,7 @@ class SharedCore {
                 byHost.set(host, {
                     host, parsers: [], pages: 0, outbound_pages: 0, page_errors: 0, errors: [],
                     extracted: 0, events: 0, bear: 0, tagged: 0, upcoming: 0, duration_ms: 0,
-                    proposals: { new: 0, merge: 0 }, upcomingKeys: {}, eventKeyIndex: new Set(),
+                    proposals: { new: 0, merge: 0 }, newUpcoming: 0, upcomingKeys: {}, eventKeyIndex: new Set(),
                     roles: [], url: '', signals: { structured: 0, ai: 0 },
                     quality: { n: 0, time: 0, place: 0, coords: 0, url: 0, image: 0, desc: 0, keys: new Set(), maxDay: '', flags: {}, aiDropped: 0, manualDropped: 0, dropReasons: new Map(), dedupRemoved: 0, merges: 0, changed: 0, churnFields: {}, errors: {}, renamed: 0, renamedExamples: [] }
                 });
@@ -2920,6 +2926,12 @@ class SharedCore {
             if (!host) return;
             const row = hostOf(host);
             row.proposals[action] += 1;
+            if (action === 'new') {
+                const newDay = key
+                    ? key.slice(key.lastIndexOf('|') + 1)
+                    : SharedCore.sourceLedgerLocalDay(event.startDate, event.timezone);
+                if (newDay && newDay >= todayKey) row.newUpcoming += 1;
+            }
             const extraction = String(event._extractionSource || '').trim().toLowerCase();
             if (extraction && extraction !== 'unknown') {
                 if (extraction === 'ai' || extraction === 'ocr') row.signals.ai += 1;
@@ -3016,6 +3028,7 @@ class SharedCore {
                 tagged: row.tagged,
                 upcoming: row.upcoming,
                 proposals: row.proposals,
+                new_upcoming: row.newUpcoming,
                 duration_ms: row.duration_ms,
                 status,
                 vanished,
