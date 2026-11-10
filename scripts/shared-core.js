@@ -17877,6 +17877,49 @@ class SharedCore {
         return Boolean(event && typeof event === 'object' && event._loneCrawlWithheld && !event._ownerReviewApproved);
     }
 
+    // The fold of a lone crawl event (isLoneCrawlWithheld: the only event of
+    // a page the crawl reached, its date stated nowhere beside its name)
+    // into a record whose page DID state its date. The lone record's date is
+    // the model's guess, so everything that matched the two records rests
+    // on a guess: the stated record is the base and keeps every field it
+    // states; the lone record fills blanks only. A link or an image is a
+    // blank it may fill only when the stated record itself points at the
+    // lone record's page (a listing row and the detail page its own link
+    // opens — woofsatlanta.com/events/fafo-fridays/); any other lone page
+    // may be about something else entirely. No arbitration, no priorities
+    // — the same shape as the aggregator fold.
+    //
+    // bearitmtl.com run 20261109-053706: the hotel-discount page "Rabais
+    // Hotel - Festival Sugar Bear 2026" was read with a neighbouring
+    // party's night (Oct 31, Diamant Rouge), stamped lone, then matched
+    // "SPOOKY PLAYGROUND" by place and night; the merge arbitration gave
+    // the discount page the title, the description and the website, the
+    // stamp was lost in the fold, and the real party left the run under a
+    // hotel page's name. The festival-pass page did the same to "APÉRO
+    // OURS".
+    mergeLoneCrawlRecordIntoStatedRecord(statedRecord, loneRecord) {
+        const merged = { ...statedRecord };
+        const isEmpty = (value) => value === null || value === undefined
+            || (typeof value === 'string' && value.trim() === '')
+            || (Array.isArray(value) && value.length === 0);
+        const stamp = loneRecord && loneRecord._loneCrawlWithheld && typeof loneRecord._loneCrawlWithheld === 'object' ? loneRecord._loneCrawlWithheld : {};
+        const reason = String(stamp.reason || '').trim() || 'its date is stated nowhere beside its name';
+        const page = String(stamp.page || loneRecord._sourcePageUrl || loneRecord.url || '').trim();
+        const pageKey = page ? this.getUrlDedupeKey(page) : '';
+        const statedPointsAtLonePage = Boolean(pageKey) && ['url', 'website', 'ticketUrl']
+            .some(field => typeof statedRecord[field] === 'string' && statedRecord[field].trim() && this.getUrlDedupeKey(statedRecord[field]) === pageKey);
+        const linkOrImage = new Set(['url', 'website', 'ticketUrl', 'image', 'imageHorizontal', 'imageVertical', 'facebook', 'instagram']);
+        const filled = [];
+        for (const [field, value] of Object.entries(loneRecord || {})) {
+            if (field.startsWith('_') || field === 'key' || isEmpty(value) || !isEmpty(merged[field])) continue;
+            if (linkOrImage.has(field) && !statedPointsAtLonePage) continue;
+            merged[field] = value;
+            filled.push(field);
+        }
+        console.log(`🧭 LONE EVENT: "${loneRecord.title || 'event'}"${page ? ` (${page})` : ''} folded into "${statedRecord.title || 'event'}" — ${reason}, so its date is a guess: the record whose page states its date keeps every field it states${filled.length > 0 ? `, blanks filled: ${filled.join(', ')}` : ''}`);
+        return merged;
+    }
+
     async mergeParsedEvents(existingEvent, newEvent, options = {}) {
         // Exactly one side from an aggregator: no arbitration, no priorities —
         // the event's own source wins (see "Aggregators are for DISCOVERY").
@@ -17886,6 +17929,16 @@ class SharedCore {
             return existingIsAggregator
                 ? this.mergeAggregatorCopyIntoOwnRecord(newEvent, existingEvent)
                 : this.mergeAggregatorCopyIntoOwnRecord(existingEvent, newEvent);
+        }
+        // Exactly one side a lone crawl event with a guessed date: the record
+        // whose page stated its date wins every field it states. (Two lone
+        // records fold as before — the merged record stays withheld.)
+        const existingIsLone = SharedCore.isLoneCrawlWithheld(existingEvent);
+        const newIsLone = SharedCore.isLoneCrawlWithheld(newEvent);
+        if (existingIsLone !== newIsLone) {
+            return existingIsLone
+                ? this.mergeLoneCrawlRecordIntoStatedRecord(newEvent, existingEvent)
+                : this.mergeLoneCrawlRecordIntoStatedRecord(existingEvent, newEvent);
         }
         const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
         // A page shared by 3+ records over 2+ nights (the batch's pass-page

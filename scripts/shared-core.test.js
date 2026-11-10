@@ -30405,3 +30405,107 @@ test('page cities: prepareParsedEvents weighs a title-word city against the page
   assert.ok(lines.some(line => line.includes('names prague in its title') && line.includes('filed under sitges')), 'the move leaves a line');
   assert.ok(lines.some(line => line.includes('names palm-springs in its title') && line.includes('filed under sitges')));
 });
+
+// ── A lone crawl event never takes over a record whose page stated its date ──
+// bearitmtl.com, run 20261109-053706: the hotel-discount page was read as
+// one event wearing the neighbouring party's night and door, stamped lone
+// (its date is stated nowhere on that page), then matched "SPOOKY
+// PLAYGROUND" by place and night. The merge arbitration gave the discount
+// page the title, the description and the website, and the lone stamp died
+// in the fold — the real party left the run as "Rabais Hotel - Festival
+// Sugar Bear 2026". Record shapes are the run's own, trimmed.
+function loneCrawlFoldFixtures() {
+  const party = {
+    title: 'SPOOKY PLAYGROUND',
+    description: 'Le party d\'Halloween des ours au Diamant Rouge.',
+    startDate: new Date('2026-10-31T02:00:00.000Z'), endDate: new Date('2026-10-31T07:00:00.000Z'),
+    bar: 'Diamant Rouge', address: '1681 SAINT-CATHERINE EST', city: 'montreal', timezone: 'America/Toronto',
+    website: 'https://www.bearitmtl.com/spooky-playground/',
+    image: 'https://www.bearitmtl.com/wp-content/uploads/2026/10/SPOOKY-Playground-Vignette_WEB-2.jpg',
+    source: 'ai-web', _extractionSource: 'ai', _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://www.bearitmtl.com/spooky-playground/', _parserConfig: { name: 'Bear it MTL' },
+    shortName: 'BEAR IT', _promoter: 'Bear it MTL', _organizer: 'Bear-IT - Ours et Fier'
+  };
+  const discountPage = {
+    title: 'Rabais Hotel - Festival Sugar Bear 2026',
+    description: 'Rabais Hotel - Festival Sugar Bear 2026 - Bear-IT - Ours et Fier',
+    startDate: new Date('2026-10-31T02:00:00.000Z'), endDate: new Date('2026-10-31T07:00:00.000Z'),
+    bar: 'Diamant Rouge', address: '1681 SAINT-CATHERINE EST', city: 'montreal', timezone: 'America/Toronto',
+    website: 'https://www.bearitmtl.com/rabais-hotel-festival-sugar-bear-2026/',
+    image: 'https://www.bearitmtl.com/wp-content/uploads/2026/03/rabais-hotel.jpg',
+    cover: '30$+1 FREE DRINK',
+    source: 'ai-web', _extractionSource: 'ai', _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://www.bearitmtl.com/rabais-hotel-festival-sugar-bear-2026/', _parserConfig: { name: 'Bear it MTL' },
+    shortName: 'BEAR IT', _promoter: 'Bear it MTL', _organizer: 'Bear-IT - Ours et Fier',
+    _loneCrawlWithheld: { page: 'https://www.bearitmtl.com/rabais-hotel-festival-sugar-bear-2026/', day: '2026-10-30', reason: 'the only event read from a page the crawl reached, and its date is stated nowhere on that page', near: [] }
+  };
+  return { party, discountPage };
+}
+
+test('lone crawl fold: a lone crawl event with a guessed date folds into the record whose page stated its date as blanks only — it never wins a field, never fills a link or an image, in either order, and says so', async () => {
+  const core = createCore();
+  for (const order of ['party-first', 'lone-first']) {
+    const { party, discountPage } = loneCrawlFoldFixtures();
+    const { result: merged, logs } = await withLogsAsync(() => order === 'party-first'
+      ? core.mergeParsedEvents(party, discountPage)
+      : core.mergeParsedEvents(discountPage, party));
+    assert.equal(merged.title, 'SPOOKY PLAYGROUND', order);
+    assert.equal(merged.description, 'Le party d\'Halloween des ours au Diamant Rouge.', order);
+    assert.equal(merged.website, 'https://www.bearitmtl.com/spooky-playground/', order);
+    assert.equal(merged.image, party.image, order);
+    assert.equal(merged.address, '1681 SAINT-CATHERINE EST', order);
+    assert.equal(merged.cover, '30$+1 FREE DRINK', 'a blank is filled');
+    assert.equal(merged._loneCrawlWithheld, undefined, 'the stated record is not withheld');
+    assert.equal(SharedCore.isLoneCrawlWithheld(merged), false);
+    assert.equal(merged._sourcePageUrl, 'https://www.bearitmtl.com/spooky-playground/', 'provenance stays the stated record\'s');
+    const line = logs.find(l => l.startsWith('🧭 LONE EVENT:'));
+    assert.ok(line && line.includes('"Rabais Hotel - Festival Sugar Bear 2026"') && line.includes('folded into "SPOOKY PLAYGROUND"') && line.includes('blanks filled: cover'), line);
+    assert.ok(!logs.some(l => l.includes('AI MERGE')), 'no arbitration ran');
+  }
+  // A link or an image is never a blank the lone page may fill.
+  const { party, discountPage } = loneCrawlFoldFixtures();
+  delete party.website; delete party.image;
+  discountPage.ticketUrl = 'https://www.bearitmtl.com/festival-sugar-bear-2026-passes/';
+  const { result: bare } = await withLogsAsync(() => core.mergeParsedEvents(party, discountPage));
+  assert.equal(bare.website, undefined);
+  assert.equal(bare.image, undefined);
+  assert.equal(bare.ticketUrl, undefined);
+  // …unless the stated record itself points at the lone page: a listing row
+  // and the detail page its own link opens (woofsatlanta.com "FAFO Fridays",
+  // same run — the calendar row links /events/fafo-fridays/, whose page
+  // states no date beside the name). The page's flyer fills the row's blank;
+  // the row's date is still the row's.
+  const row = { title: 'FAFO Fridays', startDate: new Date('2026-11-14T03:00:00.000Z'), bar: 'Woofs Atlanta', city: 'atlanta',
+    website: 'https://woofsatlanta.com/events/fafo-fridays/', source: 'ai-web', _sourcePageUrl: 'https://woofsatlanta.com/calendar/' };
+  const detail = { title: 'FAFO Fridays', startDate: new Date('2026-11-13T23:00:00.000Z'), bar: 'Woofs Atlanta', city: 'atlanta',
+    website: 'https://woofsatlanta.com/events/fafo-fridays/?occurrence=2', image: 'https://woofsatlanta.com/wp-content/uploads/fafo.jpg', source: 'ai-web',
+    _sourcePageUrl: 'https://woofsatlanta.com/events/fafo-fridays/',
+    _loneCrawlWithheld: { page: 'https://woofsatlanta.com/events/fafo-fridays/', day: '2026-11-13', reason: 'the only event read from a page the crawl reached, and no date is stated within six lines of its name', near: [] } };
+  const { result: own } = await withLogsAsync(() => core.mergeParsedEvents(detail, row));
+  assert.equal(own.image, 'https://woofsatlanta.com/wp-content/uploads/fafo.jpg', 'its own page\'s flyer fills the blank');
+  assert.equal(own.website, 'https://woofsatlanta.com/events/fafo-fridays/', 'a stated link is never restated');
+  assert.equal(new Date(own.startDate).toISOString(), '2026-11-14T03:00:00.000Z', 'the guessed date never wins');
+});
+
+test('lone crawl fold: the dedup pass folds the lone page into the real party and the party leaves under its own name; an owner-approved lone record and two lone records fold as before', async () => {
+  const core = createCore();
+  const { party, discountPage } = loneCrawlFoldFixtures();
+  const { result: folded, logs } = await withLogsAsync(() => core.deduplicateEvents([discountPage, party], null));
+  assert.equal(folded.length, 1, logs.join('\n'));
+  assert.equal(folded[0].title, 'SPOOKY PLAYGROUND');
+  assert.equal(folded[0].website, 'https://www.bearitmtl.com/spooky-playground/');
+  assert.equal(SharedCore.isLoneCrawlWithheld(folded[0]), false);
+
+  // Two lone records: neither page stated a date, the rule has no side to take.
+  const a = loneCrawlFoldFixtures().discountPage;
+  const b = { ...loneCrawlFoldFixtures().discountPage, description: '' };
+  const { result: both, logs: bothLogs } = await withLogsAsync(() => core.mergeParsedEvents(a, b));
+  assert.ok(!bothLogs.some(l => l.includes('folded into')), 'not this rule');
+  assert.equal(both.title, 'Rabais Hotel - Festival Sugar Bear 2026');
+  assert.ok(SharedCore.isLoneCrawlWithheld(both), 'two guesses stay withheld');
+
+  // The owner approved the lone record on the deck: it is an ordinary record again.
+  const approved = { ...loneCrawlFoldFixtures().discountPage, _ownerReviewApproved: true };
+  const { logs: approvedLogs } = await withLogsAsync(() => core.mergeParsedEvents(loneCrawlFoldFixtures().party, approved));
+  assert.ok(!approvedLogs.some(l => l.includes('folded into')), 'an approved record is not a guess any more');
+});
