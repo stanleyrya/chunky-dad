@@ -323,7 +323,7 @@ test('bear verdict store: upsert by party identity (last verdict wins), clear, a
   assert.equal(cleared.removed, true);
   assert.equal(cleared.verdicts.length, 1);
   assert.throws(() => rq.upsertBearVerdict([], core, { title: '', bar: 'x' }, 'bear'), /no title identity/);
-  assert.throws(() => rq.upsertBearVerdict([], core, { title: 'x' }, 'maybe'), /bear, tagged or not_bear/);
+  assert.throws(() => rq.upsertBearVerdict([], core, { title: 'x' }, 'perhaps'), /bear, tagged, not_bear or maybe/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
@@ -1724,6 +1724,105 @@ test('bear verdict store: tagged verdicts carry their tags; not_bear never does;
   assert.equal(notBear.verdicts.length, 1, 'the tagged entry is replaced');
   assert.equal(notBear.entry.tags, undefined);
   assert.deepEqual(
-    rq.normalizeBearVerdicts({ verdicts: [{ verdict: 'tagged', tags: 'leather, bear-run', title: 'x', venue: 'y' }, { verdict: 'not_bear', tags: ['leather'], title: 'z', venue: 'y' }, { verdict: 'maybe', title: 'q' }] }),
+    rq.normalizeBearVerdicts({ verdicts: [{ verdict: 'tagged', tags: 'leather, bear-run', title: 'x', venue: 'y' }, { verdict: 'not_bear', tags: ['leather'], title: 'z', venue: 'y' }, { verdict: 'perhaps', title: 'q' }] }),
     [{ verdict: 'tagged', tags: ['leather'], title: 'x', venue: 'y' }, { verdict: 'not_bear', title: 'z', venue: 'y' }]);
+});
+
+// ---------------------------------------------------------------------------
+// MAYBE (owner 2026-11-10: "mark some events as maybes to revisit later… for
+// now we don't show") and the notices that say what speaks for a dropped
+// event ("keep some type of bear bar and fat picture notices").
+// ---------------------------------------------------------------------------
+const THREE_DOLLAR = { title: 'Dolly Parton Tribute', bar: '3 Dollar Bill', address: '260 Meserole St', city: 'nyc' };
+function droppedRow(title, start, extra = {}) {
+  return {
+    title, startDate: start, venue: '3 Dollar Bill', reason: 'ai: no bear language', host: 'www.3dollarbillbk.com', ...extra,
+    event: { title, startDate: start, endDate: start, bar: '3 Dollar Bill', address: '260 Meserole St', city: 'nyc', timezone: 'America/New_York', source: 'ai-web', image: 'https://x/y.jpg' }
+  };
+}
+
+test('maybe in the verdict store: kept by a save, never tagged, replaced by a firm verdict and replacing one, and an undo hands back what it replaced', () => {
+  const core = rq.createDeckCore({ config: { cities: CITIES } }, {});
+  const at = (day) => ({ now: new Date(`2030-01-0${day}T00:00:00Z`) });
+  const parked = rq.upsertBearVerdict([], core, THREE_DOLLAR, 'maybe', { ...at(1), tags: ['leather'] });
+  assert.equal(parked.entry.verdict, 'maybe');
+  assert.equal(parked.entry.tags, undefined, 'a maybe says nothing about what the party is');
+  assert.deepEqual(rq.normalizeBearVerdicts({ verdicts: parked.verdicts }).map((entry) => entry.verdict), ['maybe'], 'a Mac save must not drop the maybe');
+  assert.throws(() => rq.upsertBearVerdict([], core, THREE_DOLLAR, 'perhaps'), /bear, tagged, not_bear or maybe/);
+
+  // A firm answer on the party, under a decorated title, removes the maybe.
+  const settled = rq.upsertBearVerdict(parked.verdicts, core, { ...THREE_DOLLAR, title: 'Dolly Parton Tribute 2030' }, 'not_bear', at(2));
+  assert.deepEqual(settled.verdicts.map((entry) => [entry.verdict, entry.title]), [['not_bear', 'Dolly Parton Tribute 2030']]);
+  assert.equal(settled.replaced.verdict, 'maybe', 'the undo can put the maybe back');
+
+  // A maybe on a party with a firm verdict parks it: the firm one goes, and comes back on undo.
+  const reparked = rq.upsertBearVerdict(settled.verdicts, core, THREE_DOLLAR, 'maybe', at(3));
+  assert.deepEqual(reparked.verdicts.map((entry) => entry.verdict), ['maybe']);
+  assert.equal(reparked.replaced.verdict, 'not_bear');
+  const undone = rq.restoreBearVerdict(rq.clearBearVerdict(reparked.verdicts, core, THREE_DOLLAR).verdicts, core, reparked.replaced);
+  assert.deepEqual(undone.verdicts.map((entry) => entry.verdict), ['not_bear']);
+
+  // Another party at the same bar is not covered.
+  const other = rq.upsertBearVerdict(parked.verdicts, core, { ...THREE_DOLLAR, title: 'Charli Party' }, 'bear', at(2));
+  assert.deepEqual(other.verdicts.map((entry) => entry.verdict).sort(), ['bear', 'maybe']);
+  assert.deepEqual(rq.findBearVerdictStoreConflicts(other.verdicts, core), [], 'a maybe beside a firm verdict is never "both ways"');
+});
+
+test('buildDeck: a parked party leaves the stack and every count — the dropped card and each kept night wait as `parked`; a firm verdict ends it', () => {
+  const payload = runPayload({
+    analyzedEvents: [newEvent(), newEvent({ startDate: iso(FUTURE + 7 * 86400000), endDate: iso(FUTURE + 7 * 86400000 + 3600000) }), newEvent({ title: 'Bearracuda', url: 'https://bearracuda.com/' })],
+    bearDroppedEvents: [droppedRow('Dolly Parton Tribute', iso(FUTURE)), droppedRow('Charli Party', iso(FUTURE))]
+  });
+  const maybes = [
+    { verdict: 'maybe', stampedAt: '2030-01-01T00:00:00.000Z', title: 'Dolly Parton Tribute', venue: '3 Dollar Bill', city: 'nyc' },
+    { verdict: 'maybe', stampedAt: '2030-01-01T00:00:00.000Z', title: 'FURBALL NYC', venue: 'Rockbar', city: 'nyc' }
+  ];
+  const deck = deckOf(payload, rq.emptyDecisionStore(), { bearVerdicts: maybes });
+  assert.deepEqual(deck.cards.filter((card) => card.parked).map((card) => [card.kind, card.proposal.title]).sort(),
+    [['dropped', 'Dolly Parton Tribute'], ['new', 'FURBALL NYC'], ['new', 'FURBALL NYC']]);
+  assert.deepEqual(deck.cards.filter((card) => !card.parked).map((card) => [card.kind, card.proposal.title]).sort(), [['dropped', 'Charli Party'], ['new', 'Bearracuda']]);
+  assert.deepEqual([deck.counts.maybe, deck.counts.pending, deck.counts.new, deck.counts.dropped, deck.counts.decided], [3, 1, 1, 1, 0], 'parked cards are in no other count, and are not decisions');
+  const parkedDrop = deck.cards.find((card) => card.parked && card.kind === 'dropped');
+  assert.equal(parkedDrop.display.maybe.stampedAt, '2030-01-01T00:00:00.000Z');
+  assert.equal(parkedDrop.display.bearVerdict, null, 'a maybe is not a verdict');
+
+  // Held by the next run: the row's reason is the store's, the card is still parked.
+  const held = deckOf(runPayload({ bearDroppedEvents: [droppedRow('Dolly Parton Tribute', iso(FUTURE), { reason: 'manual store: maybe (parked 2030-01-01)', manualStore: true })] }), rq.emptyDecisionStore(), { bearVerdicts: maybes });
+  assert.equal(held.cards[0].parked, true);
+
+  // Answered: a firm verdict on the party outranks the maybe that is still stored.
+  const answered = deckOf(payload, rq.emptyDecisionStore(), { bearVerdicts: maybes.concat([{ verdict: 'not_bear', stampedAt: '2030-01-02T00:00:00.000Z', title: 'Dolly Parton Tribute', venue: '3 Dollar Bill', city: 'nyc' }]) });
+  assert.equal(answered.cards.some((card) => card.parked && card.kind === 'dropped'), false);
+  assert.equal(answered.decided.find((entry) => entry.kind === 'dropped').decision.bearVerdict, 'not_bear');
+});
+
+test('buildDeck: a dropped card says what speaks for it — the listed bar and its record this run, the flyer look when it saw a big man — and that makes it worth a look, nothing more', () => {
+  const curatedBars = { nyc: [{ name: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY', website: 'https://www.3dollarbillbk.com/' }, { name: 'Rockbar', address: '185 Christopher St, New York, NY' }] };
+  const kept = (title) => newEvent({ title, bar: '3 Dollar Bill', address: '260 Meserole St', isBearEvent: true, url: `https://www.3dollarbillbk.com/${title}` });
+  const payload = runPayload({
+    analyzedEvents: [kept('Bear Night'), kept('Bear Night'), kept('Cubhouse'), newEvent({ isBearEvent: true })],
+    bearDroppedEvents: [
+      droppedRow('Dolly Parton Tribute', iso(FUTURE)),
+      droppedRow('Dolly Parton Tribute', iso(FUTURE + 7 * 86400000), { flyerLook: { image: 'https://x/y2.jpg', people: true, heavyset: true, bigBearded: false, description: 'A heavyset shirtless man in a cowboy hat.' } }),
+      droppedRow('Charli Party', iso(FUTURE), { flyerLook: { image: 'https://x/y.jpg', people: true, heavyset: false, bigBearded: false, description: 'Two slim dancers.' } }),
+      // The same bar, read off an aggregator: listed, but not its own site.
+      droppedRow('Drag Brunch', iso(FUTURE), { host: 'aggregator.example' }),
+      // Parked by the owner: neither kept nor turned away in the bar's record.
+      droppedRow('Maybe Night', iso(FUTURE), { reason: 'manual store: maybe (parked 2030-01-01)' }),
+      { title: 'Elsewhere', startDate: iso(FUTURE), venue: 'Some Club', reason: 'ai: no bear language', host: 'someclub.example', flyerLook: { heavyset: false, bigBearded: true, description: 'A big bearded man.' },
+        event: { title: 'Elsewhere', startDate: iso(FUTURE), endDate: iso(FUTURE), bar: 'Some Club', address: '1 Nowhere Rd', city: 'nyc' } }
+    ]
+  });
+  const deck = deckOf(payload, rq.emptyDecisionStore(), { curatedBars });
+  const card = (title) => deck.cards.find((entry) => entry.kind === 'dropped' && entry.proposal.title === title);
+  assert.deepEqual(card('Dolly Parton Tribute').display.barNotice, { bar: '3 Dollar Bill', ownSite: true, host: 'www.3dollarbillbk.com', kept: 2, dropped: 3 }, 'distinct parties, never rows');
+  assert.deepEqual(card('Dolly Parton Tribute').display.flyerNotice, { heavyset: true, bigBearded: false, description: 'A heavyset shirtless man in a cowboy hat.' }, 'a later night\'s flyer speaks for the party');
+  assert.deepEqual(card('Dolly Parton Tribute').worth, ['flyer', 'bar']);
+  assert.equal(card('Charli Party').display.flyerNotice, undefined, 'a look that saw no big man says nothing');
+  assert.deepEqual(card('Charli Party').worth, ['bar']);
+  assert.deepEqual([card('Drag Brunch').display.barNotice.ownSite, card('Drag Brunch').display.barNotice.host, card('Drag Brunch').worth], [false, '', []]);
+  assert.equal(card('Elsewhere').display.barNotice, undefined, 'not on the bars list: no bar notice');
+  assert.deepEqual(card('Elsewhere').worth, ['flyer']);
+  assert.equal(deck.counts.worth, 4);
+  assert.equal(deck.counts.dropped, 5, 'worth a look sorts the pile; every dropped card is still in it');
 });

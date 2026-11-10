@@ -575,11 +575,15 @@ function normalizeBearVerdicts(parsed) {
         ? parsed.verdicts
         : Array.isArray(parsed) ? parsed : [];
     const SharedCore = loadSharedCore();
-    return list.filter((entry) => entry && typeof entry === 'object' && SharedCore.isBearVerdictValue(entry.verdict))
+    // `maybe` entries are kept (SharedCore.isStoredBearVerdictValue): the
+    // Mac rewrites this file on every verdict, and a filter on the three
+    // firm values would silently delete every parked party.
+    return list.filter((entry) => entry && typeof entry === 'object' && SharedCore.isStoredBearVerdictValue(entry.verdict))
         .map((entry) => {
             // tags ride on bear and tagged entries (EventSchema.EVENT_TAGS);
-            // a not_bear entry carries none — it drops the event.
-            const tags = entry.verdict === 'not_bear' ? [] : normalizeVerdictTags(entry.tags);
+            // a not_bear entry carries none — it drops the event — and a
+            // maybe has not said anything yet.
+            const tags = entry.verdict === 'not_bear' || entry.verdict === 'maybe' ? [] : normalizeVerdictTags(entry.tags);
             if (tags.length === 0) {
                 if (!Object.prototype.hasOwnProperty.call(entry, 'tags')) return entry;
                 const { tags: _omit, ...rest } = entry;
@@ -646,7 +650,15 @@ function withBearStore(core, list, read) {
 // with no exact entry), those entries too — the owner's new word settles
 // the party, and leaving the other side in place would keep the conflict
 // alive. Agreeing entries under another spelling are left alone, as before.
-function coveredBearVerdicts(list, core, id) {
+//
+// A MAYBE and a verdict never stand side by side on one party. A firm
+// verdict replaces every maybe that covers the party (the exact title or
+// the party fold) — the party has its answer. A maybe replaces every firm
+// entry that speaks to the event (exact title, year-blind sibling, party
+// fold): "ask me again later" withdraws the answer, and a firm entry left
+// behind would outrank the maybe and keep deciding the party
+// (SharedCore.findStoredMaybeVerdictMatch). The undo puts them all back.
+function coveredBearVerdicts(list, core, id, verdict = '') {
     const key = core.getBearVerdictTitleKey(id.title, [id.bar]);
     const place = { title: id.title, bar: id.bar, address: id.address, location: id.location, city: id.city };
     const exact = key ? list.filter((existing) => core.getBearVerdictTitleKey(existing.title, [existing.venue]) === key
@@ -654,6 +666,10 @@ function coveredBearVerdicts(list, core, id) {
     const conflict = key ? withBearStore(core, list, () => core.findStoredBearVerdictConflict(place)) : null;
     const covered = exact.slice();
     for (const entry of conflict ? conflict.hits : []) if (!covered.includes(entry)) covered.push(entry);
+    if (key && verdict) {
+        const hits = withBearStore(core, list, () => core.collectStoredBearVerdictHits(place, { maybe: verdict !== 'maybe' }));
+        for (const entry of hits ? hits.title.concat(hits.party) : []) if (!covered.includes(entry)) covered.push(entry);
+    }
     // Store order, so the new entry takes the first covered slot.
     return list.filter((existing) => covered.includes(existing));
 }
@@ -666,19 +682,20 @@ function coveredBearVerdicts(list, core, id) {
 // options.tags: the tags the owner gave with the verdict (EventSchema
 // .EVENT_TAGS) — required for `tagged` (that is what keeps the event),
 // optional on `bear` (a leather night that is also bear), ignored on
-// `not_bear`.
+// `not_bear`. `maybe` parks the party (SharedCore.isStoredBearVerdictValue):
+// no tags, and it is not a verdict.
 function upsertBearVerdict(verdicts, core, identity, verdict, options = {}) {
     const SharedCore = loadSharedCore();
-    if (!SharedCore.isBearVerdictValue(verdict)) throw new Error('verdict must be bear, tagged or not_bear');
+    if (!SharedCore.isStoredBearVerdictValue(verdict)) throw new Error('verdict must be bear, tagged, not_bear or maybe');
     const id = buildBearIdentity(identity);
     const key = core.getBearVerdictTitleKey(id.title, [id.bar]);
     if (!key) throw new Error('event carries no title identity');
-    const tags = verdict === 'not_bear' ? [] : normalizeVerdictTags(options.tags);
+    const tags = verdict === 'not_bear' || verdict === 'maybe' ? [] : normalizeVerdictTags(options.tags);
     if (verdict === 'tagged' && tags.length === 0) throw new Error('a tagged verdict needs at least one tag');
     const now = options.now instanceof Date ? options.now : new Date();
     const entry = { verdict, stampedAt: now.toISOString(), title: id.title, venue: id.bar, address: id.address, location: id.location, city: id.city, ...(tags.length > 0 ? { tags } : {}) };
     const list = normalizeBearVerdicts(verdicts).slice();
-    const covered = coveredBearVerdicts(list, core, id);
+    const covered = coveredBearVerdicts(list, core, id, verdict);
     const index = covered.length > 0 ? list.indexOf(covered[0]) : -1;
     const kept = list.filter((existing) => !covered.includes(existing));
     if (index >= 0) kept.splice(Math.min(index, kept.length), 0, entry);
@@ -900,6 +917,12 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         ? core.findStoredBearVerdictMatch(event)
         : null;
     const storedVerdict = storedMatch ? storedMatch.entry : null;
+    // Parked as a maybe (no firm verdict speaks): the card belongs on the
+    // Maybes list, not in the stack. `on` names the spelling it was parked
+    // under when the party fold reached it.
+    const maybeMatch = !storedVerdict && Array.isArray(core.bearVerdicts) && core.bearVerdicts.length > 0
+        ? core.findStoredMaybeVerdictMatch(event)
+        : null;
     // Big drift (shared-core assessMergeDrift, stamped at analysis): the
     // merge is withheld from every automatic write and the card carries
     // the facts — which identity fields move, the rung that matched the
@@ -970,6 +993,10 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         // calendar), the way the site will read them.
         tags: normalizeVerdictTags(event.tags),
         bearVerdictOn: storedMatch && storedMatch.matchedBy === 'party' ? String(storedVerdict.title || '') : '',
+        maybe: maybeMatch ? {
+            stampedAt: maybeMatch.entry.stampedAt || null,
+            on: maybeMatch.matchedBy === 'party' ? String(maybeMatch.entry.title || '') : ''
+        } : null,
         bearIdentity: buildBearIdentity(event),
         isBearEvent: event.isBearEvent === true,
         barSource: typeof event.barSource === 'string' ? event.barSource : '',
@@ -1849,7 +1876,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, manual: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0, 'verdict-conflict': 0, verdictConflictsInStore: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, manual: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0, 'verdict-conflict': 0, verdictConflictsInStore: 0, maybe: 0, worth: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
     // its fresh action; the run file's executions[] dates it. Executions
@@ -1911,6 +1938,17 @@ function buildDeck(runPayload, store, options = {}) {
             counts.decided++;
             if (decision.verdict === 'approve') counts.approved++;
             else counts.rejected++;
+        } else if (entry.kind === 'new' && entry.display && entry.display.maybe) {
+            // PARKED (owner 2026-11-10: "mark some events as maybes to
+            // revisit later… for now we don't show"). The party is a maybe in
+            // the verdict store: its card leaves the stack and every count,
+            // and waits on the Maybes tab with its controls intact. Nothing
+            // is recorded as a decision, so the phone never writes it and
+            // it is never a rejection. From the next run on the bear check
+            // holds the party out (tier 0) and it arrives as a held row.
+            entry.parked = true;
+            cards.push(entry);
+            counts.maybe++;
         } else {
             cards.push(entry);
             counts.pending++;
@@ -2034,6 +2072,48 @@ function buildDeck(runPayload, store, options = {}) {
     // say "that IS bear" (→ a stored verdict the next run honours) or confirm
     // the drop. Already-judged parties (a stored verdict) are decided.
     const dropped = Array.isArray(payload.bearDroppedEvents) ? payload.bearDroppedEvents : [];
+    // WHAT THE CARD SAYS FOR THE EVENT (owner 2026-11-10: "keep some type of
+    // bear bar and fat picture notices/qualifications"). Facts, never a
+    // verdict. The bars list has no bear-bar flag, so the bar notice states
+    // what is known: the venue is on the list, whether this row was read
+    // from the venue's own site, and how many of the venue's parties this
+    // run kept and did not keep (distinct parties, never rows).
+    const curatedBarOf = (event) => {
+        const cityBars = core.getCuratedCityBars(String(event.city || '').trim().toLowerCase());
+        if (!cityBars) return null;
+        return core.findCuratedBarByName(cityBars, event.bar || event.venue || '')
+            || core.findCuratedBarByPlace(cityBars, typeof event.location === 'string' ? event.location : '', typeof event.address === 'string' ? event.address : '');
+    };
+    const barTallyId = (event, bar) => `${String(event.city || '').trim().toLowerCase()}|${bar.name}`;
+    const barTally = new Map();
+    const tallyBar = (event, side) => {
+        if (!event || typeof event !== 'object') return;
+        const bar = curatedBarOf(event);
+        const titleKey = bar ? core.getBearVerdictTitleKey(event.title || event.name, [event.bar || event.venue]) : '';
+        if (!titleKey) return;
+        const id = barTallyId(event, bar);
+        if (!barTally.has(id)) barTally.set(id, { kept: new Set(), dropped: new Set() });
+        barTally.get(id)[side].add(titleKey);
+    };
+    analyzed.forEach((event) => { if (event && event.isBearEvent === true) tallyBar(event, 'kept'); });
+    // A party the owner parked is neither kept nor turned away.
+    dropped.forEach((entry) => { if (entry && entry.event && !/^manual store: maybe\b/.test(String(entry.reason || ''))) tallyBar(entry.event, 'dropped'); });
+    const buildBarNotice = (event, host) => {
+        const bar = curatedBarOf(event);
+        if (!bar) return null;
+        const tally = barTally.get(barTallyId(event, bar)) || { kept: new Set(), dropped: new Set() };
+        const cityKey = String(event.city || '').trim().toLowerCase();
+        const ownSite = host ? core.getCuratedBarsClaimingWebsiteHost(host).some((claim) => claim && claim.bar && claim.bar.name === bar.name && String(claim.city || '').toLowerCase() === cityKey) : false;
+        return { bar: bar.name, ownSite, host: ownSite ? host : '', kept: tally.kept.size, dropped: [...tally.dropped].filter((key) => !tally.kept.has(key)).length };
+    };
+    // The flyer look (SharedCore.lookAtDroppedFlyers) speaks only when it
+    // saw a heavyset or a big bearded man; a look that saw neither says
+    // nothing and never counts against an event.
+    const buildFlyerNotice = (entry) => {
+        const look = entry && entry.flyerLook && typeof entry.flyerLook === 'object' ? entry.flyerLook : null;
+        if (!look || (look.heavyset !== true && look.bigBearded !== true)) return null;
+        return { heavyset: look.heavyset === true, bigBearded: look.bigBearded === true, description: String(look.description || '').trim().slice(0, 240) };
+    };
     const droppedByKey = new Map();
     dropped.forEach((entry, index) => {
         const event = entry && entry.event && typeof entry.event === 'object' ? entry.event : null;
@@ -2048,6 +2128,11 @@ function buildDeck(runPayload, store, options = {}) {
         const existing = droppedByKey.get(key);
         if (existing) {
             existing.proposal.occurrences += 1;
+            // Another night's flyer may be the one that shows the crowd.
+            if (!existing.display.flyerNotice) {
+                const later = buildFlyerNotice(entry);
+                if (later) { existing.display.flyerNotice = later; existing.worth = ['flyer'].concat(existing.worth); }
+            }
             return;
         }
         const timezone = event.timezone || core.getCityTimezone(event.city) || null;
@@ -2088,7 +2173,17 @@ function buildDeck(runPayload, store, options = {}) {
         // the card as it stands today as its snapshot.
         const fixTarget = core.buildOwnerReviewProposal(event);
         if (fixTarget) fixTarget.kind = 'new';
-        const card = { id: `d${index}`, kind: 'dropped', key, sourceIndex: index, proposal, display, fixTarget: fixTarget || null };
+        const barNotice = buildBarNotice(event, proposal.host);
+        if (barNotice) display.barNotice = barNotice;
+        const flyerNotice = buildFlyerNotice(entry);
+        if (flyerNotice) display.flyerNotice = flyerNotice;
+        // WORTH A LOOK: what the owner's rubric calls a maybe (a party on a
+        // listed bar's own site, a flyer with a big man on it). It sorts
+        // the Not-bear pile; it decides nothing and hides nothing.
+        const worth = [];
+        if (flyerNotice) worth.push('flyer');
+        if (barNotice && barNotice.ownSite) worth.push('bar');
+        const card = { id: `d${index}`, kind: 'dropped', key, sourceIndex: index, proposal, display, fixTarget: fixTarget || null, worth };
         droppedByKey.set(key, card);
     });
     for (const card of droppedByKey.values()) {
@@ -2103,9 +2198,15 @@ function buildDeck(runPayload, store, options = {}) {
             decided.push({ ...card, noteKey: note ? note.key : '', rejectionMode: note ? SharedCore.getOwnerRejectionMode(note) : '', decision: { key: card.key, kind: 'dropped', verdict: card.display.bearVerdict === 'bear' ? 'approve' : 'reject', stampedAt: card.display.bearVerdictStampedAt, reason: note ? note.reason : null, bearVerdict: card.display.bearVerdict } });
             counts.decided++;
             counts.droppedDecided++;
+        } else if (card.display.maybe) {
+            // Parked by the owner: on the Maybes tab, out of the pile.
+            card.parked = true;
+            cards.push(card);
+            counts.maybe++;
         } else {
             cards.push(card);
             counts.dropped++;
+            if (card.worth.length > 0) counts.worth++;
         }
     }
 

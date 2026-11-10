@@ -2025,8 +2025,10 @@ class SharedCore {
         return null;
     }
 
+    // Firm verdicts only: a maybe beside a bear is not "both ways".
     static bearVerdictsDisagree(entries) {
-        return new Set((Array.isArray(entries) ? entries : []).map(entry => entry && entry.verdict)).size > 1;
+        return new Set((Array.isArray(entries) ? entries : []).map(entry => entry && entry.verdict)
+            .filter(value => SharedCore.isBearVerdictValue(value))).size > 1;
     }
 
     // The owner's stored MAYBE for this event — { entry, matchedBy } or null.
