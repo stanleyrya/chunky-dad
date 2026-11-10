@@ -12279,6 +12279,7 @@ class SharedCore {
                 if (!discoveryOnly && !enrichContext && !eventPageFollowsTickets && pageEventsForEnrich.length > 0) {
                     const ticketLinks = [];
                     const seenTicketLinks = new Set();
+                    const allowlistRefusedLinks = [];
                     for (const event of pageEventsForEnrich) {
                         const ticketUrl = event && typeof event.ticketUrl === 'string' ? event.ticketUrl.trim().split('#')[0] : '';
                         if (!ticketUrl || !/^https?:\/\//i.test(ticketUrl)) continue;
@@ -12288,9 +12289,20 @@ class SharedCore {
                         if (!normalized || seenTicketLinks.has(normalized) || this.hasProcessedUrl(processedUrls, normalized)) continue;
                         if (this.getUrlDedupeKey(normalized) === this.getUrlDedupeKey(url)) continue;
                         if (this.isApiEndpointUrl(normalized)) continue;
+                        // A source that states which pages it reads has
+                        // already said what happens to this page: see
+                        // ticketLinkCanPassDiscoveryAllowlist.
+                        if (!this.ticketLinkCanPassDiscoveryAllowlist(normalized, event, parserConfig)) {
+                            seenTicketLinks.add(normalized);
+                            allowlistRefusedLinks.push(`"${event.title || 'Unknown'}" → ${normalized}`);
+                            continue;
+                        }
                         seenTicketLinks.add(normalized);
                         ticketLinks.push(normalized);
                         if (ticketLinks.length >= 12) break;
+                    }
+                    if (allowlistRefusedLinks.length > 0) {
+                        await displayAdapter.logInfo(`SYSTEM: Ticket-link enrichment: not following ${allowlistRefusedLinks.length} ticket link(s) from ${url} — this source reads only what matches its discovery allowlist, and neither the link nor its event's title does, so nothing the page yields would be kept: ${allowlistRefusedLinks.join('; ')}`);
                     }
                     const enrichUrls = this.filterKnownDeadEndUrls(ticketLinks, discoveryOnly, Date.now(), httpAdapter);
                     if (enrichUrls.length > 0) {
@@ -14358,6 +14370,49 @@ class SharedCore {
         const depth = (value) => (this.parseUrl(value) || { pathname: '' }).pathname.replace(/\/+$/, '').split('/').filter(Boolean).length;
         const roots = Array.isArray(parserConfig && parserConfig.urls) ? parserConfig.urls : [];
         return roots.some(root => depth(root) === depth(url));
+    }
+
+    // AN EVENT'S TICKET LINK IS READ ONLY WHEN THE SOURCE WOULD KEEP WHAT THE
+    // PAGE SAYS.
+    //
+    // discoveryAllowedPatterns is the source's own statement of what it
+    // reads, and the parser applies it to EXTRACTION: on a page whose address
+    // does not match, an event is kept only when its own title or links match
+    // (filterEventsByDiscoveryAllowlist). Ticket-link enrichment followed the
+    // link regardless, so for such a source every one of those requests was
+    // made for a page whose every event the parser then threw away.
+    //
+    // Run 20261109-053706, whereto.party (a listing of every club night in 49
+    // cities, allowlist "whereto.party/in/"): 31 ticket links followed — 22
+    // to ra.co (one answered 403 and became a run error, 21 were refused as
+    // parked), 3 refused by a ticket vendor's robots.txt, 6 pages read, each
+    // ending "Discovery allowlist kept 0 of 1 extracted event(s)". 27 of the
+    // 31 rows were then dropped by the bear check. Nothing was ever gained.
+    //
+    // The page's record of an event carries the page's address and, as a
+    // rule, the title its listing row had — so when neither the link nor the
+    // row's title matches, the page cannot pass. No allowlist → every link
+    // passes, exactly as before.
+    ticketLinkCanPassDiscoveryAllowlist(ticketUrl, event, parserConfig) {
+        const patterns = Array.isArray(parserConfig && parserConfig.discoveryAllowedPatterns) ? parserConfig.discoveryAllowedPatterns : [];
+        if (patterns.length === 0) return true;
+        // The parser's own matching (matchesDiscoveryAllowedPattern):
+        // lower-cased value; a string is a substring, a RegExp is tested. A
+        // RegExp from the config file is another realm's on the phone, where
+        // instanceof is false — and a pattern this cannot read refuses
+        // nothing.
+        const isRegExp = (pattern) => pattern instanceof RegExp || Object.prototype.toString.call(pattern) === '[object RegExp]';
+        if (patterns.some(pattern => typeof pattern !== 'string' && !isRegExp(pattern))) return true;
+        const matches = (value) => {
+            const lowered = String(value || '').toLowerCase();
+            if (!lowered) return false;
+            return patterns.some(pattern => {
+                if (isRegExp(pattern)) { pattern.lastIndex = 0; return pattern.test(lowered); }
+                const wanted = pattern.trim().toLowerCase();
+                return Boolean(wanted) && lowered.includes(wanted);
+            });
+        };
+        return matches(ticketUrl) || matches(event && event.ticketUrl) || matches(event && event.title);
     }
 
     hasProcessedUrl(processedUrls, url) {

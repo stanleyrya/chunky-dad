@@ -30733,3 +30733,95 @@ test('never requested: the refusal is not counted as the host failing to answer'
   core.noteHostReachability('http://inkedkenny.com/', new Error('fetch failed'));
   assert.equal(core.hostReachability.get('inkedkenny.com').failures, 1);
 });
+
+// ---------------------------------------------------------------------------
+// Ticket-link enrichment and the source's own discovery allowlist.
+// Run 20261109-053706, whereto.party (allowlist "whereto.party/in/"): 31
+// ticket links followed from its city pages — ra.co answered 403 (a run
+// error), a vendor's robots.txt refused three, and the six pages that opened
+// each ended "Discovery allowlist kept 0 of 1 extracted event(s)".
+// ---------------------------------------------------------------------------
+
+test('ticket-link enrichment: a source with a discovery allowlist has an event\'s ticket link read only when the link or the event\'s title matches it', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const soon = () => new Date(Date.now() + 7 * 86400000);
+  const pages = {
+    'https://listing.example/cities': { additionalLinks: ['https://listing.example/in/melbourne'] },
+    'https://listing.example/in/melbourne': {
+      events: [
+        // Rows shaped like the run's own (title + outbound ticket link).
+        { title: "Ruby Lou - onesixone Thursday's", startDate: soon(), bar: 'onesixone', ticketUrl: 'https://tickets-a.example/events/2578203' },
+        { title: 'NYMPHO x PEP RALLY present: Chippy Nonstop', startDate: soon(), bar: 'Colour', ticketUrl: 'https://tickets-b.example/nympho-x-pep-rally-present-chippy-nonstop-can#tickets' },
+        { title: 'A row with no ticket link', startDate: soon(), bar: 'Colour' }
+      ]
+    },
+    'https://tickets-a.example/events/2578203': { events: [{ title: "Ruby Lou - onesixone Thursday's", startDate: soon() }] },
+    'https://tickets-b.example/nympho-x-pep-rally-present-chippy-nonstop-can': { events: [{ title: 'NYMPHO x Pep Rally Present: Chippy Nonstop (CAN)', startDate: soon() }] }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const entry = {
+    name: 'Listing Example', siteRole: 'aggregator', urls: ['https://listing.example/cities'],
+    urlDiscoveryDepth: 1, discoveryAllowedPatterns: ['listing.example/in/'], alwaysBear: true, ai: CRAWL_AI
+  };
+  await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+
+  assert.deepEqual(fetched, ['https://listing.example/cities', 'https://listing.example/in/melbourne'], 'no ticket page is requested');
+  assert.ok(display.logs.includes(
+    'SYSTEM: Ticket-link enrichment: not following 2 ticket link(s) from https://listing.example/in/melbourne — this source reads only what matches its discovery allowlist, and neither the link nor its event\'s title does, so nothing the page yields would be kept: '
+    + '"Ruby Lou - onesixone Thursday\'s" → https://tickets-a.example/events/2578203; "NYMPHO x PEP RALLY present: Chippy Nonstop" → https://tickets-b.example/nympho-x-pep-rally-present-chippy-nonstop-can'),
+    JSON.stringify(display.logs.filter(line => line.includes('Ticket-link'))));
+  assert.ok(!display.logs.some(line => line.includes('Ticket-link enrichment: following')));
+});
+
+test('ticket-link enrichment: with an allowlist, a link or a title that matches is still read; with none, every ticket link is read as before', async () => {
+  const soon = () => new Date(Date.now() + 7 * 86400000);
+  const pages = () => ({
+    'https://platform.example/search?q=promoname': {
+      events: [
+        { title: 'PROMONAME: Flannel Night', startDate: soon(), ticketUrl: 'https://vendor.example/e/flannel-night-123' },
+        { title: 'Harvest Ball', startDate: soon(), ticketUrl: 'https://vendor.example/e/promoname-harvest-ball-456' },
+        { title: 'Somebody Else Entirely', startDate: soon(), ticketUrl: 'https://vendor.example/e/somebody-else-789' }
+      ]
+    },
+    'https://vendor.example/e/flannel-night-123': { events: [{ title: 'PROMONAME: Flannel Night', startDate: soon() }] },
+    'https://vendor.example/e/promoname-harvest-ball-456': { events: [{ title: 'Harvest Ball', startDate: soon() }] },
+    'https://vendor.example/e/somebody-else-789': { events: [{ title: 'Somebody Else Entirely', startDate: soon() }] }
+  });
+  const run = async (extra) => {
+    const core = createCore();
+    const display = createDisplayAdapterStub();
+    const { fetched, httpAdapter, parsers } = createCrawlHarness(pages());
+    const entry = { name: 'Promoname', urls: ['https://platform.example/search?q=promoname'], urlDiscoveryDepth: 0, alwaysBear: true, ai: CRAWL_AI, ...extra };
+    await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
+    return { fetched: fetched.slice(1).sort(), logs: display.logs.filter(line => line.includes('Ticket-link enrichment')) };
+  };
+
+  const scoped = await run({ discoveryAllowedPatterns: ['promoname'] });
+  assert.deepEqual(scoped.fetched, ['https://vendor.example/e/flannel-night-123', 'https://vendor.example/e/promoname-harvest-ball-456'], 'the title names it, or the link does');
+  assert.deepEqual(scoped.logs, [
+    'SYSTEM: Ticket-link enrichment: not following 1 ticket link(s) from https://platform.example/search?q=promoname — this source reads only what matches its discovery allowlist, and neither the link nor its event\'s title does, so nothing the page yields would be kept: "Somebody Else Entirely" → https://vendor.example/e/somebody-else-789',
+    'SYSTEM: Ticket-link enrichment: following 2 ticket link(s) from https://platform.example/search?q=promoname for 3 event(s) (enrich-only)'
+  ]);
+
+  const open = await run({});
+  assert.equal(open.fetched.length, 3, 'no allowlist: nothing changes');
+  assert.deepEqual(open.logs, ['SYSTEM: Ticket-link enrichment: following 3 ticket link(s) from https://platform.example/search?q=promoname for 3 event(s) (enrich-only)']);
+
+  // The rule itself: the parser's matching, a RegExp from any realm, and a
+  // pattern it cannot read refuses nothing.
+  const core = createCore();
+  const can = (link, title, patterns) => core.ticketLinkCanPassDiscoveryAllowlist(link, { title, ticketUrl: link }, { discoveryAllowedPatterns: patterns });
+  assert.equal(can('https://ra.co/events/2578203', "Ruby Lou - onesixone Thursday's", ['whereto.party/in/']), false);
+  assert.equal(can('https://ra.co/events/2578203', "Ruby Lou - onesixone Thursday's", []), true);
+  assert.equal(can('https://ra.co/events/2578203', "Ruby Lou - onesixone Thursday's", undefined), true);
+  assert.equal(can('https://vendor.example/e/1', 'GOLDILOXX Flannel Nite', [' Goldiloxx ']), true, 'case and padding as the parser reads them');
+  assert.equal(can('https://vendor.example/e/1', 'Flannel Nite', [/goldi\s*loxx/g]), false);
+  assert.equal(can('https://vendor.example/e/goldi-loxx-1', 'Flannel Nite', [/goldi.?loxx/g]), true);
+  assert.equal(can('https://vendor.example/e/goldi-loxx-1', 'Flannel Nite', [/goldi.?loxx/g]), true, 'a global RegExp answers the same twice');
+  const foreignRegExp = require('node:vm').runInNewContext('/goldiloxx/');
+  assert.equal(foreignRegExp instanceof RegExp, false, 'another realm, as a config RegExp is on the phone');
+  assert.equal(can('https://vendor.example/e/1', 'Goldiloxx Flannel Nite', [foreignRegExp]), true);
+  assert.equal(can('https://vendor.example/e/1', 'Flannel Nite', [foreignRegExp]), false);
+  assert.equal(can('https://vendor.example/e/1', 'Flannel Nite', ['whereto.party/in/', { not: 'a pattern' }]), true, 'unreadable pattern: follow');
+});
