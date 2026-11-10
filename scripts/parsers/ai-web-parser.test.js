@@ -2480,6 +2480,21 @@ test('weekday pinning falls back to the source content when evidence lacks a wee
   assert.equal(parser.resolveWeekdayPinnedYear('2025-01-17', 'JANUARY 17TH', ambiguous), null);
   // Date-like text between the weekday and the token breaks adjacency.
   assert.equal(parser.resolveWeekdayPinnedYear('2025-01-17', 'JANUARY 17TH', 'SATURDAY DEC 13\nJANUARY 17TH'), null);
+  // Bear Jamboree TBT (2026-11-09 replay): the flyer says "THU / JUNE 4TH",
+  // the paragraph under it repeats "on June 4" with no weekday, and the
+  // model quoted only "JUNE 4TH". The bare repeat says nothing about the
+  // weekday, so it must not unsay the flyer: last June's party stays last
+  // June's instead of rolling to a day next year the page never names.
+  const repeated = 'TBT\nTHU\nJUNE 4TH\n8:00PM TO 1:00AM\n\nJoin us for the TBT Welcome Party on June 4 from 8PM-1AM';
+  const held = parser.resolveWeekdayPinnedYear('2025-06-04', 'JUNE 4TH', repeated);
+  assert.ok(held, 'a bare repeat of the date does not veto the weekday stated beside it elsewhere');
+  assert.equal(held.value, '2026-06-04', '2026-06-04 is the Thursday');
+  // The bare repeat first, the stated weekday second: order does not matter.
+  const repeatedFirst = 'Welcome Party on June 4\nTBT\nTHU\nJUNE 4TH';
+  assert.equal(parser.resolveWeekdayPinnedYear('2025-06-04', 'JUNE 4TH', repeatedFirst).value, '2026-06-04');
+  // Two stated weekdays that disagree still pin nothing, bare repeats or not.
+  const twoMinds = 'THU\nJUNE 4TH\nparty on June 4\nFRI\nJUNE 4TH';
+  assert.equal(parser.resolveWeekdayPinnedYear('2025-06-04', 'JUNE 4TH', twoMinds), null);
 });
 
 test('adjustLikelyEventYear re-anchors on the current year when hallucinated-year ±1 misses the window', () => {

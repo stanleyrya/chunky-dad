@@ -29160,9 +29160,13 @@ TEXT:
     // Search the pass's source content for the extracted month+day token and
     // accept a weekday named in the preceding ~2 lines / ~40 chars, with nothing
     // date-like (digits or another month name) between the weekday and the date.
-    // Conservative by design: pins only when the token match is unambiguous — the
-    // month+day appears exactly once, or every occurrence agrees on the adjacent
-    // weekday. Returns the JS day index (0=Sunday) or null.
+    // Conservative by design: pins only when the page is of one mind — every
+    // occurrence that names a weekday beside the month+day names the same one.
+    // An occurrence with no weekday beside it says nothing and vetoes nothing
+    // (a flyer's "THU\nJUNE 4TH" is not unsaid by the paragraph under it that
+    // repeats "on June 4"); two occurrences naming different weekdays are two
+    // years or two parties, and nothing is pinned. Returns the JS day index
+    // (0=Sunday) or null.
     extractWeekdayNearDateInSource(sourceText, valueText) {
         const source = String(sourceText || '');
         if (!source.trim()) return null;
@@ -29214,10 +29218,9 @@ TEXT:
         }
 
         if (occurrenceCount === 0) return null;
-        if (occurrenceCount === 1) return adjacentWeekdays[0];
-        const first = adjacentWeekdays[0];
-        if (first === null) return null;
-        return adjacentWeekdays.every(weekday => weekday === first) ? first : null;
+        const stated = adjacentWeekdays.filter(weekday => weekday !== null);
+        if (stated.length === 0) return null;
+        return stated.every(weekday => weekday === stated[0]) ? stated[0] : null;
     }
 
     // Deterministic weekday→year pinning. Listing/flyer text often states a
