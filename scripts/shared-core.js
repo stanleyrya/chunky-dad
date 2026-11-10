@@ -1269,6 +1269,7 @@ class SharedCore {
                     // (invalidateAiClassificationCacheEntry) only re-classifies
                     // pages whose classification CAME from cache.
                     this.noteAiClassificationCacheHit(url);
+                    if (cachedOutcome.rejected) this.noteAiClassificationDeclined(url);
                     return cachedOutcome.rejected ? null : cachedOutcome;
                 }
             } catch (error) {
@@ -1331,6 +1332,7 @@ class SharedCore {
                 console.log(`🗂️ SharedCore: AI classification cache write failed for ${url}: ${error.message}`);
             }
         }
+        if (outcome.rejected) this.noteAiClassificationDeclined(url);
         return outcome.rejected ? null : outcome;
     }
 
@@ -1353,6 +1355,20 @@ class SharedCore {
     noteAiClassificationCacheHit(url) {
         if (!this.aiClassificationCacheHitUrls) this.aiClassificationCacheHitUrls = new Set();
         this.aiClassificationCacheHitUrls.add(String(url || ''));
+    }
+
+    // In-run record of pages the model was ASKED about and would not label
+    // ('unknown', an invalid label, or under 60 confidence) — distinct from
+    // every other null classifyPageWithAi returns (AI off, a dead server, an
+    // unparseable answer), where nobody declined anything.
+    noteAiClassificationDeclined(url) {
+        if (!this.aiClassificationDeclinedUrls) this.aiClassificationDeclinedUrls = new Set();
+        this.aiClassificationDeclinedUrls.add(String(url || ''));
+    }
+
+    wasAiClassificationDeclined(url) {
+        return Boolean(this.aiClassificationDeclinedUrls
+            && this.aiClassificationDeclinedUrls.has(String(url || '')));
     }
 
     wasAiClassificationCacheHit(url) {
@@ -12363,7 +12379,7 @@ class SharedCore {
                 } finally {
                     if (politeGate && typeof politeGate.endOpeningRoot === 'function') politeGate.endOpeningRoot();
                 }
-                const { pageClassification, parseResult, urlParserName } = crawlParse;
+                const { pageClassification, parseResult, urlParserName, classificationSignal } = crawlParse;
                 // The host answered: a site that comes back up mid-run is
                 // crawled again (see noteHostReachability).
                 this.noteHostReached(url);
@@ -12754,6 +12770,18 @@ class SharedCore {
                         if (linksToConsider.length > 0) {
                             await displayAdapter.logInfo(`SYSTEM: Enrich-only crawl: not following ${linksToConsider.length} link(s) from ${url}`);
                         }
+                        linksToConsider = [];
+                        adaptiveFollowBlocked = true;
+                    } else if (linksToConsider.length > 0 && this.isUnprovenCrawledListing({ url, currentDepth, pageClassification, classificationSignal, parseResult, parserConfig, discoveryOnly })) {
+                        // A page the crawl REACHED is a listing when something
+                        // says so: it yielded a row, or the model called it
+                        // one. bearitmtl.com/conditions-generales-de-vente/
+                        // (terms of sale) had neither — the sidebar's month
+                        // names tripped the month-count heuristic, the model
+                        // declined to call it anything, it read 0 events — and
+                        // its footer sent the crawl to the blog's category
+                        // archives and two plugin vendors' home pages.
+                        await displayAdapter.logInfo(`SYSTEM: 🧭 UNPROVEN LISTING: not following ${linksToConsider.length} link(s) from ${url} — only the month-count guess calls it a listing, the model would not, and it read as no events; its links are the site's menu`);
                         linksToConsider = [];
                         adaptiveFollowBlocked = true;
                     } else if (linksToConsider.length > 0 && currentDepth >= ADAPTIVE_CRAWL_MAX_HOPS) {
@@ -14755,6 +14783,23 @@ class SharedCore {
         return stamped;
     }
 
+    // A page the crawl reached (never the owner's configured URL) whose only
+    // claim to being a listing is the month-count heuristic: the model was
+    // asked and would not call it anything ('heuristic-declined' — never a
+    // parser that turned the model off, never a dead server), and the parse
+    // read no row of any kind
+    // (kept, dropped by the bear check, or undated). Such a page hands the
+    // crawl nothing — see the caller for the evidence.
+    isUnprovenCrawledListing({ url, currentDepth = 0, pageClassification = '', classificationSignal = '', parseResult = null, parserConfig = null, discoveryOnly = false } = {}) {
+        if (!(currentDepth > 0) || discoveryOnly) return false;
+        if (pageClassification !== 'multi-event-page' || classificationSignal !== 'heuristic-declined') return false;
+        if (this.isConfiguredParserUrlForCrawl(url, parserConfig)) return false;
+        const count = (list) => (Array.isArray(list) ? list.length : 0);
+        return count(parseResult && parseResult.events) === 0
+            && count(parseResult && parseResult.bearDroppedEvents) === 0
+            && count(parseResult && parseResult.undatedRowDrops) === 0;
+    }
+
     async parsePageForCrawl({
         url,
         htmlData,
@@ -14818,6 +14863,8 @@ class SharedCore {
                     classificationSignal = 'ai';
                 } else if (aiResult && aiResult.classification) {
                     classificationSignal = 'ai-confirmed';
+                } else if (!aiResult && classificationSignal === 'heuristic' && this.wasAiClassificationDeclined(url)) {
+                    classificationSignal = 'heuristic-declined';
                 }
             } catch (error) {
                 console.warn(`⚠️ SharedCore: AI page classification failed for ${url}: ${error.message}`);
@@ -14855,7 +14902,7 @@ class SharedCore {
         // a per-parser siteRole knob was the only durable answer. One place,
         // every parser and every extraction route: a page is a page.
         this.stampPageSiteRoleOnEvents(parseResult, htmlData);
-        return { pageClassification, parseResult, urlParserName };
+        return { pageClassification, parseResult, urlParserName, classificationSignal };
     }
 
     // Strip protocol prefix from a URL for compact display labels.

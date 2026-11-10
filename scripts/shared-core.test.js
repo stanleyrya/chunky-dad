@@ -10954,6 +10954,58 @@ test('a link to another running source\'s own configured page is left to that so
 
 });
 
+// bearitmtl.com/conditions-generales-de-vente/ (replay of run
+// 20261109-053706): terms of sale, called multi-event-page by the month
+// count of its sidebar, the model declined to call it anything, 0 events —
+// and its footer sent the crawl to the blog's category archives.
+test('a crawled page only the month count calls a listing hands the crawl nothing', async () => {
+  const future = new Date(Date.now() + 5 * 86400000).toISOString();
+  const months = '<html><body><p>January February March April May June July August</p><p>Terms of sale apply to every order.</p></body></html>';
+  const run = async ({ answer, termsEvents = [], ai = {} }) => {
+    const core = createCore();
+    const display = createDisplayAdapterStub();
+    const pages = {
+      'https://club.example/events': {
+        html: months,
+        events: [{ title: 'Bear Night', startDate: future }],
+        additionalLinks: ['https://club.example/terms']
+      },
+      'https://club.example/terms': { html: months, events: termsEvents, additionalLinks: ['https://club.example/category/news'] },
+      'https://club.example/category/news': { events: [{ title: 'Old News', startDate: future }] }
+    };
+    const harness = createCrawlHarness(pages);
+    const aiConfig = { enabled: true, provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' };
+    harness.parsers['ai-web'].getAiConfig = () => aiConfig;
+    harness.httpAdapter.postJson = async () => ({ ok: true, status: 200, text: JSON.stringify({ response: answer }) });
+    await core.processParser(
+      { name: 'Club', urls: ['https://club.example/events'], alwaysBear: true, ai: { bearCheck: { mode: 'off' }, ...ai } },
+      {}, harness.httpAdapter, display, harness.parsers
+    );
+    return { fetched: harness.fetched, logs: display.logs };
+  };
+  const declined = JSON.stringify({ classification: 'unknown', confidence: 20, reason: 'legal text' });
+
+  const stopped = await run({ answer: declined });
+  assert.ok(stopped.fetched.includes('https://club.example/terms'), 'the page itself is still read');
+  assert.ok(!stopped.fetched.includes('https://club.example/category/news'), 'its links are not followed');
+  assert.ok(stopped.logs.some(l => l.includes('UNPROVEN LISTING: not following 1 link(s) from https://club.example/terms')), stopped.logs.filter(l => /terms/.test(l)).join('\n'));
+
+  // A row of any kind proves the page: it listed something.
+  const proven = await run({ answer: declined, termsEvents: [{ title: 'Terms Party', startDate: future }] });
+  assert.ok(proven.fetched.includes('https://club.example/category/news'));
+
+  // The model calling it a listing proves it too.
+  const confirmed = await run({ answer: JSON.stringify({ classification: 'multi-event-page', confidence: 90, reason: 'lists nights' }) });
+  assert.ok(confirmed.fetched.includes('https://club.example/category/news'));
+
+  // A parser that turned the model off, and a model that answered nothing,
+  // declined nothing: the heuristic stands as before.
+  const modelOff = await run({ answer: declined, ai: { classifyPages: false } });
+  assert.ok(modelOff.fetched.includes('https://club.example/category/news'));
+  const silent = await run({ answer: '' });
+  assert.ok(silent.fetched.includes('https://club.example/category/news'));
+});
+
 test('parsePageForCrawl refuses non-page responses and ad pages before any parser runs', async () => {
   const core = createCore();
   const display = createDisplayAdapterStub();
