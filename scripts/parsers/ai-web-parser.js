@@ -1405,6 +1405,9 @@ class AiWebParser {
             // JSON that arrived through a SPA data door carries context the
             // payload itself lacks — fills blanks before the completeness gate.
             this.applyDataDoorContext(jsonApiEvents, effectiveHtmlData && effectiveHtmlData.dataDoor, cityConfig);
+            // A row that types its street address after its name states its
+            // place there (readFeedRowTitleAddresses) — read before the gate.
+            this.readFeedRowTitleAddresses(jsonApiEvents);
             await this.resolveJsonApiSlugLinks(jsonApiEvents, sourceUrl, httpAdapter);
             await this.resolveJsonApiImageIdUrls(jsonApiEvents, sourceUrl, httpAdapter);
             // On a venue's or promoter's own site (config siteRole, or the
@@ -1435,10 +1438,9 @@ class AiWebParser {
                 // venue (placeVenueFeedRowsFromCuratedHost).
                 if ((configuredRole || pageRole) === 'venue') this.placeVenueFeedRowsFromCuratedHost(jsonApiEvents, sourceUrl);
             }
-            // A stated city is place evidence too: an aggregator row with no
-            // venue yet ("BEAR POOL PARTY", Sitges) is a real event somewhere
-            // in that city, not an incomplete record.
-            const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address || event.city);
+            // The completeness gate (keepPlacedFeedRows): a row that names no
+            // place is not kept, and says so.
+            const completeJsonApiEvents = this.keepPlacedFeedRows(jsonApiEvents, sourceUrl);
             // The page's own data, streamed to the browser as React flight
             // chunks (see collectPageFlightDataRows): read as feed rows, with
             // the same builder, completeness gate and enrichment as a feed.
@@ -1448,9 +1450,11 @@ class AiWebParser {
                 const more = await this.continuePageFlightRows(html, sourceUrl, pageDataRows, pageFlight.continuation, httpAdapter);
                 for (const row of more) pageDataRows.push(row);
             }
-            const pageDataEvents = pageDataRows
+            const builtPageDataEvents = pageDataRows
                 .map(row => this.buildEventFromJsonApiObject(row, sourceUrl, cityConfig))
-                .filter(event => event && (event.bar || event.address || event.city));
+                .filter(Boolean);
+            this.readFeedRowTitleAddresses(builtPageDataEvents);
+            const pageDataEvents = this.keepPlacedFeedRows(builtPageDataEvents, sourceUrl);
             if (pageDataRows.length > 0) {
                 console.log(`📦 PAGE DATA: ${sourceUrl} ships ${pageDataRows.length} event row(s) in its own flight data — built ${pageDataEvents.length} event(s)`);
             }
@@ -32078,6 +32082,85 @@ TEXT:
             }
         }
         return claimants;
+    }
+
+    // A FEED ROW THAT TYPES ITS STREET ADDRESS AFTER ITS NAME states its place
+    // there. Lodge NY's Google Calendar (run 20261109-053706) writes every
+    // party as "<name> 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues"; most
+    // rows repeat the address in LOCATION, but the monthly "Chub Chaser
+    // Party" has no LOCATION at all (dropped at the gate below, every run)
+    // and "The Fuck Stop" says only "Garment District, New York, NY, USA"
+    // (kept, with the address still in its name). Read by shape
+    // (SharedCore.readAddressTailFromTitle — the same tail
+    // stripAddressTailFromTitle cuts when the row DOES state the address):
+    //   - a row that already states a street line is left to that strip;
+    //   - a row that states only a locality keeps it behind the street line
+    //     ("232 W 37th St, 2nd Fl, New York, NY, USA");
+    //   - a row that states no place takes the full address the other rows
+    //     of this same feed state for that same door (the one most of them
+    //     state), and the title's own street line when none does.
+    // The name loses the tail either way. Every read is logged. Returns the
+    // number of rows read.
+    readFeedRowTitleAddresses(feedEvents) {
+        const rows = (Array.isArray(feedEvents) ? feedEvents : []).filter(event => event && typeof event === 'object');
+        const core = this.core;
+        if (rows.length === 0 || !core || typeof core.readAddressTailFromTitle !== 'function') return 0;
+        const text = (value) => (typeof value === 'string' ? value.trim() : '');
+        const statesStreetLine = (address) => address.split(',').some(part => core.looksLikeStreetAddress(part.trim()));
+        // The street addresses this feed's rows state, most-stated first.
+        const stated = new Map();
+        for (const event of rows) {
+            const address = text(event.address);
+            if (address && statesStreetLine(address)) stated.set(address, (stated.get(address) || 0) + 1);
+        }
+        const statedByCount = [...stated.entries()].sort((a, b) => b[1] - a[1]).map(entry => entry[0]);
+        let read = 0;
+        for (const event of rows) {
+            const existing = text(event.address);
+            if (existing && statesStreetLine(existing)) continue;
+            const tail = core.readAddressTailFromTitle(event.title);
+            if (!tail) continue;
+            const sameDoor = !existing && typeof core.areSameStreetLine === 'function'
+                ? statedByCount.find(address => core.areSameStreetLine(tail.address, address))
+                : '';
+            const address = existing
+                ? (tail.locality ? tail.address : `${tail.address}, ${existing}`)
+                : (sameDoor || tail.address);
+            const why = existing
+                ? `the row states only "${[text(event.bar), existing].filter(Boolean).join(', ')}"`
+                : (sameDoor ? 'the row states no place; the full address is the one this feed\'s other rows state for that door' : 'the row states no place');
+            console.log(`📍 TITLE ADDRESS: "${event.title}" → "${tail.title}" — the name ends in a street address and ${why}: address = ${address}${tail.crossStreets ? ` (${tail.crossStreets})` : ''}`);
+            event.title = tail.title;
+            event.address = address;
+            read++;
+        }
+        return read;
+    }
+
+    // THE FEED COMPLETENESS GATE: a structured row is an event only when it
+    // names a place — a bar, an address or a city (a stated city is place
+    // evidence too: an aggregator row with no venue yet, "BEAR POOL PARTY",
+    // Sitges, is a real event somewhere in that city). A row that names none
+    // is not kept, and never silently: one line per party names it, its
+    // nights and the reason (Lodge NY's "Chub Chaser Party" vanished at this
+    // gate on every run with no trace, audit 2026-11-09).
+    keepPlacedFeedRows(feedEvents, sourceUrl) {
+        const rows = Array.isArray(feedEvents) ? feedEvents : [];
+        const kept = [];
+        const unplaced = new Map();
+        for (const event of rows) {
+            if (!event) continue;
+            if (event.bar || event.address || event.city) { kept.push(event); continue; }
+            const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : '(untitled)';
+            const ms = this.core && typeof this.core.toEpochMillis === 'function' ? this.core.toEpochMillis(event.startDate) : null;
+            const day = Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : 'undated';
+            if (!unplaced.has(title)) unplaced.set(title, []);
+            unplaced.get(title).push(day);
+        }
+        for (const [title, days] of unplaced) {
+            console.log(`🚧 FEED GATE: "${title}" (${days.length} night(s): ${days.slice(0, 6).join(', ')}${days.length > 6 ? ', …' : ''}) names no bar, address or city in ${sourceUrl} — not kept as a structured event`);
+        }
+        return kept;
     }
 
     // A VENUE's own feed that names no place: the place is the venue. The

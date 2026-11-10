@@ -30270,3 +30270,52 @@ test('feed fidelity: a cancelled iCalendar record says so on its row', () => {
   assert.equal(series.status, undefined);
   for (const row of rows.filter(row => !row.rrule)) assert.equal(row.status, 'cancelled');
 });
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): a title that ENDS in a street address is
+// read by shape. Lodge NY's calendar writes every party as "<name> 232 W 37th
+// St, 2nd Fl b/w 7th and 8th Avenues"; the rows with no LOCATION line were
+// dropped at the feed gate on every run.
+// ---------------------------------------------------------------------------
+test('feed fidelity: a title that ends in a street address is read by shape', () => {
+  const core = createCore();
+  const read = (title) => core.readAddressTailFromTitle(title);
+  // The real titles of the cached feed (run 20261109-053706).
+  assert.deepEqual(read('Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues '),
+    { title: 'Chub Chaser Party', address: '232 W 37th St, 2nd Fl', crossStreets: 'b/w 7th and 8th Avenues', locality: '' });
+  assert.deepEqual(read('The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues'),
+    { title: 'The Fuck Stop', address: '232 W 37th St, 2nd Fl', crossStreets: 'between 7th and 8th Avenues', locality: '' });
+  assert.deepEqual(read('The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues'),
+    { title: 'The Bear Party', address: '232 W 37th St, 2nd Fl', crossStreets: 'b/w 7th & 8th Avenues', locality: '' });
+  assert.deepEqual(read('Lodge Long Island 92 Kean St, West Babylon, NY'),
+    { title: 'Lodge Long Island', address: '92 Kean St, West Babylon, NY', crossStreets: '', locality: 'West Babylon, NY' });
+  // Other shapes of the same thing.
+  assert.equal(read('Fuzzy @ 1354 Harrison Street').address, '1354 Harrison Street');
+  assert.equal(read('Fuzzy @ 1354 Harrison Street').title, 'Fuzzy');
+  assert.equal(read('Furball 10-90 Wyckoff Ave, Queens, NY 11385').address, '10-90 Wyckoff Ave, Queens, NY 11385');
+  assert.equal(read('Beef 2069 Cheshire Bridge Rd NE').address, '2069 Cheshire Bridge Rd NE');
+  assert.equal(read('Tea 700 N. Main St. Suite 4').address, '700 N. Main St, Suite 4');
+});
+
+test('feed fidelity: a number inside a name is not a street address', () => {
+  const core = createCore();
+  for (const title of [
+    'Studio 54 Night', 'Top 40 Drive', 'Route 66 Road Trip', 'Bears 4 Bareburger', 'Bear Cave Friday at The 244 Spot',
+    'Mr. Leather 2026 Contest', '9th Avenue Saloon Night', 'Party at 3 Dollar Bill',
+    // The street is followed by more name, not by more address.
+    'Party 123 Main St Block Party', 'Bear Night 123 Main St, Underwear Party', "Bear Night 17 March St Patrick's",
+    "Workman's Lunch at 108 Greenwich St, 6th Fl in Tribeca",
+    // An everyday word that is also a street type needs more address behind it.
+    'Bears 2 Go Your Own Way',
+    // No house number: the title only gestures at a place (both real, Lodge NY).
+    'Chub Chaser Party on 37th b/w 7th and 8th Aves',
+    'Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address)',
+    // The title IS the address: nothing would be left of the name.
+    '232 W 37th St', '232 W 37th St party', ''
+  ]) {
+    assert.equal(core.readAddressTailFromTitle(title), null, title);
+  }
+  assert.equal(core.readAddressTailFromTitle(null), null);
+  // The everyday word does name a street once a locality follows it.
+  assert.equal(core.readAddressTailFromTitle('Bear Brunch 12 Castro Place, San Francisco, CA').address, '12 Castro Place, San Francisco, CA');
+});

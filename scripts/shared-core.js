@@ -181,6 +181,9 @@ const ADDRESS_ABBREVIATION_EXPANSIONS = {
 // ("619 E. Pine" vs "619 E. Pine Street") is the same street line; any other
 // surplus token ("Pine Street" vs "Pine Avenue", or a different street name)
 // is a real difference and must still arbitrate.
+// The street-type words a street line may end in, as typed (the same words
+// looksLikeStreetAddress anchors on, plus the spelled-out parkway/highway).
+const STREET_TYPE_WORDS = 'St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Pl|Place|Ct|Court|Pkwy|Parkway|Hwy|Highway';
 const ADDRESS_STREET_TYPE_TOKENS = [
     'street', 'avenue', 'road', 'boulevard', 'drive', 'lane', 'place',
     'court', 'highway', 'parkway', 'way'
@@ -1630,12 +1633,98 @@ class SharedCore {
         const tail = new RegExp(`(^|\\s)${escape(houseNumber)}\\s+${escape(streetWord)}\\b`, 'i');
         const match = text.match(tail);
         if (!match || match.index === undefined || match.index === 0) return text;
-        const head = text.slice(0, match.index)
+        const head = SharedCore.titleBeforeAddressTail(text.slice(0, match.index));
+        if (!head) return text;
+        return head;
+    }
+
+    // The name that is left when an address tail is cut off a title: the
+    // joining punctuation and the "at" / "in" that led into the address go
+    // with it. '' when nothing with a letter remains (the title IS the
+    // address).
+    static titleBeforeAddressTail(head) {
+        const bare = String(head || '')
             .replace(/[\s,:\-–—/|@(]+$/, '')
             .replace(/\s+(?:at|in|@)$/i, '')
             .trim();
-        if (!head || !/[a-z]/i.test(head)) return text;
-        return head;
+        return bare && /[a-z]/i.test(bare) ? bare : '';
+    }
+
+    // The same tail, read BY SHAPE when the row states no street address to
+    // recognise it by (Lodge NY's calendar, run 20261109-053706: the monthly
+    // "Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues" has
+    // no LOCATION line at all, so the feed gate dropped it every run; six
+    // "The Fuck Stop 232 W 37th St, …" rows say only "Garment District, New
+    // York, NY, USA" and kept the address in their name).
+    //
+    // A tail is an address only when EVERYTHING from the house number to the
+    // end of the title is one: house number, optional directional, one to
+    // three street-name words, a street-type word — then nothing but a floor
+    // or unit, a "between X and Y" cross-street phrase, and a locality that
+    // ends in a region code or postal code. Any other word after the street
+    // ("54 Night", "123 Main St Block Party", "… (sign up for address)")
+    // means the number belongs to the name, and the title is left alone.
+    // A title that only gestures at a place ("… on 37th b/w 7th and 8th
+    // Aves", no house number) is not read either.
+    //
+    // Returns { title, address, crossStreets, locality } or null. The address is the
+    // street line, the floor and the locality; the cross streets are
+    // directions for a person, not part of an address a geocoder can read.
+    readAddressTailFromTitle(title) {
+        const text = String(title || '').replace(/\s+/g, ' ').trim();
+        if (!text) return null;
+        const word = "[A-Za-z0-9][A-Za-z0-9'’.]*";
+        const street = new RegExp(
+            '^(\\d{1,6}(?:-\\d{1,6})?[A-Za-z]?)\\s+'
+            + '((?:(?:N|S|E|W|NE|NW|SE|SW|North|South|East|West)\\.?\\s+)?'
+            + `(?:${word}\\s+){1,3}?`
+            + `(${STREET_TYPE_WORDS})\\b\\.?(?:\\s+(?:NE|NW|SE|SW)\\b)?)`, 'i');
+        const unit = new RegExp('^(?:\\d+(?:st|nd|rd|th)\\s+(?:fl|floor)\\b\\.?'
+            + '|(?:fl|floor|suite|ste|unit|apt|apartment|room|rm|level)\\b\\.?\\s*#?[A-Za-z0-9-]+'
+            + '|#\\s*[A-Za-z0-9-]+)', 'i');
+        const cross = new RegExp('^(?:b\\/w|btw|btwn|bet|between)\\b\\.?\\s+'
+            + `${word}(?:\\s+${word})?\\s+(?:and|&|\\+)\\s+${word}(?:\\s+${word})?\\b\\.?`, 'i');
+        // A locality is named by where it ENDS: a region code or a postal
+        // code. Up to two capitalised place names may lead it and a country
+        // may follow; a bare ", Something" after the street is just more name.
+        const locality = /^,\s*((?:[A-Z][A-Za-z.'’-]*(?:\s+[A-Z][A-Za-z.'’-]*){0,2},\s*){0,2}(?:[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?|\d{5}(?:-\d{4})?)(?:,\s*[A-Z][A-Za-z.]*(?:\s+[A-Z][A-Za-z.]*){0,2})?)\s*$/;
+        const numberAt = /(?:^|\s)(?=\d{1,6}(?:-\d{1,6})?[A-Za-z]?\s)/g;
+        let found;
+        while ((found = numberAt.exec(text)) !== null) {
+            const start = found.index + found[0].length;
+            if (numberAt.lastIndex === found.index) numberAt.lastIndex++;
+            if (start === 0) continue;
+            const head = SharedCore.titleBeforeAddressTail(text.slice(0, start));
+            if (!head) continue;
+            const tail = text.slice(start);
+            const line = street.exec(tail);
+            if (!line) continue;
+            let rest = tail.slice(line[0].length);
+            const parts = [`${line[1]} ${line[2].trim().replace(/\.$/, '')}`];
+            let crossStreets = '';
+            let place = '';
+            let readable = true;
+            while (readable) {
+                const gap = /^[\s,]+/.exec(rest);
+                const after = gap ? rest.slice(gap[0].length) : rest;
+                if (!after) { rest = ''; break; }
+                const placed = locality.exec(rest);
+                if (placed) { place = placed[1].replace(/\s*,\s*/g, ', '); rest = ''; break; }
+                const floor = unit.exec(after);
+                if (floor && parts.length === 1) { parts.push(floor[0].replace(/\.$/, '')); rest = after.slice(floor[0].length); continue; }
+                const between = !crossStreets ? cross.exec(after) : null;
+                if (between) { crossStreets = between[0]; rest = after.slice(between[0].length); continue; }
+                readable = false;
+            }
+            if (!readable || rest) continue;
+            // A street-type word that is also an everyday word ("… 2 Go
+            // Your Own Way") names a street only with something more of an
+            // address behind it.
+            if (/^(?:way|place|court|drive|lane)$/i.test(line[3]) && parts.length === 1 && !crossStreets && !place) continue;
+            if (place) parts.push(place);
+            return { title: head, address: parts.join(', '), crossStreets, locality: place };
+        }
+        return null;
     }
 
     getBearVerdictTitleKey(title, barNames = []) {

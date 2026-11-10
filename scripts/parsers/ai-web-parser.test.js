@@ -23568,3 +23568,103 @@ test('feed fidelity: an all-day exception takes the whole day; a series with eve
   assert.deepEqual(all, []);
   assert.equal(series.rrule, 'FREQ=WEEKLY');
 });
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): a feed row that types its street address
+// after its name states its place there, and the feed gate never drops a row
+// without saying so. Lodge NY's monthly "Chub Chaser Party" has no LOCATION
+// line and was lost at the gate on every run; "The Fuck Stop" says only
+// "Garment District, New York, NY, USA" and kept the address in its name.
+// Rows are in the shape shared-core's icsRecordToFeedRow hands over, trimmed
+// from the cached feed of run 20261109-053706.
+// ---------------------------------------------------------------------------
+function feedFidelityTitleAddressRows() {
+  const start = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 6, 13, 0, 0));
+  const wall = (date) => date.toISOString().slice(0, 19);
+  const row = (uid, title, days, place = {}) => {
+    const at = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+    return { uid, title, start: wall(at), end: wall(new Date(at.getTime() + 3 * 60 * 60 * 1000)), all_day: false, timezone: 'America/New_York', ...place };
+  };
+  return { events: [
+    row('bear-1@google.com', 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', 0, { address: '232 W 37th St 2nd fl, New York, NY 10018, USA' }),
+    row('bear-2@google.com', 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', 7, { address: '232 W 37th St 2nd fl, New York, NY 10018, USA' }),
+    row('dads-1@google.com', "Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues", 1, { address: '232 W 37th St, 2nd Fl, New York, NY, USA' }),
+    row('squeeze-1@google.com', 'Squeeze 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues', 2, { address: '457 W 56th St 2nd fl, New York, NY 10019, USA' }),
+    // No LOCATION line at all.
+    row('0n89pkstn30gf5ku8hl3igju05@google.com', 'Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues ', 3),
+    // A neighbourhood-only LOCATION ("Garment District\, New York\, NY\, USA").
+    row('fstop-1@google.com', 'The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues', 4, { venue: 'Garment District', address: 'New York, NY, USA' }),
+    // No LOCATION, and a door no other row of the feed states.
+    row('island-1@google.com', 'Lodge Long Island 92 Kean St, West Babylon, NY', 5),
+    // No LOCATION and no house number in the title: nothing to read.
+    row('chub-old@google.com', 'Chub Chaser Party on 37th b/w 7th and 8th Aves', 8),
+    row('chub-old@google.com-2', 'Chub Chaser Party on 37th b/w 7th and 8th Aves', 9)
+  ] };
+}
+
+test('feed fidelity: a feed row with no place reads the street address its title ends in', () => {
+  const parser = createParser();
+  const feedUrl = 'https://calendar.example/calendar/ical/parties/public/basic.ics';
+  let events;
+  let read;
+  const logs = captureLogs(() => {
+    events = parser.extractEventsFromJsonApiPayload(feedFidelityTitleAddressRows(), feedUrl, null);
+    read = parser.readFeedRowTitleAddresses(events);
+  });
+  assert.equal(events.length, 9);
+  assert.equal(read, 3, logs.join('\n'));
+  const chub = events.find(event => event.title === 'Chub Chaser Party');
+  assert.ok(chub, 'the address left the name');
+  assert.equal(chub.address, '232 W 37th St 2nd fl, New York, NY 10018, USA', 'the full address is the one most rows of the feed state for that door');
+  assert.equal(chub.bar || '', '');
+  const stop = events.find(event => event.title === 'The Fuck Stop');
+  assert.equal(stop.address, '232 W 37th St, 2nd Fl, New York, NY, USA', 'the street line leads the locality the row itself states');
+  const island = events.find(event => event.title === 'Lodge Long Island');
+  assert.equal(island.address, '92 Kean St, West Babylon, NY', 'no other row states this door: the title\'s own address');
+  // A row that states its street address is left to the existing strip.
+  const bear = events.filter(event => event.title.startsWith('The Bear Party'));
+  assert.equal(bear.length, 2);
+  for (const event of bear) {
+    assert.equal(event.title, 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues');
+    assert.equal(event.address, '232 W 37th St 2nd fl, New York, NY 10018, USA');
+  }
+  // Every read says what it did and why.
+  assert.ok(logs.some(line => line.startsWith('📍 TITLE ADDRESS: "Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues" → "Chub Chaser Party"')
+    && line.includes('the row states no place; the full address is the one this feed\'s other rows state for that door')
+    && line.includes('address = 232 W 37th St 2nd fl, New York, NY 10018, USA (b/w 7th and 8th Avenues)')), logs.join('\n'));
+  assert.ok(logs.some(line => line.startsWith('📍 TITLE ADDRESS: "The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues" → "The Fuck Stop"')
+    && line.includes('the row states only "Garment District, New York, NY, USA"')), logs.join('\n'));
+  assert.ok(logs.some(line => line.startsWith('📍 TITLE ADDRESS: "Lodge Long Island 92 Kean St, West Babylon, NY" → "Lodge Long Island"')
+    && line.includes('the row states no place: address = 92 Kean St, West Babylon, NY')), logs.join('\n'));
+  // Reading twice changes nothing.
+  assert.equal(parser.readFeedRowTitleAddresses(events), 0);
+});
+
+test('feed fidelity: the feed gate names every row it does not keep', () => {
+  const parser = createParser();
+  const feedUrl = 'https://calendar.example/calendar/ical/parties/public/basic.ics';
+  const events = parser.extractEventsFromJsonApiPayload(feedFidelityTitleAddressRows(), feedUrl, null);
+  // Before the title is read: the three rows with no place field are not kept, and each is named.
+  let kept;
+  const before = captureLogs(() => { kept = parser.keepPlacedFeedRows(events, feedUrl); });
+  assert.equal(kept.length, 5);
+  const gate = before.filter(line => line.startsWith('🚧 FEED GATE:'));
+  assert.equal(gate.length, 3, before.join('\n'));
+  assert.ok(gate.some(line => line.includes('"Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues" (1 night(s): ')
+    && line.includes(`names no bar, address or city in ${feedUrl} — not kept as a structured event`)), gate.join('\n'));
+  assert.ok(gate.some(line => line.includes('"Lodge Long Island 92 Kean St, West Babylon, NY"')), gate.join('\n'));
+  // Two nights of one party share a line that dates both.
+  const twoNights = gate.find(line => line.includes('"Chub Chaser Party on 37th b/w 7th and 8th Aves" (2 night(s): '));
+  assert.ok(twoNights, gate.join('\n'));
+  assert.equal((twoNights.match(/\d{4}-\d{2}-\d{2}/g) || []).length, 2);
+  // After it: only the row whose title names no door is left out — still by name.
+  parser.readFeedRowTitleAddresses(events);
+  const after = captureLogs(() => { kept = parser.keepPlacedFeedRows(events, feedUrl); });
+  assert.equal(kept.length, 7);
+  assert.deepEqual(after.filter(line => line.startsWith('🚧 FEED GATE:')).map(line => line.replace(/ night\(s\).*$/, '')), ['🚧 FEED GATE: "Chub Chaser Party on 37th b/w 7th and 8th Aves" (2']);
+  // A city alone is place evidence; nothing is said about rows that are kept.
+  const quiet = captureLogs(() => { kept = parser.keepPlacedFeedRows([{ title: 'BEAR POOL PARTY', startDate: new Date(), city: 'sitges' }, null], feedUrl); });
+  assert.equal(kept.length, 1);
+  assert.deepEqual(quiet, []);
+  assert.deepEqual(parser.keepPlacedFeedRows(null, feedUrl), []);
+});
