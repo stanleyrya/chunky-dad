@@ -24,7 +24,8 @@
     "paletteSource": "favicon",
     "palette": "#000000:87:0 #232323:2:0 #d3d3d3:2:0",
     "faviconPlate": "#000000",
-    "gayCitiesLastScrapedAt": "2026-06-14T16:38:16.402Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:16.402Z",
+    "scene": "bear"
   },
   {
     "name": "Eagle NYC",
@@ -43,7 +44,8 @@
     "palette": "#ffffff:74:0 #656565:5:0 #8a8a8a:5:0",
     "faviconPlate": "#ffffff",
     "gayCitiesLastScrapedAt": "2026-06-26T17:08:38.515Z",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.784Z"
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.784Z",
+    "scene": "leather"
   },
   {
     "name": "3 Dollar Bill",
@@ -72,7 +74,8 @@
     "facebook": "https://www.facebook.com/TysNYC",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJaVvpXJNZwokRT3p02KL_TrY",
     "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
-    "gayCitiesLastScrapedAt": "2026-06-14T16:38:20.711Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:20.711Z",
+    "scene": "bear"
   },
   {
     "name": "Nowhere Bar",

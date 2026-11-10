@@ -37,7 +37,8 @@
     "facebook": "https://www.facebook.com/kingsarms.soho",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJBUDtIZcEdkgR0k-Xw7rA8wM",
     "gayCities": "https://london.gaycities.com/bars/2046-the-kings-arms",
-    "gayCitiesLastScrapedAt": "2026-06-13T16:37:29.296Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T16:37:29.296Z",
+    "scene": "bear"
   },
   {
     "name": "Eagle London",
@@ -54,7 +55,8 @@
     "paletteSource": "favicon",
     "palette": "#000000:56:0 #bcbcbc:8:0 #939393:8:0",
     "faviconPlate": "#000000",
-    "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z",
+    "scene": "leather"
   },
   {
     "name": "Westminster Pier",

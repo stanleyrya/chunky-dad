@@ -14,7 +14,8 @@
     "paletteSource": "favicon",
     "palette": "#fefefe:43:0 #010101:34:0 #130b0c:10:1",
     "faviconPlate": "#ffffff",
-    "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z",
+    "scene": "leather"
   },
   {
     "name": "Gym Sports Bar",
@@ -64,6 +65,7 @@
     "name": "Ramrod",
     "city": "fort-lauderdale",
     "address": "Northeast 4th Avenue, Fort Lauderdale, Florida",
-    "coordinates": "26.1462600, -80.1403612"
+    "coordinates": "26.1462600, -80.1403612",
+    "scene": "leather"
   }
 ]

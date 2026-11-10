@@ -1796,8 +1796,16 @@ test('buildDeck: a parked party leaves the stack and every count — the dropped
   assert.equal(answered.decided.find((entry) => entry.kind === 'dropped').decision.bearVerdict, 'not_bear');
 });
 
-test('buildDeck: a dropped card says what speaks for it — the listed bar and its record this run, the flyer look when it saw a big man — and that makes it worth a look, nothing more', () => {
-  const curatedBars = { nyc: [{ name: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY', website: 'https://www.3dollarbillbk.com/' }, { name: 'Rockbar', address: '185 Christopher St, New York, NY' }] };
+test('buildDeck: a dropped card says what speaks for it — the listed bar, the owner\'s mark on it and its record this run, the flyer look when it saw a big man — and a bear bar or a big man makes it worth a look, nothing more', () => {
+  const curatedBars = { nyc: [
+    { name: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY', website: 'https://www.3dollarbillbk.com/', scene: 'bear' },
+    { name: 'Rockbar', address: '185 Christopher St, New York, NY' },
+    { name: 'Eagle NYC', address: '554 W 28th St, New York, NY', website: 'https://www.eagle-ny.com/', scene: 'leather' },
+    { name: 'Pieces', address: '8 Christopher St, New York, NY', website: 'https://www.piecesbar.com/' },
+    { name: 'The Cock', address: '25 Avenue B, New York, NY', scene: 'twink' }
+  ] };
+  const elsewhereRow = (title, bar, address, host) => ({ title, startDate: iso(FUTURE), venue: bar, reason: 'ai: no bear language', host,
+    event: { title, startDate: iso(FUTURE), endDate: iso(FUTURE), bar, address, city: 'nyc' } });
   const kept = (title) => newEvent({ title, bar: '3 Dollar Bill', address: '260 Meserole St', isBearEvent: true, url: `https://www.3dollarbillbk.com/${title}` });
   const payload = runPayload({
     analyzedEvents: [kept('Bear Night'), kept('Bear Night'), kept('Cubhouse'), newEvent({ isBearEvent: true })],
@@ -1805,8 +1813,13 @@ test('buildDeck: a dropped card says what speaks for it — the listed bar and i
       droppedRow('Dolly Parton Tribute', iso(FUTURE)),
       droppedRow('Dolly Parton Tribute', iso(FUTURE + 7 * 86400000), { flyerLook: { image: 'https://x/y2.jpg', people: true, heavyset: true, bigBearded: false, description: 'A heavyset shirtless man in a cowboy hat.' } }),
       droppedRow('Charli Party', iso(FUTURE), { flyerLook: { image: 'https://x/y.jpg', people: true, heavyset: false, bigBearded: false, description: 'Two slim dancers.' } }),
-      // The same bar, read off an aggregator: listed, but not its own site.
+      // The same bar, read off an aggregator: not its own site, still his bear bar.
       droppedRow('Drag Brunch', iso(FUTURE), { host: 'aggregator.example' }),
+      // A leather bar and an unmarked bar, each on its own site: a notice, not a maybe.
+      elsewhereRow('Jock Night', 'Eagle NYC', '554 W 28th St', 'www.eagle-ny.com'),
+      elsewhereRow('Karaoke', 'Pieces', '8 Christopher St', 'www.piecesbar.com'),
+      // A mark the deck does not know is no mark.
+      elsewhereRow('Foam Party', 'The Cock', '25 Avenue B', 'aggregator.example'),
       // Parked by the owner: neither kept nor turned away in the bar's record.
       droppedRow('Maybe Night', iso(FUTURE), { reason: 'manual store: maybe (parked 2030-01-01)' }),
       { title: 'Elsewhere', startDate: iso(FUTURE), venue: 'Some Club', reason: 'ai: no bear language', host: 'someclub.example', flyerLook: { heavyset: false, bigBearded: true, description: 'A big bearded man.' },
@@ -1815,14 +1828,17 @@ test('buildDeck: a dropped card says what speaks for it — the listed bar and i
   });
   const deck = deckOf(payload, rq.emptyDecisionStore(), { curatedBars });
   const card = (title) => deck.cards.find((entry) => entry.kind === 'dropped' && entry.proposal.title === title);
-  assert.deepEqual(card('Dolly Parton Tribute').display.barNotice, { bar: '3 Dollar Bill', ownSite: true, host: 'www.3dollarbillbk.com', kept: 2, dropped: 3 }, 'distinct parties, never rows');
+  assert.deepEqual(card('Dolly Parton Tribute').display.barNotice, { bar: '3 Dollar Bill', scene: 'bear', ownSite: true, host: 'www.3dollarbillbk.com', kept: 2, dropped: 3 }, 'distinct parties, never rows');
   assert.deepEqual(card('Dolly Parton Tribute').display.flyerNotice, { heavyset: true, bigBearded: false, description: 'A heavyset shirtless man in a cowboy hat.' }, 'a later night\'s flyer speaks for the party');
   assert.deepEqual(card('Dolly Parton Tribute').worth, ['flyer', 'bar']);
   assert.equal(card('Charli Party').display.flyerNotice, undefined, 'a look that saw no big man says nothing');
   assert.deepEqual(card('Charli Party').worth, ['bar']);
-  assert.deepEqual([card('Drag Brunch').display.barNotice.ownSite, card('Drag Brunch').display.barNotice.host, card('Drag Brunch').worth], [false, '', []]);
+  assert.deepEqual([card('Drag Brunch').display.barNotice.ownSite, card('Drag Brunch').display.barNotice.host, card('Drag Brunch').worth], [false, '', ['bar']], 'his bear bar, whoever listed the party');
+  assert.deepEqual([card('Jock Night').display.barNotice.scene, card('Jock Night').display.barNotice.ownSite, card('Jock Night').worth], ['leather', true, []]);
+  assert.deepEqual([card('Karaoke').display.barNotice.scene, card('Karaoke').display.barNotice.ownSite, card('Karaoke').worth], ['', true, []], 'an unmarked bar\'s own site is not a maybe');
+  assert.deepEqual([card('Foam Party').display.barNotice.scene, card('Foam Party').worth], ['', []]);
   assert.equal(card('Elsewhere').display.barNotice, undefined, 'not on the bars list: no bar notice');
   assert.deepEqual(card('Elsewhere').worth, ['flyer']);
-  assert.equal(deck.counts.worth, 4);
-  assert.equal(deck.counts.dropped, 5, 'worth a look sorts the pile; every dropped card is still in it');
+  assert.equal(deck.counts.worth, 5, 'the four cards at his bear bar and the big man elsewhere');
+  assert.equal(deck.counts.dropped, 8, 'worth a look sorts the pile; every dropped card is still in it');
 });

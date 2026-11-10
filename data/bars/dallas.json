@@ -23,6 +23,7 @@
     "faviconFg": "#fefefe",
     "paletteSource": "favicon",
     "palette": "#ffffff:100:0",
-    "faviconPlate": "#ffffff"
+    "faviconPlate": "#ffffff",
+    "scene": "leather"
   }
 ]

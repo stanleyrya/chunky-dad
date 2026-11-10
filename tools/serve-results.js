@@ -1025,12 +1025,14 @@ function renderReviewBearRow(display = {}, proposal = {}) {
         : '';
     // What speaks for the event (owner 2026-11-10: "keep some type of bear
     // bar and fat picture notices/qualifications"). Facts, never a verdict:
-    // the bars list has no bear-bar flag, and the flyer look is a machine's.
+    // the bar's scene is the owner's own mark on his bars list, and the flyer
+    // look is a machine's.
     const notices = [];
     const bar = display.barNotice && typeof display.barNotice === 'object' ? display.barNotice : null;
     if (bar && bar.bar) {
         const parties = (Number(bar.kept) || 0) + (Number(bar.dropped) || 0);
-        notices.push(`🍺 On your bars list: ${bar.bar}.${bar.ownSite ? ' Read from its own site.' : ''}${parties > 0 ? ` This run kept ${Number(bar.kept) || 0} of its ${parties} ${parties === 1 ? 'party' : 'parties'}.` : ''}`);
+        const listed = bar.scene === 'bear' ? 'A bear bar on your list' : bar.scene === 'leather' ? 'A leather bar on your list' : 'On your bars list';
+        notices.push(`🍺 ${listed}: ${bar.bar}.${bar.ownSite ? ' Read from its own site.' : ''}${parties > 0 ? ` This run kept ${Number(bar.kept) || 0} of its ${parties} ${parties === 1 ? 'party' : 'parties'}.` : ''}`);
     }
     const flyer = display.flyerNotice && typeof display.flyerNotice === 'object' ? display.flyerNotice : null;
     if (flyer) {

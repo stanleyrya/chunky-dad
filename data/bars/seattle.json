@@ -15,7 +15,8 @@
     "accent": "#e35326",
     "faviconPlate": "#f6f6f6",
     "gayCitiesLastScrapedAt": "2026-06-26T17:08:40.863Z",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z"
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z",
+    "scene": "bear"
   },
   {
     "name": "The Lumber Yard Bar",
@@ -47,7 +48,8 @@
     "paletteSource": "favicon",
     "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0",
     "faviconPlate": "#ffffff",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z",
+    "scene": "leather"
   },
   {
     "name": "Seattle Eagle",
@@ -65,7 +67,8 @@
     "accent": "#e2d7b0",
     "faviconPlate": "#1a1a1a",
     "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z"
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z",
+    "scene": "leather"
   },
   {
     "name": "CC’s Seattle",

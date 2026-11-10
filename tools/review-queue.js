@@ -2074,10 +2074,11 @@ function buildDeck(runPayload, store, options = {}) {
     const dropped = Array.isArray(payload.bearDroppedEvents) ? payload.bearDroppedEvents : [];
     // WHAT THE CARD SAYS FOR THE EVENT (owner 2026-11-10: "keep some type of
     // bear bar and fat picture notices/qualifications"). Facts, never a
-    // verdict. The bars list has no bear-bar flag, so the bar notice states
-    // what is known: the venue is on the list, whether this row was read
-    // from the venue's own site, and how many of the venue's parties this
-    // run kept and did not keep (distinct parties, never rows).
+    // verdict. The bar notice states what is known: the venue is on the
+    // list, what the owner marked it as (`scene`: a bear bar, a leather
+    // bar, or nothing), whether this row was read from the venue's own
+    // site, and how many of the venue's parties this run kept and did not
+    // keep (distinct parties, never rows).
     const curatedBarOf = (event) => {
         const cityBars = core.getCuratedCityBars(String(event.city || '').trim().toLowerCase());
         if (!cityBars) return null;
@@ -2104,7 +2105,10 @@ function buildDeck(runPayload, store, options = {}) {
         const tally = barTally.get(barTallyId(event, bar)) || { kept: new Set(), dropped: new Set() };
         const cityKey = String(event.city || '').trim().toLowerCase();
         const ownSite = host ? core.getCuratedBarsClaimingWebsiteHost(host).some((claim) => claim && claim.bar && claim.bar.name === bar.name && String(claim.city || '').toLowerCase() === cityKey) : false;
-        return { bar: bar.name, ownSite, host: ownSite ? host : '', kept: tally.kept.size, dropped: [...tally.dropped].filter((key) => !tally.kept.has(key)).length };
+        // `scene` is the owner's own mark on the bar (data/bars): a bear
+        // bar or a leather bar. Any other value is no mark.
+        const scene = bar.scene === 'bear' || bar.scene === 'leather' ? bar.scene : '';
+        return { bar: bar.name, scene, ownSite, host: ownSite ? host : '', kept: tally.kept.size, dropped: [...tally.dropped].filter((key) => !tally.kept.has(key)).length };
     };
     // The flyer look (SharedCore.lookAtDroppedFlyers) speaks only when it
     // saw a heavyset or a big bearded man; a look that saw neither says
@@ -2177,12 +2181,12 @@ function buildDeck(runPayload, store, options = {}) {
         if (barNotice) display.barNotice = barNotice;
         const flyerNotice = buildFlyerNotice(entry);
         if (flyerNotice) display.flyerNotice = flyerNotice;
-        // WORTH A LOOK: what the owner's rubric calls a maybe (a party on a
-        // listed bar's own site, a flyer with a big man on it). It sorts
+        // WORTH A LOOK: what the owner's rubric calls a maybe (a party at a
+        // bar he marked as a bear bar, a flyer with a big man on it). It sorts
         // the Not-bear pile; it decides nothing and hides nothing.
         const worth = [];
         if (flyerNotice) worth.push('flyer');
-        if (barNotice && barNotice.ownSite) worth.push('bar');
+        if (barNotice && barNotice.scene === 'bear') worth.push('bar');
         const card = { id: `d${index}`, kind: 'dropped', key, sourceIndex: index, proposal, display, fixTarget: fixTarget || null, worth };
         droppedByKey.set(key, card);
     });

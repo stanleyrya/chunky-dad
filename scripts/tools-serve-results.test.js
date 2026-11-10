@@ -1291,13 +1291,16 @@ test('renderReviewBearRow: a maybe is said as a hold, never as a verdict; the ba
   assert.ok(!firm.includes('parked this as a maybe'));
 
   const noticed = renderReviewBearRow({
-    barNotice: { bar: 'Dallas Eagle', ownSite: true, host: 'dallaseagle.com', kept: 3, dropped: 5 },
+    barNotice: { bar: 'Dallas Eagle', scene: 'leather', ownSite: true, host: 'dallaseagle.com', kept: 3, dropped: 5 },
     flyerNotice: { heavyset: true, bigBearded: false, description: 'A shirtless heavyset man <b>' }
   }, dropped('ai: no bear language'));
-  assert.ok(noticed.includes('<div class="bear-notice">🍺 On your bars list: Dallas Eagle. Read from its own site. This run kept 3 of its 8 parties.</div>'));
+  assert.ok(noticed.includes('<div class="bear-notice">🍺 A leather bar on your list: Dallas Eagle. Read from its own site. This run kept 3 of its 8 parties.</div>'));
   assert.ok(noticed.includes('<div class="bear-notice">🧔 The flyer shows a heavyset man — “A shirtless heavyset man &lt;b&gt;” (a machine look)</div>'));
   const elsewhere = renderReviewBearRow({ barNotice: { bar: 'Rockbar', ownSite: false, host: '', kept: 0, dropped: 1 }, flyerNotice: { heavyset: true, bigBearded: true, description: '' } }, dropped('ai: x'));
   assert.ok(elsewhere.includes('🍺 On your bars list: Rockbar. This run kept 0 of its 1 party.') && !elsewhere.includes('own site'));
+  const bearBar = renderReviewBearRow({ barNotice: { bar: 'Rockbar', scene: 'bear', ownSite: false, host: '', kept: 0, dropped: 0 } }, dropped('ai: x'));
+  assert.ok(bearBar.includes('<div class="bear-notice">🍺 A bear bar on your list: Rockbar.</div>'));
+  assert.ok(renderReviewBearRow({ barNotice: { bar: 'Rockbar', scene: '<b>', ownSite: false, host: '', kept: 0, dropped: 0 } }, dropped('ai: x')).includes('🍺 On your bars list: Rockbar.'), 'an unknown mark is no mark');
   assert.ok(elsewhere.includes('🧔 The flyer shows a heavyset, big bearded man (a machine look)'));
   assert.ok(!renderReviewBearRow({}, dropped('ai: x')).includes('bear-notice'), 'no notice without a fact');
 });
