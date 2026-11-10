@@ -30189,3 +30189,118 @@ test('aggregator: a not-bear held because the row names a usually-bear promoter 
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, true, { siteRole: 'aggregator' }), false, 'a trusted promoter is never dropped here');
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, false, { siteRole: 'venue' }), false);
 });
+
+// ── Crawl scope (2026-11-09): entity-encoded addresses, aliases that fail closed ──
+// tickettailor.com writes every URL in its markup with numeric entities:
+//   <link rel="canonical" href="https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;toucanstikilounge" />
+//   <a href="&#x2F;events&#x2F;toucanstikilounge&#x2F;2424070" class="event__link">
+// (page cache, run 20261106). Undecoded, the canonical had no scheme, was
+// resolved as a relative path and recorded as the page's own address.
+test('normalizeUrl: numeric character references in an attribute value are decoded before the URL is resolved', () => {
+  const core = createCore();
+  const page = 'https://www.tickettailor.com/events/toucanstikilounge';
+  assert.equal(
+    core.normalizeUrl('https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;toucanstikilounge', page),
+    'https://www.tickettailor.com/events/toucanstikilounge');
+  assert.equal(
+    core.normalizeUrl('&#x2F;events&#x2F;toucanstikilounge&#x2F;2424070', page),
+    'https://www.tickettailor.com/events/toucanstikilounge/2424070');
+  assert.equal(
+    core.normalizeUrl('https&#x3A;&#x2F;&#x2F;app.tickettailorassets.com&#x2F;favicon.ico&#x3F;r&#x3D;1793700830', page),
+    'https://app.tickettailorassets.com/favicon.ico?r=1793700830');
+  // Decimal spelling, and the ampersand's numeric forms (decoded once, like &amp;).
+  assert.equal(core.normalizeUrl('https&#58;&#47;&#47;x.example&#47;a?b=1&#38;c=2&#x26;d=3', page), 'https://x.example/a?b=1&c=2&d=3');
+  // Control characters and lone surrogate halves are never produced.
+  assert.equal(core.decodeNumericCharacterReferences('a&#10;b&#xD83D;c&#0;d&#x7f;'), 'a&#10;b&#xD83D;c&#0;d&#x7f;');
+  assert.equal(core.decodeNumericCharacterReferences('caf&#233; &#x1F43B;'), 'café 🐻');
+  // Plain URLs are untouched.
+  assert.equal(core.normalizeUrl('https://x.example/a?b=1&amp;c=2', page), 'https://x.example/a?b=1&c=2');
+});
+
+test('url alias: a declared address that is not a clean absolute http(s) URL is not an alias', () => {
+  const core = createCore();
+  const fetched = 'https://www.tickettailor.com/events/asociacionmadbear/2409132';
+  const original = console.log;
+  const lines = [];
+  console.log = (line) => { lines.push(String(line)); };
+  try {
+    // The exact value run 20261109-053706 recorded (log line 2257).
+    assert.equal(core.noteUrlAlias(fetched,
+      'https://www.tickettailor.com/events/asociacionmadbear/https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;asociacionmadbear&#x2F;2409132'), false);
+    // The same mistake after a partial decode: an address inside the path.
+    assert.equal(core.noteUrlAlias(fetched, 'https://www.tickettailor.com/events/asociacionmadbear/https:'), false);
+    assert.equal(core.noteUrlAlias(fetched, 'https://www.tickettailor.com/events/asociacionmadbear/https%3A%2F%2Fwww.tickettailor.com'), false);
+    // Relative, scheme-less, non-http and dirty values.
+    assert.equal(core.noteUrlAlias(fetched, '/events/asociacionmadbear/2409132-fiesta'), false);
+    assert.equal(core.noteUrlAlias(fetched, 'www.tickettailor.com/events/asociacionmadbear/2409132-fiesta'), false);
+    assert.equal(core.noteUrlAlias(fetched, 'ftp://www.tickettailor.com/events/asociacionmadbear/2409132-fiesta'), false);
+    assert.equal(core.noteUrlAlias(fetched, 'https://www.tickettailor.com/events/asociacionmadbear/2409132 fiesta'), false);
+    assert.equal(core.noteUrlAlias(fetched, 'https://www.tickettailor.com/events/asociacionmadbear/2409132&quot;'), false);
+    assert.equal(core.noteUrlAlias(fetched, null), false);
+    assert.equal(core.resolveUrlAlias(fetched), fetched, 'nothing was learned');
+    assert.deepEqual(lines.filter(line => line.includes('ALIAS')), []);
+    // A clean sibling address on the page's own domain still is one.
+    assert.equal(core.noteUrlAlias(fetched, 'https://www.tickettailor.com/events/asociacionmadbear/2409132-fiesta'), true);
+  } finally { console.log = original; }
+  assert.equal(core.isCleanAbsoluteHttpUrl('https://dice.fm/event/v3x3n7-spookmince-31st-oct-unlocked-shoreditch-london-tickets'), true);
+  assert.equal(core.isCleanAbsoluteHttpUrl('https://x.example/a?next=https://y.example/b&amp;c=1'), true, 'only the path is judged; a query may carry anything');
+});
+
+// Furball, run 20261106: the row's ticket link opened a venue's box office
+// (tickettailor.com/events/toucanstikilounge). The enrich-only map was keyed
+// before the fetch; the page then declared another spelling of its address,
+// the lookup key changed, the context was not found and every event in the
+// box office was ingested as the promoter's.
+test('enrich-only crawl: the context is found for the URL as requested even when the page teaches an alias mid-fetch', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /promoter\.example\/e\//i, classification: 'event-page' },
+      { pattern: /boxoffice\.example/i, classification: 'multi-event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const partyDate = new Date(Date.now() + 7 * 86400000);
+  const requested = 'https://boxoffice.example/events/6a5e399f126db80001fe9c5c';
+  const declared = 'https://boxoffice.example/events/v3x3n7-the-tiki-lounge-box-office';
+  const pages = {
+    'https://promoter.example/e/bear-party': {
+      events: [{ title: 'Bear Party', bar: 'Tiki Lounge', startDate: partyDate, ticketUrl: requested }]
+    },
+    [requested]: {
+      events: [
+        { title: 'Bear Party', bar: 'Tiki Lounge', startDate: partyDate },
+        { title: 'Tiki Tuesday Trivia', bar: 'Tiki Lounge', startDate: new Date(partyDate.getTime() + 86400000) },
+        { title: 'Luau Brunch', bar: 'Tiki Lounge', startDate: new Date(partyDate.getTime() + 2 * 86400000) }
+      ],
+      additionalLinks: ['https://boxoffice.example/events/another-night']
+    },
+    'https://boxoffice.example/events/another-night': {}
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const parse = parsers['ai-web'].parseEvents;
+  const original = console.log;
+  console.log = () => {};
+  let result;
+  try {
+    parsers['ai-web'].parseEvents = (htmlData, parserConfig) => {
+      // What the real parser does while it reads the page (noteSelfDeclaredAliases).
+      if (htmlData.url === requested) core.noteUrlAlias(requested, declared);
+      return parse(htmlData, parserConfig);
+    };
+    result = await core.processParser(
+      { name: 'Bear Promoter', urls: ['https://promoter.example/e/bear-party'], alwaysBear: true, ai: CRAWL_AI },
+      {}, httpAdapter, display, parsers
+    );
+  } finally { console.log = original; }
+
+  assert.equal(core.resolveUrlAlias(requested), declared, 'the alias was learned during the fetch');
+  assert.ok(fetched.includes(requested));
+  assert.equal(result.events.length, 1, `only the promoter's own party: ${JSON.stringify(result.events.map(e => e.title))}`);
+  assert.equal(result.events[0].title, 'Bear Party');
+  assert.ok(
+    display.logs.includes('SYSTEM: Enrich-only crawl: kept 1 matching event(s), dropped 2 sibling event(s) from boxoffice.example (reached via ticket link from "Bear Party")'),
+    JSON.stringify(display.logs.filter(l => l.includes('Enrich-only'))));
+  assert.deepEqual(result.enrichOnlyDrops[0].droppedEvents.map(e => e.title), ['Tiki Tuesday Trivia', 'Luau Brunch']);
+  assert.ok(!fetched.includes('https://boxoffice.example/events/another-night'), 'an enrich-only page is not crawled further');
+});

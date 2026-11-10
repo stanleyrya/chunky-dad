@@ -11576,6 +11576,9 @@ class SharedCore {
                 }
                 continue;
             }
+            // The key this URL was queued under, taken before the fetch can
+            // teach the run another spelling of it (see enrichContext below).
+            const requestedUrlKey = this.getUrlDedupeKey(url);
 
             if (discoveryTreeCollector) {
                 if (currentDepth === 0 && !discoveryTreeCollector.rootUrlSet.has(url)) {
@@ -11884,8 +11887,14 @@ class SharedCore {
                 // whether it was productive (raw pre-filter counts) or a dead end.
                 this.recordDeadEndObservation({ url, currentDepth, parseResult, pageClassification, discoveryOnly });
 
+                // The map was keyed before this page was fetched. A page
+                // that declares another spelling of its own address
+                // (noteUrlAlias, learned while it was parsed just above)
+                // re-keys the URL — so the context is looked up under the
+                // address as it was REQUESTED first. Missing it turned an
+                // enrich-only ticket page into a discovery page.
                 const enrichContext = !discoveryOnly && enrichOnlyByUrl
-                    ? (enrichOnlyByUrl[this.getUrlDedupeKey(url)] || null)
+                    ? (enrichOnlyByUrl[requestedUrlKey] || enrichOnlyByUrl[this.getUrlDedupeKey(url)] || null)
                     : null;
 
                 let pageEventsForEnrich = [];
@@ -21656,7 +21665,15 @@ class SharedCore {
     normalizeUrl(url, baseUrl) {
         if (!url) return null;
 
-        let normalized = this.decodeBasicEntities(this.decodeUrlEscapes(String(url))).replace(/&amp;/gi, '&');
+        // A URL read from an HTML attribute is entity-encoded text. Some
+        // platforms encode EVERY structural character numerically
+        // (`href="https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;…"`,
+        // the canonical, og:url and 82 of 86 hrefs on a box-office page,
+        // run 20261106): left encoded, the value has no scheme, so it was
+        // resolved as a RELATIVE path under the page it was read from.
+        let normalized = this.decodeNumericCharacterReferences(
+            this.decodeBasicEntities(this.decodeUrlEscapes(String(url)))
+        ).replace(/&amp;/gi, '&');
         normalized = normalized.replace(/[),.;]+$/, '').trim();
         if (!normalized) return null;
 
@@ -21741,6 +21758,25 @@ class SharedCore {
             .replace(/&gt;/gi, '>')
             .replace(/&quot;/gi, '"')
             .replace(/&#39;/gi, "'");
+    }
+
+    // Numeric character references (&#58; / &#x3A;) → the character, decoded
+    // once. Only printable, non-surrogate code points: a control character or
+    // a lone surrogate half stays as the text it was (it would not be a URL
+    // either way, and one orphaned surrogate blanks a whole WebView document).
+    decodeNumericCharacterReferences(text) {
+        const decode = (code, fallback) => {
+            if (!Number.isFinite(code) || code < 0x20 || code === 0x7f || code > 0x10ffff) return fallback;
+            if (code >= 0xd800 && code <= 0xdfff) return fallback;
+            try {
+                return String.fromCodePoint(code);
+            } catch (_) {
+                return fallback;
+            }
+        };
+        return String(text || '')
+            .replace(/&#x([0-9a-f]{1,6});/gi, (entity, hex) => decode(parseInt(hex, 16), entity))
+            .replace(/&#(\d{1,7});/g, (entity, dec) => decode(Number(dec), entity));
     }
 
     isValidUrl(url) {
@@ -28982,6 +29018,15 @@ class SharedCore {
     // another directory (a listing's canonical pasted onto every event page
     // would otherwise fold the whole site into one event).
     noteUrlAlias(fetchedUrl, declaredUrl) {
+        // A declared address is only ever an absolute http(s) URL written
+        // cleanly. Anything else — a relative value, leftover entity text,
+        // an address with another address inside its path — is a value that
+        // was read or resolved wrongly, and an alias built on it re-keys the
+        // page under an address nobody serves (tickettailor.com, run
+        // 20261106: the entity-encoded canonical resolved as a relative
+        // path became "the page's own address", the enrich-only lookup
+        // then missed, and a venue's whole box office was ingested).
+        if (!this.isCleanAbsoluteHttpUrl(declaredUrl)) return false;
         const fetched = this.parseIdentityDestinationRaw(fetchedUrl);
         const declared = this.parseIdentityDestinationRaw(declaredUrl);
         if (!fetched || !declared || fetched.key === declared.key) return false;
@@ -29005,6 +29050,22 @@ class SharedCore {
             this._leadingIdShapes.set(`${declared.host}/${declared.segments.slice(0, -1).join('/')}`, declaredToken[1].length);
         }
         console.log(`🔗 ALIAS: ${fetchedUrl} is ${declaredUrl} — the page declares that address as its own`);
+        return true;
+    }
+
+    // An absolute http(s) URL with nothing in it that says "this was not
+    // decoded or not resolved properly": no whitespace, quotes or angle
+    // brackets, no entity text, and no second address inside its path.
+    isCleanAbsoluteHttpUrl(value) {
+        const text = typeof value === 'string' ? value.trim() : '';
+        if (!/^https?:\/\/[^\s"'<>\\]+$/i.test(text)) return false;
+        const parsed = this.parseUrl(text);
+        if (!parsed || !/^https?:$/i.test(String(parsed.protocol || ''))) return false;
+        // Entity text is looked for before the fragment is cut: "&#x3A;"
+        // carries its own "#".
+        if (/&#x?[0-9a-f]+;|&[a-z]{2,8};/i.test(text.split('?')[0])) return false;
+        const path = text.replace(/^https?:\/\/[^/?#]*/i, '').split(/[?#]/)[0];
+        if (/(?:^|\/)(?:https?|ftp)(?::|%3a)/i.test(path)) return false;
         return true;
     }
 

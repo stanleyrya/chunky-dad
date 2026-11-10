@@ -23484,3 +23484,61 @@ test('session lines on a day-dated event page: a Squarespace 00:01 start with "F
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T04:00:00Z'), timezone: 'America/New_York' }), '2026-10-30');
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T23:00:00Z'), timezone: 'America/New_York' }), '');
 });
+
+// ── Crawl scope (2026-11-09) ─────────────────────────────────────────────────
+// tickettailor.com (page cache, run 20261106) writes its canonical, og:url and
+// hrefs with every structural character as a numeric entity. Trimmed markup.
+const ENTITY_ENCODED_BOX_OFFICE_HTML = `<!DOCTYPE html><html lang="en-GB"><head>
+<link rel="canonical" href="https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;toucanstikilounge" />
+<meta property="og:url" content="https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;toucanstikilounge" />
+</head><body>
+<a href="&#x2F;events&#x2F;toucanstikilounge" class="header__logo" notranslate>Toucan's</a>
+<a notranslate href="&#x2F;events&#x2F;toucanstikilounge&#x2F;2424070" class="event__link">Luau</a>
+</body></html>`;
+
+test('a declared address written with numeric entities is decoded, and is never an alias when it is not absolute', () => {
+  // Wired as in production (bear-event-scraper-unified.js): the parser resolves URLs with the core's normalizeUrl.
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const parser = new AiWebParser({ normalizeUrl: core.normalizeUrl.bind(core) });
+  parser.core = core;
+  const lines = [];
+  const original = console.log;
+  console.log = (line) => { lines.push(String(line)); };
+  try {
+    // The page as fetched, and the same markup reached under its event URL (run 20261109, log line 2257).
+    parser.noteSelfDeclaredAliases(ENTITY_ENCODED_BOX_OFFICE_HTML, 'https://www.tickettailor.com/events/toucanstikilounge');
+    parser.noteSelfDeclaredAliases(
+      ENTITY_ENCODED_BOX_OFFICE_HTML.replace(/toucanstikilounge/g, 'asociacionmadbear&#x2F;2409132'),
+      'https://www.tickettailor.com/events/asociacionmadbear/2409132');
+    // A relative canonical is our resolution, not the page's declaration.
+    parser.noteSelfDeclaredAliases('<link rel="canonical" href="/event/v3x3n7-spookmince-tickets">', 'https://dice.fm/event/6a5e399f126db80001fe9c5c');
+    parser.noteSelfDeclaredAliases('<link rel="canonical" href="v3x3n7-spookmince-tickets">', 'https://dice.fm/event/6a5e399f126db80001fe9c5c');
+  } finally { console.log = original; }
+  assert.deepEqual(lines.filter(line => line.includes('ALIAS')), [], 'no alias was recorded');
+  // Even a resolver that does not decode (the stub this suite uses elsewhere) cannot get the mis-resolved value past the core.
+  const undecoding = createParser();
+  undecoding.core = core;
+  undecoding.noteSelfDeclaredAliases(ENTITY_ENCODED_BOX_OFFICE_HTML, 'https://www.tickettailor.com/events/toucanstikilounge');
+  assert.deepEqual(lines.filter(line => line.includes('ALIAS')), [], 'the core refuses an address with entity text in it');
+  assert.equal(core.resolveUrlAlias('https://www.tickettailor.com/events/toucanstikilounge'), 'https://www.tickettailor.com/events/toucanstikilounge');
+  assert.equal(core.resolveUrlAlias('https://dice.fm/event/6a5e399f126db80001fe9c5c'), 'https://dice.fm/event/6a5e399f126db80001fe9c5c');
+
+  // The entity-encoded canonical IS the page: it reads as a self-reference, not as a new link.
+  assert.equal(
+    parser.normalizeUrl(parser.extractSelfDeclaredCanonicalUrls(ENTITY_ENCODED_BOX_OFFICE_HTML)[0], 'https://www.tickettailor.com/events/toucanstikilounge'),
+    'https://www.tickettailor.com/events/toucanstikilounge');
+  // …and the page's entity-encoded hrefs resolve to the addresses they name.
+  const hrefs = parser.extractHrefCandidates(ENTITY_ENCODED_BOX_OFFICE_HTML)
+    .map(candidate => parser.normalizeUrl(candidate.url, 'https://www.tickettailor.com/events/toucanstikilounge'));
+  assert.ok(hrefs.includes('https://www.tickettailor.com/events/toucanstikilounge/2424070'), hrefs.join(' | '));
+  assert.ok(hrefs.every(href => !/&#|%26%23/i.test(href)), hrefs.join(' | '));
+
+  // An absolute, entity-encoded declaration of ANOTHER spelling still folds.
+  const idUrl = 'https://dice.fm/event/6a5e399f126db80001fe9c5c';
+  const slugUrl = 'https://dice.fm/event/v3x3n7-spookmince-31st-oct-unlocked-shoreditch-london-tickets';
+  console.log = () => {};
+  try {
+    parser.noteSelfDeclaredAliases(`<link rel="canonical" href="${slugUrl.replace(/:/g, '&#x3A;').replace(/\//g, '&#x2F;')}">`, idUrl);
+  } finally { console.log = original; }
+  assert.equal(core.resolveUrlAlias(idUrl), slugUrl);
+});

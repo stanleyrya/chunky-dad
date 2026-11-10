@@ -9173,9 +9173,22 @@ class AiWebParser {
     // declaredUrl as its own address (rel=canonical / og:url). The core
     // decides, failing closed, whether that is one page under two spellings
     // (SharedCore.noteUrlAlias); nothing is guessed from URL shape here.
-    noteSelfDeclaredAlias(sourceUrl, declaredUrl) {
+    noteSelfDeclaredAlias(sourceUrl, declaredUrl, rawDeclared = declaredUrl) {
         if (!sourceUrl || !declaredUrl) return;
+        // Only an address the page WROTE OUT in full is its own address. A
+        // value that needed the page URL to become absolute (a relative
+        // canonical, or one that only looked relative because it was never
+        // entity-decoded) is our resolution, not the page's declaration.
+        if (!this.isAbsoluteDeclaredAddress(rawDeclared)) return;
         if (this.core && typeof this.core.noteUrlAlias === 'function') this.core.noteUrlAlias(sourceUrl, declaredUrl);
+    }
+
+    // Is this attribute value, once its entities are decoded, an absolute
+    // http(s) URL? (tickettailor.com writes its canonical as
+    // "https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;…".)
+    isAbsoluteDeclaredAddress(rawDeclared) {
+        const decoded = this.decodeEntitiesFully(String(rawDeclared || '')).trim();
+        return /^https?:\/\/[^\s"'<>]+$/i.test(decoded);
     }
 
     noteSelfDeclaredAliases(html, sourceUrl) {
@@ -9187,7 +9200,7 @@ class AiWebParser {
             } catch (_) {
                 resolved = '';
             }
-            if (resolved) this.noteSelfDeclaredAlias(sourceUrl, resolved);
+            if (resolved) this.noteSelfDeclaredAlias(sourceUrl, resolved, rawDeclared);
         }
     }
 
@@ -12571,7 +12584,7 @@ class AiWebParser {
                 resolved = '';
             }
             if (!resolved) continue;
-            this.noteSelfDeclaredAlias(sourceUrl, resolved);
+            this.noteSelfDeclaredAlias(sourceUrl, resolved, rawDeclared);
             const samePath = this.getUrlPathIdentityKey(resolved) === sourceKey;
             // The declared address carries the fetched address's own
             // identifier (see getUrlIdAliasKey): the same document under its
