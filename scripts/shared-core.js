@@ -6657,6 +6657,91 @@ class SharedCore {
         return null;
     }
 
+    // The page that says where a record sits in THIS source's crawl: the page
+    // of the row that led to it when an enrich-only hop kept it (a ticket
+    // page reached from an event's own link — _enrichParentPageUrl, stamped
+    // by the enrich filter in crawlUrlsForEvents), else the page it was read
+    // on. Empty when the record carries no page at all (a record built
+    // outside the crawl).
+    getPromoterInheritancePageUrl(event) {
+        if (!event || typeof event !== 'object') return '';
+        for (const value of [event._enrichParentPageUrl, event._sourcePageUrl]) {
+            if (typeof value === 'string' && value.trim()) return value.trim();
+        }
+        return '';
+    }
+
+    // TRUE when `pageUrl` is on a site other than the ones the parser is
+    // configured to read. Same test as isBearCheckCrossHost, for any page:
+    // no page, or a config that names no urls, is never "off site" (nothing
+    // to scope by — fail open to the legacy behaviour).
+    isPageOffParserSite(pageUrl, parserConfig) {
+        const pageHost = this.getHostFromUrl(typeof pageUrl === 'string' ? pageUrl : '');
+        const configuredUrls = parserConfig && Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
+        const configuredHosts = configuredUrls.map(configuredUrl => this.getHostFromUrl(configuredUrl)).filter(Boolean);
+        return Boolean(pageHost) && configuredHosts.length > 0 &&
+            !configuredHosts.some(configuredHost => this.areUrlHostsSameSite(pageHost, configuredHost));
+    }
+
+    // HOW a record got its promoter stamp, as the registry pass recorded it:
+    // 'organizer' | 'title' (the event's OWN content names the promoter),
+    // 'url' (an address on the record — its page's or its links' — carries
+    // the promoter's curated token: that says whose LISTING the row sat on),
+    // 'parser-site' (nothing on the record named anyone; it inherited the
+    // promoter whose site the parser reads). '' when the stamp carries no
+    // evidence kind (a record stamped before this field existed, a test
+    // fixture) — every reader treats '' as it treated every stamp before:
+    // as the event's own.
+    getEventPromoterEvidence(event) {
+        const kind = event && typeof event._promoterEvidence === 'string' ? event._promoterEvidence.trim() : '';
+        return kind === 'organizer' || kind === 'title' || kind === 'url' || kind === 'parser-site' ? kind : '';
+    }
+
+    // TRUE when the record's promoter stamp says the EVENT is that promoter's
+    // by its own words (title / organizer), or says nothing about how it was
+    // earned (legacy). FALSE for the two listing-level kinds.
+    isPromoterStampEventLevel(event) {
+        const kind = this.getEventPromoterEvidence(event);
+        return kind !== 'url' && kind !== 'parser-site';
+    }
+
+    // An INHERITED stamp sitting on a record of another site. The parser-site
+    // rung is trust in a SITE ("this parser reads this promoter's own site"),
+    // so it holds only where it was earned: on that site's pages and on the
+    // pages its rows pointed at. The pass records that page next to the stamp
+    // (_promoterEvidencePageUrl, '' when the record had no page) because the
+    // record's _sourcePageUrl does not survive a merge unchanged — it follows
+    // whichever side carried structured data. Only when the stamp carries no
+    // page of its own is the record's source page asked instead.
+    isInheritedPromoterStampOffSite(event, parserConfig) {
+        if (this.getEventPromoterEvidence(event) !== 'parser-site') return false;
+        const page = typeof event._promoterEvidencePageUrl === 'string'
+            ? event._promoterEvidencePageUrl
+            : (typeof event._sourcePageUrl === 'string' ? event._sourcePageUrl : '');
+        return this.isPageOffParserSite(page, parserConfig);
+    }
+
+    // Strength of a promoter stamp as a statement about the EVENT: its own
+    // words (or a stamp with no recorded kind) > an address on the record >
+    // inheritance from the parser's site. 0 = no stamp.
+    getPromoterEvidenceRank(event) {
+        if (!event || typeof event._promoter !== 'string' || !event._promoter) return 0;
+        const kind = this.getEventPromoterEvidence(event);
+        return kind === 'parser-site' ? 1 : kind === 'url' ? 2 : 3;
+    }
+
+    // Move the evidence half of a promoter stamp from one record to another
+    // (the caller has already settled that both carry the same _promoter).
+    copyPromoterEvidenceStamp(fromEvent, toEvent) {
+        for (const field of ['_promoterEvidence', '_promoterEvidencePageUrl']) {
+            if (typeof fromEvent[field] === 'string') {
+                toEvent[field] = fromEvent[field];
+            } else {
+                delete toEvent[field];
+            }
+        }
+    }
+
     applyPromoterRegistryMatches(events, parserConfig, mainConfig) {
         const mode = this.getPromoterRegistryMode(mainConfig);
         if (mode === 'off') return;
@@ -6667,6 +6752,9 @@ class SharedCore {
         // Last resort only — computed once, applied per event below when the
         // event's OWN fields matched nothing.
         const parserEntry = this.resolveParserPromoterEntry(parserConfig);
+        // Records the parser rung REFUSED, by the page they were read on —
+        // one log line per page below (flag, don't drop silently).
+        const refusedByPage = new Map();
         for (const event of events) {
             const ownMatch = this.matchEventToPromoter(event);
             // A sub-brand the title named (BOATMINCE, SPOOKMINCE) must keep
@@ -6675,6 +6763,30 @@ class SharedCore {
             // closed: `ownMatch.ambiguous` is a decision not to guess, and the
             // parser must not overrule it.
             const fromParser = !ownMatch && Boolean(parserEntry);
+            // …and only where the parser's site speaks. "This parser reads
+            // this promoter's own site" is a statement about THAT SITE's
+            // pages; a crawl also reads pages of other sites, and a record
+            // read there with nobody named on it is not the promoter's by
+            // default. Run 20261109-053706, Two Tons of Fun: the site's
+            // footer credits its ticket vendor, the crawl followed the credit
+            // to the vendor's home page and on into its listings, and 265
+            // records of strangers' events (craft clubs, pilates, game
+            // nights) "inherited Two Tons of Fun" — bearAffinity=always, so
+            // every one was a curated bear event. 2026-11-06, Furball: 19
+            // events of a venue's box office, same rung. The rung therefore
+            // asks where the record sits in the crawl
+            // (getPromoterInheritancePageUrl): on one of the parser's
+            // configured sites, or on a page a row of such a site pointed at
+            // and the enrich-only match kept (the TURKEYMINCE ticket page
+            // this rung was written for). A record with no page at all keeps
+            // the old behaviour — there is nothing to scope it by.
+            const inheritancePage = fromParser ? this.getPromoterInheritancePageUrl(event) : '';
+            if (fromParser && inheritancePage && this.isPageOffParserSite(inheritancePage, parserConfig)) {
+                const readOn = (typeof event._sourcePageUrl === 'string' && event._sourcePageUrl.trim()) || inheritancePage;
+                if (!refusedByPage.has(readOn)) refusedByPage.set(readOn, []);
+                refusedByPage.get(readOn).push(event.title || 'Unknown');
+                continue;
+            }
             const match = fromParser ? { entry: parserEntry, evidence: 'parser-site' } : ownMatch;
             if (!match) continue;
             const title = event.title || 'Unknown';
@@ -6705,6 +6817,19 @@ class SharedCore {
             if (identityWebsite) stampKeys.push('website');
             if (mode === 'enforce') {
                 event._promoter = match.entry.name;
+                // HOW it matched travels with the stamp (see
+                // getEventPromoterEvidence): the bear check and the identity
+                // ladder must tell "the event names this promoter" from "the
+                // row sat on this promoter's listing". For an inherited stamp
+                // the page that earned it rides along too.
+                event._promoterEvidence = fromParser
+                    ? 'parser-site'
+                    : (String(match.evidence || '').startsWith('url:') ? 'url' : match.evidence);
+                if (fromParser) {
+                    event._promoterEvidencePageUrl = inheritancePage;
+                } else {
+                    delete event._promoterEvidencePageUrl;
+                }
                 if (!event._organizer && match.evidence !== 'organizer') {
                     event._organizer = match.entry.name;
                 }
@@ -6720,6 +6845,9 @@ class SharedCore {
         }
         if (counts.parser > 0) {
             console.log(`🪪 PROMOTER REGISTRY${tag}: ${counts.parser} more event(s) inherited ${parserEntry.name} from the parser's own site (${this.getHostFromUrl(parserEntry.website)}) — nothing in the event itself named a promoter`);
+        }
+        for (const [page, titles] of refusedByPage) {
+            console.log(`🪪 PROMOTER REGISTRY${tag}: ${titles.length} event(s) read on ${page} did NOT inherit ${parserEntry.name} — that page is not on the parser's own site and no row of that site led to it, and nothing in the events names a promoter: ${titles.map(title => `"${title}"`).join(', ')}`);
         }
     }
 
@@ -12079,10 +12207,32 @@ class SharedCore {
                         const keptEvents = [];
                         const droppedEvents = [];
                         for (const childEvent of parsedEvents) {
-                            const matchesParent = enrichContext.parentEvents.some(parentEvent =>
+                            const keptByParent = enrichContext.parentEvents.find(parentEvent =>
                                 this.getSameEventIdentitySignal(childEvent, parentEvent, { requireCloseStartTimes: false })
-                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url));
-                            (matchesParent ? keptEvents : droppedEvents).push(childEvent);
+                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url)) || null;
+                            if (keptByParent) {
+                                // WHO VOUCHES FOR THIS RECORD? It was read on
+                                // someone else's page (a ticket page, a venue
+                                // page) and is here only because a row of
+                                // another page pointed at it and matched it.
+                                // That row's page is the record's place in
+                                // the source — through a chain of such hops,
+                                // the FIRST page of the chain. The parser-site
+                                // promoter rung reads it (see
+                                // getPromoterInheritancePageUrl): a ticket page
+                                // a row of the promoter's own site led to is
+                                // the promoter's event; a ticket page a row of
+                                // a wandered-onto listing led to is not.
+                                // Underscore field — never serialized.
+                                const vouchingPage = [keptByParent._enrichParentPageUrl, keptByParent._sourcePageUrl, enrichContext.parentUrl]
+                                    .find(value => typeof value === 'string' && value.trim());
+                                if (vouchingPage && !childEvent._enrichParentPageUrl) {
+                                    childEvent._enrichParentPageUrl = vouchingPage.trim();
+                                }
+                                keptEvents.push(childEvent);
+                            } else {
+                                droppedEvents.push(childEvent);
+                            }
                         }
                         if (droppedEvents.length > 0) {
                             const childHost = this.getHostFromUrl(url) || url;
@@ -14503,8 +14653,24 @@ class SharedCore {
     // untrusted parser → trusted (never-drop). Events without a matched
     // promoter (or a matched entry without bearAffinity) resolve exactly to
     // parserConfig.alwaysBear — byte-identical to the pre-registry behavior.
+    //
+    // `evidence` says HOW the promoter was matched (getEventPromoterEvidence:
+    // 'organizer' | 'title' | 'url' | 'parser-site' | '' for a stamp that
+    // carries no kind). One kind does not carry the promoter's affinity
+    // everywhere: a stamp the record merely INHERITED from the parser's site
+    // ('parser-site') while the record itself sits on another site's page
+    // (isInheritedPromoterStampOffSite). Nothing in such a record names the
+    // promoter and it was not read where the promoter publishes, so it
+    // resolves exactly like a record with no affinity — the parser's own
+    // alwaysBear, which the curated test already limits to the parser's own
+    // pages. A record read on the promoter's site (or on the ticket page its
+    // row pointed at) keeps the promoter's trust as before.
     getEventBearTrust(event, parserConfig) {
         const entry = this.getEventPromoterEntry(event);
+        const evidence = entry ? this.getEventPromoterEvidence(event) : '';
+        if (entry && this.isInheritedPromoterStampOffSite(event, parserConfig)) {
+            return { trusted: Boolean(parserConfig && parserConfig.alwaysBear === true), promoter: entry.name, affinity: '', evidence };
+        }
         // A sub-brand inherits its parent's affinity (the same inheritance
         // promoterEntryToMetadataBlock applies to every unspecified field):
         // TREASURE TRAIL carries none of its own, so Bearracuda's "usually"
@@ -14518,12 +14684,12 @@ class SharedCore {
         const affinitySource = parent && typeof parent.bearAffinity === 'string' && parent.bearAffinity.trim() ? parent : entry;
         const affinity = affinitySource && typeof affinitySource.bearAffinity === 'string' ? affinitySource.bearAffinity.trim().toLowerCase() : '';
         if (entry && affinity === 'always') {
-            return { trusted: true, promoter: entry.name, affinity };
+            return { trusted: true, promoter: entry.name, affinity, evidence };
         }
         if (entry && affinity === 'usually') {
-            return { trusted: false, promoter: entry.name, affinity };
+            return { trusted: false, promoter: entry.name, affinity, evidence };
         }
-        return { trusted: parserConfig && parserConfig.alwaysBear === true, promoter: entry ? entry.name : '', affinity: '' };
+        return { trusted: parserConfig && parserConfig.alwaysBear === true, promoter: entry ? entry.name : '', affinity: '', evidence };
     }
 
     // One cascade decision per event: { result: 'bear'|'not_bear'|'unsure',
@@ -15144,8 +15310,13 @@ class SharedCore {
     // as opposed to the model merely believing a venue has a bear reputation.
     // Only curated sources get the trusting prompt variant and the
     // evidence-gate bypass; every other source must show event-level evidence.
-    //   - registry bearAffinity=always: matched by the event's OWN content, so
-    //     it stays curated wherever the page lived.
+    //   - registry bearAffinity=always: matched by the event's OWN content
+    //     (title / organizer) or by the promoter's own address on the record,
+    //     so it stays curated wherever the page lived. A stamp the record
+    //     only INHERITED from the parser's site never arrives here with an
+    //     affinity when the record sits on another site's page
+    //     (getEventBearTrust) — that record must show event-level evidence
+    //     like any other.
     //   - parserConfig.alwaysBear: covers that promoter's own pages only, so a
     //     cross-host page found while crawling it is NOT curated.
     isBearCheckCurated(event, parserConfig) {
@@ -15237,10 +15408,26 @@ class SharedCore {
         const promoterLabel = parentName
             ? `${trust.promoter}, a party series of ${parentName}`
             : `the promoter ${trust.promoter}`;
+        // The sentence says only what the match KNOWS. "This event's own
+        // content names X" is true for a title/organizer match (and is kept,
+        // byte-identical, for those and for a stamp that carries no evidence
+        // kind). A URL match knows that the record's page or one of its
+        // links is the promoter's; an inherited stamp knows that the record
+        // was found through the promoter's own site. Telling the model the
+        // event NAMES the promoter in those two cases put words in the
+        // event's mouth — run 20261109-053706: "Macramé Workshop" and 264
+        // other strangers' listings were each introduced as naming Two Tons
+        // of Fun. Only this lead-in differs; the owner-marking half of the
+        // sentence is the same for every kind.
+        const promoterLeadIn = trust.evidence === 'url'
+            ? `This event's page address or links belong to ${promoterLabel}`
+            : trust.evidence === 'parser-site'
+                ? `This event was found through the website of ${promoterLabel}`
+                : `This event's own content names ${promoterLabel}`;
         const matchedPromoterSentence = trust.affinity === 'always'
-            ? ` This event's own content names ${promoterLabel}, whom the calendar owner has marked as a trusted bear-scene promoter.`
+            ? ` ${promoterLeadIn}, whom the calendar owner has marked as a trusted bear-scene promoter.`
             : trust.affinity === 'usually'
-                ? ` This event's own content names ${promoterLabel}, whom the calendar owner tracks as a usually-bear promoter${parentName ? ` (its named series are bear parties unless the event text targets another audience)` : ''} — judge this event on its own content.`
+                ? ` ${promoterLeadIn}, whom the calendar owner tracks as a usually-bear promoter${parentName ? ` (its named series are bear parties unless the event text targets another audience)` : ''} — judge this event on its own content.`
                 : '';
 
         // Honest cross-host provenance: when the event was actually extracted
@@ -15392,7 +15579,10 @@ class SharedCore {
         // (the additive registry sentence), so matched events get their own
         // memo basis; unmatched events keep the exact pre-registry key.
         const memoTrust = this.getEventBearTrust(event, parserConfig);
-        const memoPromoterPart = memoTrust.affinity ? `|promoter:${memoTrust.promoter}:${memoTrust.affinity}` : '';
+        // …and on HOW the promoter was matched, for the two kinds whose
+        // sentence differs (title/organizer/legacy stamps keep their key).
+        const memoEvidencePart = memoTrust.evidence === 'url' || memoTrust.evidence === 'parser-site' ? `:${memoTrust.evidence}` : '';
+        const memoPromoterPart = memoTrust.affinity ? `|promoter:${memoTrust.promoter}:${memoTrust.affinity}${memoEvidencePart}` : '';
         const memoKey = `${title}|${description}|${bar}|${memoHost}${memoPromoterPart}`;
         if (!this._bearVerdictMemo) {
             this._bearVerdictMemo = new Map();
@@ -17861,9 +18051,18 @@ class SharedCore {
             mergedEvent._sourceRowId = existingEvent._sourceRowId;
             mergedEvent._sourceRowFeed = existingEvent._sourceRowFeed;
         }
-        // Same carry for the matched-promoter identity stamp (_promoter).
+        // Same carry for the matched-promoter identity stamp (_promoter) —
+        // together with HOW it was matched (_promoterEvidence and, for an
+        // inherited stamp, the page that earned it). When both records carry
+        // the SAME promoter the merged event keeps the stronger account of
+        // it: one side's own title naming the promoter is true of the merged
+        // event too, whatever the other side's listing-level stamp said.
         if (!mergedEvent._promoter && existingEvent && typeof existingEvent._promoter === 'string' && existingEvent._promoter) {
             mergedEvent._promoter = existingEvent._promoter;
+            this.copyPromoterEvidenceStamp(existingEvent, mergedEvent);
+        } else if (mergedEvent._promoter && existingEvent && existingEvent._promoter === mergedEvent._promoter
+            && this.getPromoterEvidenceRank(existingEvent) > this.getPromoterEvidenceRank(mergedEvent)) {
+            this.copyPromoterEvidenceStamp(existingEvent, mergedEvent);
         }
         // Same carry for the feed's own "past" filing (_feedPastList, see
         // assessPastCreateWithhold): the feed row and the reading of its own
@@ -19662,6 +19861,7 @@ class SharedCore {
         // just on the pre-merge scraped record.
         if (typeof newEvent._promoter === 'string' && newEvent._promoter) {
             finalEvent._promoter = newEvent._promoter;
+            this.copyPromoterEvidenceStamp(newEvent, finalEvent);
         }
         if (typeof newEvent._organizer === 'string' && newEvent._organizer) {
             finalEvent._organizer = newEvent._organizer;
@@ -28257,7 +28457,15 @@ class SharedCore {
             && !this.hasMissingTimeStartPlaceholder(newEvent, existingEvent)
             && this.recordsSharePromoter(newEvent, existingEvent)
             && (this.isPlacelessRecord(incoming) !== this.isPlacelessRecord(existing))
-            && this.namesHaveAffinity(newEvent, existingEvent)) {
+            // …and the word the names share must be the EVENT's, not the
+            // promoter's: the shared promoter is already this rung's first
+            // condition, so its own name inside both titles is that same fact
+            // counted twice ("23rd Folsom Europe Streetfair" / "Lockers @
+            // FOLSOM EUROPE Street Fair" / "Boxer Berlin @ Folsom" — the
+            // fair, its cloakroom and a shop's stall, one slot, run
+            // 20261109-053706).
+            && this.namesHaveAffinity(newEvent, existingEvent,
+                { brandNames: this.getPromoterBrandNames(this.getEventPromoterEntry(newEvent)) })) {
             return 'promoter-exact-start';
         }
         // Same place, roughly the same start time (tolerant of legacy wall-clock offsets),
@@ -28638,15 +28846,25 @@ class SharedCore {
         return a.some(key => b.has(key));
     }
 
-    // TRUE when the two names share a distinctive word (5+ letters, not
-    // generic event vocabulary) or a pair of such words one OCR slip apart
-    // ("GOLDII.OXX" / "GOLDILOXX Chicago").
     // Both records stamped with the same curated promoter (the registry's
-    // _promoter, stamped from each record's own text or link).
+    // _promoter) — AND at least one of them by its OWN words. A stamp earned
+    // from an address (the listing page's URL carries the promoter's token)
+    // or inherited from the parser's site is the LISTING's identity: every
+    // row of that listing wears it, so two such stamps say "these rows sat on
+    // one programme", which is true of every pair on the page. Run
+    // 20261109-053706, a street fair's programme of 110 cards (107 stamped
+    // from the page URL): "Aftermatch: Dance Your Ass Off" was matched to
+    // "CLASSIC meets FETISH", "Mister B" to "Friday Gathering" — different
+    // parties in one time slot, one of them without a place. The pair this
+    // rung was built for still passes: a programme row stamped from its page
+    // address beside the venue's own listing whose TITLE names the promoter
+    // ("HalloQueen Burner Brunch – 10:30 AM – Spooky Bear"). A stamp with no
+    // recorded kind counts as the event's own, as it always did.
     recordsSharePromoter(eventA, eventB) {
         const key = (event) => this.normalizeIdentityText(String((event && event._promoter) || ''));
         const a = key(eventA);
-        return Boolean(a) && a === key(eventB);
+        if (!a || a !== key(eventB)) return false;
+        return this.isPromoterStampEventLevel(eventA) || this.isPromoterStampEventLevel(eventB);
     }
 
     // No place evidence at all: no bar, no address, no coordinates.
@@ -28655,21 +28873,52 @@ class SharedCore {
         return !(String(record.bar || '').trim() || String(record.address || '').trim() || String(record.location || '').trim());
     }
 
-    namesHaveAffinity(eventA, eventB) {
+    // TRUE when the two names share a distinctive word (5+ letters, not
+    // generic event vocabulary) or a pair of such words one OCR slip apart
+    // ("GOLDII.OXX" / "GOLDILOXX Chicago").
+    // The names compared are the ones the PAGE stated. A shortName the
+    // registry pasted on (statically stamped, or — once a merge has dropped
+    // the stamp — equal to a curated promoter's shortName) is branding worn
+    // by every record of that promoter, the same ruling
+    // buildIdentityComparisonShape applies: on the programme above all 110
+    // cards carried shortName "FOLSOM EUROPE", so every pair "shared a
+    // distinctive word" and this test could never say no.
+    // `options.brandNames`: names whose words are NOT the event's own for
+    // this comparison (a caller that has already established the shared
+    // brand by other means passes it here, so the brand cannot also be the
+    // name the two records share).
+    namesHaveAffinity(eventA, eventB, options = {}) {
+        const brandWords = new Set();
+        for (const brandName of (options && Array.isArray(options.brandNames) ? options.brandNames : [])) {
+            if (typeof brandName !== 'string') continue;
+            const lower = this.decodeBasicHtmlEntities(brandName).replace(/\u00AD/g, '').toLowerCase();
+            for (const word of lower.replace(/[^a-z0-9]+/g, ' ').split(' ')) {
+                if (word) brandWords.add(word);
+            }
+            const squashed = lower.replace(/[^a-z0-9]+/g, '');
+            if (squashed) brandWords.add(squashed);
+        }
         const generic = new Set(['party', 'night', 'nights', 'weekend', 'event', 'events', 'bears', 'presents', 'annual',
             'friday', 'saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'tickets', 'dance', 'social', 'happy', 'hour']);
+        const ownShortName = (event) => {
+            const value = event && event.shortName;
+            if (typeof value !== 'string' || !value.trim()) return null;
+            const staticFields = event._staticFields && typeof event._staticFields === 'object' ? event._staticFields : {};
+            if (Object.prototype.hasOwnProperty.call(staticFields, 'shortName')) return null;
+            return this.isCuratedPromoterShortName(value) ? null : value;
+        };
         const tokens = (event) => {
-            const names = [event && event.title, event && event.shortName, event && event.name].filter(value => typeof value === 'string');
+            const names = [event && event.title, ownShortName(event), event && event.name].filter(value => typeof value === 'string');
             const out = new Set();
             for (const name of names) {
                 const lower = this.decodeBasicHtmlEntities(name).toLowerCase();
                 for (const word of lower.replace(/[^a-z0-9]+/g, ' ').split(' ')) {
-                    if (word.length >= 5 && !generic.has(word) && !/^\d+$/.test(word)) out.add(word);
+                    if (word.length >= 5 && !generic.has(word) && !/^\d+$/.test(word) && !brandWords.has(word)) out.add(word);
                 }
                 // The whole name squashed: an OCR slip that inserts
                 // punctuation ("GOLDII.OXX") splits the word it misread.
                 const squashed = lower.replace(/[^a-z0-9]+/g, '');
-                if (squashed.length >= 6) out.add(squashed);
+                if (squashed.length >= 6 && !brandWords.has(squashed)) out.add(squashed);
             }
             return [...out];
         };
