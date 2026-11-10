@@ -13469,6 +13469,10 @@ class SharedCore {
     noteHostReachability(url, error) {
         const host = FetchPoliteness.hostKeyOf(url);
         if (!host) return;
+        // A request this pipeline refuses to make says nothing about whether
+        // the host answers — and its wording ("a social network") must never
+        // be read as a network failure by the pattern below.
+        if (error && error.politeness && error.politeness.reason === 'never-request') return;
         if (!this.hostReachability) this.hostReachability = new Map();
         const entry = this.hostReachability.get(host) || { failures: 0, succeeded: false };
         // Only a connection-level failure counts. Anything carrying an HTTP
@@ -31682,6 +31686,28 @@ class FetchPoliteness {
         return this.hosts.get(hostKey);
     }
 
+    // HOSTS THIS PIPELINE NEVER REQUESTS, whatever links there: the social
+    // networks (the hosts getSocialIdentityFieldForHost already classifies —
+    // consulted, not a second list; the owner's standing rule is no
+    // Instagram or Facebook fetching). URL discovery rejects links to them
+    // (ai-web-parser validateEventUrl), but two doors stood open:
+    //   - an event's own ticket link is crawled without passing discovery
+    //     (2026-11-08: a ticket link to facebook.com/events/… had this gate
+    //     request facebook.com/robots.txt before robots refused the page);
+    //   - a redirect is a request nobody validated (run 20261109-053706: a
+    //     photo-credit link, http://inkedkenny.com/, redirected to
+    //     instagram.com/inkedkennyphoto — the profile was requested, cached
+    //     as inkedkenny.com's home page and read as a link hub).
+    // So the rule lives here, where every request passes, and the adapter
+    // asks it again for each redirect hop and each cached landing address.
+    // '' when the URL may be requested; otherwise why not.
+    static neverRequestReason(url) {
+        const match = String(url || '').match(/^https?:\/\/(?:[^/?#@]*@)?([^/?#:]+)/i);
+        const host = match ? match[1].toLowerCase().replace(/\.$/, '') : '';
+        if (!host || getSocialIdentityFieldForHost(host) === undefined) return '';
+        return `${host} is a social network, never requested by this pipeline`;
+    }
+
     // A refusal the caller must not retry.
     buildRefusal(message, reason, hostKey) {
         const error = new Error(message);
@@ -31807,6 +31833,9 @@ class FetchPoliteness {
     // CDN) is only counted.
     async run(url, perform, options = {}) {
         const hostKey = FetchPoliteness.hostKeyOf(url);
+        // Before anything else — its robots.txt is a request to it too.
+        const never = FetchPoliteness.neverRequestReason(url);
+        if (never) throw this.buildRefusal(`${never} — not requesting ${url}`, 'never-request', hostKey);
         if (!hostKey || this.isExempt(hostKey)) return perform();
         const state = this.getHostState(hostKey);
         if (options.kind === 'asset') {
@@ -31928,6 +31957,8 @@ class FetchPoliteness {
     // '' when a request for this URL would be attempted; otherwise why not
     // (parked host / budget spent). Read-only — nothing is counted.
     refusalReasonFor(url) {
+        const never = FetchPoliteness.neverRequestReason(url);
+        if (never) return never;
         const hostKey = FetchPoliteness.hostKeyOf(url);
         const state = hostKey ? this.hosts.get(hostKey) : null;
         if (!state) return '';

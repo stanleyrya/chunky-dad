@@ -30665,3 +30665,71 @@ test('off-site listing: a page is judged where the request landed, not where the
   assert.equal(result.offSiteListingDrops[0].url, 'https://short.example/pool');
   assert.equal(result.offSiteListingDrops[0].landingUrl, 'https://venue.example/');
 });
+
+// ---------------------------------------------------------------------------
+// Hosts the pipeline never requests. 2026-11-08: an event's own ticket link
+// (facebook.com/events/1657399302403721/) reached the crawl through
+// ticket-link enrichment, which no discovery filter sees; the politeness gate
+// read facebook.com/robots.txt, and only that file's Disallow stopped the
+// page. The refusal now sits in the gate, ahead of robots.txt.
+// ---------------------------------------------------------------------------
+
+test('never requested: a social network address is refused by the gate before its robots.txt is read, whatever the robots mode and whatever the kind of request', async () => {
+  const never = SharedCore.FetchPoliteness.neverRequestReason;
+  assert.equal(never('https://www.facebook.com/events/1657399302403721/'), 'www.facebook.com is a social network, never requested by this pipeline');
+  assert.equal(never('https://instagram.com/inkedkennyphoto'), 'instagram.com is a social network, never requested by this pipeline');
+  assert.equal(never('HTTP://M.Facebook.COM./login'), 'm.facebook.com is a social network, never requested by this pipeline');
+  assert.equal(never('https://user:pw@www.instagram.com:443/p/1'), 'www.instagram.com is a social network, never requested by this pipeline');
+  // The host decides, never a mention of the name somewhere else.
+  for (const other of [
+    'https://scontent-lga3-1.cdninstagram.com/v/t51/x.jpg',
+    'https://notfacebook.com/events/1',
+    'https://facebook.com.tickets.example/e/1',
+    'https://blackeagletoronto.com/?next=https://www.instagram.com/x',
+    'https://www.instagram.com@tickets.example/e/1',
+    'http://inkedkenny.com/',
+    'mailto:someone@facebook.com',
+    '', null
+  ]) assert.equal(never(other), '', String(other));
+
+  for (const robots of ['off', 'report', 'enforce']) {
+    let robotsReads = 0;
+    let performed = 0;
+    const { gate, sleeps } = makePoliteness({ robots, minHostGapMs: 2000, fetchRobotsText: async () => { robotsReads++; return 'User-agent: *\nAllow: /\n'; } });
+    // Even a configured root, even inside its own opening window.
+    gate.setConfiguredRootTest(() => true);
+    gate.beginOpeningRoot('https://www.facebook.com/events/1657399302403721/');
+    for (const kind of ['page', 'image', 'api']) {
+      await assert.rejects(
+        gate.run('https://www.facebook.com/events/1657399302403721/', async () => { performed++; return 'never'; }, { kind }),
+        (error) => error.politeness.reason === 'never-request' && error.politeness.host === 'facebook.com' && error.retryable === false
+          && error.message === 'www.facebook.com is a social network, never requested by this pipeline — not requesting https://www.facebook.com/events/1657399302403721/');
+    }
+    gate.endOpeningRoot();
+    assert.equal(gate.refusalReasonFor('https://www.instagram.com/eagle_la/'), 'www.instagram.com is a social network, never requested by this pipeline');
+    assert.equal(robotsReads, 0, `robots ${robots}: robots.txt of that host is never read`);
+    assert.equal(performed, 0, `robots ${robots}: the request is never made`);
+    assert.deepEqual(sleeps, [], 'and no pacing is spent on a request that is not made');
+    // Everything else is untouched.
+    assert.equal(await gate.run('https://tickets.example/e/1', async () => 'page'), 'page');
+    assert.equal(gate.refusalReasonFor('https://tickets.example/e/2'), '');
+  }
+});
+
+test('never requested: the refusal is not counted as the host failing to answer', async () => {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema });
+  const { gate } = makePoliteness({ robots: 'off', minHostGapMs: 0 });
+  let refusal = null;
+  try { await gate.run('https://www.facebook.com/events/1657399302403721/', async () => 'never'); } catch (error) { refusal = error; }
+  assert.equal(refusal.politeness.reason, 'never-request');
+  // The adapter's wording for a redirect that was not followed (inkedkenny.com, 2026-11-08).
+  const redirected = Object.assign(new Error('HTTP request failed for http://inkedkenny.com/: it redirects to https://www.instagram.com/inkedkennyphoto — www.instagram.com is a social network, never requested by this pipeline; the redirect is not followed'), { retryable: false, politeness: { reason: 'never-request', host: 'instagram.com' } });
+  for (let i = 0; i < 5; i++) {
+    core.noteHostReachability('https://www.facebook.com/events/1657399302403721/', refusal);
+    core.noteHostReachability('http://inkedkenny.com/', redirected);
+  }
+  assert.equal(core.hostReachability ? core.hostReachability.size : 0, 0, 'no host is marked as failing (or as answering) by a request that was never made');
+  // A real connection failure still counts.
+  core.noteHostReachability('http://inkedkenny.com/', new Error('fetch failed'));
+  assert.equal(core.hostReachability.get('inkedkenny.com').failures, 1);
+});

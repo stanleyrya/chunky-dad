@@ -581,6 +581,9 @@ class WebAdapter {
                 statusCode: cached.statusCode || 200,
                 headers: cached.headers || {},
                 fetchedAt: cached.fetchedAt || null,
+                // Where the redirect landed when the page was fetched: the
+                // crawl judges a page by its landing address, live or cached.
+                ...(typeof cached.finalUrl === 'string' && cached.finalUrl ? { finalUrl: cached.finalUrl } : {}),
                 modifiedAtMs: Number.isFinite(stats.mtimeMs) ? stats.mtimeMs : null,
                 cachePath
             };
@@ -1648,6 +1651,11 @@ class WebAdapter {
             // nonce, a page behind a gate it just passed) — no memo, no disk
             // cache on the way in; the answer still refreshes both.
             const wantsFresh = options.fresh === true;
+            // A host this pipeline never requests (SharedCore.FetchPoliteness
+            // .neverRequestReason) is refused here too: the gate is absent
+            // for an adapter built outside a run and bypassed for robots.txt.
+            const neverReason = this.getNeverRequestReason(url);
+            if (neverReason) throw this.buildNeverRequestRefusal(neverReason, url);
             memoKey = this.getRunPageMemoKey(url, options);
             const memoized = wantsFresh ? null : this.readRunPageMemo(memoKey);
             if (memoized) {
@@ -1668,6 +1676,10 @@ class WebAdapter {
                 typeof options.isCacheableResponse !== 'function' || options.isCacheableResponse(responseData) !== false;
             if (canUseCache && !wantsFresh) {
                 const cachedPage = await this.readCachedPage(url, pageCacheConfig);
+                const cachedLandingRefusal = cachedPage && cachedPage.finalUrl ? this.getNeverRequestReason(cachedPage.finalUrl) : '';
+                if (cachedLandingRefusal) {
+                    throw this.buildNeverRequestRefusal(`it redirects to ${cachedPage.finalUrl} — ${cachedLandingRefusal}; the copy cached ${cachedPage.fetchedAt || 'earlier'} is that page, not this one, and is not read`, cachedPage.finalUrl);
+                }
                 if (cachedPage && isCacheableResponse(cachedPage)) {
                     this.logPageCacheHit(url, cachedPage, pageCacheConfig);
                     this.writeRunPageMemo(memoKey, cachedPage);
@@ -1718,10 +1730,33 @@ class WebAdapter {
             const sessionCookie = this.getRunSessionCookieHeader(url);
             if (sessionCookie && !fetchOptions.headers.Cookie && !fetchOptions.headers.cookie) fetchOptions.headers.Cookie = sessionCookie;
             
+            // A plain page GET walks its redirects by hand, so a hop to a
+            // host this pipeline never requests is refused BEFORE it is made
+            // (fetch would have followed it and handed back the other
+            // site's page as this one). Node only: a browser's manual
+            // redirect is opaque.
+            const walksRedirects = this.isNode && !this.config.corsProxy && fetchOptions.method.toUpperCase() === 'GET' && !options.body && options.session !== true;
+            let landedUrl = '';
             const { response, html } = await this.runPolitely(url, options, async () => {
-                const liveResponse = options.session === true
-                    ? await this.fetchWithRunSession(fetchUrl, fetchOptions)
-                    : await fetch(fetchUrl, fetchOptions);
+                let liveResponse;
+                if (options.session === true) {
+                    liveResponse = await this.fetchWithRunSession(fetchUrl, fetchOptions);
+                } else if (walksRedirects) {
+                    const walked = await this.fetchWalkingRedirects(fetchUrl, fetchOptions);
+                    liveResponse = walked.response;
+                    landedUrl = walked.landedUrl;
+                } else {
+                    liveResponse = await fetch(fetchUrl, fetchOptions);
+                }
+                // Where fetch walked the hop itself (a POST, a browser), the
+                // landing is only known afterwards: what a never-requested
+                // host answered is still not the page.
+                const followedTo = !walksRedirects && liveResponse && typeof liveResponse.url === 'string' ? liveResponse.url : '';
+                const followedRefusal = followedTo && followedTo !== url && followedTo !== fetchUrl ? this.getNeverRequestReason(followedTo) : '';
+                if (followedRefusal) {
+                    this.discardResponseBody(liveResponse);
+                    throw this.buildNeverRequestRefusal(`it redirects to ${followedTo} — ${followedRefusal}; what came back is not kept`, followedTo);
+                }
                 if (!liveResponse.ok) {
                     // A refused response still has a body on the wire. Left
                     // unread it stays open, and when the server later closes
@@ -1746,7 +1781,8 @@ class WebAdapter {
                 };
                 // Where a followed redirect landed, when it went somewhere
                 // else (a platform's tracking hop to the organiser's page).
-                if (response.url && response.url !== url && response.url !== fetchUrl) responseData.finalUrl = response.url;
+                const landedAt = walksRedirects ? landedUrl : response.url;
+                if (landedAt && landedAt !== url && landedAt !== fetchUrl) responseData.finalUrl = landedAt;
 
                 if (canUseCache && isCacheableResponse(responseData)) {
                     await this.writeCachedPage(url, responseData, pageCacheConfig);
@@ -1762,6 +1798,16 @@ class WebAdapter {
         } catch (error) {
             if (error?.cachedFailure) {
                 throw error;
+            }
+            // A never-requested host (named, redirected to, or cached from a
+            // redirect): a skip — no browser, no phone inbox, whatever
+            // digits the address in the message happens to carry.
+            if (error && error.politeness && error.politeness.reason === 'never-request') {
+                console.log(`🚦 POLITE: skipped ${url} — ${error.message}`);
+                const skipped = new Error(`HTTP request failed for ${url}: ${error.message}`);
+                skipped.retryable = false;
+                skipped.politeness = error.politeness;
+                throw skipped;
             }
             // A refusal by the politeness gate (parked host, budget, robots)
             // never left the machine: it is a skip, reported as one, and it
@@ -1822,6 +1868,56 @@ class WebAdapter {
             if (error && Number.isFinite(error.statusCode)) wrapped.statusCode = error.statusCode;
             throw wrapped;
         }
+    }
+
+    // Why this URL is never requested ('' when it may be) — the core's one
+    // rule, SharedCore.FetchPoliteness.neverRequestReason.
+    getNeverRequestReason(url) {
+        const core = this.getSharedCoreRef();
+        const gateClass = core && core.FetchPoliteness;
+        return gateClass && typeof gateClass.neverRequestReason === 'function' ? gateClass.neverRequestReason(url) : '';
+    }
+
+    buildNeverRequestRefusal(message, refusedUrl) {
+        const error = new Error(message);
+        error.retryable = false;
+        error.politeness = {
+            reason: 'never-request',
+            host: (String(refusedUrl || '').match(/^https?:\/\/(?:[^/?#@]*@)?([^/?#:]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '')
+        };
+        return error;
+    }
+
+    // A GET with its redirects walked by hand: every hop is asked about
+    // before it is made (getNeverRequestReason), so a link that redirects to
+    // a never-requested host stops at the redirect. Otherwise what fetch
+    // does by itself: 301/302/303/307/308 with a Location, twenty hops,
+    // credentials dropped when the origin changes, the run's cookie session
+    // of the host each hop goes to. Returns { response, landedUrl }.
+    async fetchWalkingRedirects(fetchUrl, fetchOptions) {
+        let currentUrl = fetchUrl;
+        let headers = { ...(fetchOptions.headers || {}) };
+        for (let hop = 0; hop <= 20; hop++) {
+            const response = await fetch(currentUrl, { ...fetchOptions, headers, redirect: 'manual' });
+            const redirected = [301, 302, 303, 307, 308].includes(response.status);
+            const location = redirected && response.headers && typeof response.headers.get === 'function' ? response.headers.get('location') : '';
+            if (!location) return { response, landedUrl: currentUrl };
+            let nextUrl = null;
+            try { nextUrl = new URL(location, currentUrl); } catch (_) { nextUrl = null; }
+            if (!nextUrl || !/^https?:$/.test(nextUrl.protocol)) return { response, landedUrl: currentUrl };
+            this.discardResponseBody(response);
+            const refusal = this.getNeverRequestReason(nextUrl.toString());
+            if (refusal) {
+                throw this.buildNeverRequestRefusal(`it redirects to ${nextUrl.toString()} — ${refusal}; the redirect is not followed`, nextUrl.toString());
+            }
+            if (nextUrl.origin !== new URL(currentUrl).origin) {
+                headers = Object.fromEntries(Object.entries(headers).filter(([name]) => !/^(?:authorization|proxy-authorization|cookie)$/i.test(name)));
+                const sessionCookie = this.getRunSessionCookieHeader(nextUrl.toString());
+                if (sessionCookie) headers.Cookie = sessionCookie;
+            }
+            currentUrl = nextUrl.toString();
+        }
+        throw new Error(`too many redirects from ${fetchUrl}`);
     }
 
     discardResponseBody(response) {
