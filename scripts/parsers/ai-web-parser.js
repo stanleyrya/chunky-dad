@@ -20264,7 +20264,9 @@ class AiWebParser {
         for (const source of htmlSources) {
             for (const pattern of patterns) {
                 for (const match of source.matchAll(pattern)) {
-                    const raw = match[1] ? match[1] : this.rejoinSpaceSplitImageUrl(source, match.index, match[0]);
+                    const raw = match[1]
+                        ? match[1]
+                        : this.cutUrlEmbeddedInQuery(source, match.index, this.rejoinSpaceSplitImageUrl(source, match.index, match[0]));
                     const candidate = this.truncateAtEncodedDelimiter(raw);
                     if (candidate && !this.isMarkupNamespaceUrl(candidate)) candidates.add(candidate);
                 }
@@ -20304,6 +20306,41 @@ class AiWebParser {
         if (/[<>\r\n,]|https?:/i.test(tail)) return head;
         const whole = (head + tail).trim().replace(/\s/g, '%20');
         return this.hasSupportedImageFilenameAtEnd(whole) ? whole : head;
+    }
+
+    // A URL written UNENCODED inside another URL's query string ends where
+    // the enclosing query's next parameter begins. Share buttons do this:
+    //   href="fb-messenger://share/?link=https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch&app_id=179821335543821&redirect_uri=https://…"
+    //   href="https://wa.me/?text=OutSavvy%20-%20… at%20The Cavendish Arms.%20https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch&app_absent=1"
+    // The bare-URL scan starts at the inner "https://" and runs to the
+    // closing quote, so the page's own address came back as two more
+    // "pages" ("…-scratch&app_id=…&redirect_uri=https://…" and
+    // "…-scratch&app_absent=1"), each fetched and cached (Two Tons of Fun,
+    // run 20261109-053706). Decided from the markup alone: the match sits
+    // inside a quoted value that had already opened a query ("?") before
+    // it, and the matched URL has no "?" of its own before its first "&" —
+    // so that "&" can only belong to the enclosing URL. A URL with its own
+    // query is ambiguous and is left exactly as the scan cut it.
+    cutUrlEmbeddedInQuery(source, matchIndex, candidate) {
+        const head = String(candidate || '');
+        const index = Number(matchIndex);
+        const ampersand = head.indexOf('&');
+        if (ampersand === -1 || !Number.isFinite(index) || index < 2) return head;
+        const question = head.indexOf('?');
+        if (question !== -1 && question < ampersand) return head;
+        const text = String(source || '');
+        // The value the match sits in: back to the nearest quote or tag edge.
+        const floor = Math.max(0, index - 2000);
+        let start = -1;
+        for (let i = index - 1; i >= floor; i--) {
+            const ch = text[i];
+            if (ch === '"' || ch === "'" || ch === '<' || ch === '>') { start = i + 1; break; }
+        }
+        if (start === -1 || start === index) return head;
+        const enclosing = text.slice(start, index);
+        // The enclosing value's first run (its own address) has opened a query.
+        if (!/^\S*\?/.test(enclosing)) return head;
+        return head.slice(0, ampersand);
     }
 
     // An XML namespace is not a link. Inline SVG icons carry
