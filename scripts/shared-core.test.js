@@ -30294,3 +30294,35 @@ test('stated name: the keyword tier and the tag keyword match read the saved tit
   assert.deepEqual(tagged.fromTitle, ['leather']);
   assert.ok(tagged.hits.leather.title.includes('leather'));
 });
+
+// ---------------------------------------------------------------------------
+// A title's "at <venue>" tail names the bar only by the bar's NAME (2026-11-09)
+//   massbearsandcubs.org, run 20261109-053706: "Bears At The Beach" at "DCR
+//   Nantasket Beach" was saved as "Bears" — one shared word, the place TYPE.
+// ---------------------------------------------------------------------------
+
+test('title tail: one word shared with the bar is not the bar — the tail must be the bar\'s name from its first word', () => {
+  const core = new SharedCore({ toronto: { timezone: 'America/Toronto', patterns: ['toronto'] }, nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } }, { eventSchema: EventSchema });
+  // The motivating rows (real titles and bars from the run).
+  assert.equal(core.stripVenueSuffixFromTitle('Bears At The Beach', 'DCR Nantasket Beach'), 'Bears At The Beach');
+  assert.equal(core.stripVenueSuffixFromTitle('Jocks at Jacques', "JACQUE'S Cabaret"), 'Jocks at Jacques', 'not the bar as the bar spells itself');
+  assert.equal(core.stripVenueSuffixFromTitle('Game Night 2.0 at the Masonic Lodge', 'King Hiram Masonic Lodge'), 'Game Night 2.0 at the Masonic Lodge', 'the end of a name is not the name');
+  assert.equal(core.titleTailNamesBar('the Beach', 'DCR Nantasket Beach'), false);
+  assert.equal(core.titleTailNamesBar('Cabaret', "Jacque's Cabaret"), false);
+  assert.equal(core.titleTailNamesBar('Anchor', 'Crown & Anchor'), false);
+  // Every tail the run stripped for the right reason still goes.
+  assert.equal(core.stripVenueSuffixFromTitle('Bear Cave Friday at The 244 Spot', 'The 244 Spot'), 'Bear Cave Friday');
+  assert.equal(core.stripVenueSuffixFromTitle("Fursdays at Ty's", "Ty's Bar NYC"), 'Fursdays');
+  assert.equal(core.stripVenueSuffixFromTitle('Bears 4 Bareburger at Bareburger HK', 'Bareburger'), 'Bears 4 Bareburger');
+  assert.equal(core.stripVenueSuffixFromTitle('Fetish in the Mix 2026 @ Woof Berlin', 'Woof Berlin'), 'Fetish in the Mix 2026');
+  assert.equal(core.stripVenueSuffixFromTitle('World AIDS Day 2026 at Eagle', 'The Eagle Bar'), 'World AIDS Day 2026');
+  assert.equal(core.stripVenueSuffixFromTitle('Early Sundays at Stonewall', 'The Stonewall Inn'), 'Early Sundays');
+  assert.equal(core.stripVenueSuffixFromTitle('JXL at KYŌ', 'Kyō Kuala Lumpur'), 'JXL');
+  assert.equal(core.stripVenueSuffixFromTitle('Butterball at Rockbar', 'Rockbar NYC'), 'Butterball');
+  assert.equal(core.stripVenueSuffixFromTitle('Full Moon Festival at Paradise Beach Phuket', 'Paradise Beach'), 'Full Moon Festival', 'the whole name with a place word after it');
+  // City words set aside, the same name.
+  assert.equal(core.titleTailNamesBar('the Black Eagle', 'Black Eagle Toronto'), true);
+  // An "at" inside an open bracket is an aside, not the title's venue tail.
+  assert.equal(core.stripVenueSuffixFromTitle('BEAST (A Pre-Halloween at the Black Eagle)', 'Black Eagle Toronto'), 'BEAST (A Pre-Halloween at the Black Eagle)');
+  assert.equal(core.stripVenueSuffixFromTitle('BEAST (Pre-Halloween) at the Black Eagle', 'Black Eagle Toronto'), 'BEAST (Pre-Halloween)');
+});

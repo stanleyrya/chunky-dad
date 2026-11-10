@@ -1523,22 +1523,29 @@ class SharedCore {
     // stripped) joined into one comparable string. "MEAT RACK" == "Meat Rack"
     // but != "MEAT RACK INFERNO" — equality, never subset, so a different
     // party at the same venue can never inherit a verdict.
-    // Does a title's "at <venue>" tail name THIS bar? The bar's key, the
-    // same name with descriptors either way ("Ty's" / "Ty's Bar NYC",
-    // "Bareburger HK" / "Bareburger"), or a leading article dropped.
+    // Does a title's "at <venue>" tail name THIS bar? Only when it is the
+    // bar's NAME: the bar's key, the same words once city words are set
+    // aside ("the Black Eagle" / "Black Eagle Toronto"), the name with
+    // descriptors AFTER it either way ("Ty's" / "Ty's Bar NYC", "Bareburger
+    // HK" / "Bareburger"), or a leading article dropped.
+    // One shared word is not the bar. This used to accept any tail whose
+    // letters sat somewhere inside the bar's key, so "Bears At The Beach" at
+    // "DCR Nantasket Beach" was saved as "Bears" — the word a place type
+    // shares with the party's name, not the place's name (massbearsandcubs.org,
+    // run 20261109-053706). A name starts at its first word: a tail that
+    // matches only the END or the middle of the bar's name ("the Beach",
+    // "the Masonic Lodge" at "King Hiram Masonic Lodge") is the party's own
+    // wording and stays in the title.
     titleTailNamesBar(tail, bar) {
         const tailKey = this.normalizeBarNameKey(String(tail || '').replace(/^(the|le|la|el)\s+/i, ''));
         const barKey = this.normalizeBarNameKey(String(bar || '').replace(/^(the|le|la|el)\s+/i, ''));
         if (!tailKey || !barKey) return false;
         if (tailKey === barKey) return true;
-        if (tailKey.length >= 4 && barKey.length >= 4 && (tailKey.includes(barKey) || barKey.includes(tailKey))) return true;
-        const leads = (shortName, longName) => {
-            const shortTokens = this.getCrossSourceTitleTokens(String(shortName || ''));
-            const longTokens = this.getCrossSourceTitleTokens(String(longName || ''));
-            return shortTokens.length >= 1 && shortTokens.length < longTokens.length
-                && shortTokens.every((token, index) => longTokens[index] === token);
-        };
-        return leads(tail, bar) || leads(bar, tail);
+        const tailTokens = this.getCrossSourceTitleTokens(String(tail || ''));
+        const barTokens = this.getCrossSourceTitleTokens(String(bar || ''));
+        if (tailTokens.length === 0 || barTokens.length === 0) return false;
+        const [shortTokens, longTokens] = tailTokens.length <= barTokens.length ? [tailTokens, barTokens] : [barTokens, tailTokens];
+        return shortTokens.every((token, index) => longTokens[index] === token);
     }
 
     // "Fuzzy at Nowhere" with bar Nowhere is "Fuzzy": the venue is already
@@ -1552,6 +1559,11 @@ class SharedCore {
         if (!match) return text;
         const head = match[1].replace(/[\s:\-–—/|]+$/, '').trim();
         if (!head || !/[a-z]/i.test(head)) return text;
+        // An "at" inside a bracket the title has not closed yet belongs to
+        // the aside, not to the title: "BEAST (A Pre-Halloween at the Black
+        // Eagle)" would be cut to "BEAST (A Pre-Halloween".
+        const depth = (value, open, close) => value.split(open).length - value.split(close).length;
+        if (depth(head, '(', ')') > 0 || depth(head, '[', ']') > 0) return text;
         // A head that only says WHEN ("Tonight", "This week") names no
         // party — the venue was the whole title (umbrella rows).
         const timeWords = new Set(['week', 'weekend', 'tonight', 'today', 'tomorrow', 'month', 'night', 'nights', 'day', 'days', 'evening', 'daily', 'weekly', 'monthly']);
