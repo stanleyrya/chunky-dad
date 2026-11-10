@@ -23618,3 +23618,426 @@ test('Squarespace collection: a row the feed files under past is stamped with th
   // An item built with no read behind it (another parser instance) is unstamped.
   assert.equal(createParser().buildEventFromSquarespaceItem(SQUARESPACE_PAST_ONLY_TWIN.past[0], 'https://www.bosf.example/events')._feedPastList, undefined);
 });
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): series expansion subtracts the nights the
+// feed itself cancelled or moved. XL Bears "Game Night" (2nd Sundays) was kept
+// on 2026-11-08 although a RECURRENCE-ID record moved that night to 11-15;
+// Lodge NY "Manhole" likewise on 11-15 / 11-22.
+// ---------------------------------------------------------------------------
+function feedFidelityWeeklySeries() {
+  // A weekly series that began four weeks ago at 16:00 wall clock; the rows
+  // are in the shape shared-core's icsRecordToFeedRow hands over.
+  const day = 24 * 60 * 60 * 1000;
+  const first = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - 28, 16, 0, 0));
+  const wall = (date) => date.toISOString().slice(0, 19);
+  const night = (weeks) => new Date(first.getTime() + weeks * 7 * day);
+  const series = {
+    uid: 'game-night@calendar.example', title: 'Game Night', description: 'Board games for bears & friends',
+    start: wall(first), end: wall(new Date(first.getTime() + 5 * 60 * 60 * 1000)),
+    venue: 'Phoenix Comics & Games', address: '113 Broadway E, Seattle, WA 98102', all_day: false,
+    rrule: 'FREQ=WEEKLY', timezone: 'America/Los_Angeles'
+  };
+  return { day, first, wall, night, series };
+}
+
+test('feed fidelity: a series night another record replaces is emitted once, as the override says', () => {
+  const parser = createParser();
+  const { day, wall, night, series } = feedFidelityWeeklySeries();
+  const moved = night(5);
+  const movedTo = new Date(moved.getTime() + day + 2 * 60 * 60 * 1000); // next day, 18:00
+  const cancelled = night(7);
+  const payload = { events: [
+    { ...series, exdates: [wall(cancelled), wall(moved)] },
+    { uid: series.uid, title: 'Game Night (moved)', description: 'Moved a day for the prerelease', start: wall(movedTo), end: wall(new Date(movedTo.getTime() + 3 * 60 * 60 * 1000)), venue: 'The Other Shop', address: '500 Pine St, Seattle, WA 98101', all_day: false, timezone: 'America/Los_Angeles' }
+  ] };
+  let events;
+  const logs = captureLogs(() => { events = parser.extractEventsFromJsonApiPayload(payload, 'https://calendar.example/public/basic.ics', null); });
+  const starts = events.map(event => event.startDate.toISOString());
+  assert.ok(!starts.includes(moved.toISOString()), 'the night that was moved away is not an event');
+  assert.ok(!starts.includes(cancelled.toISOString()), 'the EXDATE night is not an event');
+  assert.ok(starts.includes(night(6).toISOString()) && starts.includes(night(8).toISOString()), 'the nights around them stay');
+  const override = events.filter(event => event.startDate.toISOString() === movedTo.toISOString());
+  assert.equal(override.length, 1, 'the override row is the real night, once');
+  assert.equal(override[0].title, 'Game Night (moved)');
+  assert.equal(override[0].bar, 'The Other Shop');
+  assert.equal(override[0].endDate.toISOString(), new Date(movedTo.getTime() + 3 * 60 * 60 * 1000).toISOString());
+  assert.ok(logs.some(line => line.includes('🔁 SERIES: "Game Night"') && line.includes('2 night(s) the feed itself cancelled or moved are not events')
+    && line.includes(moved.toISOString().slice(0, 10)) && line.includes(cancelled.toISOString().slice(0, 10))), logs.join('\n'));
+  for (const event of events) {
+    assert.equal(event._jsonApiSeriesExclusions, undefined, 'the exception list never leaves the expander');
+    assert.equal(event.recurrence, undefined, 'the scraper writes nights, never a series');
+  }
+  // Without the exception list the expansion is what it was.
+  const before = parser.extractEventsFromJsonApiPayload({ events: [series] }, 'https://calendar.example/public/basic.ics', null);
+  assert.ok(before.map(event => event.startDate.toISOString()).includes(moved.toISOString()));
+});
+
+test('feed fidelity: exception values are read in every form a feed writes them', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.readJsonApiSeriesExclusions(['2026-11-08T16:00:00', '2026-11-08', '20261108T160000', '20261108', '2026-11-09T00:00:00.000Z', '', 'soon', 7]), [
+    { ms: Date.UTC(2026, 10, 8, 16), dayOnly: false },
+    { ms: Date.UTC(2026, 10, 8), dayOnly: true },
+    { ms: Date.UTC(2026, 10, 8, 16), dayOnly: false },
+    { ms: Date.UTC(2026, 10, 8), dayOnly: true },
+    { ms: Date.UTC(2026, 10, 9), dayOnly: false }
+  ]);
+  assert.deepEqual(parser.readJsonApiSeriesExclusions('20261108T160000,20261213T160000').map(entry => entry.ms), [Date.UTC(2026, 10, 8, 16), Date.UTC(2026, 11, 13, 16)]);
+  assert.deepEqual(parser.readJsonApiSeriesExclusions(null), []);
+});
+
+test('feed fidelity: an all-day exception takes the whole day; a series with every night excepted is no event', () => {
+  const parser = createParser();
+  const { night, series } = feedFidelityWeeklySeries();
+  const base = { title: 'Game Night', startDate: night(0), endDate: new Date(night(0).getTime() + 5 * 3600000), _jsonApiRrule: 'FREQ=WEEKLY' };
+  const dayOnly = parser.expandJsonApiSeriesRow({ ...base, _jsonApiSeriesExclusions: [{ ms: Date.UTC(night(5).getUTCFullYear(), night(5).getUTCMonth(), night(5).getUTCDate()), dayOnly: true }] });
+  assert.ok(!dayOnly.map(event => event.startDate.toISOString()).includes(night(5).toISOString()));
+  assert.ok(dayOnly.map(event => event.startDate.toISOString()).includes(night(6).toISOString()));
+  // A timed exception at another hour of the same day excepts nothing.
+  const otherHour = parser.expandJsonApiSeriesRow({ ...base, _jsonApiSeriesExclusions: [{ ms: night(5).getTime() + 3600000, dayOnly: false }] });
+  assert.ok(otherHour.map(event => event.startDate.toISOString()).includes(night(5).toISOString()));
+  // Every night in the window excepted (a two-night run): nothing is left, and the first night is not resurrected.
+  const until = night(5).toISOString().slice(0, 10).replace(/-/g, '');
+  const all = parser.expandJsonApiSeriesRow({ ...base, _jsonApiRrule: `FREQ=WEEKLY;UNTIL=${until}T235959Z`, _jsonApiSeriesExclusions: [4, 5].map(week => ({ ms: night(week).getTime(), dayOnly: false })) });
+  assert.deepEqual(all, []);
+  assert.equal(series.rrule, 'FREQ=WEEKLY');
+});
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): a feed row that types its street address
+// after its name states its place there, and the feed gate never drops a row
+// without saying so. Lodge NY's monthly "Chub Chaser Party" has no LOCATION
+// line and was lost at the gate on every run; "The Fuck Stop" says only
+// "Garment District, New York, NY, USA" and kept the address in its name.
+// Rows are in the shape shared-core's icsRecordToFeedRow hands over, trimmed
+// from the cached feed of run 20261109-053706.
+// ---------------------------------------------------------------------------
+function feedFidelityTitleAddressRows() {
+  const start = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 6, 13, 0, 0));
+  const wall = (date) => date.toISOString().slice(0, 19);
+  const row = (uid, title, days, place = {}) => {
+    const at = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+    return { uid, title, start: wall(at), end: wall(new Date(at.getTime() + 3 * 60 * 60 * 1000)), all_day: false, timezone: 'America/New_York', ...place };
+  };
+  return { events: [
+    row('bear-1@google.com', 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', 0, { address: '232 W 37th St 2nd fl, New York, NY 10018, USA' }),
+    row('bear-2@google.com', 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', 7, { address: '232 W 37th St 2nd fl, New York, NY 10018, USA' }),
+    row('dads-1@google.com', "Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues", 1, { address: '232 W 37th St, 2nd Fl, New York, NY, USA' }),
+    row('squeeze-1@google.com', 'Squeeze 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues', 2, { address: '457 W 56th St 2nd fl, New York, NY 10019, USA' }),
+    // No LOCATION line at all.
+    row('0n89pkstn30gf5ku8hl3igju05@google.com', 'Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues ', 3),
+    // A neighbourhood-only LOCATION ("Garment District\, New York\, NY\, USA").
+    row('fstop-1@google.com', 'The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues', 4, { venue: 'Garment District', address: 'New York, NY, USA' }),
+    // No LOCATION, and a door no other row of the feed states.
+    row('island-1@google.com', 'Lodge Long Island 92 Kean St, West Babylon, NY', 5),
+    // No LOCATION and no house number in the title: nothing to read.
+    row('chub-old@google.com', 'Chub Chaser Party on 37th b/w 7th and 8th Aves', 8),
+    row('chub-old@google.com-2', 'Chub Chaser Party on 37th b/w 7th and 8th Aves', 9)
+  ] };
+}
+
+test('feed fidelity: a feed row with no place reads the street address its title ends in', () => {
+  const parser = createParser();
+  const feedUrl = 'https://calendar.example/calendar/ical/parties/public/basic.ics';
+  let events;
+  let read;
+  const logs = captureLogs(() => {
+    events = parser.extractEventsFromJsonApiPayload(feedFidelityTitleAddressRows(), feedUrl, null);
+    read = parser.readFeedRowTitleAddresses(events);
+  });
+  assert.equal(events.length, 9);
+  assert.equal(read, 3, logs.join('\n'));
+  const chub = events.find(event => event.title === 'Chub Chaser Party');
+  assert.ok(chub, 'the address left the name');
+  assert.equal(chub.address, '232 W 37th St 2nd fl, New York, NY 10018, USA', 'the full address is the one most rows of the feed state for that door');
+  assert.equal(chub.bar || '', '');
+  const stop = events.find(event => event.title === 'The Fuck Stop');
+  assert.equal(stop.address, '232 W 37th St, 2nd Fl, New York, NY, USA', 'the street line leads the locality the row itself states');
+  const island = events.find(event => event.title === 'Lodge Long Island');
+  assert.equal(island.address, '92 Kean St, West Babylon, NY', 'no other row states this door: the title\'s own address');
+  // A row that states its street address is left to the existing strip.
+  const bear = events.filter(event => event.title.startsWith('The Bear Party'));
+  assert.equal(bear.length, 2);
+  for (const event of bear) {
+    assert.equal(event.title, 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues');
+    assert.equal(event.address, '232 W 37th St 2nd fl, New York, NY 10018, USA');
+  }
+  // Every read says what it did and why.
+  assert.ok(logs.some(line => line.startsWith('📍 TITLE ADDRESS: "Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues" → "Chub Chaser Party"')
+    && line.includes('the row states no place; the full address is the one this feed\'s other rows state for that door')
+    && line.includes('address = 232 W 37th St 2nd fl, New York, NY 10018, USA (b/w 7th and 8th Avenues)')), logs.join('\n'));
+  assert.ok(logs.some(line => line.startsWith('📍 TITLE ADDRESS: "The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues" → "The Fuck Stop"')
+    && line.includes('the row states only "Garment District, New York, NY, USA"')), logs.join('\n'));
+  assert.ok(logs.some(line => line.startsWith('📍 TITLE ADDRESS: "Lodge Long Island 92 Kean St, West Babylon, NY" → "Lodge Long Island"')
+    && line.includes('the row states no place: address = 92 Kean St, West Babylon, NY')), logs.join('\n'));
+  // Reading twice changes nothing.
+  assert.equal(parser.readFeedRowTitleAddresses(events), 0);
+});
+
+test('feed fidelity: the feed gate names every row it does not keep', () => {
+  const parser = createParser();
+  const feedUrl = 'https://calendar.example/calendar/ical/parties/public/basic.ics';
+  const events = parser.extractEventsFromJsonApiPayload(feedFidelityTitleAddressRows(), feedUrl, null);
+  // Before the title is read: the three rows with no place field are not kept, and each is named.
+  let kept;
+  const before = captureLogs(() => { kept = parser.keepPlacedFeedRows(events, feedUrl); });
+  assert.equal(kept.length, 5);
+  const gate = before.filter(line => line.startsWith('🚧 FEED GATE:'));
+  assert.equal(gate.length, 3, before.join('\n'));
+  assert.ok(gate.some(line => line.includes('"Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues" (1 night(s): ')
+    && line.includes(`names no bar, address or city in ${feedUrl} — not kept as a structured event`)), gate.join('\n'));
+  assert.ok(gate.some(line => line.includes('"Lodge Long Island 92 Kean St, West Babylon, NY"')), gate.join('\n'));
+  // Two nights of one party share a line that dates both.
+  const twoNights = gate.find(line => line.includes('"Chub Chaser Party on 37th b/w 7th and 8th Aves" (2 night(s): '));
+  assert.ok(twoNights, gate.join('\n'));
+  assert.equal((twoNights.match(/\d{4}-\d{2}-\d{2}/g) || []).length, 2);
+  // After it: only the row whose title names no door is left out — still by name.
+  parser.readFeedRowTitleAddresses(events);
+  const after = captureLogs(() => { kept = parser.keepPlacedFeedRows(events, feedUrl); });
+  assert.equal(kept.length, 7);
+  assert.deepEqual(after.filter(line => line.startsWith('🚧 FEED GATE:')).map(line => line.replace(/ night\(s\).*$/, '')), ['🚧 FEED GATE: "Chub Chaser Party on 37th b/w 7th and 8th Aves" (2']);
+  // A city alone is place evidence; nothing is said about rows that are kept.
+  const quiet = captureLogs(() => { kept = parser.keepPlacedFeedRows([{ title: 'BEAR POOL PARTY', startDate: new Date(), city: 'sitges' }, null], feedUrl); });
+  assert.equal(kept.length, 1);
+  assert.deepEqual(quiet, []);
+  assert.deepEqual(parser.keepPlacedFeedRows(null, feedUrl), []);
+});
+
+// ---------------------------------------------------------------------------
+// FEED FIDELITY — ONE FEED QUERY IS ASKED ONCE PER RUN. precinctdtla.com, run
+// 20261109-053706: the home page and /calendar/ both carry the venue's
+// EventON calendar (the same endpoint, the same shortcode), each replayed the
+// same months, and the run built 77 events twice. The claim is on the QUERY —
+// endpoint + the shortcode fields that select rows + the month — so a
+// differently-filtered calendar elsewhere on the site is still read.
+// Fixtures: the two pages' frames as cached on 2026-11-08, shortcodes trimmed.
+// ---------------------------------------------------------------------------
+const feedEvoSc = (overrides = {}) => ({ accord: 'no', calendar_type: 'fullcal', day_incre: 0, event_location: 'all', event_order: 'ASC', event_past_future: 'all', event_type: 'all', event_type_2: 'all', fixed_day: '7', fixed_month: '11', fixed_year: '2026', focus_end_date_range: '1796111999', focus_start_date_range: '1793516400', hide_past: 'no', lang: 'L1', month_incre: 0, number_of_months: '1', ...overrides });
+const feedEvoPage = (origin, frames) => `<html><body><nav><a href="/menu/">Menu</a><a href="/calendar/">Calendar</a><a href="/lostandfound/">Lost and Found</a></nav>
+<script>var evo_general_params = {"is_admin":"","ajaxurl":"${origin}/wp-admin/admin-ajax.php","evo_ajax_url":"/?evo-ajax=%%endpoint%%","ajax_method":"endpoint","n":"4e064a44c4","evo_v":"5.0.2"};</script>
+<h2>THIS MONTH</h2>
+${frames.map(frame => `<div id='${frame.id}' class='ajde_evcal_calendar sev cev color esty_2 etttc_custom evofc_nolist evoFC ajax_loading_cal' data-cal=''><div class='evo_cal_data' data-sc="${JSON.stringify(frame.sc).replace(/"/g, '&quot;')}"></div></div>`).join('\n')}
+<footer><h4>HOURS</h4><p>Monday: Closed</p><p>Tues-Friday: 6pm-2am</p><p>Saturday: 5pm-2am</p><p>Sunday: 3pm-12am</p><h4>ADDRESS</h4><p>357 S Broadway</p><p>Los Angeles, CA 90013</p></footer>
+</body></html>`;
+// The home page: a day strip and the month grid. /calendar/: this month's grid and next month's.
+const FEED_EVO_HOME = [{ id: 'evcal_calendar_269', sc: feedEvoSc({ calendar_type: 'daily', fixed_day: '8', dv_view_style: 'def' }) }, { id: 'evcal_calendar_579', sc: feedEvoSc() }];
+const FEED_EVO_CALENDAR = [{ id: 'evcal_calendar_678', sc: feedEvoSc() }, { id: 'evcal_calendar_476', sc: feedEvoSc({ fixed_month: '12', month_incre: '+1', focus_start_date_range: '1796112000', focus_end_date_range: '1798790399' }) }];
+function feedEvoAdapter({ refuse = () => false } = {}) {
+  const posts = [];
+  return {
+    posts,
+    postForm: async (endpoint, body, options) => {
+      const frames = Array.from(new Set((decodeURIComponent(body).match(/cals\[([^\]]+)\]/g) || []).map(m => m.slice(5, -1))));
+      const field = (id, name) => (decodeURIComponent(body).split('&').find(pair => pair.startsWith(`cals[${id}][sc][${name}]=`)) || '=').split('=')[1];
+      const monthOf = (id) => `${field(id, 'fixed_year')}-${String(field(id, 'fixed_month')).padStart(2, '0')}`;
+      posts.push({ endpoint, frames, cacheUrl: options.cacheUrl });
+      if (refuse(options.cacheUrl)) return { ok: true, status: 200, text: '{"status":"bad","msg":"Nonce validation failed"}' };
+      const cals = {};
+      for (const id of frames) cals[id] = { sc: {}, json: [], html: eventOnCard(`${id.slice(-3)}${monthOf(id).replace('-', '')}`, `Bear Night ${monthOf(id)}`, `${monthOf(id)}-14T21:00-8:00`, `${monthOf(id)}-15T02:00-8:00`) };
+      return { ok: true, status: 200, text: JSON.stringify({ cals }) };
+    },
+    fetchData: async (requestUrl) => ({ html: '<html><body>no calendar here now</body></html>', url: requestUrl })
+  };
+}
+
+test('feed fidelity: a calendar another page of the site already asked for is not asked again — the page that read it is named', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', calendarLookaheadMonths: 1 };
+  const adapter = feedEvoAdapter();
+  const home = 'https://bar.example/';
+  const calendar = 'https://bar.example/calendar/';
+  const first = await parser.collectEventOnCalendarHtml({ url: home, html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  assert.deepEqual(adapter.posts.map(p => p.cacheUrl), ['https://bar.example/?eventon_month=2026-11', 'https://bar.example/?eventon_month=2026-12'], 'the first page asks as before, under the same cache names');
+  assert.deepEqual(adapter.posts[0].frames, ['evcal_calendar_269', 'evcal_calendar_579'], 'a day strip and a month grid are two questions');
+  assert.ok(first.includes('Bear Night 2026-11') && first.includes('Bear Night 2026-12'));
+  let second;
+  const lines = await captureLogsAsync(async () => {
+    second = await parser.collectEventOnCalendarHtml({ url: calendar, html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, config, adapter);
+  });
+  assert.equal(adapter.posts.length, 2, 'the same grid for the same months: nothing is asked');
+  assert.equal(second, '');
+  assert.deepEqual(lines.filter(line => line.startsWith('📅 EVENTON:')), [
+    `📅 EVENTON: the calendar on ${calendar} is the one already read on ${home} (same endpoint, same shortcode) — month(s) 2026-11, 2026-12 not asked for again`
+  ]);
+  // Being a configured page buys no turn of its own: the question is the same whoever asks.
+  const configured = { ...config, urls: [home, calendar] };
+  assert.equal(await parser.collectEventOnCalendarHtml({ url: calendar, html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, configured, adapter), '');
+  assert.equal(adapter.posts.length, 2);
+  // The page that asked may ask again (a retry of its own read).
+  await parser.collectEventOnCalendarHtml({ url: home, html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  assert.equal(adapter.posts.length, 4);
+  // Another source reading the same site keeps its own read (twins fold in dedup).
+  await parser.collectEventOnCalendarHtml({ url: calendar, html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, { name: 'Another Source', calendarLookaheadMonths: 1 }, adapter);
+  assert.equal(adapter.posts.length, 5);
+  // Its http spelling is the page that read, visited again.
+  const twin = await captureLogsAsync(async () => {
+    assert.equal(await parser.collectEventOnCalendarHtml({ url: 'http://www.bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter), '');
+  });
+  assert.equal(adapter.posts.length, 5);
+  assert.ok(twin.some(line => line.includes(`the calendar on http://www.bar.example/ is the one already read on ${home}`)), twin.join('\n'));
+});
+
+test('feed fidelity: a differently-filtered calendar on another page is another feed and is read; a page mixing both asks only for the new one', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', calendarLookaheadMonths: 1 };
+  const adapter = feedEvoAdapter();
+  await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  assert.equal(adapter.posts.length, 2);
+  // Same host, same endpoint, one selecting field different: the rows differ, so it is read.
+  const bears = [{ id: 'evcal_calendar_101', sc: feedEvoSc({ event_type: '12' }) }];
+  const html = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/bear-nights/', html: feedEvoPage('https://bar.example', bears) }, config, adapter);
+  assert.deepEqual(adapter.posts.slice(2).map(p => p.cacheUrl), ['https://bar.example/bear-nights/?eventon_month=2026-11', 'https://bar.example/bear-nights/?eventon_month=2026-12']);
+  assert.ok(html.includes('Bear Night 2026-11'));
+  // Where the frame is opened (its month, its focused day) is not part of what it asks for; what it selects is.
+  assert.equal(parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', FEED_EVO_CALENDAR[0].sc),
+    parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', FEED_EVO_CALENDAR[1].sc));
+  assert.notEqual(parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', feedEvoSc()),
+    parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', feedEvoSc({ event_type: '12' })));
+  assert.notEqual(parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', feedEvoSc()),
+    parser.getEventOnFeedIdentity('https://other.example/?evo-ajax=eventon_init_load', feedEvoSc()));
+  // A page with the grid already read AND a calendar of its own: only the new one is asked for,
+  // and the shorter request is remembered under its own name (the whole-page answer holds both frames).
+  const mixed = [{ id: 'evcal_calendar_678', sc: feedEvoSc() }, { id: 'evcal_calendar_202', sc: feedEvoSc({ event_location: '44' }) }];
+  const before = adapter.posts.length;
+  let mixedHtml;
+  const lines = await captureLogsAsync(async () => {
+    mixedHtml = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/patio/', html: feedEvoPage('https://bar.example', mixed) }, config, adapter);
+  });
+  const asked = adapter.posts.slice(before);
+  assert.deepEqual(asked.map(p => p.frames), [['evcal_calendar_202'], ['evcal_calendar_202']]);
+  assert.match(asked[0].cacheUrl, /^https:\/\/bar\.example\/patio\/\?eventon_month=2026-11&eventon_asked=[0-9a-f]{8}$/);
+  assert.equal(asked[1].cacheUrl, 'https://bar.example/patio/?eventon_month=2026-12', 'the later months walk one frame, as before');
+  assert.ok(mixedHtml.includes('Bear Night 2026-11'));
+  assert.ok(lines.some(line => line.includes('the calendar on https://bar.example/patio/ is the one already read on https://bar.example/ (same endpoint, same shortcode) — month(s) 2026-11 not asked for again')), lines.join('\n'));
+  assert.ok(!(parser.feedReadElsewhere instanceof Map) || !parser.feedReadElsewhere.has(parser.getUrlDedupeKey('https://bar.example/patio/')), 'a page that read something is read as usual');
+});
+
+test('feed fidelity: a calendar request that failed gives the question back to the next page that carries it', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', calendarLookaheadMonths: 1 };
+  // The home page's requests are refused (and stay refused after the one fresh read).
+  const adapter = feedEvoAdapter({ refuse: cacheUrl => cacheUrl.startsWith('https://bar.example/?') });
+  let first;
+  const failed = await captureLogsAsync(async () => {
+    first = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  });
+  assert.equal(first, '');
+  assert.ok(failed.some(line => line.includes('month 2026-11 failed for https://bar.example/')), failed.join('\n'));
+  const before = adapter.posts.length;
+  const second = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/calendar/', html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, config, adapter);
+  assert.deepEqual(adapter.posts.slice(before).map(p => p.frames), [['evcal_calendar_678', 'evcal_calendar_476']], 'the next page asks for the whole calendar');
+  assert.ok(second.includes('Bear Night 2026-11') && second.includes('Bear Night 2026-12'));
+  assert.ok(!(parser.feedReadElsewhere instanceof Map) || parser.feedReadElsewhere.size === 0);
+});
+
+test('feed fidelity: the page whose calendar was read elsewhere builds no events again and sends no empty frame to OCR or the AI; its links are still followed', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', urls: ['https://bar.example/'], calendarLookaheadMonths: 1 };
+  const adapter = feedEvoAdapter();
+  let aiCalls = 0;
+  parser.extractOcrFromAllImages = async () => { aiCalls++; throw new Error('no OCR'); };
+  parser.callAi = async () => { aiCalls++; throw new Error('no AI'); };
+  parser.core.callAiGenerate = async () => { aiCalls++; throw new Error('no AI'); };
+  const home = await parser.parseEvents({ url: 'https://bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, null, 'link-aggregator', adapter);
+  assert.deepEqual(home.events.map(e => e.title).sort(), ['Bear Night 2026-11', 'Bear Night 2026-12'], 'the day strip repeats the grid\'s card: one event per night');
+  assert.equal(home.extractionSummary.source, 'eventon');
+  let second;
+  const lines = await captureLogsAsync(async () => {
+    second = await parser.parseEvents({ url: 'https://bar.example/calendar/', html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, config, null, 'multi-event-page', adapter);
+  });
+  assert.equal(adapter.posts.length, 2, 'two months, asked once');
+  assert.deepEqual(second.events, []);
+  assert.equal(second.extractionSummary.source, 'eventon');
+  assert.equal(aiCalls, 0, 'the opening-hours shell around the empty frame is not sent for extraction');
+  assert.ok(second.additionalLinks.some(link => /\/menu\/$/.test(link)) && second.additionalLinks.some(link => /\/lostandfound\/$/.test(link)), JSON.stringify(second.additionalLinks));
+  assert.ok(lines.some(line => line.startsWith('📅 EVENTON: https://bar.example/calendar/ is read through its calendar, and that calendar was read on https://bar.example/ — no events built here again')
+    && / \d+ link\(s\) still followed$/.test(line)), lines.join('\n'));
+});
+
+test('feed fidelity: at a once-per-host door the http spelling of the page that read is that page again — not read twice, configured or not', () => {
+  const parser = createParser();
+  // blackeagletoronto.com, run 20261109-053706: the site's RSS twin links the http home page.
+  const config = { name: 'Venue', urls: ['http://www.venue.example/', 'https://www.venue.example/'] };
+  for (const kind of ['elfsight', 'dice', 'squarespace-collection', 'wix']) {
+    assert.equal(parser.claimHostDoor(kind, 'https://www.venue.example/', config, 'door-1'), '');
+    assert.equal(parser.claimHostDoor(kind, 'http://www.venue.example/', config, 'door-1'), 'https://www.venue.example/', `${kind}: the other spelling`);
+    assert.equal(parser.claimHostDoor(kind, 'http://venue.example', config, 'door-1'), 'https://www.venue.example/', `${kind}: without www`);
+    assert.equal(parser.claimHostDoor(kind, 'https://www.venue.example/', config, 'door-1'), '', `${kind}: the page that read may read again`);
+  }
+  assert.equal(parser.isSchemeTwinPage('https://venue.example/a', 'http://venue.example/a'), true);
+  assert.equal(parser.isSchemeTwinPage('https://venue.example/a', 'https://venue.example/a'), false);
+  assert.equal(parser.isSchemeTwinPage('https://venue.example/a', 'http://venue.example/b'), false);
+  assert.equal(parser.isSchemeTwinPage('', ''), false);
+  // A feed claim is on the feed alone: it takes no host-wide claim with it.
+  const other = createParser();
+  assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/', config), '');
+  assert.equal(other.claimFeedDoor('eventon', 'feed-b-2026-11', 'https://venue.example/shows/', config), '', 'another feed on the host');
+  assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/shows/', config), 'https://venue.example/');
+  assert.equal(other.claimFeedDoor('eventon', '', 'https://venue.example/shows/', config), '', 'no identity, no claim');
+  other.releaseHostDoor('eventon', 'https://venue.example/', 'feed-a-2026-11');
+  assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/shows/', config), '', 'a released question may be asked');
+});
+
+// ---------------------------------------------------------------------------
+// Feed fidelity: a feed row whose start is a bare calendar date names a day.
+// Rows are whereto.party's page data as cached for run 20261109-053706, trimmed.
+// ---------------------------------------------------------------------------
+test('feed fidelity: a feed row dated by a bare day and no clock is stamped date-only — its days are written through the end date, not midnight to midnight', () => {
+  const parser = createParser();
+  const core = parser.core;
+  const sourceUrl = 'https://whereto.example/in/madrid';
+  const build = (row) => {
+    const event = parser.buildEventFromJsonApiObject(row, sourceUrl);
+    if (event && !event.timezone && row.city && row.city.time_zone) event.timezone = row.city.time_zone;
+    return event;
+  };
+  const settle = (event) => { core.resolveWallClockDates(event); core.applyAllDayConvention(event); return event; };
+  const iso = (value) => new Date(value).toISOString();
+
+  // MADBEAR 2026: { start_date, end_date } bare days, both clocks null.
+  const festival = build({ id: 'a9303a95-e6e7-4c1f-bdde-a74ce6811968', slug: 'madbear-2026', name: 'MADBEAR 2026', start_date: '2026-12-03', end_date: '2026-12-10', start_time: null, end_time: null, pricing: null, ticketing_url: null, city: { name: 'Madrid', time_zone: 'Europe/Madrid' }, place: null, tag_slugs: [{ slug: 'gay' }] });
+  assert.equal(festival._noTimeStated, true);
+  settle(festival);
+  assert.equal(iso(festival.startDate), '2026-12-02T23:00:00.000Z', 'the 3rd, from its own midnight in Madrid');
+  assert.equal(iso(festival.endDate), '2026-12-10T22:59:59.000Z', 'through the end of the 10th — the end date names its day too');
+  assert.equal(festival.allDay, true);
+  assert.equal(festival.timeUnknown, undefined);
+
+  // A one-day row at a venue with no clock: a night whose time nobody printed — never "12:00 AM – 3:00 AM".
+  const oneDay = build({ id: 'b', slug: 'froth-and-fury-fest-2027', name: 'Froth & Fury Fest 2027', start_date: '2027-01-30', end_date: null, start_time: null, end_time: null, city: { name: 'Adelaide', time_zone: 'Australia/Adelaide' }, place: { name: 'Adelaide Showground' } });
+  assert.equal(oneDay._noTimeStated, true);
+  settle(oneDay);
+  assert.equal(iso(oneDay.startDate), '2027-01-29T13:30:00.000Z');
+  assert.equal(iso(oneDay.endDate), '2027-01-30T13:29:59.000Z');
+  assert.equal(oneDay.timeUnknown, true);
+
+  // The same row with its clock stated is a timed night, as before (THICK 'N' JUICY Brisbane, run 20260930-150601).
+  const timed = build({ id: 'c', slug: 'thick-n-juicy', name: "THICK 'N' JUICY Brisbane", start_date: '2026-11-13', end_date: null, start_time: '21:00:00', end_time: '03:00:00', city: { name: 'Brisbane', time_zone: 'Australia/Brisbane' } });
+  assert.equal(timed._noTimeStated, undefined);
+  assert.equal(timed.startDate.toISOString(), '2026-11-13T21:00:00.000Z');
+  settle(timed);
+  assert.equal(timed.allDay, undefined);
+  assert.equal(timed.timeUnknown, undefined);
+
+  // A midnight the feed STATES is a clock: an instant at 00:00Z (7pm in New York) and a written "T00:00:00" are left alone.
+  const instant = build({ id: 'd', name: 'Drag Rumble', start_at: '2026-11-12T00:00:00Z', end_at: '2026-11-12T05:00:00Z' });
+  assert.equal(instant._noTimeStated, undefined);
+  const statedMidnight = build({ id: 'e', name: 'Midnight Mass', start_at: '2026-11-12T00:00:00', end_at: '2026-11-12T04:00:00' });
+  assert.equal(statedMidnight._noTimeStated, undefined);
+
+  // A bare start day beside an end that carries a clock is not "no time stated": the row is left as it was read.
+  const mixed = build({ id: 'f', name: 'Pool Party', start_date: '2026-12-05', end_at: '2026-12-05T19:00:00', city: { name: 'Madrid', time_zone: 'Europe/Madrid' } });
+  assert.equal(mixed._noTimeStated, undefined);
+
+  // A row the feed flags all-day already has its own shape (midnight through 23:59:59, wall clock) and takes no stamp.
+  const flagged = build({ id: 'g', title: 'Bear Frolic', start_date: '2026-10-08', end_date: '2026-10-11', all_day: true });
+  assert.equal(flagged._noTimeStated, undefined);
+  assert.equal(flagged.startDate.toISOString(), '2026-10-08T00:00:00.000Z');
+  assert.equal(flagged.endDate.toISOString(), '2026-10-11T23:59:59.000Z');
+
+  // The mark itself: only a bare YYYY-MM-DD carries it.
+  assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03').dateOnly, true);
+  assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03T00:00:00').dateOnly, undefined);
+  assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03T21:00:00+01:00').dateOnly, undefined);
+  assert.equal(parser.jsonApiScalarDateCandidate({ millis: 1796256000000, tzid: 'Europe/Madrid' }).dateOnly, undefined);
+});

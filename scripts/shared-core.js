@@ -181,6 +181,9 @@ const ADDRESS_ABBREVIATION_EXPANSIONS = {
 // ("619 E. Pine" vs "619 E. Pine Street") is the same street line; any other
 // surplus token ("Pine Street" vs "Pine Avenue", or a different street name)
 // is a real difference and must still arbitrate.
+// The street-type words a street line may end in, as typed (the same words
+// looksLikeStreetAddress anchors on, plus the spelled-out parkway/highway).
+const STREET_TYPE_WORDS = 'St|Street|Ave|Avenue|Blvd|Boulevard|Rd|Road|Dr|Drive|Ln|Lane|Way|Pl|Place|Ct|Court|Pkwy|Parkway|Hwy|Highway';
 const ADDRESS_STREET_TYPE_TOKENS = [
     'street', 'avenue', 'road', 'boulevard', 'drive', 'lane', 'place',
     'court', 'highway', 'parkway', 'way'
@@ -1635,12 +1638,98 @@ class SharedCore {
         const tail = new RegExp(`(^|\\s)${escape(houseNumber)}\\s+${escape(streetWord)}\\b`, 'i');
         const match = text.match(tail);
         if (!match || match.index === undefined || match.index === 0) return text;
-        const head = text.slice(0, match.index)
+        const head = SharedCore.titleBeforeAddressTail(text.slice(0, match.index));
+        if (!head) return text;
+        return head;
+    }
+
+    // The name that is left when an address tail is cut off a title: the
+    // joining punctuation and the "at" / "in" that led into the address go
+    // with it. '' when nothing with a letter remains (the title IS the
+    // address).
+    static titleBeforeAddressTail(head) {
+        const bare = String(head || '')
             .replace(/[\s,:\-–—/|@(]+$/, '')
             .replace(/\s+(?:at|in|@)$/i, '')
             .trim();
-        if (!head || !/[a-z]/i.test(head)) return text;
-        return head;
+        return bare && /[a-z]/i.test(bare) ? bare : '';
+    }
+
+    // The same tail, read BY SHAPE when the row states no street address to
+    // recognise it by (Lodge NY's calendar, run 20261109-053706: the monthly
+    // "Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues" has
+    // no LOCATION line at all, so the feed gate dropped it every run; six
+    // "The Fuck Stop 232 W 37th St, …" rows say only "Garment District, New
+    // York, NY, USA" and kept the address in their name).
+    //
+    // A tail is an address only when EVERYTHING from the house number to the
+    // end of the title is one: house number, optional directional, one to
+    // three street-name words, a street-type word — then nothing but a floor
+    // or unit, a "between X and Y" cross-street phrase, and a locality that
+    // ends in a region code or postal code. Any other word after the street
+    // ("54 Night", "123 Main St Block Party", "… (sign up for address)")
+    // means the number belongs to the name, and the title is left alone.
+    // A title that only gestures at a place ("… on 37th b/w 7th and 8th
+    // Aves", no house number) is not read either.
+    //
+    // Returns { title, address, crossStreets, locality } or null. The address is the
+    // street line, the floor and the locality; the cross streets are
+    // directions for a person, not part of an address a geocoder can read.
+    readAddressTailFromTitle(title) {
+        const text = String(title || '').replace(/\s+/g, ' ').trim();
+        if (!text) return null;
+        const word = "[A-Za-z0-9][A-Za-z0-9'’.]*";
+        const street = new RegExp(
+            '^(\\d{1,6}(?:-\\d{1,6})?[A-Za-z]?)\\s+'
+            + '((?:(?:N|S|E|W|NE|NW|SE|SW|North|South|East|West)\\.?\\s+)?'
+            + `(?:${word}\\s+){1,3}?`
+            + `(${STREET_TYPE_WORDS})\\b\\.?(?:\\s+(?:NE|NW|SE|SW)\\b)?)`, 'i');
+        const unit = new RegExp('^(?:\\d+(?:st|nd|rd|th)\\s+(?:fl|floor)\\b\\.?'
+            + '|(?:fl|floor|suite|ste|unit|apt|apartment|room|rm|level)\\b\\.?\\s*#?[A-Za-z0-9-]+'
+            + '|#\\s*[A-Za-z0-9-]+)', 'i');
+        const cross = new RegExp('^(?:b\\/w|btw|btwn|bet|between)\\b\\.?\\s+'
+            + `${word}(?:\\s+${word})?\\s+(?:and|&|\\+)\\s+${word}(?:\\s+${word})?\\b\\.?`, 'i');
+        // A locality is named by where it ENDS: a region code or a postal
+        // code. Up to two capitalised place names may lead it and a country
+        // may follow; a bare ", Something" after the street is just more name.
+        const locality = /^,\s*((?:[A-Z][A-Za-z.'’-]*(?:\s+[A-Z][A-Za-z.'’-]*){0,2},\s*){0,2}(?:[A-Z]{2}(?:\s+\d{5}(?:-\d{4})?)?|\d{5}(?:-\d{4})?)(?:,\s*[A-Z][A-Za-z.]*(?:\s+[A-Z][A-Za-z.]*){0,2})?)\s*$/;
+        const numberAt = /(?:^|\s)(?=\d{1,6}(?:-\d{1,6})?[A-Za-z]?\s)/g;
+        let found;
+        while ((found = numberAt.exec(text)) !== null) {
+            const start = found.index + found[0].length;
+            if (numberAt.lastIndex === found.index) numberAt.lastIndex++;
+            if (start === 0) continue;
+            const head = SharedCore.titleBeforeAddressTail(text.slice(0, start));
+            if (!head) continue;
+            const tail = text.slice(start);
+            const line = street.exec(tail);
+            if (!line) continue;
+            let rest = tail.slice(line[0].length);
+            const parts = [`${line[1]} ${line[2].trim().replace(/\.$/, '')}`];
+            let crossStreets = '';
+            let place = '';
+            let readable = true;
+            while (readable) {
+                const gap = /^[\s,]+/.exec(rest);
+                const after = gap ? rest.slice(gap[0].length) : rest;
+                if (!after) { rest = ''; break; }
+                const placed = locality.exec(rest);
+                if (placed) { place = placed[1].replace(/\s*,\s*/g, ', '); rest = ''; break; }
+                const floor = unit.exec(after);
+                if (floor && parts.length === 1) { parts.push(floor[0].replace(/\.$/, '')); rest = after.slice(floor[0].length); continue; }
+                const between = !crossStreets ? cross.exec(after) : null;
+                if (between) { crossStreets = between[0]; rest = after.slice(between[0].length); continue; }
+                readable = false;
+            }
+            if (!readable || rest) continue;
+            // A street-type word that is also an everyday word ("… 2 Go
+            // Your Own Way") names a street only with something more of an
+            // address behind it.
+            if (/^(?:way|place|court|drive|lane)$/i.test(line[3]) && parts.length === 1 && !crossStreets && !place) continue;
+            if (place) parts.push(place);
+            return { title: head, address: parts.join(', '), crossStreets, locality: place };
+        }
+        return null;
     }
 
     getBearVerdictTitleKey(title, barNames = []) {
@@ -9414,6 +9503,10 @@ class SharedCore {
         // in merge arbitration — see canonicalizeIdentityLinks.
         this.placeVirtualEventsAtSourceHome(deduplicatedEvents, effectiveParserConfig);
         this.canonicalizeIdentityLinks(deduplicatedEvents);
+        // Nights of one party share its text before anything judges them
+        // (see borrowPartyDescriptions): after dedup, so each night is one
+        // record with everything its own pages said.
+        this.borrowPartyDescriptions(deduplicatedEvents);
         const bearEvents = await this.filterBearEvents(deduplicatedEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
 
         await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${bearEvents.length} final`);
@@ -14228,7 +14321,7 @@ class SharedCore {
             if (!url || typeof url !== 'string') {
                 continue;
             }
-            const key = this.getUrlDedupeKey(url);
+            const key = this.getCrawlPageKey(url);
             if (!key) {
                 continue;
             }
@@ -14293,13 +14386,27 @@ class SharedCore {
         return roots.some(root => depth(root) === depth(url));
     }
 
+    // The crawl's name for a PAGE: the dedupe key with the http and https
+    // spellings folded into one. A site answers both with the same document
+    // (http redirects to https), and its own markup still writes the old
+    // spelling — a Squarespace canonical, an RSS <link>, a footer link. Run
+    // 20261109-053706: blackeagletoronto.com's RSS twin linked
+    // http://www.blackeagletoronto.com/, the crawl took it for a new page and
+    // read the home page — widget calendar and all — a second time (114
+    // events twice); bearsevents.com and beefdip.com/tags/ were read twice
+    // the same way. Only the VISITED SET folds: the URL that is fetched and
+    // the URL an event keeps are the spelling the crawl met first.
+    getCrawlPageKey(url) {
+        return this.getUrlDedupeKey(url).replace(/^http:\/\//, 'https://');
+    }
+
     hasProcessedUrl(processedUrls, url) {
-        const key = this.getUrlDedupeKey(url);
+        const key = this.getCrawlPageKey(url);
         return !!key && processedUrls.has(key);
     }
 
     markProcessedUrl(processedUrls, url, ownerName = '') {
-        const key = this.getUrlDedupeKey(url);
+        const key = this.getCrawlPageKey(url);
         if (key) {
             processedUrls.add(key);
             // Every parser that read the page, in order: the first names
@@ -14315,7 +14422,7 @@ class SharedCore {
 
     // The parser that first processed this URL in the run ('' when unknown).
     getProcessedUrlOwner(url) {
-        const key = this.getUrlDedupeKey(url);
+        const key = this.getCrawlPageKey(url);
         const readers = key && this._processedUrlOwners instanceof Map ? this._processedUrlOwners.get(key) : null;
         return Array.isArray(readers) && readers.length > 0 ? readers[0] : '';
     }
@@ -14325,7 +14432,7 @@ class SharedCore {
     // URL is read again (once).
     isOwnSitePageProcessedByAnother(url, parserConfig) {
         if (!parserConfig) return false;
-        const key = this.getUrlDedupeKey(url);
+        const key = this.getCrawlPageKey(url);
         const readers = key && this._processedUrlOwners instanceof Map ? this._processedUrlOwners.get(key) : null;
         if (!Array.isArray(readers) || readers.length === 0) return false;
         const ownName = typeof parserConfig.name === 'string' ? parserConfig.name : '';
@@ -14443,6 +14550,142 @@ class SharedCore {
             
             return true;
         });
+    }
+
+    // ------------------------------------------------------------------
+    // A NIGHT BORROWS ITS PARTY'S DESCRIPTION. A calendar grid or feed prints
+    // a cut-off excerpt of each night's text, and only the nights whose own
+    // page was read carry the whole of it: thedallaseagle.com, run
+    // 20261109-053706 — "Underwear Night and Contest" on 11-11 (its page
+    // read) had 502 characters, the 11-18 and 12-02 nights kept the month
+    // grid's 320 ending "…for cash prizes and a cha , ...", and the bear
+    // check and the tagger judged those nights on the stump. Within one
+    // source's records of a run, nights of ONE party (same title, same
+    // venue, same source) share a text:
+    //   - a text that is the cut-off OPENING of another night's fuller text
+    //     (it ends in an ellipsis mark, or stops inside a word of the fuller
+    //     one) takes the fuller text. A night whose excerpt differs — it
+    //     names its own theme — is not a prefix and keeps its own words;
+    //   - a night with NO text takes the party's text only when at least
+    //     two other nights carry it, every night that has a text says the
+    //     same thing, and that text names no calendar date (a text that
+    //     dates itself belongs to its night). One night's words may be that
+    //     night's alone — tockify rows of a weekly Friday, same run: only
+    //     11-14 said "DJs … spin at …" and twelve blank Fridays would have
+    //     been given its DJs — so a single text is not lent, and nights
+    //     that disagree leave the blank blank: nothing is picked for it.
+    // No page is fetched for this; every borrow and every refusal is logged.
+    // ------------------------------------------------------------------
+
+    // A description as compared (see normalizeDescriptionForContainment)
+    // without the mark of a cut: " , ...", "...", "…", "[...]" — and without
+    // the half entity a cut can leave behind ("Happy Hour! 5 &#8211 , ...").
+    // Only the DETACHED comma of the grid's mark goes with it: a comma
+    // written against a word ("…your finest leather, …") is the text's own,
+    // or the stump would read one character short of its uncut twin and
+    // "open" a text that says nothing more.
+    readDescriptionStem(value) {
+        const text = this.normalizeDescriptionForContainment(value);
+        const cut = text.match(/^([\s\S]*?)(?:\s+,)?\s*(?:\[\s*\.{3,}\s*\]|\.{3,})\s*$/);
+        let stem = cut ? cut[1] : text;
+        if (cut) stem = stem.replace(/&#?[a-z0-9]{0,8}$/, '');
+        return { stem: stem.trim(), marked: !!cut };
+    }
+
+    // TRUE when `shorter` is the cut-off opening of `fuller`.
+    isCutOffOpeningOf(shorter, fuller) {
+        const part = this.readDescriptionStem(shorter);
+        const whole = this.readDescriptionStem(fuller);
+        // Twenty characters: an opening shorter than that is a greeting, not a text.
+        if (part.stem.length < 20 || whole.stem.length <= part.stem.length || !whole.stem.startsWith(part.stem)) return false;
+        if (part.marked) return true;
+        const isWordChar = (char) => /[a-z0-9]/.test(char || '');
+        return isWordChar(part.stem[part.stem.length - 1]) && isWordChar(whole.stem[part.stem.length]);
+    }
+
+    // A month with a day number, or a numeric date: the text speaks of one night.
+    descriptionNamesCalendarDate(value) {
+        const text = this.normalizeDescriptionForContainment(value);
+        const month = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+        return new RegExp(`\\b${month}\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?\\b|\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${month}\\b|\\b\\d{1,2}[/.]\\d{1,2}(?:[/.]\\d{2,4})?\\b`).test(text);
+    }
+
+    // `events` are ONE source's records of the run (the caller's parser):
+    // that is the "same source". A record's own `source` field names the
+    // route that read it (the grid row "mec", the page-read night "ai-web"),
+    // which is exactly the pair this rule joins.
+    borrowPartyDescriptions(events) {
+        const list = Array.isArray(events) ? events.filter(event => event && typeof event === 'object') : [];
+        const parties = new Map();
+        for (const event of list) {
+            const title = this.normalizeIdentityText(event.title);
+            const venue = this.normalizeBarNameKey(event.bar)
+                || String(typeof event.location === 'string' ? event.location : '').replace(/\s+/g, '')
+                || this.normalizeIdentityText(event.address);
+            if (!title || !venue) continue;
+            const key = `${title}|${venue}`;
+            if (!parties.has(key)) parties.set(key, []);
+            parties.get(key).push(event);
+        }
+        const textOf = (event) => (typeof event.description === 'string' ? event.description.trim() : '');
+        const nightOf = (event) => this.getEventLocalDayKey(event) || 'an undated night';
+        let borrowed = 0;
+        for (const nights of parties.values()) {
+            if (nights.length < 2) continue;
+            // 1. A cut-off opening takes the fullest text it opens. Decided
+            // on the texts as they were read, then applied.
+            const fuller = new Map();
+            for (const night of nights) {
+                const own = textOf(night);
+                if (!own) continue;
+                let donor = null;
+                for (const other of nights) {
+                    if (other === night || !this.isCutOffOpeningOf(own, textOf(other))) continue;
+                    if (!donor || textOf(other).length > textOf(donor).length) donor = other;
+                }
+                if (donor) fuller.set(night, donor);
+            }
+            for (const [night, donor] of fuller) {
+                const own = textOf(night);
+                const text = textOf(donor);
+                console.log(`📝 DESCRIPTION: "${night.title || 'Unknown'}" ${nightOf(night)} — its text (${own.length} chars, ending "${own.slice(-24)}") is the cut-off opening of the ${nightOf(donor)} night's (same party, same venue, same source); the fuller text (${text.length} chars) is used`);
+                night.description = text;
+                borrowed++;
+            }
+            // 2. A night with no text.
+            const blanks = nights.filter(night => !textOf(night));
+            if (blanks.length === 0 || blanks.length === nights.length) continue;
+            const said = new Map();
+            for (const night of nights) {
+                const text = textOf(night);
+                if (!text) continue;
+                const key = this.normalizeDescriptionForContainment(text);
+                if (!said.has(key)) said.set(key, []);
+                said.get(key).push(night);
+            }
+            const title = blanks[0].title || 'Unknown';
+            const blankNights = blanks.map(nightOf).join(', ');
+            if (said.size > 1) {
+                console.log(`📝 DESCRIPTION: "${title}" has no text on ${blankNights}, and its other nights say ${said.size} different things — none is picked for it; left blank`);
+                continue;
+            }
+            const agreeing = Array.from(said.values())[0];
+            const donor = agreeing[0];
+            if (agreeing.length < 2) {
+                console.log(`📝 DESCRIPTION: "${title}" has no text on ${blankNights}; only the ${nightOf(donor)} night has one, and one night's words may be that night's alone — not borrowed; left blank`);
+                continue;
+            }
+            if (this.descriptionNamesCalendarDate(textOf(donor))) {
+                console.log(`📝 DESCRIPTION: "${title}" has no text on ${blankNights}; the ${nightOf(donor)} night's text names a calendar date, so it is that night's — not borrowed; left blank`);
+                continue;
+            }
+            for (const night of blanks) {
+                console.log(`📝 DESCRIPTION: "${night.title || 'Unknown'}" ${nightOf(night)} has no text of its own — borrowed the ${nightOf(donor)} night's (${textOf(donor).length} chars; same party, same venue, same source, and all ${agreeing.length} nights that have a text say the same)`);
+                night.description = textOf(donor);
+                borrowed++;
+            }
+        }
+        return borrowed;
     }
 
     // Bear-check cascade: keyword match → AI verdict with promoter context →
@@ -21834,8 +22077,21 @@ class SharedCore {
         if (current.length < records.length) {
             console.log(`📅 ICS FEED: ${doorUrl} — ${records.length - current.length} of ${records.length} record(s) ended more than ${ICS_FEED_HISTORY_DAYS} days ago (the calendar's archive) — ${current.length} read`);
         }
-        const rows = current.map(record => this.icsRecordToFeedRow(record, doorUrl)).filter(Boolean);
-        return { kind: 'ics', count: rows.length, richness: this.machineDoorRowRichness(rows), body: JSON.stringify({ events: rows }) };
+        // The nights a series does NOT have, as the feed itself states them:
+        // its own EXDATEs, and every occurrence another record of the same
+        // UID replaces (RECURRENCE-ID — that record is the real night and is
+        // read as its own row). Collected over ALL records, archive
+        // included: an override filed long ago still cancels its night.
+        const replacedByUid = new Map();
+        for (const record of records) {
+            if (!record || !record.uid || !record.recurrenceId) continue;
+            if (!replacedByUid.has(record.uid)) replacedByUid.set(record.uid, []);
+            replacedByUid.get(record.uid).push(record.recurrenceId);
+        }
+        const rows = current.map(record => this.icsRecordToFeedRow(record, doorUrl, replacedByUid.get(record.uid) || [])).filter(Boolean);
+        // Richness measures what a row says about its EVENT; the exception
+        // list is bookkeeping and must not tip a door comparison.
+        return { kind: 'ics', count: rows.length, richness: this.machineDoorRowRichness(rows.map(({ exdates, ...rest }) => rest)), body: JSON.stringify({ events: rows }) };
     }
 
     // A VEVENT whose span ended more than ICS_FEED_HISTORY_DAYS ago and
@@ -21857,7 +22113,9 @@ class SharedCore {
         return untilMs < cutoff;
     }
 
-    icsRecordToFeedRow(record, doorUrl) {
+    // `replaced`: the RECURRENCE-ID values of the other records sharing this
+    // record's UID (see readMachineDoorBody) — only a series row uses them.
+    icsRecordToFeedRow(record, doorUrl, replaced = []) {
         if (!record || !record.start) return null;
         const pad = (value) => String(value).padStart(2, '0');
         const wallIso = (entry) => `${entry.wall.year}-${pad(entry.wall.month)}-${pad(entry.wall.day)}T${pad(entry.wall.hour)}:${pad(entry.wall.minute)}:${pad(entry.wall.second)}`;
@@ -21892,10 +22150,53 @@ class SharedCore {
             address: leadingIsVenue ? segments.slice(1).join(', ') : location,
             all_day: Boolean(record.isAllDay)
         };
+        // A cancelled record says so in the feed's own word; the reader
+        // skips a row whose status says cancelled (and a cancelled
+        // RECURRENCE-ID record still takes its night off the series).
+        if (record.status === 'CANCELLED') row.status = 'cancelled';
         if (record.rrule) row.rrule = record.rrule;
+        // A series row carries the nights it does not have (XL Bears'
+        // "Game Night", 2nd Sundays: the feed moved 2026-11-08 to 11-15 with
+        // a RECURRENCE-ID record and the expansion kept both, audit
+        // 2026-11-09). Each is written in the SERIES' own clock — the one
+        // its `start` is written in — so the reader compares like with
+        // like whatever form the feed used for the exclusion (a UTC
+        // RECURRENCE-ID beside a TZID DTSTART names the same night).
+        if (record.rrule && !record.recurrenceId) {
+            const excluded = [];
+            for (const entry of [...(Array.isArray(record.exdates) ? record.exdates : []), ...(Array.isArray(replaced) ? replaced : [])]) {
+                const value = SharedCore.icsExclusionInSeriesClock(entry, record.start);
+                if (value && !excluded.includes(value)) excluded.push(value);
+            }
+            if (excluded.length > 0) row.exdates = excluded;
+        }
         const tzid = record.start.tzid;
         if (tzid && tzid !== 'UTC' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(tzid)) row.timezone = tzid;
         return row;
+    }
+
+    // One EXDATE / RECURRENCE-ID value (a parseIcsDateValue record) as text
+    // in the clock of the series it belongs to: a bare day for an all-day
+    // series or an all-day exclusion (it names the whole day), a Z instant
+    // for a UTC series, otherwise the offset-less wall clock in the series'
+    // zone. '' when it cannot be placed (the night is then kept — fail open).
+    static icsExclusionInSeriesClock(exclusion, seriesStart) {
+        if (!exclusion || !exclusion.wall || !seriesStart || !seriesStart.wall) return '';
+        const pad = (value) => String(value).padStart(2, '0');
+        const day = (wall) => `${wall.year}-${pad(wall.month)}-${pad(wall.day)}`;
+        const clock = (wall) => `${day(wall)}T${pad(wall.hour)}:${pad(wall.minute)}:${pad(wall.second)}`;
+        if (exclusion.isDateOnly || seriesStart.isDateOnly) {
+            // A timed exclusion of an all-day series names the day it falls
+            // on where it was written.
+            return day(exclusion.wall);
+        }
+        const instant = exclusion.date instanceof Date && !isNaN(exclusion.date.getTime()) ? exclusion.date : null;
+        if (!instant) return '';
+        if (seriesStart.tzid === 'UTC') return instant.toISOString();
+        if ((exclusion.tzid || null) === (seriesStart.tzid || null)) return clock(exclusion.wall);
+        // Floating series (no zone at all): its wall clock was read as UTC.
+        const inSeriesZone = SharedCore.instantToZonedWallClockRecord(instant, seriesStart.tzid || 'UTC');
+        return inSeriesZone ? clock(inSeriesZone.wall) : '';
     }
 
     // Crawl-queue guard: obvious static assets are never pages, so the crawl
@@ -24401,6 +24702,7 @@ class SharedCore {
                     case 'LOCATION': record.location = SharedCore.unescapeIcsText(value).trim(); break;
                     case 'URL': record.url = value.trim(); break;
                     case 'RRULE': record.rrule = value.trim(); break;
+                    case 'STATUS': record.status = value.trim().toUpperCase(); break;
                     case 'DTSTART': record.start = SharedCore.parseIcsDateValue(params, value); break;
                     case 'DTEND': record.end = SharedCore.parseIcsDateValue(params, value); break;
                     case 'RECURRENCE-ID': record.recurrenceId = SharedCore.parseIcsDateValue(params, value); break;

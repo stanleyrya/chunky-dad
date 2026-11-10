@@ -31052,3 +31052,357 @@ test('identity: the shared promoter\'s own name is not the distinctive word two 
   // …and a row that is ONLY the promoter's name beside a venue row that only mentions it does not.
   assert.equal(spooky.getSameEventIdentitySignal({ ...programmeRow, title: 'SPOOKY BEAR' }, { ...crownRow, title: 'Tea Dance – Spooky Bear' }), null);
 });
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): an iCalendar series row carries the nights
+// the feed itself cancelled (EXDATE) or moved (a RECURRENCE-ID record of the
+// same UID), written in the series' own clock.
+// ---------------------------------------------------------------------------
+// Trimmed from the XL Bears public Google Calendar as cached 2026-11-08:
+// "Game Night" is every 2nd Sunday; the 2026-11-08 night was moved to 11-15.
+const GAME_NIGHT_UID = '_6hhjgohh68q3cb9mcop3ib9k6gsjib9pcks64bb660sm6dhhccojce1n68_R20230709T230000@google.com';
+const GAME_NIGHT_ICS = [
+  'BEGIN:VCALENDAR', 'PRODID:-//Google Inc//Google Calendar 70.9054//EN', 'VERSION:2.0',
+  'BEGIN:VEVENT',
+  'DTSTART;TZID=America/Los_Angeles:20261115T160000',
+  'DTEND;TZID=America/Los_Angeles:20261115T210000',
+  `UID:${GAME_NIGHT_UID}`,
+  'RECURRENCE-ID;TZID=America/Los_Angeles:20261108T160000',
+  'DESCRIPTION:Moved to 11/15 due to MTG Prerelease at Phoenix on 11/08',
+  'LOCATION:Phoenix Comics & Games\\, 113 Broadway E\\, Seattle\\, WA 98102',
+  'STATUS:CONFIRMED', 'SUMMARY:Game Night',
+  'END:VEVENT',
+  'BEGIN:VEVENT',
+  'DTSTART;TZID=America/Los_Angeles:20230709T160000',
+  'DTEND;TZID=America/Los_Angeles:20230709T210000',
+  'RRULE:FREQ=MONTHLY;BYDAY=2SU',
+  'EXDATE;TZID=America/Los_Angeles:20240609T160000',
+  'EXDATE;TZID=America/Los_Angeles:20241110T160000',
+  `UID:${GAME_NIGHT_UID}`,
+  'DESCRIPTION:Come join us bears & friends at Phoenix Comics & Games for board games',
+  'LOCATION:Phoenix Comics & Games\\, 113 Broadway E\\, Seattle\\, WA 98102',
+  'STATUS:CONFIRMED', 'SUMMARY:Game Night',
+  'END:VEVENT',
+  'END:VCALENDAR'
+].join('\r\n');
+
+test('feed fidelity: an iCalendar series row carries its EXDATEs and the nights another record of its UID replaces', () => {
+  const core = createCore();
+  const door = core.readMachineDoorBody(GAME_NIGHT_ICS, 'https://calendar.example/public/basic.ics');
+  assert.equal(door.kind, 'ics');
+  const rows = JSON.parse(door.body).events;
+  const series = rows.find(row => row.rrule);
+  assert.ok(series, 'the series row is read (no UNTIL — still running)');
+  assert.deepEqual(series.exdates, ['2024-06-09T16:00:00', '2024-11-10T16:00:00', '2026-11-08T16:00:00'],
+    'its own EXDATEs, then the RECURRENCE-ID of the override — all in the wall clock its start is written in');
+  assert.equal(series.start, '2023-07-09T16:00:00');
+  // The override is collected from ALL records, so it still takes its night
+  // off the series once it has itself aged into the archive.
+  for (const row of rows.filter(row => !row.rrule)) {
+    assert.equal(row.exdates, undefined, 'an override row is a plain night and carries no exception list');
+    assert.equal(row.start, '2026-11-15T16:00:00');
+  }
+  // The exception list does not count as a field the row says about its event.
+  const plain = core.readMachineDoorBody(GAME_NIGHT_ICS.replace(/EXDATE[^\r]*\r\n/g, '').replace(/RECURRENCE-ID[^\r]*\r\n/, ''), 'https://calendar.example/public/basic.ics');
+  assert.equal(door.richness, plain.richness);
+});
+
+test('feed fidelity: an exception is written in the clock of its series whatever form the feed used', () => {
+  const start = (params, value) => SharedCore.parseIcsDateValue(params, value);
+  const la = start(';TZID=America/Los_Angeles', '20230709T160000');
+  // Same zone: the wall clock as written.
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start(';TZID=America/Los_Angeles', '20261108T160000'), la), '2026-11-08T16:00:00');
+  // A UTC value beside a TZID series names the same night (00:00Z on the 9th is 16:00 PST on the 8th).
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start('', '20261109T000000Z'), la), '2026-11-08T16:00:00');
+  // …and across the DST change (PDT: 23:00Z is 16:00).
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start('', '20260712T230000Z'), la), '2026-07-12T16:00:00');
+  // A UTC series is compared on instants.
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start(';TZID=America/Los_Angeles', '20261108T160000'), start('', '20230709T230000Z')), '2026-11-09T00:00:00.000Z');
+  // All-day values name a day.
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start(';VALUE=DATE', '20261108'), start(';VALUE=DATE', '20230709')), '2026-11-08');
+  assert.equal(SharedCore.icsExclusionInSeriesClock(start(';VALUE=DATE', '20261108'), la), '2026-11-08', 'an all-day exception of a timed series names the whole day');
+  assert.equal(SharedCore.icsExclusionInSeriesClock(null, la), '');
+});
+
+test('feed fidelity: a cancelled iCalendar record says so on its row', () => {
+  const core = createCore();
+  const ics = GAME_NIGHT_ICS.replace('STATUS:CONFIRMED', 'STATUS:CANCELLED');
+  const rows = JSON.parse(core.readMachineDoorBody(ics, 'https://calendar.example/public/basic.ics').body).events;
+  const series = rows.find(row => row.rrule);
+  assert.ok(series.exdates.includes('2026-11-08T16:00:00'), 'a cancelled override still takes its night off the series');
+  assert.equal(series.status, undefined);
+  for (const row of rows.filter(row => !row.rrule)) assert.equal(row.status, 'cancelled');
+});
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): a title that ENDS in a street address is
+// read by shape. Lodge NY's calendar writes every party as "<name> 232 W 37th
+// St, 2nd Fl b/w 7th and 8th Avenues"; the rows with no LOCATION line were
+// dropped at the feed gate on every run.
+// ---------------------------------------------------------------------------
+test('feed fidelity: a title that ends in a street address is read by shape', () => {
+  const core = createCore();
+  const read = (title) => core.readAddressTailFromTitle(title);
+  // The real titles of the cached feed (run 20261109-053706).
+  assert.deepEqual(read('Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues '),
+    { title: 'Chub Chaser Party', address: '232 W 37th St, 2nd Fl', crossStreets: 'b/w 7th and 8th Avenues', locality: '' });
+  assert.deepEqual(read('The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues'),
+    { title: 'The Fuck Stop', address: '232 W 37th St, 2nd Fl', crossStreets: 'between 7th and 8th Avenues', locality: '' });
+  assert.deepEqual(read('The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues'),
+    { title: 'The Bear Party', address: '232 W 37th St, 2nd Fl', crossStreets: 'b/w 7th & 8th Avenues', locality: '' });
+  assert.deepEqual(read('Lodge Long Island 92 Kean St, West Babylon, NY'),
+    { title: 'Lodge Long Island', address: '92 Kean St, West Babylon, NY', crossStreets: '', locality: 'West Babylon, NY' });
+  // Other shapes of the same thing.
+  assert.equal(read('Fuzzy @ 1354 Harrison Street').address, '1354 Harrison Street');
+  assert.equal(read('Fuzzy @ 1354 Harrison Street').title, 'Fuzzy');
+  assert.equal(read('Furball 10-90 Wyckoff Ave, Queens, NY 11385').address, '10-90 Wyckoff Ave, Queens, NY 11385');
+  assert.equal(read('Beef 2069 Cheshire Bridge Rd NE').address, '2069 Cheshire Bridge Rd NE');
+  assert.equal(read('Tea 700 N. Main St. Suite 4').address, '700 N. Main St, Suite 4');
+});
+
+test('feed fidelity: a number inside a name is not a street address', () => {
+  const core = createCore();
+  for (const title of [
+    'Studio 54 Night', 'Top 40 Drive', 'Route 66 Road Trip', 'Bears 4 Bareburger', 'Bear Cave Friday at The 244 Spot',
+    'Mr. Leather 2026 Contest', '9th Avenue Saloon Night', 'Party at 3 Dollar Bill',
+    // The street is followed by more name, not by more address.
+    'Party 123 Main St Block Party', 'Bear Night 123 Main St, Underwear Party', "Bear Night 17 March St Patrick's",
+    "Workman's Lunch at 108 Greenwich St, 6th Fl in Tribeca",
+    // An everyday word that is also a street type needs more address behind it.
+    'Bears 2 Go Your Own Way',
+    // No house number: the title only gestures at a place (both real, Lodge NY).
+    'Chub Chaser Party on 37th b/w 7th and 8th Aves',
+    'Manhole in Park Slope, Brooklyn (sign up at manholenyc.com for address)',
+    // The title IS the address: nothing would be left of the name.
+    '232 W 37th St', '232 W 37th St party', ''
+  ]) {
+    assert.equal(core.readAddressTailFromTitle(title), null, title);
+  }
+  assert.equal(core.readAddressTailFromTitle(null), null);
+  // The everyday word does name a street once a locality follows it.
+  assert.equal(core.readAddressTailFromTitle('Bear Brunch 12 Castro Place, San Francisco, CA').address, '12 Castro Place, San Francisco, CA');
+});
+
+// ---------------------------------------------------------------------------
+// FEED FIDELITY — ONE PAGE UNDER EITHER SCHEME. Run 20261109-053706:
+// blackeagletoronto.com's RSS twin links http://www.blackeagletoronto.com/,
+// the crawl's visited set kept the protocol in its key, took the http
+// spelling for a new page and read the home page — widget calendar and all —
+// a second time (114 events, twice; bearsevents.com and beefdip.com/tags/
+// were read twice the same way). The visited set names a page without its
+// scheme; nothing else about a URL changes.
+// ---------------------------------------------------------------------------
+test('feed fidelity: the crawl\'s visited set knows a page under either scheme — the first spelling met is the one kept', () => {
+  const core = createCore();
+  const visited = new Set();
+  core._processedUrlOwners = new Map(); // a run keeps who read each page
+  core.markProcessedUrl(visited, 'https://www.blackeagletoronto.com/', 'Black Eagle');
+  assert.equal(core.hasProcessedUrl(visited, 'http://www.blackeagletoronto.com/'), true);
+  assert.equal(core.hasProcessedUrl(visited, 'http://blackeagletoronto.com'), true);
+  assert.equal(core.hasProcessedUrl(visited, 'http://www.blackeagletoronto.com/events'), false, 'another page of the site is another page');
+  assert.equal(core.getProcessedUrlOwner('http://www.blackeagletoronto.com/'), 'Black Eagle');
+  // Marked under http first: the https spelling is the same page too.
+  core.markProcessedUrl(visited, 'http://bearsevents.example/agenda', 'Agenda');
+  assert.equal(core.hasProcessedUrl(visited, 'https://www.bearsevents.example/agenda/'), true);
+  assert.equal(visited.size, 2, 'one entry per page');
+  // A batch of links: read pages drop out, twins inside the batch fold, the first spelling is the one fetched.
+  assert.deepEqual(core.deduplicateUrls([
+    'http://www.blackeagletoronto.com/',
+    'http://www.blackeagletoronto.com/events',
+    'https://www.blackeagletoronto.com/events',
+    'https://www.blackeagletoronto.com/welcome?format=rss'
+  ], visited), ['http://www.blackeagletoronto.com/events', 'https://www.blackeagletoronto.com/welcome?format=rss']);
+  // Only the visited set folds: a URL's own key still tells the spellings apart.
+  assert.notEqual(core.getUrlDedupeKey('http://www.blackeagletoronto.com/'), core.getUrlDedupeKey('https://www.blackeagletoronto.com/'));
+  assert.equal(core.getCrawlPageKey('http://www.blackeagletoronto.com/'), core.getCrawlPageKey('https://blackeagletoronto.com'));
+  assert.equal(core.getCrawlPageKey(''), '');
+});
+
+test('feed fidelity: a page that links its own http spelling is read once', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const night = { title: 'Bear Night', startDate: new Date(Date.now() + 5 * 86400000) };
+  const pages = {
+    // The home page lists the calendar and links its feed twin; the twin links the old spelling of the home page.
+    'https://www.venue.example/': { events: [night], additionalLinks: ['https://www.venue.example/calendar', 'http://www.venue.example/', 'http://www.venue.example/calendar'] },
+    'https://www.venue.example/calendar': { additionalLinks: ['http://www.venue.example/', 'http://www.venue.example/calendar'] },
+    'http://www.venue.example/': { events: [night], additionalLinks: [] },
+    'http://www.venue.example/calendar': { additionalLinks: [] }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  await core.processParser(
+    { name: 'Venue', urls: ['https://www.venue.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.deepEqual(fetched, ['https://www.venue.example/', 'https://www.venue.example/calendar'], 'neither http spelling is fetched');
+  // Both spellings configured (clubchubusa.com lists its http root too): still one read.
+  const again = createCore();
+  const second = createCrawlHarness(pages);
+  await again.processParser(
+    { name: 'Venue', urls: ['https://www.venue.example/', 'http://www.venue.example/'], alwaysBear: true, ai: CRAWL_AI },
+    {}, second.httpAdapter, createDisplayAdapterStub(), second.parsers
+  );
+  assert.equal(second.fetched.filter(url => /^https?:\/\/www\.venue\.example\/$/.test(url)).length, 1, JSON.stringify(second.fetched));
+});
+
+// ---------------------------------------------------------------------------
+// Feed fidelity: nights of one party share its description (borrowPartyDescriptions).
+// Fixtures are the records of run 20261109-053706, trimmed: thedallaseagle.com's
+// "Underwear Night and Contest" (one night read from its page, the others kept
+// the month grid's cut-off excerpt) and the shapes seen beside it that must be
+// left alone.
+// ---------------------------------------------------------------------------
+const PARTY_TEXT_FULL = 'Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅 Where else can you strip down to your undies and indulge in premium cocktails and ice cold draft beer? FREE Lockers are available, so drop your pants and join in on some humpday fun! Compete in our weekly Underwear Contest at 11pm for cash prizes and a chance to enter our monthly contest! 🔥 Sponsored by Package Dallas! 🦅 Underwear and jocks recommended, legal clothing coverage required at all times. Free lockers! 🍻 Get here early…';
+const PARTY_TEXT_GRID = 'Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅 Where else can you strip down to your undies and indulge in premium cocktails and ice cold draft beer? FREE Lockers are available, so drop your pants and join in on some humpday fun! Compete in our weekly Underwear Contest at 11pm for cash prizes and a cha , ...';
+const PARTY_TEXT_THEMED = 'Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅 🧣 Theme – Flannel Where else can you strip down to your undies and indulge in premium cocktails and ice cold draft beer? FREE Lockers are available, so drop your pants and join in on some humpday fun! Compete in our weekly Underwear Contest at 11pm f , ...';
+function partyNight(startDate, description, extra = {}) {
+  return Object.assign({
+    title: 'Underwear Night and Contest',
+    startDate,
+    bar: 'Dallas Eagle',
+    location: '32.7693483, -96.8112576',
+    address: '525 S Riverfront Blvd, Dallas, TX 75207',
+    timezone: 'America/Chicago',
+    source: 'mec',
+    description
+  }, extra);
+}
+function capturePartyLogs(fn) {
+  const quiet = console.log; const lines = [];
+  console.log = (line) => lines.push(String(line));
+  try { return { result: fn(), lines: lines.filter(line => line.includes('📝 DESCRIPTION')) }; } finally { console.log = quiet; }
+}
+
+test('feed fidelity: a grid excerpt cut off mid-word takes the fuller text of the same party\'s night whose page was read; a themed night keeps its own words', () => {
+  const core = createCore();
+  const events = [
+    partyNight('2026-11-12T03:00:00.000Z', PARTY_TEXT_FULL, { source: 'ai-web' }),
+    partyNight('2026-11-19T03:00:00.000Z', PARTY_TEXT_GRID),
+    partyNight('2026-11-26T03:00:00.000Z', PARTY_TEXT_THEMED),
+    partyNight('2026-12-03T03:00:00.000Z', PARTY_TEXT_GRID)
+  ];
+  const { result, lines } = capturePartyLogs(() => core.borrowPartyDescriptions(events));
+  assert.equal(result, 2);
+  assert.deepEqual(events.map(event => event.description), [PARTY_TEXT_FULL, PARTY_TEXT_FULL, PARTY_TEXT_THEMED, PARTY_TEXT_FULL]);
+  assert.equal(lines.length, 2, lines.join('\n'));
+  assert.match(lines[0], /"Underwear Night and Contest" 2026-11-18 — its text \(327 chars, ending "h prizes and a cha , \.\.\."\) is the cut-off opening of the 2026-11-11 night's .*the fuller text \(502 chars\) is used/);
+  assert.match(lines[1], /2026-12-02/);
+});
+
+test('feed fidelity: only a cut-off OPENING borrows — a whole shorter text, a same-length stump and another party or venue are left alone', () => {
+  const core = createCore();
+  // A whole sentence that the longer text happens to start with is not a cut: no mark, and it does not stop inside a word.
+  const whole = [
+    partyNight('2026-11-12T03:00:00.000Z', 'Strip down to your undies and join the fun.'),
+    partyNight('2026-11-19T03:00:00.000Z', 'Strip down to your undies and join the fun. Tonight only: a guest DJ from Austin.')
+  ];
+  assert.equal(capturePartyLogs(() => core.borrowPartyDescriptions(whole)).result, 0);
+  assert.equal(whole[0].description, 'Strip down to your undies and join the fun.');
+  // eagleportland.com "L.U.R.E", same run: one night ends "…finest leather, …", the others "…finest leather," —
+  // the same stump twice; the comma is the text's own, and neither is the fuller one.
+  const stumps = [
+    partyNight('2026-11-29T03:00:00.000Z', 'Leather. Uniform. Rubber. Everything Else.\nIf it\'s got a fetish and a fit, it belongs at L.U.R.E. Come dressed in your finest leather, …', { title: 'L.U.R.E' }),
+    partyNight('2026-12-27T03:00:00.000Z', 'Leather. Uniform. Rubber. Everything Else.\nIf it\'s got a fetish and a fit, it belongs at L.U.R.E. Come dressed in your finest leather,', { title: 'L.U.R.E' })
+  ];
+  const stumpRun = capturePartyLogs(() => core.borrowPartyDescriptions(stumps));
+  assert.equal(stumpRun.result, 0, stumpRun.lines.join('\n'));
+  assert.match(stumps[0].description, /leather, …$/);
+  // Same words, another party's title — and the same title at another venue: neither is "the same party".
+  const strangers = [
+    partyNight('2026-11-12T03:00:00.000Z', PARTY_TEXT_FULL, { source: 'ai-web' }),
+    partyNight('2026-11-19T03:00:00.000Z', PARTY_TEXT_GRID, { title: 'Jockstrap Night' }),
+    partyNight('2026-11-26T03:00:00.000Z', PARTY_TEXT_GRID, { bar: 'Another Bar', location: '32.81, -96.80', address: '1 Other St, Dallas, TX' }),
+    partyNight('2026-12-03T03:00:00.000Z', '', { bar: '', location: '', address: '' })
+  ];
+  assert.equal(capturePartyLogs(() => core.borrowPartyDescriptions(strangers)).result, 0);
+  assert.equal(strangers[1].description, PARTY_TEXT_GRID);
+  assert.equal(strangers[2].description, PARTY_TEXT_GRID);
+  assert.equal(strangers[3].description, '', 'a night with no venue at all joins no party');
+  // The stem a cut leaves: the mark, the grid's detached comma and a half entity go; an attached comma stays.
+  assert.deepEqual(core.readDescriptionStem('Happy Hour! 5 &#8211 , ...'), { stem: 'happy hour! 5', marked: true });
+  assert.deepEqual(core.readDescriptionStem('Come in leather, …'), { stem: 'come in leather,', marked: true });
+  assert.deepEqual(core.readDescriptionStem('Doors at nine.'), { stem: 'doors at nine.', marked: false });
+  assert.equal(core.isCutOffOpeningOf('Hi there...', 'Hi there and welcome to the bar'), false, 'a greeting is too short to name a text');
+});
+
+test('feed fidelity: a night with no text takes the party\'s text only when at least two other nights carry it and none says otherwise', () => {
+  const core = createCore();
+  // eagle-la "SUNDAY BEER BUST", same run: the nights that have a text all say the same thing.
+  const agreed = [
+    partyNight('2026-11-15T22:00:00.000Z', 'Sunday Beer Bust 2pm $5 domestic drafts', { title: 'SUNDAY BEER BUST' }),
+    partyNight('2026-11-22T22:00:00.000Z', 'Sunday Beer Bust 2pm $5 domestic drafts', { title: 'SUNDAY BEER BUST' }),
+    partyNight('2026-11-29T22:00:00.000Z', '', { title: 'SUNDAY BEER BUST' }),
+    partyNight('2026-12-06T22:00:00.000Z', undefined, { title: 'Sunday Beer Bust' })
+  ];
+  const agreedRun = capturePartyLogs(() => core.borrowPartyDescriptions(agreed));
+  assert.equal(agreedRun.result, 2);
+  assert.deepEqual(agreed.map(event => event.description), Array(4).fill('Sunday Beer Bust 2pm $5 domestic drafts'));
+  assert.match(agreedRun.lines[0], /"SUNDAY BEER BUST" 2026-11-29 has no text of its own — borrowed the 2026-11-15 night's \(39 chars; same party, same venue, same source, and all 2 nights that have a text say the same\)/);
+  // One night's words may be that night's alone (tockify "Friday at The Eagle NYC": only 11-13 named its DJs).
+  const single = [
+    partyNight('2026-11-14T03:00:00.000Z', 'DJs Alex Ramos & Mark Cicero spin at The Eagle NYC.', { title: 'Friday at The Eagle NYC' }),
+    partyNight('2026-11-21T03:00:00.000Z', '', { title: 'Friday at The Eagle NYC' }),
+    partyNight('2026-11-28T03:00:00.000Z', '', { title: 'Friday at The Eagle NYC' })
+  ];
+  const singleRun = capturePartyLogs(() => core.borrowPartyDescriptions(single));
+  assert.equal(singleRun.result, 0);
+  assert.deepEqual(single.map(event => event.description), ['DJs Alex Ramos & Mark Cicero spin at The Eagle NYC.', '', '']);
+  assert.equal(singleRun.lines.length, 1);
+  assert.match(singleRun.lines[0], /"Friday at The Eagle NYC" has no text on 2026-11-20, 2026-11-27; only the 2026-11-13 night has one, and one night's words may be that night's alone — not borrowed; left blank/);
+  // Nights that disagree (eagle-la "B BAR": two wordings): nothing is picked for the blank.
+  const split = [
+    partyNight('2026-11-13T04:00:00.000Z', 'Every Thursday 9pm no cover', { title: 'B BAR' }),
+    partyNight('2026-11-20T04:00:00.000Z', 'Every Thursday 9pm no cover', { title: 'B BAR' }),
+    partyNight('2026-11-27T04:00:00.000Z', 'B BAR Every Thursday with DJ Chris', { title: 'B BAR' }),
+    partyNight('2026-12-04T04:00:00.000Z', '', { title: 'B BAR' })
+  ];
+  const splitRun = capturePartyLogs(() => core.borrowPartyDescriptions(split));
+  assert.equal(splitRun.result, 0);
+  assert.equal(split[3].description, '');
+  assert.match(splitRun.lines[0], /"B BAR" has no text on 2026-12-03, and its other nights say 2 different things — none is picked for it; left blank/);
+  // A text that dates itself is its night's, however many rows repeat it.
+  const dated = [
+    partyNight('2026-11-14T03:00:00.000Z', 'Join us Friday, November 13th for the anniversary party.', { title: 'Anniversary' }),
+    partyNight('2026-11-15T03:00:00.000Z', 'Join us Friday, November 13th for the anniversary party.', { title: 'Anniversary' }),
+    partyNight('2026-11-21T03:00:00.000Z', '', { title: 'Anniversary' })
+  ];
+  const datedRun = capturePartyLogs(() => core.borrowPartyDescriptions(dated));
+  assert.equal(datedRun.result, 0);
+  assert.equal(dated[2].description, '');
+  assert.match(datedRun.lines[0], /names a calendar date, so it is that night's — not borrowed; left blank/);
+  assert.equal(core.descriptionNamesCalendarDate('Doors 9pm. $5 drafts every Sunday.'), false);
+  assert.equal(core.descriptionNamesCalendarDate('Back on 12/5 with a new DJ'), true);
+  assert.equal(core.descriptionNamesCalendarDate('See you on the 5th of December'), true);
+  // A party with no text on any night, and a lone night, say nothing: no borrow, no note.
+  const silent = [partyNight('2026-11-14T03:00:00.000Z', '', { title: 'Club Night' }), partyNight('2026-11-21T03:00:00.000Z', '', { title: 'Club Night' }), partyNight('2026-11-22T03:00:00.000Z', '', { title: 'Twisted Tuesday' })];
+  const silentRun = capturePartyLogs(() => core.borrowPartyDescriptions(silent));
+  assert.equal(silentRun.result, 0);
+  assert.equal(silentRun.lines.length, 0);
+  assert.equal(core.borrowPartyDescriptions(null), 0);
+});
+
+test('feed fidelity: in a run, the nights a parser returns leave with their party\'s whole text — the themed night with its own', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const day = (offset) => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + offset, 3, 0, 0));
+  const night = (offset, description, source) => partyNight(day(offset), description, { source, url: `https://www.venue.example/events/underwear-night/?occurrence=${offset}` });
+  const pages = {
+    'https://www.venue.example/': {
+      events: [night(3, PARTY_TEXT_FULL, 'ai-web'), night(10, PARTY_TEXT_GRID, 'mec'), night(17, PARTY_TEXT_THEMED, 'mec'), night(24, PARTY_TEXT_GRID, 'mec')],
+      additionalLinks: []
+    }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const quiet = console.log; const lines = [];
+  console.log = (line) => lines.push(String(line));
+  let result;
+  try {
+    result = await core.processParser(
+      { name: 'Venue', urls: ['https://www.venue.example/'], alwaysBear: true, ai: CRAWL_AI },
+      {}, httpAdapter, display, parsers
+    );
+  } finally { console.log = quiet; }
+  const texts = result.events.slice().sort((a, b) => new Date(a.startDate) - new Date(b.startDate)).map(event => event.description);
+  assert.deepEqual(texts, [PARTY_TEXT_FULL, PARTY_TEXT_FULL, PARTY_TEXT_THEMED, PARTY_TEXT_FULL]);
+  assert.equal(lines.filter(line => line.includes('📝 DESCRIPTION') && line.includes('cut-off opening')).length, 2);
+});

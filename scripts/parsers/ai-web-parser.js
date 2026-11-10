@@ -1405,6 +1405,9 @@ class AiWebParser {
             // JSON that arrived through a SPA data door carries context the
             // payload itself lacks — fills blanks before the completeness gate.
             this.applyDataDoorContext(jsonApiEvents, effectiveHtmlData && effectiveHtmlData.dataDoor, cityConfig);
+            // A row that types its street address after its name states its
+            // place there (readFeedRowTitleAddresses) — read before the gate.
+            this.readFeedRowTitleAddresses(jsonApiEvents);
             await this.resolveJsonApiSlugLinks(jsonApiEvents, sourceUrl, httpAdapter);
             await this.resolveJsonApiImageIdUrls(jsonApiEvents, sourceUrl, httpAdapter);
             // On a venue's or promoter's own site (config siteRole, or the
@@ -1435,10 +1438,9 @@ class AiWebParser {
                 // venue (placeVenueFeedRowsFromCuratedHost).
                 if ((configuredRole || pageRole) === 'venue') this.placeVenueFeedRowsFromCuratedHost(jsonApiEvents, sourceUrl);
             }
-            // A stated city is place evidence too: an aggregator row with no
-            // venue yet ("BEAR POOL PARTY", Sitges) is a real event somewhere
-            // in that city, not an incomplete record.
-            const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address || event.city);
+            // The completeness gate (keepPlacedFeedRows): a row that names no
+            // place is not kept, and says so.
+            const completeJsonApiEvents = this.keepPlacedFeedRows(jsonApiEvents, sourceUrl);
             // The page's own data, streamed to the browser as React flight
             // chunks (see collectPageFlightDataRows): read as feed rows, with
             // the same builder, completeness gate and enrichment as a feed.
@@ -1448,9 +1450,11 @@ class AiWebParser {
                 const more = await this.continuePageFlightRows(html, sourceUrl, pageDataRows, pageFlight.continuation, httpAdapter);
                 for (const row of more) pageDataRows.push(row);
             }
-            const pageDataEvents = pageDataRows
+            const builtPageDataEvents = pageDataRows
                 .map(row => this.buildEventFromJsonApiObject(row, sourceUrl, cityConfig))
-                .filter(event => event && (event.bar || event.address || event.city));
+                .filter(Boolean);
+            this.readFeedRowTitleAddresses(builtPageDataEvents);
+            const pageDataEvents = this.keepPlacedFeedRows(builtPageDataEvents, sourceUrl);
             if (pageDataRows.length > 0) {
                 console.log(`📦 PAGE DATA: ${sourceUrl} ships ${pageDataRows.length} event row(s) in its own flight data — built ${pageDataEvents.length} event(s)`);
             }
@@ -1780,6 +1784,31 @@ class AiWebParser {
                     // has to say so or the run reports OCR it actually did as
                     // OCR it skipped.
                     extractionSummary: { source: structuredSource, aiPasses: this.aiPromptHistory.length, ocrImages: structuredArtworkOcrCount },
+                    source: this.config.source,
+                    url: sourceUrl
+                };
+            }
+
+            // The page's calendar is a feed ANOTHER page of the site already
+            // answered for in this run (see claimFeedDoor): its listing has
+            // been read. Had this page asked first, the calendar's cards
+            // would have been its whole read — the route above skips the OCR
+            // sweep and the AI — so, second, it gets the same read minus the
+            // repeated rows, and its links are still followed. Without this
+            // the empty calendar frame's shell goes to the AI
+            // (precinctdtla.com/calendar/, offline replay 2026-11-09: 231
+            // characters of opening hours sent for whole-page extraction —
+            // the shape that once shipped an hours block as an event,
+            // woofsatlanta.com, run 20261017-054812).
+            const calendarReadOn = this.feedReadElsewhere instanceof Map ? (this.feedReadElsewhere.get(this.getUrlDedupeKey(sourceUrl)) || '') : '';
+            if (calendarReadOn && jsonApiPayload === null) {
+                console.log(`📅 EVENTON: ${sourceUrl} is read through its calendar, and that calendar was read on ${calendarReadOn} — no events built here again, no OCR sweep or AI extraction of the empty frame; ${additionalLinks.length} link(s) still followed`);
+                return {
+                    events: [],
+                    additionalLinks: additionalLinks,
+                    discoveredSegments: null,
+                    ocrResults: [],
+                    extractionSummary: { source: 'eventon', aiPasses: this.aiPromptHistory.length, ocrImages: 0 },
                     source: this.config.source,
                     url: sourceUrl
                 };
@@ -9806,7 +9835,15 @@ class AiWebParser {
     // mirrors rockbarnyc.com, widget and all) — is the same calendar, read
     // once. Returns '' when this page may read, else the page that already
     // did.
-    claimHostDoor(kind, sourceUrl, parserConfig, doorId = '') {
+    // `feedOnly` is for a door whose id is the WHOLE query — an endpoint and
+    // the parameters that select its rows (see claimFeedDoor): the claim is
+    // on that query alone, so another feed on the same host keeps its own
+    // read, and no page has a turn of its own to keep — the same question
+    // has the same answer whichever page asks it.
+    // The page that read a door is the same page under either scheme: its
+    // http/https twin is that page VISITED AGAIN, and is not read again —
+    // configured or not (see isSchemeTwinPage).
+    claimHostDoor(kind, sourceUrl, parserConfig, doorId = '', { feedOnly = false } = {}) {
         if (!this.hostDoorReads) this.hostDoorReads = new Map();
         const hostMatch = String(sourceUrl || '').match(/^https?:\/\/([^/?#:@]+)/i);
         const host = hostMatch ? hostMatch[1].toLowerCase().replace(/^www\./, '') : '';
@@ -9817,17 +9854,50 @@ class AiWebParser {
         // found the door "already read" — its 43 events went to 0. Twins
         // fold in dedup; the claim only stops ONE source re-reading ONE door.
         const owner = String((parserConfig && parserConfig.name) || '').toLowerCase();
-        const claimKeys = [`${String(kind || '')}|owner:${owner}|host:${host}`];
+        const claimKeys = feedOnly && doorId ? [] : [`${String(kind || '')}|owner:${owner}|host:${host}`];
         if (doorId) claimKeys.push(`${String(kind || '')}|owner:${owner}|door:${String(doorId).toLowerCase()}`);
         const readOn = claimKeys.map(key => this.hostDoorReads.get(key) || '').find(Boolean) || '';
         if (readOn) {
             const samePage = this.getUrlDedupeKey(readOn) === this.getUrlDedupeKey(String(sourceUrl || ''));
-            if (!samePage && !this.isConfiguredParserUrl(sourceUrl, parserConfig)) return readOn;
+            if (!samePage && this.isSchemeTwinPage(readOn, sourceUrl)) return readOn;
+            const ownTurn = !feedOnly && this.isConfiguredParserUrl(sourceUrl, parserConfig);
+            if (!samePage && !ownTurn) return readOn;
         }
         for (const key of claimKeys) {
             if (!this.hostDoorReads.has(key)) this.hostDoorReads.set(key, String(sourceUrl || ''));
         }
         return '';
+    }
+
+    // http://x/p and https://x/p are one page (a site answers both with the
+    // same document, and its own markup — an RSS twin, an old menu — still
+    // writes the old spelling): when the page that read a door comes back
+    // under the other scheme it is the same page a second time, and the
+    // whole calendar would be published twice (blackeagletoronto.com, run
+    // 20261109-053706: 114 widget events read on the https home page and 114
+    // more on its http spelling). The crawl's visited set folds the two
+    // spellings first (shared-core getCrawlPageKey); this is the same rule
+    // at the door.
+    isSchemeTwinPage(a, b) {
+        const fold = (url) => this.getUrlDedupeKey(String(url || '')).replace(/^http:\/\//, 'https://');
+        const left = this.getUrlDedupeKey(String(a || ''));
+        const right = this.getUrlDedupeKey(String(b || ''));
+        return !!left && left !== right && fold(a) === fold(b);
+    }
+
+    // ONE FEED QUERY IS ASKED ONCE PER RUN. A reader that replays a page's
+    // own data call (a calendar plugin's month request) names the query —
+    // the endpoint and the parameters that select its rows, hashed — and
+    // claims it here; a second page of the site carrying the same calendar
+    // asks the same question and would publish the same rows again
+    // (precinctdtla.com, run 20261109-053706: the home page and /calendar/
+    // each replayed the same EventON months — 77 events, twice). Keyed by
+    // the query, not the host: a differently-filtered calendar on another
+    // page is another feed and is read. '' when this page may ask, else the
+    // page that already did.
+    claimFeedDoor(kind, feedId, sourceUrl, parserConfig) {
+        if (!feedId) return '';
+        return this.claimHostDoor(kind, sourceUrl, parserConfig, feedId, { feedOnly: true });
     }
 
     // A door that answered nothing was not the site's calendar — the claim
@@ -11467,6 +11537,21 @@ class AiWebParser {
             focus_start_date_range: String(nextStart), focus_end_date_range: String(nextEnd) };
     }
 
+    // What a calendar frame ASKS FOR, whatever month it is opened on: the
+    // endpoint plus its shortcode without the fields that only place the
+    // view in time (the ones shiftEventOnShortcodeMonth moves, the frame's
+    // own month/day offset and its focused day). Two frames with the same
+    // identity asked for the same month are the same question. The endpoint
+    // is named as a page is (www or not, http or https: one address).
+    getEventOnFeedIdentity(endpoint, sc) {
+        const position = new Set(['fixed_day', 'fixed_month', 'fixed_year', 'focus_start_date_range', 'focus_end_date_range', 'month_incre', 'day_incre']);
+        const asked = Object.keys(sc && typeof sc === 'object' ? sc : {}).sort()
+            .filter(key => !position.has(key) && sc[key] !== null && typeof sc[key] !== 'object')
+            .map(key => `${key}=${String(sc[key])}`);
+        const address = this.getUrlDedupeKey(String(endpoint || '')).replace(/^http:\/\//, 'https://');
+        return this.constructor.shortTextHash(`${address}|${asked.join('&')}`);
+    }
+
     // Which route reads a page: its structured events, or the segment/AI
     // pass. A link hub's own JSON-LD / page data is not read (bearracuda.com
     // marks up a partial set on its hub; the detail pages are read instead)
@@ -11532,27 +11617,53 @@ class AiWebParser {
         const steps = 1 + Math.max(0, 1 + Math.max(0, this.resolveCalendarLookaheadMonths(parserConfig)) - monthsCovered);
         const parts = [];
         let refreshed = false;
+        // One question — a feed and a month — is asked once per run (see
+        // claimFeedDoor): a frame whose month another page of the site
+        // already asked for is left out of the request, and a request with
+        // no frame left is not sent.
+        const monthOf = (sc) => `${Number(sc.fixed_year) || 0}-${String(Number(sc.fixed_month) || 0).padStart(2, '0')}`;
+        const alreadyRead = new Map(); // page that read → months it answered for
+        let refused = false;
+        if (this.feedReadElsewhere instanceof Map) this.feedReadElsewhere.delete(this.getUrlDedupeKey(sourceUrl));
         for (let step = 0; step < steps; step++) {
             const last = framesOf(evo)[evo.calendars.length - 1].sc;
             const base = new Date(Date.UTC(Number(last.fixed_year) || 1970, (Number(last.fixed_month) || 1) - 1 + step, 1));
             const label = step === 0
                 ? `${base.getUTCFullYear()}-${String(base.getUTCMonth() + 1).padStart(2, '0')}${monthsCovered > 1 ? ` (+${monthsCovered - 1} earlier)` : ''}`
                 : `${base.getUTCFullYear()}-${String(base.getUTCMonth() + 1).padStart(2, '0')}`;
+            const claimed = [];
             const post = async () => {
                 const fields = [['nonce', evo.nonce]];
                 if (evo.action) fields.push(['action', evo.action]);
                 const frames = framesOf(evo);
-                for (const calendar of (step === 0 ? frames : frames.slice(-1))) {
+                const stepFrames = step === 0 ? frames : frames.slice(-1);
+                const asking = new Set();
+                for (const calendar of stepFrames) {
                     const sc = this.shiftEventOnShortcodeMonth(calendar.sc, step);
+                    const question = `${this.getEventOnFeedIdentity(evo.endpoint, sc)}-${monthOf(sc)}`;
+                    if (asking.has(question)) continue; // the same frame twice on one page
+                    const readOn = this.claimFeedDoor('eventon', question, sourceUrl, parserConfig);
+                    if (readOn) {
+                        if (!alreadyRead.has(readOn)) alreadyRead.set(readOn, new Set());
+                        alreadyRead.get(readOn).add(monthOf(sc));
+                        continue;
+                    }
+                    asking.add(question);
+                    if (!claimed.includes(question)) claimed.push(question);
                     for (const [key, value] of Object.entries(sc)) {
                         if (value === null || typeof value === 'object') continue;
                         fields.push([`cals[${calendar.id}][sc][${key}]`, String(value)]);
                     }
                 }
+                if (asking.size === 0) return null;
                 const body = fields.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
+                // A request for only SOME of the page's frames is remembered
+                // under its own name: the answer stored for the whole page
+                // would hand back the frames that were left out.
+                const partial = asking.size < stepFrames.length ? `&eventon_asked=${this.constructor.shortTextHash(Array.from(asking).sort().join(','))}` : '';
                 const response = await httpAdapter.postForm(evo.endpoint, body, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest', Referer: sourceUrl },
-                    cacheUrl: `${sourceUrl}${sourceUrl.includes('?') ? '&' : '?'}eventon_month=${label.slice(0, 7)}`,
+                    cacheUrl: `${sourceUrl}${sourceUrl.includes('?') ? '&' : '?'}eventon_month=${label.slice(0, 7)}${partial}`,
                     // A refusal ("Nonce validation failed") is never remembered.
                     isCacheableResponse: (stored) => !/"status"\s*:\s*"bad"/.test(String((stored && (stored.text || stored.html)) || ''))
                 });
@@ -11573,6 +11684,8 @@ class AiWebParser {
                         payload = await post();
                     }
                 }
+                // Every frame of this step was already asked for elsewhere.
+                if (payload === null) continue;
                 if (!payload || payload.status === 'bad') throw new Error((payload && payload.msg) || 'calendar refused the request');
                 let cards = 0;
                 let answered = 0;
@@ -11591,8 +11704,20 @@ class AiWebParser {
                 console.log(`📅 EVENTON: month ${label} loaded for ${sourceUrl} — ${cards} event card(s) from ${answered} calendar frame(s)`);
             } catch (error) {
                 console.log(`📅 EVENTON: month ${label} failed for ${sourceUrl}: ${error && error.message ? error.message : error} — continuing without it`);
+                // Not answered: the question goes back for the next page that asks it.
+                refused = true;
+                for (const question of claimed) this.releaseHostDoor('eventon', sourceUrl, question);
                 if (step === 0) break; // the opening month refused: later months will too
             }
+        }
+        for (const [readOn, months] of alreadyRead) {
+            console.log(`📅 EVENTON: the calendar on ${sourceUrl} is the one already read on ${readOn} (same endpoint, same shortcode) — month(s) ${Array.from(months).sort().join(', ')} not asked for again`);
+        }
+        // Every month this page's calendar would show was answered on
+        // another page: its listing is read (see the route in parseEvents).
+        if (parts.length === 0 && !refused && alreadyRead.size > 0) {
+            if (!(this.feedReadElsewhere instanceof Map)) this.feedReadElsewhere = new Map();
+            this.feedReadElsewhere.set(this.getUrlDedupeKey(sourceUrl), Array.from(alreadyRead.keys())[0]);
         }
         return parts.join('\n');
     }
@@ -15699,12 +15824,16 @@ class AiWebParser {
     // timezoneUnresolved is false and the tzid rides along. Bare numbers are
     // NOT accepted: last_update_date / date_id / created_date are epoch
     // numbers too, and the key patterns cannot tell them from a start.
+    // `dateOnly` says the value was a bare calendar day ("2026-12-03"): it
+    // parses to that day's midnight, and only this mark tells the day the
+    // feed named from a midnight it stated.
     jsonApiScalarDateCandidate(value) {
         if (this.jsonApiValueIsIsoDateish(value)) {
             const parsed = this.parseJsonLdDateValue(value);
-            return parsed.date
-                ? { date: parsed.date, timezone: null, timezoneUnresolved: parsed.timezoneUnresolved }
-                : null;
+            if (!parsed.date) return null;
+            const candidate = { date: parsed.date, timezone: null, timezoneUnresolved: parsed.timezoneUnresolved };
+            if (/^\d{4}-\d{2}-\d{2}$/.test(String(value).trim())) candidate.dateOnly = true;
+            return candidate;
         }
         if (value && typeof value === 'object' && !Array.isArray(value)
             && typeof value.millis === 'number' && value.millis > 1e11 && value.millis < 1e13) {
@@ -16450,6 +16579,32 @@ class AiWebParser {
     // JSON_API_SERIES_MAX_OCCURRENCES), each a copy of the row with the
     // occurrence's own start (end shifted by the row's duration). A rule the
     // expander does not support leaves the row as it is.
+    // A series row's excluded nights → [{ ms, dayOnly }] in the clock the
+    // row's own start is read in. A bare day ("2026-11-08", an all-day
+    // exclusion) excludes whatever the rule yields on that day; a timed
+    // value excludes exactly that start. Unreadable values are skipped (the
+    // night is kept — fail open).
+    readJsonApiSeriesExclusions(value) {
+        const values = Array.isArray(value) ? value : (typeof value === 'string' ? value.split(/[,;\s]+(?=\d{4}-?\d{2}-?\d{2})/) : []);
+        const excluded = [];
+        for (const entry of values) {
+            const text = typeof entry === 'string' ? entry.trim() : '';
+            if (!text) continue;
+            // iCalendar's compact form ("20261108T160000", "20261108").
+            const compact = text.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/);
+            const iso = compact
+                ? `${compact[1]}-${compact[2]}-${compact[3]}${compact[4] ? `T${compact[4]}:${compact[5]}:${compact[6] || '00'}${compact[7] || ''}` : ''}`
+                : text;
+            const dayOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
+            const candidate = dayOnly
+                ? { date: new Date(`${iso}T00:00:00Z`) }
+                : this.jsonApiScalarDateCandidate(iso);
+            if (!candidate || !(candidate.date instanceof Date) || Number.isNaN(candidate.date.getTime())) continue;
+            excluded.push({ ms: candidate.date.getTime(), dayOnly });
+        }
+        return excluded;
+    }
+
     expandJsonApiSeriesRow(event) {
         const rrule = event && typeof event._jsonApiRrule === 'string' ? event._jsonApiRrule : '';
         if (!rrule || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return [event];
@@ -16467,10 +16622,31 @@ class AiWebParser {
             occurrences = null;
         }
         if (!Array.isArray(occurrences)) return [event];
-        const starts = occurrences
+        // THE FEED'S OWN EXCEPTIONS COME OFF FIRST. A rule says "every 2nd
+        // Sunday"; the feed also says which of those nights were cancelled
+        // (EXDATE) or moved (a RECURRENCE-ID record, which is read as its
+        // own row with its own date, time, title and place). Expanding the
+        // rule alone kept the night that was moved away AND the night it
+        // moved to (XL Bears "Game Night" on 2026-11-08 and 11-15, Lodge NY
+        // "Manhole" on 11-15 and 11-22 — audit 2026-11-09).
+        const exclusions = Array.isArray(event._jsonApiSeriesExclusions) ? event._jsonApiSeriesExclusions : [];
+        const excludedStarts = new Set(exclusions.filter(entry => !entry.dayOnly).map(entry => entry.ms));
+        const excludedDays = new Set(exclusions.filter(entry => entry.dayOnly).map(entry => new Date(entry.ms).toISOString().slice(0, 10)));
+        const allStarts = occurrences
             .map(entry => (entry instanceof Date ? entry : (entry && entry.date instanceof Date ? entry.date : (entry && entry.start instanceof Date ? entry.start : null))))
-            .filter(date => date && !Number.isNaN(date.getTime()))
+            .filter(date => date && !Number.isNaN(date.getTime()));
+        const leftOut = allStarts.filter(date => excludedStarts.has(date.getTime()) || excludedDays.has(date.toISOString().slice(0, 10)));
+        const starts = allStarts
+            .filter(date => !leftOut.includes(date))
             .slice(0, JSON_API_SERIES_MAX_OCCURRENCES);
+        if (leftOut.length > 0) {
+            console.log(`🔁 SERIES: "${event.title}" (${rrule}) — ${leftOut.length} night(s) the feed itself cancelled or moved are not events: ${leftOut.map(date => date.toISOString().slice(0, 10)).join(', ')}`);
+        }
+        if (starts.length === 0 && leftOut.length > 0) {
+            // Every night the rule has in the window is excepted: nothing of
+            // the series is an event — its first night least of all.
+            return [];
+        }
         if (starts.length === 0) {
             // A rule whose UNTIL has passed is a series that has ENDED: its
             // first night (the row's own start, months or years back) is not
@@ -16497,6 +16673,7 @@ class AiWebParser {
             const copy = { ...event, startDate: start };
             copy.endDate = durationMs > 0 ? new Date(start.getTime() + durationMs) : null;
             delete copy._jsonApiRrule;
+            delete copy._jsonApiSeriesExclusions;
             return copy;
         });
     }
@@ -17285,6 +17462,7 @@ class AiWebParser {
                 start.date = new Date(Date.UTC(startDay.year, startDay.month, startDay.day, startClock.hour, startClock.minute));
                 start.timezoneUnresolved = true;
                 start.timezone = start.timezone || null;
+                start.dateOnly = false;
                 const endClock = clockFor(/(^|_)end_time$/);
                 const endDay = dayFor(/(^|_)ends?(_(date|day))?$/);
                 if (endClock && (!end.date || endDay)) {
@@ -17293,9 +17471,26 @@ class AiWebParser {
                     if (endDate.getTime() <= start.date.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
                     end.date = endDate;
                     end.timezoneUnresolved = true;
+                    end.dateOnly = false;
                 }
             }
         }
+
+        // A BARE DAY IS A DAY. A row whose start is a calendar date and
+        // nothing else — no clock beside it, and an end that is absent or a
+        // bare date too — states no time: whereto.party's page data, run
+        // 20261109-053706, { start_date: "2026-12-03", end_date:
+        // "2026-12-10", start_time: null, end_time: null } was kept as a
+        // party from midnight on the 3rd to midnight on the 10th (its last
+        // day cut off), and a one-day row would have been written "12:00 AM
+        // – 3:00 AM". It is the rule every other reader already applies (a
+        // date and no time is a day): the row is stamped and
+        // SharedCore.applyAllDayConvention writes the day, or the days
+        // through the end date, once the zone is known. A row the feed
+        // flags all-day is shaped just below and needs no stamp; a row that
+        // states a midnight ("…T00:00:00") stated a clock and is not touched.
+        const namesDayOnly = start.dateOnly === true && (!end.date || end.dateOnly === true)
+            && !this.jsonApiRowStatesAllDay(view);
 
         // AN ALL-DAY ROW STATES A DAY, NOT AN INSTANT. A feed that publishes
         // "2026-10-08T00:00:00+00:00" with all_day: true is naming the 8th —
@@ -17467,6 +17662,8 @@ class AiWebParser {
             image,
             source: this.config.source
         };
+        // The row named a day and no time (see namesDayOnly above).
+        if (namesDayOnly) event._noTimeStated = true;
         // Surviving description chunks, for the feed-level repetition pass in
         // extractEventsFromJsonApiPayload (text every row shares is chrome).
         // Internal field, deleted once the batch has been judged.
@@ -17492,6 +17689,16 @@ class AiWebParser {
         const rruleValue = firstValue(/^(rrule|recurrence_rule|repeat_rule)$/,
             (value) => typeof value === 'string' && /^(RRULE:)?FREQ=/i.test(value.trim()));
         if (rruleValue) event._jsonApiRrule = rruleValue.trim();
+        // …and the nights the feed says that rule does NOT have (iCalendar
+        // EXDATE, and the RECURRENCE-ID of every override record — carried
+        // onto the series row by shared-core's icsRecordToFeedRow). Read
+        // with the same reader as the row's own start, so both sit in one
+        // clock. Internal field.
+        if (rruleValue) {
+            const excluded = this.readJsonApiSeriesExclusions(firstValue(/^(exdates?|excluded_dates|exception_dates)$/,
+                (value) => (Array.isArray(value) && value.length > 0) || isNonEmptyString(value)));
+            if (excluded.length > 0) event._jsonApiSeriesExclusions = excluded;
+        }
         // imageSource provenance (notes-serialized like pinSource): structured
         // data the API itself published. Absent image → no stamp (fail open).
         // An image set that publishes only IDS (owner + asset + dimensions,
@@ -32094,6 +32301,85 @@ TEXT:
             }
         }
         return claimants;
+    }
+
+    // A FEED ROW THAT TYPES ITS STREET ADDRESS AFTER ITS NAME states its place
+    // there. Lodge NY's Google Calendar (run 20261109-053706) writes every
+    // party as "<name> 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues"; most
+    // rows repeat the address in LOCATION, but the monthly "Chub Chaser
+    // Party" has no LOCATION at all (dropped at the gate below, every run)
+    // and "The Fuck Stop" says only "Garment District, New York, NY, USA"
+    // (kept, with the address still in its name). Read by shape
+    // (SharedCore.readAddressTailFromTitle — the same tail
+    // stripAddressTailFromTitle cuts when the row DOES state the address):
+    //   - a row that already states a street line is left to that strip;
+    //   - a row that states only a locality keeps it behind the street line
+    //     ("232 W 37th St, 2nd Fl, New York, NY, USA");
+    //   - a row that states no place takes the full address the other rows
+    //     of this same feed state for that same door (the one most of them
+    //     state), and the title's own street line when none does.
+    // The name loses the tail either way. Every read is logged. Returns the
+    // number of rows read.
+    readFeedRowTitleAddresses(feedEvents) {
+        const rows = (Array.isArray(feedEvents) ? feedEvents : []).filter(event => event && typeof event === 'object');
+        const core = this.core;
+        if (rows.length === 0 || !core || typeof core.readAddressTailFromTitle !== 'function') return 0;
+        const text = (value) => (typeof value === 'string' ? value.trim() : '');
+        const statesStreetLine = (address) => address.split(',').some(part => core.looksLikeStreetAddress(part.trim()));
+        // The street addresses this feed's rows state, most-stated first.
+        const stated = new Map();
+        for (const event of rows) {
+            const address = text(event.address);
+            if (address && statesStreetLine(address)) stated.set(address, (stated.get(address) || 0) + 1);
+        }
+        const statedByCount = [...stated.entries()].sort((a, b) => b[1] - a[1]).map(entry => entry[0]);
+        let read = 0;
+        for (const event of rows) {
+            const existing = text(event.address);
+            if (existing && statesStreetLine(existing)) continue;
+            const tail = core.readAddressTailFromTitle(event.title);
+            if (!tail) continue;
+            const sameDoor = !existing && typeof core.areSameStreetLine === 'function'
+                ? statedByCount.find(address => core.areSameStreetLine(tail.address, address))
+                : '';
+            const address = existing
+                ? (tail.locality ? tail.address : `${tail.address}, ${existing}`)
+                : (sameDoor || tail.address);
+            const why = existing
+                ? `the row states only "${[text(event.bar), existing].filter(Boolean).join(', ')}"`
+                : (sameDoor ? 'the row states no place; the full address is the one this feed\'s other rows state for that door' : 'the row states no place');
+            console.log(`📍 TITLE ADDRESS: "${event.title}" → "${tail.title}" — the name ends in a street address and ${why}: address = ${address}${tail.crossStreets ? ` (${tail.crossStreets})` : ''}`);
+            event.title = tail.title;
+            event.address = address;
+            read++;
+        }
+        return read;
+    }
+
+    // THE FEED COMPLETENESS GATE: a structured row is an event only when it
+    // names a place — a bar, an address or a city (a stated city is place
+    // evidence too: an aggregator row with no venue yet, "BEAR POOL PARTY",
+    // Sitges, is a real event somewhere in that city). A row that names none
+    // is not kept, and never silently: one line per party names it, its
+    // nights and the reason (Lodge NY's "Chub Chaser Party" vanished at this
+    // gate on every run with no trace, audit 2026-11-09).
+    keepPlacedFeedRows(feedEvents, sourceUrl) {
+        const rows = Array.isArray(feedEvents) ? feedEvents : [];
+        const kept = [];
+        const unplaced = new Map();
+        for (const event of rows) {
+            if (!event) continue;
+            if (event.bar || event.address || event.city) { kept.push(event); continue; }
+            const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : '(untitled)';
+            const ms = this.core && typeof this.core.toEpochMillis === 'function' ? this.core.toEpochMillis(event.startDate) : null;
+            const day = Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : 'undated';
+            if (!unplaced.has(title)) unplaced.set(title, []);
+            unplaced.get(title).push(day);
+        }
+        for (const [title, days] of unplaced) {
+            console.log(`🚧 FEED GATE: "${title}" (${days.length} night(s): ${days.slice(0, 6).join(', ')}${days.length > 6 ? ', …' : ''}) names no bar, address or city in ${sourceUrl} — not kept as a structured event`);
+        }
+        return kept;
     }
 
     // A VENUE's own feed that names no place: the place is the venue. The
