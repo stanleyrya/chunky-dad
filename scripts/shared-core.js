@@ -6632,6 +6632,27 @@ class SharedCore {
         return this.isPageOffParserSite(page, parserConfig);
     }
 
+    // Strength of a promoter stamp as a statement about the EVENT: its own
+    // words (or a stamp with no recorded kind) > an address on the record >
+    // inheritance from the parser's site. 0 = no stamp.
+    getPromoterEvidenceRank(event) {
+        if (!event || typeof event._promoter !== 'string' || !event._promoter) return 0;
+        const kind = this.getEventPromoterEvidence(event);
+        return kind === 'parser-site' ? 1 : kind === 'url' ? 2 : 3;
+    }
+
+    // Move the evidence half of a promoter stamp from one record to another
+    // (the caller has already settled that both carry the same _promoter).
+    copyPromoterEvidenceStamp(fromEvent, toEvent) {
+        for (const field of ['_promoterEvidence', '_promoterEvidencePageUrl']) {
+            if (typeof fromEvent[field] === 'string') {
+                toEvent[field] = fromEvent[field];
+            } else {
+                delete toEvent[field];
+            }
+        }
+    }
+
     applyPromoterRegistryMatches(events, parserConfig, mainConfig) {
         const mode = this.getPromoterRegistryMode(mainConfig);
         if (mode === 'off') return;
@@ -14543,8 +14564,24 @@ class SharedCore {
     // untrusted parser → trusted (never-drop). Events without a matched
     // promoter (or a matched entry without bearAffinity) resolve exactly to
     // parserConfig.alwaysBear — byte-identical to the pre-registry behavior.
+    //
+    // `evidence` says HOW the promoter was matched (getEventPromoterEvidence:
+    // 'organizer' | 'title' | 'url' | 'parser-site' | '' for a stamp that
+    // carries no kind). One kind does not carry the promoter's affinity
+    // everywhere: a stamp the record merely INHERITED from the parser's site
+    // ('parser-site') while the record itself sits on another site's page
+    // (isInheritedPromoterStampOffSite). Nothing in such a record names the
+    // promoter and it was not read where the promoter publishes, so it
+    // resolves exactly like a record with no affinity — the parser's own
+    // alwaysBear, which the curated test already limits to the parser's own
+    // pages. A record read on the promoter's site (or on the ticket page its
+    // row pointed at) keeps the promoter's trust as before.
     getEventBearTrust(event, parserConfig) {
         const entry = this.getEventPromoterEntry(event);
+        const evidence = entry ? this.getEventPromoterEvidence(event) : '';
+        if (entry && this.isInheritedPromoterStampOffSite(event, parserConfig)) {
+            return { trusted: Boolean(parserConfig && parserConfig.alwaysBear === true), promoter: entry.name, affinity: '', evidence };
+        }
         // A sub-brand inherits its parent's affinity (the same inheritance
         // promoterEntryToMetadataBlock applies to every unspecified field):
         // TREASURE TRAIL carries none of its own, so Bearracuda's "usually"
@@ -14558,12 +14595,12 @@ class SharedCore {
         const affinitySource = parent && typeof parent.bearAffinity === 'string' && parent.bearAffinity.trim() ? parent : entry;
         const affinity = affinitySource && typeof affinitySource.bearAffinity === 'string' ? affinitySource.bearAffinity.trim().toLowerCase() : '';
         if (entry && affinity === 'always') {
-            return { trusted: true, promoter: entry.name, affinity };
+            return { trusted: true, promoter: entry.name, affinity, evidence };
         }
         if (entry && affinity === 'usually') {
-            return { trusted: false, promoter: entry.name, affinity };
+            return { trusted: false, promoter: entry.name, affinity, evidence };
         }
-        return { trusted: parserConfig && parserConfig.alwaysBear === true, promoter: entry ? entry.name : '', affinity: '' };
+        return { trusted: parserConfig && parserConfig.alwaysBear === true, promoter: entry ? entry.name : '', affinity: '', evidence };
     }
 
     // One cascade decision per event: { result: 'bear'|'not_bear'|'unsure',
@@ -15176,8 +15213,13 @@ class SharedCore {
     // as opposed to the model merely believing a venue has a bear reputation.
     // Only curated sources get the trusting prompt variant and the
     // evidence-gate bypass; every other source must show event-level evidence.
-    //   - registry bearAffinity=always: matched by the event's OWN content, so
-    //     it stays curated wherever the page lived.
+    //   - registry bearAffinity=always: matched by the event's OWN content
+    //     (title / organizer) or by the promoter's own address on the record,
+    //     so it stays curated wherever the page lived. A stamp the record
+    //     only INHERITED from the parser's site never arrives here with an
+    //     affinity when the record sits on another site's page
+    //     (getEventBearTrust) — that record must show event-level evidence
+    //     like any other.
     //   - parserConfig.alwaysBear: covers that promoter's own pages only, so a
     //     cross-host page found while crawling it is NOT curated.
     isBearCheckCurated(event, parserConfig) {
@@ -15269,10 +15311,26 @@ class SharedCore {
         const promoterLabel = parentName
             ? `${trust.promoter}, a party series of ${parentName}`
             : `the promoter ${trust.promoter}`;
+        // The sentence says only what the match KNOWS. "This event's own
+        // content names X" is true for a title/organizer match (and is kept,
+        // byte-identical, for those and for a stamp that carries no evidence
+        // kind). A URL match knows that the record's page or one of its
+        // links is the promoter's; an inherited stamp knows that the record
+        // was found through the promoter's own site. Telling the model the
+        // event NAMES the promoter in those two cases put words in the
+        // event's mouth — run 20261109-053706: "Macramé Workshop" and 264
+        // other strangers' listings were each introduced as naming Two Tons
+        // of Fun. Only this lead-in differs; the owner-marking half of the
+        // sentence is the same for every kind.
+        const promoterLeadIn = trust.evidence === 'url'
+            ? `This event's page address or links belong to ${promoterLabel}`
+            : trust.evidence === 'parser-site'
+                ? `This event was found through the website of ${promoterLabel}`
+                : `This event's own content names ${promoterLabel}`;
         const matchedPromoterSentence = trust.affinity === 'always'
-            ? ` This event's own content names ${promoterLabel}, whom the calendar owner has marked as a trusted bear-scene promoter.`
+            ? ` ${promoterLeadIn}, whom the calendar owner has marked as a trusted bear-scene promoter.`
             : trust.affinity === 'usually'
-                ? ` This event's own content names ${promoterLabel}, whom the calendar owner tracks as a usually-bear promoter${parentName ? ` (its named series are bear parties unless the event text targets another audience)` : ''} — judge this event on its own content.`
+                ? ` ${promoterLeadIn}, whom the calendar owner tracks as a usually-bear promoter${parentName ? ` (its named series are bear parties unless the event text targets another audience)` : ''} — judge this event on its own content.`
                 : '';
 
         // Honest cross-host provenance: when the event was actually extracted
@@ -15424,7 +15482,10 @@ class SharedCore {
         // (the additive registry sentence), so matched events get their own
         // memo basis; unmatched events keep the exact pre-registry key.
         const memoTrust = this.getEventBearTrust(event, parserConfig);
-        const memoPromoterPart = memoTrust.affinity ? `|promoter:${memoTrust.promoter}:${memoTrust.affinity}` : '';
+        // …and on HOW the promoter was matched, for the two kinds whose
+        // sentence differs (title/organizer/legacy stamps keep their key).
+        const memoEvidencePart = memoTrust.evidence === 'url' || memoTrust.evidence === 'parser-site' ? `:${memoTrust.evidence}` : '';
+        const memoPromoterPart = memoTrust.affinity ? `|promoter:${memoTrust.promoter}:${memoTrust.affinity}${memoEvidencePart}` : '';
         const memoKey = `${title}|${description}|${bar}|${memoHost}${memoPromoterPart}`;
         if (!this._bearVerdictMemo) {
             this._bearVerdictMemo = new Map();
@@ -17893,9 +17954,18 @@ class SharedCore {
             mergedEvent._sourceRowId = existingEvent._sourceRowId;
             mergedEvent._sourceRowFeed = existingEvent._sourceRowFeed;
         }
-        // Same carry for the matched-promoter identity stamp (_promoter).
+        // Same carry for the matched-promoter identity stamp (_promoter) —
+        // together with HOW it was matched (_promoterEvidence and, for an
+        // inherited stamp, the page that earned it). When both records carry
+        // the SAME promoter the merged event keeps the stronger account of
+        // it: one side's own title naming the promoter is true of the merged
+        // event too, whatever the other side's listing-level stamp said.
         if (!mergedEvent._promoter && existingEvent && typeof existingEvent._promoter === 'string' && existingEvent._promoter) {
             mergedEvent._promoter = existingEvent._promoter;
+            this.copyPromoterEvidenceStamp(existingEvent, mergedEvent);
+        } else if (mergedEvent._promoter && existingEvent && existingEvent._promoter === mergedEvent._promoter
+            && this.getPromoterEvidenceRank(existingEvent) > this.getPromoterEvidenceRank(mergedEvent)) {
+            this.copyPromoterEvidenceStamp(existingEvent, mergedEvent);
         }
         // Same carry for page-derived ticket-role labels: the two records may
         // have learned the label on different pages, and the identity ladder
@@ -19664,6 +19734,7 @@ class SharedCore {
         // just on the pre-merge scraped record.
         if (typeof newEvent._promoter === 'string' && newEvent._promoter) {
             finalEvent._promoter = newEvent._promoter;
+            this.copyPromoterEvidenceStamp(newEvent, finalEvent);
         }
         if (typeof newEvent._organizer === 'string' && newEvent._organizer) {
             finalEvent._organizer = newEvent._organizer;

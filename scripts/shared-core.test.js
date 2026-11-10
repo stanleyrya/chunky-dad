@@ -30381,3 +30381,185 @@ test('parser promoter, through the crawl: the promoter\'s row and its ticket pag
   assert.ok(refusals.some(line => line.includes('read on https://www.outsavvy.com/event/40021/macrame-workshop did NOT inherit')),
     'a ticket page vouched for by a row of the vendor\'s listing is the vendor\'s, not the promoter\'s');
 });
+
+// ---------------------------------------------------------------------------
+// HOW A PROMOTER STAMP WAS EARNED TRAVELS WITH IT (run 20261109-053706).
+//
+// `_promoter` said "this event is X's" and nothing about why. The bear check
+// read every stamp as the strongest kind: its prompt introduced "Macramé
+// Workshop" (and 264 other strangers' listings) with "This event's own
+// content names the promoter Two Tons of Fun, whom the calendar owner has
+// marked as a trusted bear-scene promoter", and an inherited stamp made each
+// one a curated bear event past the evidence gate. The pass now records the
+// kind — 'organizer' | 'title' (the event's own words), 'url' (an address on
+// the record), 'parser-site' (inherited) — and the readers tell them apart.
+// ---------------------------------------------------------------------------
+test('promoter evidence: the registry pass records how each stamp was earned', () => {
+  const core = createRegistryCore();
+  const parserConfig = { name: 'Bearracuda Events', urls: ['https://bearracuda.com/'] };
+  const start = new Date('2026-08-01T21:00:00.000Z');
+  const byOrganizer = { title: 'HOT TAKE Anniversary', startDate: start, _organizer: 'Bearracuda Events' };
+  const byTitle = { title: 'Bearracuda Portland', startDate: start };
+  const byLink = { title: 'HOT TAKE', startDate: start, ticketUrl: 'https://www.eventbrite.com/o/bearracuda-21867032189' };
+  const byPage = { title: 'UNDERBEAR', startDate: start, _sourcePageUrl: 'https://bearracuda.com/events/' };
+  const inherited = { title: 'TURKEY TAKEOVER', startDate: start, ticketUrl: 'https://dice.fm/event/abc123-turkey-takeover' };
+  captureRegistryLogs(() => core.applyPromoterRegistryMatches([byOrganizer, byTitle, byLink, byPage, inherited], parserConfig, ENFORCE_REGISTRY_CONFIG));
+
+  assert.deepEqual([byOrganizer, byTitle, byLink, byPage, inherited].map(event => [event._promoter, event._promoterEvidence]), [
+    ['Bearracuda', 'organizer'], ['Bearracuda', 'title'], ['Bearracuda', 'url'], ['Bearracuda', 'url'], ['Bearracuda', 'parser-site']
+  ]);
+  assert.equal(core.getEventBearTrust(byTitle, parserConfig).evidence, 'title');
+  assert.equal(core.getEventBearTrust(inherited, parserConfig).evidence, 'parser-site');
+  assert.equal(core.getEventBearTrust({ title: 'x', _promoter: 'Bearracuda' }, parserConfig).evidence, '', 'a stamp with no recorded kind stays what it was');
+  assert.equal(core.getEventBearTrust({ title: 'x' }, parserConfig).evidence, '');
+  assert.equal(core.getEventPromoterEvidence({ _promoter: 'Bearracuda', _promoterEvidence: 'a rumour' }), '', 'only the four known kinds are a kind');
+});
+
+test('bear-check provenance: the sentence says what the match knows — only a title/organizer match "names" the promoter', () => {
+  const core = createRegistryCore([...REGISTRY_FIXTURE, ...TWO_TONS_REGISTRY]);
+  const base = { title: 'Pop Night', _sourcePageUrl: 'https://twotonsoffun.co.uk/', _promoter: 'Two Tons of Fun' };
+  const sentenceFor = (stamp, parserConfig = TWO_TONS_PARSER) => core.buildBearCheckProvenance({ ...base, ...stamp }, parserConfig);
+  const tail = ', whom the calendar owner has marked as a trusted bear-scene promoter.';
+
+  const legacy = sentenceFor({});
+  const named = ' This event\'s own content names the promoter Two Tons of Fun' + tail;
+  assert.ok(legacy.endsWith(named), legacy);
+  assert.equal(sentenceFor({ _promoterEvidence: 'title' }), legacy, 'title evidence: byte-identical to the sentence every stamp used to get');
+  assert.equal(sentenceFor({ _promoterEvidence: 'organizer' }), legacy);
+
+  const byUrl = sentenceFor({ _promoterEvidence: 'url' });
+  const inherited = sentenceFor({ _promoterEvidence: 'parser-site', _promoterEvidencePageUrl: 'https://twotonsoffun.co.uk/' });
+  assert.equal(byUrl, legacy.replace(named, ' This event\'s page address or links belong to the promoter Two Tons of Fun' + tail),
+    'URL evidence: only the lead-in of the promoter sentence differs');
+  assert.equal(inherited, legacy.replace(named, ' This event was found through the website of the promoter Two Tons of Fun' + tail),
+    'inherited: only the lead-in of the promoter sentence differs');
+  for (const sentence of [byUrl, inherited]) {
+    assert.ok(!sentence.includes('own content names'), sentence);
+  }
+
+  // The "usually" tail and the sub-brand label are untouched by the kind.
+  const bearracuda = { name: 'Bearracuda Events', urls: ['https://bearracuda.com/'] };
+  const usuallyUrl = core.buildBearCheckProvenance(
+    { title: 'x', _sourcePageUrl: 'https://bearracuda.com/events/pdx', _promoter: 'Bearracuda', _promoterEvidence: 'url' }, bearracuda);
+  assert.ok(usuallyUrl.endsWith(' This event\'s page address or links belong to the promoter Bearracuda, whom the calendar owner tracks as a usually-bear promoter — judge this event on its own content.'), usuallyUrl);
+  const seriesInherited = core.buildBearCheckProvenance(
+    { title: 'x', _sourcePageUrl: 'https://bearracuda.com/events/pdx', _promoter: 'BEEFWITCH', _promoterEvidence: 'parser-site', _promoterEvidencePageUrl: 'https://bearracuda.com/events/pdx' }, bearracuda);
+  assert.ok(seriesInherited.endsWith(' This event was found through the website of BEEFWITCH, a party series of Coach After Dark, whom the calendar owner has marked as a trusted bear-scene promoter.'), seriesInherited);
+});
+
+test('bear trust: an inherited stamp on a record of another site carries no promoter trust; on the promoter\'s own pages and its rows\' ticket pages it does', () => {
+  const core = createRegistryCore(TWO_TONS_REGISTRY);
+  // A stamp that says "inherited" with no page of its own, on a record read on the vendor's listing.
+  const stranger = { title: 'Macramé Workshop', bar: 'QueerSwap Studio', _sourcePageUrl: 'https://www.outsavvy.com/',
+    _promoter: 'Two Tons of Fun', _promoterEvidence: 'parser-site' };
+  const strangerTrust = core.getEventBearTrust(stranger, TWO_TONS_PARSER);
+  assert.deepEqual(strangerTrust, { trusted: false, promoter: 'Two Tons of Fun', affinity: '', evidence: 'parser-site' });
+  assert.equal(core.isBearCheckCurated(stranger, TWO_TONS_PARSER), false);
+  const strangerSentence = core.buildBearCheckProvenance(stranger, TWO_TONS_PARSER);
+  assert.ok(!strangerSentence.includes('Two Tons of Fun, whom'), `no promoter sentence at all: ${strangerSentence}`);
+  assert.ok(!strangerSentence.includes('trusted bear-scene promoter'), strangerSentence);
+  // An alwaysBear PARSER still trusts by config, and the curated test still stops that trust at the parser's own pages.
+  const alwaysBearParser = { ...TWO_TONS_PARSER, alwaysBear: true };
+  assert.equal(core.getEventBearTrust(stranger, alwaysBearParser).trusted, true);
+  assert.equal(core.getEventBearTrust(stranger, alwaysBearParser).affinity, '');
+  assert.equal(core.isBearCheckCurated(stranger, alwaysBearParser), false);
+
+  // The same kind of stamp, earned on the promoter's own page: the ticket page its row pointed at…
+  const ticketPage = { title: 'The BIGGEST Pop Night in London!', _sourcePageUrl: 'https://link.outsavvy.com/thebiggestpopnight',
+    _promoter: 'Two Tons of Fun', _promoterEvidence: 'parser-site', _promoterEvidencePageUrl: 'https://twotonsoffun.co.uk/' };
+  assert.deepEqual(core.getEventBearTrust(ticketPage, TWO_TONS_PARSER), { trusted: true, promoter: 'Two Tons of Fun', affinity: 'always', evidence: 'parser-site' });
+  assert.equal(core.isBearCheckCurated(ticketPage, TWO_TONS_PARSER), true);
+  // …a row of the promoter's own page, and a record that never had a page.
+  for (const ownPage of ['https://twotonsoffun.co.uk/', '']) {
+    const own = { title: 'Christmas tickets on sale', _promoter: 'Two Tons of Fun', _promoterEvidence: 'parser-site', _promoterEvidencePageUrl: ownPage };
+    assert.equal(core.getEventBearTrust(own, TWO_TONS_PARSER).affinity, 'always', `page "${ownPage}"`);
+    assert.equal(core.isBearCheckCurated(own, TWO_TONS_PARSER), true);
+  }
+  // An event that NAMES the promoter is the promoter's wherever it was read, as before; so is a stamp with no kind.
+  for (const stamp of [{ _promoterEvidence: 'title' }, { _promoterEvidence: 'url' }, {}]) {
+    const named = { title: 'Two Tons of Christmas', _sourcePageUrl: 'https://www.outsavvy.com/', _promoter: 'Two Tons of Fun', ...stamp };
+    assert.equal(core.getEventBearTrust(named, TWO_TONS_PARSER).trusted, true);
+    assert.equal(core.isBearCheckCurated(named, TWO_TONS_PARSER), true);
+  }
+});
+
+test('bear check: an inherited stamp alone keeps no stranger — no config verdict without a judge, and the judge\'s not-bear drops it', async () => {
+  const parserConfig = bearCheckConfig('enforce', { ...TWO_TONS_PARSER });
+  const stranger = () => ({ title: 'Macramé Workshop', bar: 'QueerSwap Studio', startDate: new Date('2026-11-14T11:00:00.000Z'),
+    _sourcePageUrl: 'https://www.outsavvy.com/', _promoter: 'Two Tons of Fun', _promoterEvidence: 'parser-site' });
+  const ticketPage = () => ({ title: 'The BIGGEST Pop Night in London!', bar: 'City of Quebec', startDate: new Date('2026-12-11T21:00:00.000Z'),
+    _sourcePageUrl: 'https://link.outsavvy.com/thebiggestpopnight', _promoter: 'Two Tons of Fun', _promoterEvidence: 'parser-site', _promoterEvidencePageUrl: 'https://twotonsoffun.co.uk/' });
+
+  // No judge: the stranger is not a "config: promoter … bearAffinity=always" bear any more.
+  const down = buildBearVerdictAdapter(null, { fail: true });
+  const noJudgeStranger = await createRegistryCore(TWO_TONS_REGISTRY).computeBearCheckDecision(stranger(), parserConfig, down);
+  assert.equal(noJudgeStranger.result, 'unsure');
+  assert.equal(noJudgeStranger.provenance, 'fallback: ai unavailable');
+  const noJudgeOwn = await createRegistryCore(TWO_TONS_REGISTRY).computeBearCheckDecision(ticketPage(), parserConfig, down);
+  assert.equal(noJudgeOwn.result, 'bear');
+  assert.equal(noJudgeOwn.provenance, 'config: promoter Two Tons of Fun bearAffinity=always');
+
+  // A judge that says not-bear: the stranger is dropped (and collected), the promoter's own night is not.
+  const notBear = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'a craft workshop', eventEvidence: [] });
+  const drops = [];
+  const kept = await createRegistryCore(TWO_TONS_REGISTRY).filterBearEvents([stranger(), ticketPage()], parserConfig, notBear, drops);
+  assert.deepEqual(kept.map(event => event.title), ['The BIGGEST Pop Night in London!']);
+  assert.deepEqual(drops.map(event => event.title), ['Macramé Workshop']);
+  const strangerPrompt = notBear.calls.map(call => String(call.prompt || '')).find(prompt => prompt.includes('Macramé Workshop'));
+  assert.ok(strangerPrompt, 'the stranger was judged');
+  assert.ok(!strangerPrompt.includes('own content names'), 'the prompt does not say the workshop names the promoter');
+  assert.ok(!strangerPrompt.includes('trusted bear-scene promoter'), 'and does not lend it the promoter\'s trust');
+
+  // A judge that says BEAR and quotes nothing: the evidence gate applies to the stranger, not to the promoter's own night.
+  const bareBear = buildBearVerdictAdapter({ verdict: 'bear', reason: 'the promoter is a trusted bear promoter', eventEvidence: [] });
+  const gated = await createRegistryCore(TWO_TONS_REGISTRY).filterBearEvents([stranger(), ticketPage()], parserConfig, bareBear, []);
+  const gatedStranger = gated.find(event => event.title === 'Macramé Workshop');
+  const gatedOwn = gated.find(event => event.title === 'The BIGGEST Pop Night in London!');
+  assert.match(String(gatedStranger && gatedStranger.bearReview), /\[evidence gate: no event-level evidence quoted\]$/);
+  assert.equal(gatedOwn.isBearEvent, true);
+  assert.equal(gatedOwn.bearReview, undefined);
+});
+
+test('bear check: one answer is not reused across two kinds of promoter evidence', async () => {
+  const core = createRegistryCore(TWO_TONS_REGISTRY);
+  const parserConfig = bearCheckConfig('enforce', { ...TWO_TONS_PARSER });
+  const adapter = buildBearVerdictAdapter({ verdict: 'bear', reason: 'pop night for chubs', eventEvidence: ['Pop Night'] });
+  const record = (stamp) => ({ title: 'Pop Night', bar: 'City of Quebec', _sourcePageUrl: 'https://twotonsoffun.co.uk/', _promoter: 'Two Tons of Fun', ...stamp });
+  await core.getAiBearVerdict(record({ _promoterEvidence: 'title' }), parserConfig, adapter);
+  await core.getAiBearVerdict(record({}), parserConfig, adapter);
+  assert.equal(adapter.calls.length, 1, 'title evidence and a stamp with no kind share one prompt, so one answer');
+  await core.getAiBearVerdict(record({ _promoterEvidence: 'url' }), parserConfig, adapter);
+  await core.getAiBearVerdict(record({ _promoterEvidence: 'parser-site', _promoterEvidencePageUrl: 'https://twotonsoffun.co.uk/' }), parserConfig, adapter);
+  assert.equal(adapter.calls.length, 3, 'a different sentence is a different question');
+});
+
+test('promoter evidence carries across merges, and the stronger account of one promoter wins', async () => {
+  const core = createRegistryCore(TWO_TONS_REGISTRY);
+  const start = new Date('2026-12-11T21:00:00.000Z');
+  const record = (title, stamp) => ({ title, bar: 'City of Quebec', startDate: start, _promoter: 'Two Tons of Fun', ...stamp });
+  const inheritedStamp = { _promoterEvidence: 'parser-site', _promoterEvidencePageUrl: 'https://twotonsoffun.co.uk/' };
+
+  // The kept record named the promoter; the incoming one only inherited it.
+  const namedFirst = await core.mergeParsedEvents(record('Two Tons of Christmas', { _promoterEvidence: 'title' }), record('Pop Night', inheritedStamp));
+  assert.equal(namedFirst._promoterEvidence, 'title');
+  assert.equal(namedFirst._promoterEvidencePageUrl, undefined, 'the inheritance page belongs to the inherited stamp only');
+  // The other way round the incoming record's own stamp already stands.
+  const namedSecond = await core.mergeParsedEvents(record('Pop Night', inheritedStamp), record('Two Tons of Christmas', { _promoterEvidence: 'title' }));
+  assert.equal(namedSecond._promoterEvidence, 'title');
+  assert.equal(namedSecond._promoterEvidencePageUrl, undefined);
+  // URL evidence outranks inheritance; a stamp with no kind is the event's own.
+  const urlOverInherited = await core.mergeParsedEvents(record('Pop Night', { _promoterEvidence: 'url' }), record('Pop Night', inheritedStamp));
+  assert.equal(urlOverInherited._promoterEvidence, 'url');
+  const legacyOverUrl = await core.mergeParsedEvents(record('Pop Night', {}), record('Pop Night', { _promoterEvidence: 'url' }));
+  assert.equal(legacyOverUrl._promoterEvidence, undefined);
+
+  // An incoming record with no promoter takes the whole stamp, page included — the trust
+  // question is still answered by the page that earned it, not by the merged record's page.
+  const carried = await core.mergeParsedEvents(
+    record('Pop Night', { ...inheritedStamp, _sourcePageUrl: 'https://twotonsoffun.co.uk/' }),
+    { title: 'Pop Night', bar: 'City of Quebec', startDate: start, _sourcePageUrl: 'https://link.outsavvy.com/thebiggestpopnight' });
+  assert.equal(carried._promoter, 'Two Tons of Fun');
+  assert.equal(carried._promoterEvidence, 'parser-site');
+  assert.equal(carried._promoterEvidencePageUrl, 'https://twotonsoffun.co.uk/');
+  assert.equal(core.getEventBearTrust(carried, TWO_TONS_PARSER).affinity, 'always');
+});
