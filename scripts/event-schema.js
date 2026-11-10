@@ -220,7 +220,12 @@ const EVENT_BUILDER_STATE_KEY_BY_EVENT_KEY = Object.freeze({
 //   derived  — computed from other data at read time (festival windows) and
 //              NEVER written into the record, so a date change in
 //              festivals.json never leaves a stale tag behind
-// `shown` is the site's call: today only leather earns a chip on a card.
+// `shown` is the site's call: which tags earn a chip on a card.
+// `keeps` is the calendar's call (owner, 2026-11-09: "save bear and leather
+// but not a lot of the other events"): an event that is NOT bear stays on
+// the calendar only for a tag that keeps. Every other tag is description —
+// it rides on an event that is there for another reason, and never earns a
+// place by itself. One flag per tag, so the line moves with one edit.
 // ---------------------------------------------------------------------------
 const EVENT_TAGS = Object.freeze({
     // who: 'machine' — keyword hit in the event's own text, confirmed by the
@@ -228,15 +233,15 @@ const EVENT_TAGS = Object.freeze({
     //      'owner'   — only a deck swipe or the verdict store gives it
     //      'derived' — computed at read time, never stored
     // shown: the site draws a chip for it; the rest stay data.
-    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine', hint: 'a leather, gear or harness night, run, contest or club — not a dress-code aside, not gym gear' }),
+    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine', keeps: true, hint: 'a leather, gear or harness night, run, contest or club — not a dress-code aside, not gym gear' }),
     'kink': Object.freeze({ label: 'Kink', shown: true, who: 'machine', hint: 'a kink, fetish, BDSM or play event — not a DJ or show whose name merely sounds kinky' }),
     'rubber': Object.freeze({ label: 'Rubber', shown: true, who: 'machine', hint: 'a rubber or latex event' }),
     'diaper': Object.freeze({ label: 'Diaper', shown: true, who: 'machine', hint: 'a diaper or ABDL event' }),
     'drag': Object.freeze({ label: 'Drag', shown: true, who: 'machine', hint: 'a drag show, brunch, competition or drag-race viewing — not a bar night that merely has a drag host' }),
     'pup': Object.freeze({ label: 'Pup', shown: true, who: 'machine', hint: 'a pup or pet play night, mosh or pup social — not an event that merely welcomes pups' }),
     'underwear': Object.freeze({ label: 'Underwear', shown: true, who: 'machine', hint: 'an underwear, jockstrap or singlet night or party — not a night where underwear is merely allowed' }),
-    'bear-crowd': Object.freeze({ label: 'Bear crowd', shown: false, who: 'owner' }),
-    'bear-run': Object.freeze({ label: 'Bear run', shown: false, who: 'derived' })
+    'bear-crowd': Object.freeze({ label: 'Bear crowd', shown: false, who: 'owner', keeps: true }),
+    'bear-run': Object.freeze({ label: 'Bear run', shown: false, who: 'derived', keeps: true })
 });
 
 // One tag, canonical: lower-case, inner whitespace/underscores → hyphens,
@@ -268,6 +273,11 @@ function normalizeEventTags(value) {
 function isDerivedEventTag(tag) {
     const entry = EVENT_TAGS[normalizeEventTag(tag)];
     return Boolean(entry && entry.who === 'derived');
+}
+
+// The tags that keep a not-bear event on the calendar (EVENT_TAGS `keeps`).
+function keepingEventTags(value) {
+    return normalizeEventTags(value).filter(tag => Boolean(EVENT_TAGS[tag] && EVENT_TAGS[tag].keeps === true));
 }
 
 // The tags a record may carry in its notes: everything but the derived ones.
@@ -306,45 +316,71 @@ function eventTagVenueKey(value) {
 
 // The DERIVED tags of one event against the curated festivals: `bear-run`
 // when the event falls inside a bear run's window and the run reaches it.
-// A festival's `reach` says how far the run spreads:
-//   'city'   — the run takes the town over (Provincetown, Palm Springs,
-//              Guerneville): every event in that city inside the window
-//   'venues' — the run lives at one or two bars in a big city (Urban Bear
-//              in New York): only events at the bars its `venues` list names
-//   absent   — the festival itself renders, nothing around it is tagged
+// How far a run spreads (owner, 2026-11-09: "events during a bear run in a
+// small destination area: bear; in a major city like NYC — not necessarily"):
+//   a DESTINATION town — the run takes the town over (Provincetown, Sitges,
+//              Palm Springs): every event in that city inside the window.
+//              The town says so itself: `destination: true` on its entry in
+//              js/city-config.js, handed in as options.destinations.
+//   a big city — the festival itself renders, nothing around it is tagged.
+// A festival may overrule its town with its own `reach` line (the festivals
+// calendar's notes; tools/process-festivals.js carries it):
+//   'city'   — every event in that city inside the window, destination or not
+//   'venues' — only events at the bars its `venues` list names
+//   'none'   — nothing around it, even in a destination town
 // Day arithmetic: the festival's `end` is INCLUSIVE, and the last night
 // runs past midnight, so the window closes the day after `end`.
-// options: { cityKey } — the page's city when the event carries none.
-function deriveFestivalTags(event, festivals, options = {}) {
-    if (!event || typeof event !== 'object' || !Array.isArray(festivals)) return [];
+// options: { cityKey, timezone, destinations } — the page's city when the
+// event carries none; destinations = the city keys that are destination
+// towns (an array, a Set, or the city-config map itself).
+function isDestinationCity(cityKey, destinations) {
+    const city = String(cityKey || '').trim().toLowerCase();
+    if (!city || !destinations) return false;
+    if (Array.isArray(destinations)) return destinations.some(item => String(item || '').trim().toLowerCase() === city);
+    if (typeof destinations.has === 'function') return destinations.has(city);
+    if (typeof destinations === 'object') {
+        const entry = destinations[city];
+        return entry === true || Boolean(entry && typeof entry === 'object' && entry.destination === true);
+    }
+    return false;
+}
+
+// The bear run an event falls inside, or null. deriveFestivalTags is this,
+// reduced to the tag; the scraper's bear check wants the festival's name.
+function findBearRunForEvent(event, festivals, options = {}) {
+    if (!event || typeof event !== 'object' || !Array.isArray(festivals)) return null;
     const city = String(event.city || options.cityKey || '').trim().toLowerCase();
     const start = event.startDate || event.start || event.date;
     const day = eventTagLocalDay(start, event.timezone || options.timezone || '');
-    if (!day) return [];
+    if (!day || !city) return null;
     const venueKey = eventTagVenueKey(event.bar || event.venue || '');
-    const tags = [];
-    festivals.forEach(festival => {
-        if (!festival || typeof festival !== 'object') return;
-        if (String(festival.category || '').toLowerCase() !== 'bear-run') return;
-        const reach = String(festival.reach || '').toLowerCase();
-        if (reach !== 'city' && reach !== 'venues') return;
+    for (const festival of festivals) {
+        if (!festival || typeof festival !== 'object') continue;
+        if (String(festival.category || '').toLowerCase() !== 'bear-run') continue;
+        const festivalCity = String(festival.cityKey || '').trim().toLowerCase();
+        if (!festivalCity || festivalCity !== city) continue;
+        const stated = String(festival.reach || '').toLowerCase();
+        const reach = stated || (isDestinationCity(festivalCity, options.destinations) ? 'city' : '');
+        if (reach !== 'city' && reach !== 'venues') continue;
         const dates = festival.nextDates && typeof festival.nextDates === 'object' ? festival.nextDates : null;
         const windowStart = dates && /^\d{4}-\d{2}-\d{2}$/.test(String(dates.start || '')) ? String(dates.start) : '';
         const windowEnd = dates && /^\d{4}-\d{2}-\d{2}$/.test(String(dates.end || '')) ? String(dates.end) : windowStart;
-        if (!windowStart || !windowEnd) return;
+        if (!windowStart || !windowEnd) continue;
         const closes = new Date(`${windowEnd}T00:00:00Z`);
         closes.setUTCDate(closes.getUTCDate() + 1);
         const lastDay = closes.toISOString().slice(0, 10);
-        if (day < windowStart || day > lastDay) return;
-        const festivalCity = String(festival.cityKey || '').trim().toLowerCase();
-        if (!festivalCity || !city || festivalCity !== city) return;
+        if (day < windowStart || day > lastDay) continue;
         if (reach === 'venues') {
             const venues = Array.isArray(festival.venues) ? festival.venues.map(eventTagVenueKey).filter(Boolean) : [];
-            if (!venueKey || !venues.includes(venueKey)) return;
+            if (!venueKey || !venues.includes(venueKey)) continue;
         }
-        tags.push('bear-run');
-    });
-    return normalizeEventTags(tags);
+        return festival;
+    }
+    return null;
+}
+
+function deriveFestivalTags(event, festivals, options = {}) {
+    return findBearRunForEvent(event, festivals, options) ? ['bear-run'] : [];
 }
 
 function normalizeAliasKey(key) {
@@ -1140,6 +1176,9 @@ const EventSchema = {
     formatEventTags,
     mergeEventTags,
     isDerivedEventTag,
+    keepingEventTags,
+    isDestinationCity,
+    findBearRunForEvent,
     deriveFestivalTags,
     pickImageForOrientation,
     imageAssetKey,

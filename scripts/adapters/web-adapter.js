@@ -581,6 +581,9 @@ class WebAdapter {
                 statusCode: cached.statusCode || 200,
                 headers: cached.headers || {},
                 fetchedAt: cached.fetchedAt || null,
+                // Where the redirect landed when the page was fetched: the
+                // crawl judges a page by its landing address, live or cached.
+                ...(typeof cached.finalUrl === 'string' && cached.finalUrl ? { finalUrl: cached.finalUrl } : {}),
                 modifiedAtMs: Number.isFinite(stats.mtimeMs) ? stats.mtimeMs : null,
                 cachePath
             };
@@ -662,7 +665,8 @@ class WebAdapter {
     // the installed one (config.browserFetch.executablePath or the macOS
     // default), headless, one page per launch, closed in finally — and the
     // rendered document is the page. Pacing of its own: BROWSER_FETCH_GAP_MS
-    // between launches, at most BROWSER_FETCH_CAP per run, 45 s per page.
+    // between launches, at most BROWSER_FETCH_HOST_CAP per site and
+    // BROWSER_FETCH_CAP per run, 45 s per page.
     // Off with config.browserFetch.mode "off"; absent Chrome = off. The
     // phone's inbox remains the fallback.
     getBrowserFetchConfig() {
@@ -671,18 +675,42 @@ class WebAdapter {
         const executablePath = typeof raw.executablePath === 'string' && raw.executablePath
             ? raw.executablePath
             : (process.env.PUPPETEER_EXECUTABLE_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome');
-        return { mode, executablePath, cap: Number.isFinite(Number(raw.cap)) ? Number(raw.cap) : WebAdapter.BROWSER_FETCH_CAP };
+        return {
+            mode,
+            executablePath,
+            cap: Number.isFinite(Number(raw.cap)) ? Number(raw.cap) : WebAdapter.BROWSER_FETCH_CAP,
+            hostCap: Number.isFinite(Number(raw.hostCap)) ? Number(raw.hostCap) : WebAdapter.BROWSER_FETCH_HOST_CAP
+        };
+    }
+
+    // THE BROWSER BUDGET IS PER SITE. One run-wide count let the first
+    // walled site spend the lot: on 2026-11-08 Folsom Europe's programme
+    // pages took all twenty, and Eagle Wilton Manors and Eagle Portland —
+    // both of which answer only a browser — were "not tried" and read as
+    // 0 and 4 events (102 the next morning, by luck of ordering). So each
+    // site has its own allowance (hostCap); the run-wide cap stays only as
+    // a ceiling on run time.
+    getBrowserFetchHostKey(url) {
+        return (String(url || '').match(/^https?:\/\/([^/?#]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '');
+    }
+
+    getBrowserFetchRefusal(url, settings, state) {
+        if (state.count >= settings.cap) return `${settings.cap} browser fetches already this run`;
+        const hostKey = this.getBrowserFetchHostKey(url);
+        const spent = hostKey && state.hosts ? Number(state.hosts[hostKey]) || 0 : 0;
+        if (hostKey && spent >= settings.hostCap) return `${settings.hostCap} browser fetches of ${hostKey} already this run`;
+        return '';
     }
 
     // Is the browser route open this run? (Mode on, Chrome present, cap
     // not reached.) shared-core asks before skipping a host it is leaving
     // alone for 429: with a browser to hand, the page is tried, not skipped.
-    canFetchWithBrowser() {
+    canFetchWithBrowser(url = '') {
         if (!this.isNode) return false;
         const settings = this.getBrowserFetchConfig();
         if (settings.mode === 'off') return false;
-        const state = this._browserFetch || { count: 0, unavailable: '' };
-        if (state.unavailable || state.count >= settings.cap) return false;
+        const state = this._browserFetch || { count: 0, unavailable: '', hosts: {} };
+        if (state.unavailable || this.getBrowserFetchRefusal(url, settings, state)) return false;
         try { return this.fs.existsSync(settings.executablePath); } catch (_) { return false; }
     }
 
@@ -690,11 +718,13 @@ class WebAdapter {
         if (!this.isNode) return null;
         const settings = this.getBrowserFetchConfig();
         if (settings.mode === 'off') return null;
-        if (!this._browserFetch) this._browserFetch = { count: 0, lastAt: 0, unavailable: '' };
+        if (!this._browserFetch) this._browserFetch = { count: 0, lastAt: 0, unavailable: '', hosts: {} };
         const state = this._browserFetch;
+        if (!state.hosts) state.hosts = {};
         if (state.unavailable) return null;
-        if (state.count >= settings.cap) {
-            console.log(`🧭 BROWSER: ${url} not tried — ${settings.cap} browser fetches already this run`);
+        const refusal = this.getBrowserFetchRefusal(url, settings, state);
+        if (refusal) {
+            console.log(`🧭 BROWSER: ${url} not tried — ${refusal}`);
             return null;
         }
         try {
@@ -706,6 +736,8 @@ class WebAdapter {
             const wait = WebAdapter.BROWSER_FETCH_GAP_MS - (Date.now() - state.lastAt);
             if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
             state.count += 1;
+            const hostKey = this.getBrowserFetchHostKey(url);
+            if (hostKey) state.hosts[hostKey] = (Number(state.hosts[hostKey]) || 0) + 1;
             state.lastAt = Date.now();
             const startedAt = Date.now();
             const puppeteer = await this.loadPuppeteer();
@@ -1125,7 +1157,10 @@ class WebAdapter {
                         parser: value.parser,
                         dryRun: value.dryRun,
                         city: value.city,
-                        calendarSearchRangeDays: value.calendarSearchRangeDays
+                        calendarSearchRangeDays: value.calendarSearchRangeDays,
+                        // Kept for the execute path's re-analysis (see the
+                        // Scriptable adapter): aggregator rules read it.
+                        siteRole: value.siteRole
                     };
                 }
                 if (key === '_existingEvent' && value) {
@@ -1619,6 +1654,11 @@ class WebAdapter {
             // nonce, a page behind a gate it just passed) — no memo, no disk
             // cache on the way in; the answer still refreshes both.
             const wantsFresh = options.fresh === true;
+            // A host this pipeline never requests (SharedCore.FetchPoliteness
+            // .neverRequestReason) is refused here too: the gate is absent
+            // for an adapter built outside a run and bypassed for robots.txt.
+            const neverReason = this.getNeverRequestReason(url);
+            if (neverReason) throw this.buildNeverRequestRefusal(neverReason, url);
             memoKey = this.getRunPageMemoKey(url, options);
             const memoized = wantsFresh ? null : this.readRunPageMemo(memoKey);
             if (memoized) {
@@ -1639,6 +1679,10 @@ class WebAdapter {
                 typeof options.isCacheableResponse !== 'function' || options.isCacheableResponse(responseData) !== false;
             if (canUseCache && !wantsFresh) {
                 const cachedPage = await this.readCachedPage(url, pageCacheConfig);
+                const cachedLandingRefusal = cachedPage && cachedPage.finalUrl ? this.getNeverRequestReason(cachedPage.finalUrl) : '';
+                if (cachedLandingRefusal) {
+                    throw this.buildNeverRequestRefusal(`it redirects to ${cachedPage.finalUrl} — ${cachedLandingRefusal}; the copy cached ${cachedPage.fetchedAt || 'earlier'} is that page, not this one, and is not read`, cachedPage.finalUrl);
+                }
                 if (cachedPage && isCacheableResponse(cachedPage)) {
                     this.logPageCacheHit(url, cachedPage, pageCacheConfig);
                     this.writeRunPageMemo(memoKey, cachedPage);
@@ -1689,10 +1733,33 @@ class WebAdapter {
             const sessionCookie = this.getRunSessionCookieHeader(url);
             if (sessionCookie && !fetchOptions.headers.Cookie && !fetchOptions.headers.cookie) fetchOptions.headers.Cookie = sessionCookie;
             
+            // A plain page GET walks its redirects by hand, so a hop to a
+            // host this pipeline never requests is refused BEFORE it is made
+            // (fetch would have followed it and handed back the other
+            // site's page as this one). Node only: a browser's manual
+            // redirect is opaque.
+            const walksRedirects = this.isNode && !this.config.corsProxy && fetchOptions.method.toUpperCase() === 'GET' && !options.body && options.session !== true;
+            let landedUrl = '';
             const { response, html } = await this.runPolitely(url, options, async () => {
-                const liveResponse = options.session === true
-                    ? await this.fetchWithRunSession(fetchUrl, fetchOptions)
-                    : await fetch(fetchUrl, fetchOptions);
+                let liveResponse;
+                if (options.session === true) {
+                    liveResponse = await this.fetchWithRunSession(fetchUrl, fetchOptions);
+                } else if (walksRedirects) {
+                    const walked = await this.fetchWalkingRedirects(fetchUrl, fetchOptions);
+                    liveResponse = walked.response;
+                    landedUrl = walked.landedUrl;
+                } else {
+                    liveResponse = await fetch(fetchUrl, fetchOptions);
+                }
+                // Where fetch walked the hop itself (a POST, a browser), the
+                // landing is only known afterwards: what a never-requested
+                // host answered is still not the page.
+                const followedTo = !walksRedirects && liveResponse && typeof liveResponse.url === 'string' ? liveResponse.url : '';
+                const followedRefusal = followedTo && followedTo !== url && followedTo !== fetchUrl ? this.getNeverRequestReason(followedTo) : '';
+                if (followedRefusal) {
+                    this.discardResponseBody(liveResponse);
+                    throw this.buildNeverRequestRefusal(`it redirects to ${followedTo} — ${followedRefusal}; what came back is not kept`, followedTo);
+                }
                 if (!liveResponse.ok) {
                     // A refused response still has a body on the wire. Left
                     // unread it stays open, and when the server later closes
@@ -1717,7 +1784,8 @@ class WebAdapter {
                 };
                 // Where a followed redirect landed, when it went somewhere
                 // else (a platform's tracking hop to the organiser's page).
-                if (response.url && response.url !== url && response.url !== fetchUrl) responseData.finalUrl = response.url;
+                const landedAt = walksRedirects ? landedUrl : response.url;
+                if (landedAt && landedAt !== url && landedAt !== fetchUrl) responseData.finalUrl = landedAt;
 
                 if (canUseCache && isCacheableResponse(responseData)) {
                     await this.writeCachedPage(url, responseData, pageCacheConfig);
@@ -1733,6 +1801,16 @@ class WebAdapter {
         } catch (error) {
             if (error?.cachedFailure) {
                 throw error;
+            }
+            // A never-requested host (named, redirected to, or cached from a
+            // redirect): a skip — no browser, no phone inbox, whatever
+            // digits the address in the message happens to carry.
+            if (error && error.politeness && error.politeness.reason === 'never-request') {
+                console.log(`🚦 POLITE: skipped ${url} — ${error.message}`);
+                const skipped = new Error(`HTTP request failed for ${url}: ${error.message}`);
+                skipped.retryable = false;
+                skipped.politeness = error.politeness;
+                throw skipped;
             }
             // A refusal by the politeness gate (parked host, budget, robots)
             // never left the machine: it is a skip, reported as one, and it
@@ -1793,6 +1871,56 @@ class WebAdapter {
             if (error && Number.isFinite(error.statusCode)) wrapped.statusCode = error.statusCode;
             throw wrapped;
         }
+    }
+
+    // Why this URL is never requested ('' when it may be) — the core's one
+    // rule, SharedCore.FetchPoliteness.neverRequestReason.
+    getNeverRequestReason(url) {
+        const core = this.getSharedCoreRef();
+        const gateClass = core && core.FetchPoliteness;
+        return gateClass && typeof gateClass.neverRequestReason === 'function' ? gateClass.neverRequestReason(url) : '';
+    }
+
+    buildNeverRequestRefusal(message, refusedUrl) {
+        const error = new Error(message);
+        error.retryable = false;
+        error.politeness = {
+            reason: 'never-request',
+            host: (String(refusedUrl || '').match(/^https?:\/\/(?:[^/?#@]*@)?([^/?#:]+)/i) || ['', ''])[1].toLowerCase().replace(/^www\./, '')
+        };
+        return error;
+    }
+
+    // A GET with its redirects walked by hand: every hop is asked about
+    // before it is made (getNeverRequestReason), so a link that redirects to
+    // a never-requested host stops at the redirect. Otherwise what fetch
+    // does by itself: 301/302/303/307/308 with a Location, twenty hops,
+    // credentials dropped when the origin changes, the run's cookie session
+    // of the host each hop goes to. Returns { response, landedUrl }.
+    async fetchWalkingRedirects(fetchUrl, fetchOptions) {
+        let currentUrl = fetchUrl;
+        let headers = { ...(fetchOptions.headers || {}) };
+        for (let hop = 0; hop <= 20; hop++) {
+            const response = await fetch(currentUrl, { ...fetchOptions, headers, redirect: 'manual' });
+            const redirected = [301, 302, 303, 307, 308].includes(response.status);
+            const location = redirected && response.headers && typeof response.headers.get === 'function' ? response.headers.get('location') : '';
+            if (!location) return { response, landedUrl: currentUrl };
+            let nextUrl = null;
+            try { nextUrl = new URL(location, currentUrl); } catch (_) { nextUrl = null; }
+            if (!nextUrl || !/^https?:$/.test(nextUrl.protocol)) return { response, landedUrl: currentUrl };
+            this.discardResponseBody(response);
+            const refusal = this.getNeverRequestReason(nextUrl.toString());
+            if (refusal) {
+                throw this.buildNeverRequestRefusal(`it redirects to ${nextUrl.toString()} — ${refusal}; the redirect is not followed`, nextUrl.toString());
+            }
+            if (nextUrl.origin !== new URL(currentUrl).origin) {
+                headers = Object.fromEntries(Object.entries(headers).filter(([name]) => !/^(?:authorization|proxy-authorization|cookie)$/i.test(name)));
+                const sessionCookie = this.getRunSessionCookieHeader(nextUrl.toString());
+                if (sessionCookie) headers.Cookie = sessionCookie;
+            }
+            currentUrl = nextUrl.toString();
+        }
+        throw new Error(`too many redirects from ${fetchUrl}`);
     }
 
     discardResponseBody(response) {
@@ -3263,7 +3391,9 @@ async saveFailureNote(url, error, metadata = {}) {
 }
 
 // Export for both environments
-WebAdapter.BROWSER_FETCH_CAP = 20;
+// Per site, and a ceiling for the whole run (see getBrowserFetchRefusal).
+WebAdapter.BROWSER_FETCH_HOST_CAP = 20;
+WebAdapter.BROWSER_FETCH_CAP = 80;
 WebAdapter.BROWSER_FETCH_GAP_MS = 3000;
 WebAdapter.BROWSER_FETCH_TIMEOUT_MS = 45000;
 // Hard deadline for one browser attempt (launch + navigation + body) and

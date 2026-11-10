@@ -287,8 +287,18 @@ test('browser fetch: a GET answered 429 is tried once more in a real browser; wh
     // Off switch and the per-run cap.
     const off = new WebAdapter({ cities: CITIES, politeness: {}, browserFetch: { mode: 'off' } });
     assert.equal(off.canFetchWithBrowser(), false);
+    // The allowance is per site: one walled site spending its own never
+    // closes the browser to the next one (2026-11-08: Folsom Europe's pages
+    // took a run-wide twenty and two Eagles read as empty).
+    adapter._browserFetch.hosts['dilf.example'] = WebAdapter.BROWSER_FETCH_HOST_CAP;
+    assert.equal(adapter.canFetchWithBrowser('https://www.dilf.example/events/leeds'), false, 'this site has spent its own');
+    assert.equal(adapter.canFetchWithBrowser('https://eagle.example/calendar'), true, 'another site still has its own');
+    console.log = (line) => lines.push(String(line));
+    try { assert.equal(await adapter.fetchWithBrowser('https://dilf.example/events/leeds'), null); } finally { console.log = originalLog; }
+    assert.ok(lines.some((line) => /not tried — \d+ browser fetches of dilf\.example already this run/.test(line)), lines.join('\n'));
     adapter._browserFetch.count = WebAdapter.BROWSER_FETCH_CAP;
-    assert.equal(adapter.canFetchWithBrowser(), false, 'cap reached');
+    assert.equal(adapter.canFetchWithBrowser('https://eagle.example/calendar'), false, 'run ceiling reached');
+    assert.equal(adapter.canFetchWithBrowser(), false, 'run ceiling reached');
   } finally {
     global.fetch = originalFetch;
     shared.restore();
@@ -1839,4 +1849,178 @@ test('published calendar: a city with no file yet is "missing", nothing answerin
     global.fetch = originalFetch;
     console.warn = originalWarn;
   }
+});
+
+// A saved run keeps the source's role on every record (2026-11-09): the
+// phone re-analyzes the saved records before it writes, and the aggregator
+// rules (discovery only; a finished night never proposed as new) read the
+// role from the record's own _parserConfig. Run 20261109-053706 saved
+// Gathr's 174 records with `{ name: 'Gathr' }` and nothing else.
+test('run save: the slimmed parser config keeps the source\'s siteRole and nothing else new', () => {
+  const adapter = new WebAdapter({ cities: CITIES });
+  const saved = adapter.sanitizeEventForRunSave({
+    title: 'Bears Night Out', startDate: '2026-04-05T02:00:00.000Z', _action: 'new',
+    _parserConfig: { name: 'Gathr', parser: 'ai-web', siteRole: 'aggregator', urls: ['https://gathrparty.com/'], ai: { model: 'x' } }
+  });
+  assert.equal(saved._parserConfig.siteRole, 'aggregator');
+  assert.equal(saved._parserConfig.urls, undefined);
+  assert.equal(saved._parserConfig.ai, undefined);
+  const { SharedCore } = require('../shared-core');
+  const roundTripped = JSON.parse(JSON.stringify(saved));
+  assert.equal(SharedCore.prototype.isAggregatorRecord.call({}, roundTripped), true, 'the saved record still reads as an aggregator copy');
+  // A source with no role saves no key at all.
+  const plain = JSON.parse(JSON.stringify(adapter.sanitizeEventForRunSave({ title: 'x', _parserConfig: { name: 'Rockbar', parser: 'ai-web' } })));
+  assert.equal('siteRole' in plain._parserConfig, false);
+});
+
+// ---------------------------------------------------------------------------
+// Hosts this pipeline never requests, and the redirects that lead to them.
+// Run 20261109-053706: blackeagletoronto.com credits a photographer with a
+// link to http://inkedkenny.com/, which redirects to
+// https://www.instagram.com/inkedkennyphoto. fetch followed it; the Instagram
+// profile was cached as inkedkenny.com's home page (finalUrl recorded beside
+// it) and read by the crawl as a link hub. Every test stubs global fetch.
+// ---------------------------------------------------------------------------
+
+function withRedirectingFetch(routes, run) {
+  const originalFetch = global.fetch;
+  const originalLog = console.log;
+  const calls = [];
+  const logs = [];
+  console.log = (message) => logs.push(String(message));
+  global.fetch = async (url, options = {}) => {
+    const headers = options.headers || {};
+    calls.push({ url: String(url), redirect: options.redirect || 'follow', cookie: headers.Cookie || '', authorization: headers.Authorization || '', accept: headers.Accept || '' });
+    const route = routes[String(url)];
+    if (!route) throw new Error(`unexpected request: ${url}`);
+    const pairs = route.location ? { location: route.location } : {};
+    return {
+      ok: !route.location && (route.status || 200) >= 200 && (route.status || 200) < 300,
+      status: route.status || (route.location ? 301 : 200),
+      statusText: route.location ? 'Moved Permanently' : 'OK',
+      url: route.respondsAs || String(url),
+      headers: { get: (name) => pairs[String(name).toLowerCase()] || null, getSetCookie: () => [], entries: () => Object.entries(pairs)[Symbol.iterator]() },
+      text: async () => route.html || ''
+    };
+  };
+  const done = () => { global.fetch = originalFetch; console.log = originalLog; };
+  return Promise.resolve().then(() => run({ calls, logs })).finally(done);
+}
+
+test('redirects: a hop to a host this pipeline never requests is not made — nothing is requested there, nothing is cached, and the skip names both addresses', async () => {
+  const shared = withSharedRoot();
+  try {
+    await withRedirectingFetch({
+      'http://inkedkenny.com/': { location: 'https://www.instagram.com/inkedkennyphoto' }
+    }, async ({ calls, logs }) => {
+      const adapter = makeAdapter({ pageCache: { enabled: true, ttlDays: 3 }, politeness: { minHostGapMs: 0, robots: 'off' } });
+      let refusal = null;
+      try { await adapter.fetchData('http://inkedkenny.com/'); } catch (error) { refusal = error; }
+      assert.ok(refusal, 'the page is not handed over');
+      assert.equal(refusal.message, 'HTTP request failed for http://inkedkenny.com/: it redirects to https://www.instagram.com/inkedkennyphoto — www.instagram.com is a social network, never requested by this pipeline; the redirect is not followed');
+      assert.equal(refusal.retryable, false);
+      assert.deepEqual(refusal.politeness, { reason: 'never-request', host: 'instagram.com' });
+      assert.deepEqual(calls.map(call => [call.url, call.redirect]), [['http://inkedkenny.com/', 'manual']], 'one request, to the link as written, and none to the redirect target');
+      assert.ok(logs.includes('🚦 POLITE: skipped http://inkedkenny.com/ — it redirects to https://www.instagram.com/inkedkennyphoto — www.instagram.com is a social network, never requested by this pipeline; the redirect is not followed'), JSON.stringify(logs));
+      assert.equal(adapter.hasFreshCachedPage('http://inkedkenny.com/'), false, 'nothing is cached as that page');
+      assert.ok(!logs.some(line => line.includes('BROWSER') || line.includes('INBOX')), 'a skip: no browser, no phone inbox');
+    });
+  } finally {
+    shared.restore();
+  }
+});
+
+test('redirects: an ordinary redirect is walked by hand to the page it names, the landing address is kept, and credentials stay with their origin', async () => {
+  await withRedirectingFetch({
+    'https://short.example/go': { status: 302, location: '/go/2' },
+    'https://short.example/go/2': { location: 'https://tickets.example/e/party-1?ref=short' },
+    'https://tickets.example/e/party-1?ref=short': { html: '<html><body>Party One</body></html>' },
+    'https://plain.example/': { html: '<html><body>Plain</body></html>' },
+    'https://gone.example/': { status: 302 }
+  }, async ({ calls }) => {
+    const adapter = makeAdapter();
+    const page = await adapter.fetchData('https://short.example/go', { headers: { Authorization: 'Bearer short-only', Cookie: 'sid=1' } });
+    assert.match(page.html, /Party One/);
+    assert.equal(page.url, 'https://short.example/go', 'filed under the address that was asked for');
+    assert.equal(page.finalUrl, 'https://tickets.example/e/party-1?ref=short', 'and it says where it landed');
+    assert.deepEqual(calls.map(call => [call.url, call.redirect, call.authorization, call.cookie]), [
+      ['https://short.example/go', 'manual', 'Bearer short-only', 'sid=1'],
+      ['https://short.example/go/2', 'manual', 'Bearer short-only', 'sid=1'],
+      ['https://tickets.example/e/party-1?ref=short', 'manual', '', '']
+    ]);
+    assert.ok(calls.every(call => call.accept.includes('text/html')), 'ordinary headers travel with every hop');
+    const plain = await adapter.fetchData('https://plain.example/');
+    assert.equal(plain.finalUrl, undefined, 'no redirect, no landing address');
+    // A 3xx with nowhere to go is the answer it always was.
+    await assert.rejects(() => adapter.fetchData('https://gone.example/'), /HTTP 302/);
+  });
+});
+
+test('redirects: a cached page remembers where it landed; one that landed on a never-requested host is not served as the page it is filed under', async () => {
+  const shared = withSharedRoot();
+  try {
+    await withRedirectingFetch({}, async ({ calls, logs }) => {
+      const adapter = makeAdapter({ pageCache: { enabled: true, ttlDays: 3 } });
+      const writeCached = (url, payload) => {
+        const parts = adapter.getPageCachePathParts(url);
+        const cacheDir = path.join(adapter.getPageCacheConfig().storageDir || adapter.pageStorageDir, parts.hostDir);
+        fs.mkdirSync(cacheDir, { recursive: true });
+        fs.writeFileSync(path.join(cacheDir, parts.fileName), JSON.stringify({ url, statusCode: 200, headers: {}, fetchState: 'downloaded', ...payload }));
+      };
+      // The real cache entry of 2026-11-08, trimmed.
+      writeCached('http://inkedkenny.com/', {
+        fetchedAt: '2026-11-08T11:28:55.852Z',
+        finalUrl: 'https://www.instagram.com/inkedkennyphoto',
+        html: '<html><head><title>Inked Kenny (&#064;inkedkennyphoto) • Instagram photos and videos</title></head><body></body></html>'
+      });
+      writeCached('https://short.example/go', {
+        fetchedAt: '2026-11-08T11:00:00.000Z',
+        finalUrl: 'https://tickets.example/e/party-1',
+        html: '<html><body>Party One</body></html>'
+      });
+
+      await assert.rejects(
+        () => adapter.fetchData('http://inkedkenny.com/'),
+        (error) => error.politeness && error.politeness.reason === 'never-request' && error.retryable === false
+          && error.message === 'HTTP request failed for http://inkedkenny.com/: it redirects to https://www.instagram.com/inkedkennyphoto — www.instagram.com is a social network, never requested by this pipeline; the copy cached 2026-11-08T11:28:55.852Z is that page, not this one, and is not read');
+      assert.ok(logs.some(line => line.startsWith('🚦 POLITE: skipped http://inkedkenny.com/ — it redirects to https://www.instagram.com/inkedkennyphoto')));
+
+      const page = await adapter.fetchData('https://short.example/go');
+      assert.match(page.html, /Party One/);
+      assert.equal(page.finalUrl, 'https://tickets.example/e/party-1', 'a cache hit says where the page landed, like the live read did');
+      assert.equal(calls.length, 0, 'nothing went on the wire');
+    });
+  } finally {
+    shared.restore();
+  }
+});
+
+test('never requested: a social network address is refused before memo, cache, robots.txt and network — with the gate, without it, and when fetch walked the hop itself', async () => {
+  // 2026-11-08: an event's own ticket link, facebook.com/events/…, went to
+  // the crawl without passing URL discovery; the gate requested
+  // facebook.com/robots.txt and only robots refused the page.
+  await withRedirectingFetch({
+    'https://forms.example/submit': { respondsAs: 'https://m.facebook.com/login', html: '<html><body>Log in</body></html>' }
+  }, async ({ calls, logs }) => {
+    const ticketLink = 'https://www.facebook.com/events/1657399302403721/';
+    for (const adapter of [makeAdapter({ politeness: { minHostGapMs: 0, robots: 'enforce' } }), makeAdapter()]) {
+      await assert.rejects(
+        () => adapter.fetchData(ticketLink),
+        (error) => error.politeness && error.politeness.reason === 'never-request' && error.politeness.host === 'facebook.com' && error.retryable === false);
+    }
+    await assert.rejects(() => makeAdapter().fetchData('https://instagram.com/eagle_la/'), /instagram\.com is a social network, never requested by this pipeline/);
+    assert.equal(calls.length, 0, 'no page request and no robots.txt request');
+    assert.ok(logs.includes(`🚦 POLITE: skipped ${ticketLink} — www.facebook.com is a social network, never requested by this pipeline`), JSON.stringify(logs));
+
+    // A POST is followed by fetch itself: the landing is known only after
+    // the fact, and what came back from there is still not kept.
+    await assert.rejects(
+      () => makeAdapter().fetchData('https://forms.example/submit', { method: 'POST', body: 'a=1' }),
+      /it redirects to https:\/\/m\.facebook\.com\/login — m\.facebook\.com is a social network, never requested by this pipeline; what came back is not kept/);
+
+    // Other hosts — a CDN that merely carries the name — are not the network.
+    assert.equal(makeAdapter().getNeverRequestReason('https://scontent-lga3-1.cdninstagram.com/v/t51/x.jpg'), '');
+    assert.equal(makeAdapter().getNeverRequestReason('https://notfacebook.com/events/1'), '');
+    assert.equal(makeAdapter().getNeverRequestReason('https://blackeagletoronto.com/?next=https://www.instagram.com/x'), '');
+  });
 });

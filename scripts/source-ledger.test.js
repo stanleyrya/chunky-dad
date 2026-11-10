@@ -636,3 +636,352 @@ test('buildSourceLedger: a copy an aggregator listed under its own name, folded 
   const siteHealth = health.rows.find((row) => row.host === 'theboatslip.com');
   assert.ok(!(siteHealth.quality && siteHealth.quality.signals || []).some((s) => s.key === 'renamed'), 'the site is not blamed');
 });
+
+// ---------------------------------------------------------------------------
+// new_upcoming: how many of a host's NEW proposals are still to come.
+// Bears of San Francisco, 2026-11-09: the feed's own past list gave 30 rows,
+// every one already over, and the ledger line read upcoming 0 beside
+// proposals.new 30 — the "new" count alone made a site with nothing coming
+// look like the day's busiest. The old fields keep their meaning; the new
+// one sits beside them.
+// ---------------------------------------------------------------------------
+function finishedFeedPayload() {
+  // Record shapes from run 20261109-053706 (trimmed).
+  const row = (title, startDate, slug, extra = {}) => ({
+    title, startDate, bar: 'The Willows', city: 'sf', timezone: 'America/Los_Angeles',
+    website: `https://www.bosf.org/events/${slug}`, _sourcePageUrl: 'https://www.bosf.org/events', isBearEvent: true, ...extra
+  });
+  const brunch = row('BOSF Brunch', '2026-10-10T20:00:00.000Z', 'july-dinner-night-pte22');
+  const contest = row('Bay Area Cub Contest', '2026-09-06T23:00:00.000Z', 'bay-area-cub-contest-1');
+  const dinner = row('BOSF Dinner Night', '2026-11-21T03:00:00.000Z', 'november-dinner-night');
+  const tonight = row('Bear Coffee', '2026-11-09T18:00:00.000Z', 'bear-coffee');
+  return {
+    summary: { runId: '20261109-053706', timestamp: '2026-11-09T10:37:06.000Z' },
+    runContext: { type: 'automated', environment: 'node', trigger: 'scheduled' },
+    parserResults: [{
+      name: 'Bears of San Francisco', totalEvents: 4, durationMs: 800,
+      config: { urls: ['https://www.bosf.org/events'] },
+      urlClassifications: { 'https://www.bosf.org/events': 'multi-event-page' },
+      events: [brunch, contest, dinner, tonight]
+    }],
+    analyzedEvents: [
+      { ...brunch, _action: 'new' },
+      { ...contest, _action: 'new' },
+      { ...dinner, _action: 'new' },
+      { ...tonight, _action: 'new' },
+      // A finished night that only updates its saved record is no proposal to create.
+      { ...row('BOSF Brunch', '2026-11-07T20:00:00.000Z', 'november-brunch'), _action: 'merge' },
+      // A junk title has no ledger key: the host comes from its page, the day from its start.
+      { title: 'View Event →', startDate: '2026-10-01T20:00:00.000Z', timezone: 'America/Los_Angeles', website: 'https://www.bosf.org/events/old', _sourcePageUrl: 'https://www.bosf.org/events', _action: 'new' },
+      { title: 'View Event →', startDate: '2026-12-01T20:00:00.000Z', timezone: 'America/Los_Angeles', website: 'https://www.bosf.org/events/next', _sourcePageUrl: 'https://www.bosf.org/events', _action: 'new' }
+    ],
+    errors: []
+  };
+}
+
+test('new_upcoming: the ledger line says how many of the new proposals are still to come, and every older field keeps its count', () => {
+  const now = new Date('2026-11-09T10:37:06Z');
+  const built = SharedCore.buildSourceLedger(finishedFeedPayload(), { now });
+  const line = built.records.find((r) => r.host === 'bosf.org');
+  assert.deepEqual(line.proposals, { new: 6, merge: 1 }, 'proposals still counts every record the run would create, finished or not');
+  assert.equal(SharedCore.sourceLedgerEventKey({ title: 'View Event →', startDate: '2026-12-01T20:00:00.000Z', timezone: 'America/Los_Angeles' }), '', 'link text has no ledger key');
+  assert.equal(line.new_upcoming, 3, 'the dinner, tonight (today counts, as it does for `upcoming`) and the keyless row dated in December');
+  assert.equal(line.upcoming, 2, 'upcoming is unchanged: the two kept rows dated today or later');
+  assert.equal(line.extracted, 4);
+  assert.equal(line.events, 4);
+  assert.equal(line.quality.runs_since_new, 0, 'the "runs since a new event" counter is not redefined');
+
+  // Nothing new that is still to come: the count is 0, not missing.
+  const allOver = finishedFeedPayload();
+  allOver.analyzedEvents = allOver.analyzedEvents.filter((event) => String(event.startDate) < '2026-11-09');
+  const overLine = SharedCore.buildSourceLedger(allOver, { now }).records.find((r) => r.host === 'bosf.org');
+  assert.deepEqual(overLine.proposals, { new: 3, merge: 1 });
+  assert.equal(overLine.new_upcoming, 0);
+
+  // A host with no proposals at all carries 0 too, and the count survives the ndjson round trip.
+  const quiet = SharedCore.buildSourceLedger(samplePayload(), { now: new Date('2026-10-06T12:00:00Z') });
+  assert.equal(quiet.records.find((r) => r.host === 'quietbar.example').new_upcoming, 0);
+  assert.equal(quiet.records.find((r) => r.host === 'eaglela.com').new_upcoming, 1, 'Beer Bust on 2026-10-11 is still to come on 2026-10-06');
+  const reread = parseSourceLedger(built.records.map((r) => JSON.stringify(r)).join('\n'));
+  assert.equal(reread.find((r) => r.host === 'bosf.org').new_upcoming, 3);
+});
+
+test('new_upcoming: the verdict does not move, the host card shows the count beside Proposals, and a line written before the field reads as before', () => {
+  const { buildHostSummaryHtml } = require('./metrics-sections');
+  const now = new Date('2026-11-09T12:00:00Z');
+  const built = SharedCore.buildSourceLedger(finishedFeedPayload(), { now });
+  const withField = built.records;
+  const withoutField = built.records.map((record) => { const copy = { ...record }; delete copy.new_upcoming; return copy; });
+
+  const health = assessSourceHealth(withField, { now });
+  const oldHealth = assessSourceHealth(withoutField, { now });
+  const row = health.rows.find((r) => r.host === 'bosf.org');
+  const oldRow = oldHealth.rows.find((r) => r.host === 'bosf.org');
+  assert.equal(row.verdict, oldRow.verdict, 'recorded only: the verdict is the same with and without the count');
+  assert.deepEqual(row.quality && row.quality.badges, oldRow.quality && oldRow.quality.badges);
+
+  const card = buildHostSummaryHtml(row);
+  assert.match(card, /6 new \/ 1 merge<span class="metric-subvalue">3 of the new still to come<\/span>/);
+  const oldCard = buildHostSummaryHtml(oldRow);
+  assert.match(oldCard, /6 new \/ 1 merge\s*<\/div>/, 'an older line shows the proposals alone');
+  assert.doesNotMatch(oldCard, /still to come/);
+
+  // No new proposal, nothing to qualify.
+  const noNew = finishedFeedPayload();
+  noNew.analyzedEvents = noNew.analyzedEvents.filter((event) => event._action === 'merge');
+  const mergeOnly = assessSourceHealth(SharedCore.buildSourceLedger(noNew, { now }).records, { now }).rows.find((r) => r.host === 'bosf.org');
+  assert.doesNotMatch(buildHostSummaryHtml(mergeOnly), /still to come/);
+});
+
+// ---------------------------------------------------------------------------
+// Removal cards need POSITIVE proof (2026-11-09). Nine saved Eagle LA
+// events went to the review deck as "gone from the source" because our own
+// read of the site's later months had broken: the check took "we did not
+// see it" for "the site removed it". Three rules, each tested below:
+//   1. a "gone" / "date-moved" card needs proof — the event's own page
+//      answering 404/410, or the audit's listing-covers stamp for that day;
+//   2. a source that was not read this run is not an empty source;
+//   3. a source whose expected events went missing together is degraded and
+//      every card for it is held.
+// ---------------------------------------------------------------------------
+function goneProofFixture() {
+  const { EventSchema } = require('./event-schema');
+  const core = new SharedCore({ la: { timezone: 'America/Los_Angeles', patterns: ['la'] } }, { eventSchema: EventSchema });
+  const slug = (title) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  // 05:00Z is the evening before in Los Angeles: `day` here is the UTC day, the local day is one earlier.
+  const site = (title, day, extra = {}) => ({ title, startDate: `${day}T05:00:00.000Z`, bar: 'Eagle LA', city: 'la', timezone: 'America/Los_Angeles', website: `https://eaglela.com/events/${slug(title)}/`, isBearEvent: true, ...extra });
+  const saved = (uid, title, day, extra = {}) => ({
+    identifier: `cal:${uid}`, title, startDate: new Date(`${day}T05:00:00.000Z`), endDate: new Date(`${day}T09:00:00.000Z`), location: '34.0, -118.0',
+    notes: `bar: Eagle LA\naddress: 4219 Santa Monica Blvd\nwebsite: https://eaglela.com/events/${slug(title)}/`, url: '', isAllDay: false, ...extra
+  });
+  const parser = (events, extra = {}) => ({ name: 'Eagle LA', totalEvents: events.length, config: { name: 'Eagle LA', urls: ['https://eaglela.com/calendar/'] }, urlClassifications: { 'https://eaglela.com/calendar/': 'multi-event-page' }, events, ...extra });
+  return { core, site, saved, parser, slug };
+}
+
+test('buildGoneFromSourceCandidates: not seeing a saved event is not proof the site removed it — a "gone" card needs its own page answering 404/410 or a fresh listing-covers stamp for THAT day; otherwise it is held with the reason (Eagle LA, 2026-11-09)', () => {
+  const { core, site, saved, parser } = goneProofFixture();
+  const results = { parserResults: [parser([site('BLUF LA', '2026-11-21'), site('MEAT RACK', '2026-11-15'), site('LOST PUPPY', '2026-12-19')])], analyzedEvents: [] };
+  const savedByCity = { la: { events: [saved('NYE', 'EAGLE LA NEW YEARS BASH!!', '2026-12-05')] } };
+  const first = core.buildGoneFromSourceCandidates(results, savedByCity, { now: new Date('2026-11-08T13:00:00Z') });
+  assert.equal(first.candidates.length, 0);
+  assert.deepEqual(first.held, [], 'one miss: no card was due, nothing to hold');
+  assert.equal(first.state.la.NYE.misses, 1);
+  const now = new Date('2026-11-09T13:00:00Z');
+  const lostSeries = (still) => ({ hosts: { 'eaglela.com': { lost: { 'eagle la new years bash': { title: 'EAGLE LA NEW YEARS BASH!!', bear: true, seen: 4, days: { '2026-12-04': '20261012-214806' }, ...(still ? { still } : {}) } } } }, gone: first.state });
+  const run = (previousUpcoming, coreToUse = core) => coreToUse.buildGoneFromSourceCandidates(results, savedByCity, { now, previousUpcoming });
+
+  // No check of the listing at all.
+  const bare = run({ hosts: {}, gone: first.state });
+  assert.equal(bare.candidates.length, 0, 'the second miss alone is no longer a card');
+  assert.equal(bare.summary.heldNoProof, 1);
+  assert.equal(bare.held.length, 1);
+  assert.deepEqual({ uid: bare.held[0].uid, reason: bare.held[0].reason, day: bare.held[0].day, misses: bare.held[0].misses, host: bare.held[0].host, source: bare.held[0].source },
+    { uid: 'NYE', reason: 'no-proof', day: '2026-12-04', misses: 2, host: 'eaglela.com', source: 'Eagle LA' });
+  assert.match(bare.held[0].detail, /nothing proves the site removed it .* no check of the listing yet/);
+  assert.equal(bare.state.la.NYE.misses, 2, 'the streak still counts — only the card waits');
+
+  // The stamp every one of the nine carried: "site-removed", judged off the wrong month, no proof.
+  const guess = run(lostSeries({ verdict: 'site-removed', at: '2026-11-09T12:40:00.000Z' }));
+  assert.equal(guess.candidates.length, 0);
+  assert.match(guess.held[0].detail, /an older "site removed" verdict that rests on no proof for that day/);
+  // The new audit's answer for that page: unknown.
+  const unknown = run(lostSeries({ verdict: 'unknown', at: '2026-11-09T12:40:00.000Z' }));
+  assert.equal(unknown.candidates.length, 0);
+  assert.match(unknown.held[0].detail, /the listing check says "unknown"/);
+
+  // Proof 2: the listing as read covers the day and does not carry it.
+  const proven = run(lostSeries({ verdict: 'site-removed', at: '2026-11-09T12:40:00.000Z', proof: 'listing-covers', days: ['2026-12-04'] }));
+  assert.equal(proven.candidates.length, 1);
+  assert.deepEqual(proven.held, []);
+  assert.equal(proven.candidates[0].reason, 'gone');
+  assert.equal(proven.candidates[0].proof.kind, 'listing-covers');
+  assert.match(proven.candidates[0].proof.detail, /listing covers 2026-12-04 and does not carry it \(checked 2026-11-09\)/);
+  assert.deepEqual(proven.candidates[0].deepCheck, { verdict: 'site-removed', at: '2026-11-09T12:40:00.000Z', proof: 'listing-covers', proven: true });
+  // A weekly series: vouched for on its November nights, unknown as a whole — the day vouched for still counts.
+  assert.equal(run(lostSeries({ verdict: 'unknown', at: '2026-11-09T12:40:00.000Z', proof: 'listing-covers', days: ['2026-12-04'] })).candidates.length, 1);
+  // …the proof vouches for another day: held.
+  const otherDay = run(lostSeries({ verdict: 'site-removed', at: '2026-11-09T12:40:00.000Z', proof: 'listing-covers', days: ['2026-11-27'] }));
+  assert.equal(otherDay.candidates.length, 0);
+  assert.equal(otherDay.held[0].reason, 'no-proof');
+  // …the proof is old (the page may have changed since): held.
+  assert.equal(SharedCore.GONE_PROOF_MAX_AGE_DAYS, 14);
+  assert.equal(run(lostSeries({ verdict: 'site-removed', at: '2026-10-20T12:40:00.000Z', proof: 'listing-covers', days: ['2026-12-04'] })).candidates.length, 0);
+  // …the ledger no longer counts that day lost (the run read it again since): held.
+  const returned = lostSeries({ verdict: 'site-removed', at: '2026-11-09T12:40:00.000Z', proof: 'listing-covers', days: ['2026-12-04'] });
+  returned.hosts['eaglela.com'].lost['eagle la new years bash'].days = { '2026-12-11': '20261012-214806' };
+  assert.equal(run(returned).candidates.length, 0);
+  // "Still listed" stays what it was: our read's miss, logged, never a card and not a hold.
+  const listed = run(lostSeries({ verdict: 'still-listed', at: '2026-11-09T12:40:00.000Z' }));
+  assert.equal(listed.candidates.length, 0);
+  assert.deepEqual(listed.held, []);
+  assert.equal(listed.summary.identityMisses, 1);
+
+  // Proof 1: the event's own page answers "not found" (the dead-end store, no fetch).
+  const { core: withStore } = goneProofFixture();
+  const pageUrl = 'https://eaglela.com/events/eagle-la-new-years-bash/';
+  withStore.deadLinkKnowledge = { store: { [withStore.getUrlDedupeKey(pageUrl)]: { lastStatus: 404, lastSeen: '2026-11-09T12:00:00.000Z', misses: 1 } }, retryDays: 0 };
+  const pageGone = run({ hosts: {}, gone: first.state }, withStore);
+  assert.equal(pageGone.candidates.length, 1);
+  assert.equal(pageGone.candidates[0].proof.kind, 'page-gone');
+  assert.equal(pageGone.candidates[0].proof.status, 404);
+  assert.match(pageGone.candidates[0].proof.detail, /its own page answers HTTP 404/);
+  // A wall is not an absence: 403 proves nothing.
+  const { core: walled } = goneProofFixture();
+  walled.deadLinkKnowledge = { store: { [walled.getUrlDedupeKey(pageUrl)]: { lastStatus: 403, lastSeen: '2026-11-09T12:00:00.000Z', misses: 3 } }, retryDays: 0 };
+  assert.equal(run({ hosts: {}, gone: first.state }, walled).candidates.length, 0);
+  // The listing url itself answering 404 says nothing about one event.
+  const { core: listingDead, saved: savedAgain } = goneProofFixture();
+  listingDead.deadLinkKnowledge = { store: { [listingDead.getUrlDedupeKey('https://eaglela.com/calendar/')]: { lastStatus: 404, lastSeen: '2026-11-09T12:00:00.000Z', misses: 1 } }, retryDays: 0 };
+  const pointsAtListing = { la: { events: [savedAgain('NYE', 'EAGLE LA NEW YEARS BASH!!', '2026-12-05', { notes: 'bar: Eagle LA\naddress: 4219 Santa Monica Blvd\nwebsite: https://eaglela.com/calendar/' })] } };
+  assert.equal(listingDead.buildGoneFromSourceCandidates(results, pointsAtListing, { now, previousUpcoming: { hosts: {}, gone: first.state } }).candidates.length, 0);
+});
+
+test('a source that was not read is not an empty source: the ledger line says not_read (status and counts untouched, nothing confirmed lost, nothing vanished) and no gone card is raised for a site whose configured url the run could not read', () => {
+  const { core, site, saved, parser } = goneProofFixture();
+  const events = [site('BLUF LA', '2026-11-21'), site('MEAT RACK', '2026-11-15'), site('LOST PUPPY', '2026-12-19'), site('CUBSCOUT', '2026-12-05')];
+  const payload = (runId, day, parsers) => ({ summary: { runId, timestamp: `${day}T13:00:00.000Z` }, runContext: { environment: 'node' }, parserResults: parsers, analyzedEvents: [], bearDroppedEvents: [], errors: [] });
+  let upcoming = null;
+  [['r1', '2026-11-06'], ['r2', '2026-11-07']].forEach(([runId, day]) => { upcoming = SharedCore.buildSourceLedger(payload(runId, day, [parser(events)]), { runId, previousUpcoming: upcoming, now: new Date(`${day}T13:00:00Z`) }).upcoming; });
+  // Run 3: the calendar url was refused (the browser allowance was spent) — the parser hands back nothing.
+  const unread = parser([], { unreadUrls: [{ url: 'https://eaglela.com/calendar/', reason: 'browser budget spent for this run' }], urlClassifications: {} });
+  const third = SharedCore.buildSourceLedger(payload('r3', '2026-11-08', [unread]), { runId: 'r3', previousUpcoming: upcoming, now: new Date('2026-11-08T13:00:00Z') });
+  const line = third.records.find((record) => record.host === 'eaglela.com');
+  assert.deepEqual(line.not_read, [{ url: 'https://eaglela.com/calendar/', reason: 'browser budget spent for this run' }]);
+  assert.equal(line.status, 'empty', 'the old field keeps its old computation; not_read is what the health verdict reads (assessSourceHealth: not stopped, not empty)');
+  assert.equal(line.suspected, 0, 'nothing is suspected missing off a read that did not happen');
+  assert.deepEqual(line.lost, []);
+  assert.deepEqual(line.vanished, [], 'and nothing "vanished"');
+  assert.equal(line.collapse, undefined);
+  assert.equal(line.extracted, 0, 'the count is what was extracted — the new field is what says why');
+  assert.deepEqual(third.upcoming.hosts['eaglela.com'].history.map((entry) => entry.run_id), ['r1', 'r2'], 'the unread run is not one of the host\'s reads');
+  const fourth = SharedCore.buildSourceLedger(payload('r4', '2026-11-09', [unread]), { runId: 'r4', previousUpcoming: third.upcoming, now: new Date('2026-11-09T13:00:00Z') });
+  assert.deepEqual(fourth.records.find((record) => record.host === 'eaglela.com').lost, [], 'two unread runs confirm nothing');
+  // A line of a run that read the source carries no such field.
+  assert.equal(SharedCore.buildSourceLedger(payload('r3', '2026-11-08', [parser(events)]), { runId: 'r3', previousUpcoming: upcoming, now: new Date('2026-11-08T13:00:00Z') }).records[0].not_read, undefined);
+
+  // The gone check: the site's source was not read — no miss counted, no card, and (when one was due) a visible hold.
+  const savedByCity = { la: { events: [saved('CUB', 'CUBSCOUT', '2026-12-05')] } };
+  const prior = { la: { CUB: { title: 'CUBSCOUT', day: '2026-12-04', misses: 1, host: 'eaglela.com' } } };
+  const gone = core.buildGoneFromSourceCandidates({ parserResults: [unread], analyzedEvents: [] }, savedByCity, { now: new Date('2026-11-09T13:00:00Z'), previousUpcoming: { hosts: {}, gone: prior } });
+  assert.equal(gone.candidates.length, 0);
+  assert.equal(gone.summary.notRead, 1);
+  assert.equal(gone.state.la.CUB.misses, 1, 'the streak keeps its place: neither counted nor cleared');
+  assert.equal(gone.held.length, 1);
+  assert.equal(gone.held[0].reason, 'not-read');
+  assert.match(gone.held[0].detail, /Eagle LA was not read this run \(https:\/\/eaglela\.com\/calendar\/ — browser budget spent for this run\)/);
+  // No streak yet: nothing to hold, and none is started.
+  const fresh = core.buildGoneFromSourceCandidates({ parserResults: [unread], analyzedEvents: [] }, savedByCity, { now: new Date('2026-11-09T13:00:00Z') });
+  assert.deepEqual(fresh.held, []);
+  assert.equal(fresh.state.la, undefined);
+  // One url of two unread, the other read and showing other nights: still no card — the unread url may be the one that lists it.
+  const half = { name: 'Eagle LA', totalEvents: 2, config: { name: 'Eagle LA', urls: ['https://eaglela.com/calendar/', 'https://eaglela.com/events/'] }, urlClassifications: { 'https://eaglela.com/events/': 'multi-event-page' },
+    events: [site('BLUF LA', '2026-11-21'), site('LOST PUPPY', '2026-12-19')], unreadUrls: [{ url: 'https://eaglela.com/calendar/', reason: 'HTTP 503' }] };
+  const partial = core.buildGoneFromSourceCandidates({ parserResults: [half], analyzedEvents: [] }, savedByCity, { now: new Date('2026-11-09T13:00:00Z'), previousUpcoming: { hosts: {}, gone: prior } });
+  assert.equal(partial.candidates.length, 0);
+  assert.equal(partial.held[0].reason, 'not-read');
+  assert.match(partial.held[0].detail, /HTTP 503/);
+});
+
+test('assessSourceCollapse: THE threshold — 5 or more expected future event-days missing together and at least 10% of what the source should show; proven and set-aside days do not count, days read again or passed clear it', () => {
+  assert.deepEqual(SharedCore.SOURCE_COLLAPSE_RULE, { minEvents: 5, share: 0.10 });
+  const daysOf = (n, run, month = '12') => Object.fromEntries(Array.from({ length: n }, (_, i) => [`2026-${month}-${String(i + 1).padStart(2, '0')}`, run]));
+  const lossOf = (series, misses = {}) => ({ history: [], misses, lost: series });
+  // Eagle LA, run 20261012-180543: 12 nights gone together against 53 still shown.
+  assert.deepEqual(SharedCore.assessSourceCollapse(lossOf({ a: { title: 'A', days: daysOf(12, 'r5') } }), 53, '2026-10-12'), { missing: 12, upcoming: 53, share: 0.18, since: 'r5' });
+  assert.equal(SharedCore.assessSourceCollapse(lossOf({ a: { title: 'A', days: daysOf(4, 'r5') } }), 3, '2026-10-12'), null, 'four is under the floor, whatever the share');
+  assert.deepEqual(SharedCore.assessSourceCollapse(lossOf({ a: { title: 'A', days: daysOf(5, 'r5') } }), 45, '2026-10-12'), { missing: 5, upcoming: 45, share: 0.1, since: 'r5' }, '5 of 50 is the edge');
+  assert.equal(SharedCore.assessSourceCollapse(lossOf({ a: { title: 'A', days: daysOf(5, 'r5') } }), 46, '2026-10-12'), null, '5 of 51 is under 10%');
+  // Together = confirmed by one run. Six nights that dropped out one a week are ordinary churn.
+  const trickle = { a: { title: 'A', days: { '2026-12-01': 'r1', '2026-12-02': 'r2', '2026-12-03': 'r3' } }, b: { title: 'B', days: { '2026-12-04': 'r4', '2026-12-05': 'r5', '2026-12-06': 'r6' } } };
+  assert.equal(SharedCore.assessSourceCollapse(lossOf(trickle), 10, '2026-10-12'), null);
+  // …across titles, one run: a batch.
+  const across = { a: { title: 'A', days: daysOf(3, 'r5') }, b: { title: 'B', days: daysOf(3, 'r5', '11') } };
+  assert.equal(SharedCore.assessSourceCollapse(lossOf(across), 10, '2026-10-12').missing, 6);
+  // First misses of this run, not yet confirmed: a batch with no run id (the day it starts).
+  const pending = Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`party ${i}|2026-12-${String(i + 10)}`, 1]));
+  assert.deepEqual(SharedCore.assessSourceCollapse(lossOf({}, pending), 20, '2026-10-12'), { missing: 7, upcoming: 20, share: 0.26, since: '' });
+  // Days that have passed no longer count.
+  assert.equal(SharedCore.assessSourceCollapse(lossOf({ a: { title: 'A', days: daysOf(12, 'r5', '10') } }), 20, '2026-10-09'), null, '12 lost days, 4 of them still ahead');
+  // Only PROOF takes a day out: the listing covers it without the title, or the run holds it under another name.
+  const proven = { a: { title: 'A', days: daysOf(6, 'r5'), still: { verdict: 'site-removed', at: 'x', proof: 'listing-covers', days: Object.keys(daysOf(6, 'r5')) } } };
+  assert.equal(SharedCore.assessSourceCollapse(lossOf(proven), 20, '2026-10-12'), null);
+  const partly = { a: { title: 'A', days: daysOf(6, 'r5'), still: { verdict: 'unknown', at: 'x', proof: 'listing-covers', days: ['2026-12-01'] } } };
+  assert.equal(SharedCore.assessSourceCollapse(lossOf(partly), 20, '2026-10-12').missing, 5);
+  assert.equal(SharedCore.assessSourceCollapse(lossOf({ a: { title: 'A', days: daysOf(6, 'r5'), still: { verdict: 'set-aside', at: 'x' } } }), 20, '2026-10-12'), null);
+  ['still-listed', 'unknown', 'site-removed'].forEach((verdict) => {
+    assert.equal(SharedCore.assessSourceCollapse(lossOf({ a: { title: 'A', days: daysOf(6, 'r5'), still: { verdict, at: 'x' } } }), 20, '2026-10-12').missing, 6, `"${verdict}" with no proof is still our read's problem`);
+  });
+  assert.equal(SharedCore.assessSourceCollapse(null, 20, '2026-10-12'), null);
+});
+
+test('a collapse is our problem until proven otherwise: when a source\'s expected events go missing together the ledger line says collapse, and every gone card for that source is held with the reason — the day it starts and while it lasts (Eagle LA, run 20261012-180543: 12 nights against 53)', () => {
+  const { core, site, saved, parser } = goneProofFixture();
+  const pad = (n) => String(n).padStart(2, '0');
+  // 53 nights the run keeps reading (November, January, the last on 2027-01-30) and 12 December parties it stops reading.
+  const steady = Array.from({ length: 53 }, (_, i) => site(`Steady Night ${i + 1}`, i < 30 ? `2026-11-${pad(i + 1)}` : (i < 52 ? `2027-01-${pad(i - 29)}` : '2027-01-31')));
+  const december = Array.from({ length: 12 }, (_, i) => site(`December Party ${i + 1}`, `2026-12-${pad(i + 10)}`));
+  const payload = (runId, day, events, extra = {}) => ({ summary: { runId, timestamp: `${day}T13:00:00.000Z` }, runContext: { environment: 'node' }, parserResults: [parser(events)], analyzedEvents: [], bearDroppedEvents: [], errors: [], ...extra });
+  let upcoming = null;
+  [['r1', '2026-10-06'], ['r2', '2026-10-07']].forEach(([runId, day]) => { upcoming = SharedCore.buildSourceLedger(payload(runId, day, steady.concat(december)), { runId, previousUpcoming: upcoming, now: new Date(`${day}T13:00:00Z`) }).upcoming; });
+  const savedByCity = { la: { events: [saved('D1', 'December Party 1', '2026-12-10'), saved('D2', 'December Party 2', '2026-12-11')] } };
+  const prior = { la: { D1: { title: 'December Party 1', day: '2026-12-09', misses: 1, host: 'eaglela.com' } } };
+
+  // The day it starts: the December nights are first misses of this very run.
+  const third = payload('r3', '2026-10-08', steady);
+  const now3 = new Date('2026-10-08T13:00:00Z');
+  const gone3 = core.buildGoneFromSourceCandidates(third, savedByCity, { now: now3, previousUpcoming: { ...upcoming, gone: prior } });
+  assert.equal(gone3.candidates.length, 0);
+  assert.equal(gone3.summary.suppressedCollapse, 2);
+  assert.equal(gone3.held.length, 1, 'D1 was due a card this run; D2 had no streak yet');
+  assert.equal(gone3.held[0].uid, 'D1');
+  assert.equal(gone3.held[0].reason, 'collapse');
+  assert.match(gone3.held[0].detail, /Eagle LA is degraded: 12 expected future event\(s\) went missing together \(this run\) against \d+ still shown/);
+  assert.equal(gone3.state.la.D1.misses, 1, 'frozen');
+  assert.equal(gone3.state.la.D2, undefined, 'no streak starts while the source is degraded');
+  const ledger3 = SharedCore.buildSourceLedger({ ...third, goneFromSource: gone3 }, { runId: 'r3', previousUpcoming: { ...upcoming, gone: prior }, now: now3 });
+  const line3 = ledger3.records.find((record) => record.host === 'eaglela.com');
+  assert.equal(line3.collapse.missing, 12);
+  assert.equal(line3.collapse.since, '');
+  assert.ok(line3.collapse.share >= 0.10, String(line3.collapse.share));
+  assert.equal(line3.status, 'ok', 'status keeps its meaning — the collapse is its own field');
+
+  // While it lasts: confirmed on the next run, still held three weeks later.
+  const ledger4 = SharedCore.buildSourceLedger({ ...payload('r4', '2026-10-09', steady), goneFromSource: gone3 }, { runId: 'r4', previousUpcoming: ledger3.upcoming, now: new Date('2026-10-09T13:00:00Z') });
+  assert.deepEqual({ missing: ledger4.records[0].collapse.missing, since: ledger4.records[0].collapse.since }, { missing: 12, since: 'r4' });
+  const later = payload('r30', '2026-10-30', steady);
+  const gone30 = core.buildGoneFromSourceCandidates(later, savedByCity, { now: new Date('2026-10-30T13:00:00Z'), previousUpcoming: ledger4.upcoming });
+  assert.equal(gone30.candidates.length, 0);
+  assert.equal(gone30.held.length, 1);
+  assert.match(gone30.held[0].detail, /went missing together \(run r4\)/);
+
+  // Read again: the collapse clears by itself and the events are simply seen.
+  const back = payload('r31', '2026-10-31', steady.concat(december), { analyzedEvents: [{ ...december[0], _action: 'merge', _existingEvent: { identifier: 'cal:D1' } }, { ...december[1], _action: 'merge', _existingEvent: { identifier: 'cal:D2' } }] });
+  const gone31 = core.buildGoneFromSourceCandidates(back, savedByCity, { now: new Date('2026-10-31T13:00:00Z'), previousUpcoming: ledger4.upcoming });
+  assert.equal(gone31.summary.suppressedCollapse, 0);
+  assert.equal(gone31.summary.seen, 2);
+  assert.equal(SharedCore.buildSourceLedger(back, { runId: 'r31', previousUpcoming: ledger4.upcoming, now: new Date('2026-10-31T13:00:00Z') }).records[0].collapse, undefined);
+
+  // Two nights dropping out is not a collapse: the proof rule decides (held for no proof, not for collapse).
+  const two = payload('r3', '2026-10-08', steady.concat(december.slice(2)));
+  const goneTwo = core.buildGoneFromSourceCandidates(two, savedByCity, { now: now3, previousUpcoming: { ...upcoming, gone: prior } });
+  assert.equal(goneTwo.summary.suppressedCollapse, 0);
+  assert.equal(goneTwo.held[0].reason, 'no-proof');
+});
+
+test('advanceSourceLoss: the audit\'s proof and the days it vouches for ride with the series; the list item says still_proof — a "site-removed" without it is a guess from before the rule', () => {
+  const lostState = (still) => ({ history: [], misses: {}, lost: { 'calf night': { title: 'CALF NIGHT', bear: true, seen: 3, days: { '2026-11-20': 'r4' }, still } } });
+  const run = { runId: 'r5', status: 'ok', todayKey: '2026-11-09', extracted: 3, upcomingKeys: {} };
+  const proven = SharedCore.advanceSourceLoss(lostState({ verdict: 'site-removed', at: '2026-11-09T12:00:00.000Z', proof: 'listing-covers', days: ['2026-11-20'] }), run);
+  assert.deepEqual(proven.state.lost['calf night'].still, { verdict: 'site-removed', at: '2026-11-09T12:00:00.000Z', proof: 'listing-covers', days: ['2026-11-20'] });
+  assert.equal(proven.lost[0].still, 'site-removed');
+  assert.equal(proven.lost[0].still_proof, 'listing-covers');
+  const guess = SharedCore.advanceSourceLoss(lostState({ verdict: 'site-removed', at: '2026-10-12T12:00:00.000Z' }), run);
+  assert.deepEqual(guess.state.lost['calf night'].still, { verdict: 'site-removed', at: '2026-10-12T12:00:00.000Z' });
+  assert.equal(guess.lost[0].still_proof, undefined);
+  // A run that did not read the source ('not-read') neither confirms nor clears.
+  const state = { history: [{ run_id: 'r1', upcoming: { 'a|x|2026-12-01': { title: 'A', day: '2026-12-01' } } }, { run_id: 'r2', upcoming: { 'a|x|2026-12-01': { title: 'A', day: '2026-12-01' } } }], misses: {}, lost: {} };
+  const unread = SharedCore.advanceSourceLoss(state, { runId: 'r3', status: 'not-read', todayKey: '2026-11-09', extracted: 0, upcomingKeys: {} });
+  assert.equal(unread.suspected, 0);
+  assert.equal(unread.state.history.length, 2);
+  assert.deepEqual(unread.state.misses, {});
+});

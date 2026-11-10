@@ -9,6 +9,13 @@
 // js/city-activity.data.js). A new city needs a calendar, nothing else.
 // `order` pins a city to the front of the homepage strip (lower first);
 // cities without one keep this file's order after the pinned ones.
+// `destination: true` marks a small destination town a bear run takes over
+// (owner, 2026-11-09: "events during a bear run in a small destination area:
+// bear; in a major city like NYC — not necessarily bear"). Inside a bear
+// run's window (data/festivals.json, category bear-run) every event in such
+// a town wears `bear-run` and the scraper keeps it; a big city gets nothing.
+// A fact about the PLACE, so it lives here — data/festivals.json is rebuilt
+// from the festivals calendar and would drop it.
 const CITY_CONFIG = {
     'nyc': {
         name: 'New York',
@@ -94,6 +101,7 @@ const CITY_CONFIG = {
     },
     'palm-springs': {
         name: 'Palm Springs',
+        destination: true,
         emoji: '🌴',
         tagline: 'Desert bear oasis',
         calendarId: '80d296cd29b21c9b88e6b01123d2f9bd9c1776b702a51cc7a60767e44f177e7b@group.calendar.google.com',
@@ -194,6 +202,7 @@ const CITY_CONFIG = {
     },
     'sitges': {
         name: 'Sitges',
+        destination: true,
         emoji: '🏖️',
         tagline: 'Mediterranean bear paradise',
         calendarId: 'b06b7387f73b91fad4d0dd4bd4413acd62424356482d7e59092d4a61c5803088@group.calendar.google.com',
@@ -227,6 +236,7 @@ const CITY_CONFIG = {
     },
     'ptown': {
         name: 'Provincetown',
+        destination: true,
         emoji: '⚓',
         tagline: 'Cape Cod bear paradise',
         aliases: ['provincetown'],
@@ -273,6 +283,7 @@ const CITY_CONFIG = {
     },
     'pv': {
         name: 'Puerto Vallarta',
+        destination: true,
         emoji: '🏝️',
         tagline: 'Pacific coast bear getaway',
         aliases: ['puerto-vallarta'],
@@ -392,6 +403,7 @@ const CITY_CONFIG = {
     },
     'fire-island': {
         name: 'Fire Island',
+        destination: true,
         emoji: '⛴️',
         tagline: 'Island bear summer',
         calendarId: '4bdd2af68690b471c85756b4ca4df2834b281c5d5b73e182ae00afd23d812168@group.calendar.google.com',
@@ -735,6 +747,7 @@ const CITY_CONFIG = {
     },
     'gran-canaria': {
         name: 'Gran Canaria',
+        destination: true,
         emoji: '🏝️',
         tagline: 'Canary Island bears',
         calendarId: '55e998d518d1c58d452dbb3aa6631c8d8864c95300a25dbda426dc2fac26b231@group.calendar.google.com',

@@ -2480,6 +2480,21 @@ test('weekday pinning falls back to the source content when evidence lacks a wee
   assert.equal(parser.resolveWeekdayPinnedYear('2025-01-17', 'JANUARY 17TH', ambiguous), null);
   // Date-like text between the weekday and the token breaks adjacency.
   assert.equal(parser.resolveWeekdayPinnedYear('2025-01-17', 'JANUARY 17TH', 'SATURDAY DEC 13\nJANUARY 17TH'), null);
+  // Bear Jamboree TBT (2026-11-09 replay): the flyer says "THU / JUNE 4TH",
+  // the paragraph under it repeats "on June 4" with no weekday, and the
+  // model quoted only "JUNE 4TH". The bare repeat says nothing about the
+  // weekday, so it must not unsay the flyer: last June's party stays last
+  // June's instead of rolling to a day next year the page never names.
+  const repeated = 'TBT\nTHU\nJUNE 4TH\n8:00PM TO 1:00AM\n\nJoin us for the TBT Welcome Party on June 4 from 8PM-1AM';
+  const held = parser.resolveWeekdayPinnedYear('2025-06-04', 'JUNE 4TH', repeated);
+  assert.ok(held, 'a bare repeat of the date does not veto the weekday stated beside it elsewhere');
+  assert.equal(held.value, '2026-06-04', '2026-06-04 is the Thursday');
+  // The bare repeat first, the stated weekday second: order does not matter.
+  const repeatedFirst = 'Welcome Party on June 4\nTBT\nTHU\nJUNE 4TH';
+  assert.equal(parser.resolveWeekdayPinnedYear('2025-06-04', 'JUNE 4TH', repeatedFirst).value, '2026-06-04');
+  // Two stated weekdays that disagree still pin nothing, bare repeats or not.
+  const twoMinds = 'THU\nJUNE 4TH\nparty on June 4\nFRI\nJUNE 4TH';
+  assert.equal(parser.resolveWeekdayPinnedYear('2025-06-04', 'JUNE 4TH', twoMinds), null);
 });
 
 test('adjustLikelyEventYear re-anchors on the current year when hallucinated-year ±1 misses the window', () => {
@@ -9343,7 +9358,11 @@ test('multilingual signals stay conservative: no mid-sentence weekdays, bare mon
 
 test('Sitges-shaped multi-event page splits into per-day segments with September anchoring', () => {
   const parser = createParser();
-  const programmeYear = new Date().getFullYear();
+  // Pinned to the year these headings are true of (3 September 2026 is a
+  // Thursday): the day headings vote on the page's year, so a fixture that
+  // moved with the clock would state a programme its own weekdays contradict.
+  parser.now = FROZEN_NOW;
+  const programmeYear = 2026;
   const lines = [
     'PROGRAMA oficial',
     `BEARS SITGES WEEK ${programmeYear}`,
@@ -14392,9 +14411,40 @@ test('the month-feed POST body carries the page\'s atts blob verbatim and a stab
   assert.equal(postCalls.length, 3);
   assert.ok(postCalls[0].body.endsWith(`&${MEC_FIXTURE_ATTS}`),
     `the atts blob is harvested from the page and replayed VERBATIM, got: ${postCalls[0].body}`);
-  assert.equal(postCalls[0].options.cacheUrl,
-    'https://venue.example/wp-admin/admin-ajax.php?mec_month_feed=2026-09',
-    'the synthetic cache key must be stable across runs so the page cache can answer the next one');
+  assert.match(postCalls[0].options.cacheUrl,
+    /^https:\/\/venue\.example\/wp-admin\/admin-ajax\.php\?mec_month_feed=2026-09&mec_atts=[0-9a-f]{8}$/,
+    'the synthetic cache key names the month and the widget that asked');
+
+  // Stable across runs, so the page cache can answer the next one.
+  const again = [];
+  await createParser().parseEvents(
+    { url: 'https://venue.example/calendar/', html: MEC_MONTH_GRID_PAGE_HTML },
+    { discoveryOnly: true }, null, 'link-aggregator',
+    { postForm: async (url, body, options) => { again.push(options.cacheUrl); return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON }; } });
+  assert.deepEqual(again, postCalls.map(call => call.options.cacheUrl));
+});
+
+test('two month widgets on one site never share a cached month: the key carries the widget\'s own atts', async () => {
+  // Eagle LA 2026-10-12 → 11-09: the home page's category-filtered widget and
+  // /calendar/'s full grid POST to one endpoint for the same months. Keyed by
+  // month alone, the home page's filtered answer was served to the calendar.
+  assert.ok(MEC_MONTH_GRID_PAGE_HTML.includes(MEC_FIXTURE_ATTS), 'fixture carries its atts');
+  const filteredAtts = `${MEC_FIXTURE_ATTS}&atts%5Bcategory%5D=21`;
+  const filteredHtml = MEC_MONTH_GRID_PAGE_HTML.split(MEC_FIXTURE_ATTS).join(filteredAtts);
+  const keysFor = async (url, html) => {
+    const keys = [];
+    await createParser().parseEvents({ url, html }, { discoveryOnly: true }, null, 'link-aggregator',
+      { postForm: async (endpoint, body, options) => { keys.push(options.cacheUrl); return { ok: true, status: 200, text: MEC_SEPTEMBER_RESPONSE_JSON }; } });
+    return keys;
+  };
+  const calendar = await keysFor('https://venue.example/calendar/', MEC_MONTH_GRID_PAGE_HTML);
+  const home = await keysFor('https://venue.example/home/', filteredHtml);
+  assert.equal(calendar.length, 3);
+  assert.equal(home.length, 3);
+  for (const key of home) assert.ok(!calendar.includes(key), `the filtered widget must not share a key with the full grid: ${key}`);
+  // The same widget embedded on two pages DOES share: one answer, one fetch.
+  const twin = await keysFor('https://venue.example/whats-on/', MEC_MONTH_GRID_PAGE_HTML);
+  assert.deepEqual(twin, calendar);
 });
 
 test('a failed month-feed POST degrades like any failed crawled page: logged, run continues', async () => {
@@ -23452,4 +23502,1727 @@ test('session lines on a day-dated event page: a Squarespace 00:01 start with "F
   assert.equal(parser.dateOnlyStartDay({ _startDateRawText: '2026-10-30T20:00:00-04:00' }), '');
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T04:00:00Z'), timezone: 'America/New_York' }), '2026-10-30');
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T23:00:00Z'), timezone: 'America/New_York' }), '');
+});
+
+// ---------------------------------------------------------------------------
+// Ended repeats (2026-11-09 audit). A widget entry that repeats is archive
+// once the widget ITSELF ended the repeat more than a month ago. Row shapes
+// are the cached boot payloads' own (core.service.elfsight.com/p/boot, fetched
+// 2026-11-08), trimmed: rockbarnyc.com's "Drag Race Viewing Party" and Black
+// Eagle Toronto's 2025 "BLUF TORONTO" / 2026 "STUDIO 457" entries.
+// ---------------------------------------------------------------------------
+const ENDED_REPEAT_ROWS = {
+  dragRace: { name: 'Drag Race Viewing Party', start: { type: 'datetime', date: '2024-02-02', time: '19:00' }, end: { type: 'datetime', date: '2024-02-02', time: '22:00' }, timeZone: 'America/New_York', repeatPeriod: 'custom', repeatInterval: 1, repeatFrequency: 'weekly', repeatWeeklyOnDays: ['fr'], repeatEnds: 'onDate', repeatEndsDate: { type: 'datetime', date: '2024-05-01', time: '19:00' }, repeatEndsOccurrences: 1 },
+  bluf2025: { name: 'BLUF TORONTO', visible: true, start: { date: '2025-10-25', time: '18:00' }, end: { date: '2025-10-25', time: '20:30' }, timeZone: 'America/Toronto', repeatPeriod: 'custom', repeatFrequency: 'monthly', repeatWeeklyOnDays: [], repeatEnds: 'onDate', repeatEndsDate: { date: '2025-12-30', time: '23:59', type: 'datetime' }, repeatEndsOccurrences: 1 },
+  studioTwice: { name: 'STUDIO 457 •  RETRO DANCE PARTY', visible: true, start: { type: 'datetime', date: '2026-07-05', time: '21:00' }, end: { type: 'datetime', date: '2026-07-05', time: '21:00' }, timeZone: 'America/Toronto', repeatPeriod: 'custom', repeatInterval: 1, repeatFrequency: 'weekly', repeatWeeklyOnDays: ['su'], repeatEnds: 'afterOccurrences', repeatEndsOccurrences: 2 },
+  studioOpen: { name: 'STUDIO 457 •  RETRO DANCE PARTY', visible: true, start: { type: 'datetime', date: '2026-10-25', time: '21:00' }, end: { type: 'datetime', date: '2026-10-25', time: '23:45' }, timeZone: 'America/Toronto', repeatPeriod: 'custom', repeatInterval: 2, repeatFrequency: 'weekly', repeatWeeklyOnDays: ['su'], repeatEnds: 'never', repeatEndsOccurrences: 1 },
+  nakedNight: { name: 'NAKED NIGHT', visible: true, start: { type: 'datetime', date: '2026-07-16', time: '21:00' }, end: { type: 'datetime', date: '2026-07-16', time: '21:00' }, timeZone: 'America/Toronto', repeatPeriod: 'nthDayInMonth', repeatInterval: 1, repeatFrequency: 'daily', repeatWeeklyOnDays: [], repeatEnds: 'never', repeatEndsOccurrences: 1 }
+};
+
+test('ended repeats: a repeating widget entry whose own repeat ended more than a month ago is archive', () => {
+  const parser = createParser();
+  const now = new Date('2026-11-09T10:37:06Z');
+  const rows = ENDED_REPEAT_ROWS;
+  assert.equal(parser.getElfsightRepeatLastDay(rows.dragRace), '2024-05-01');
+  assert.equal(parser.isArchivedElfsightRow(rows.dragRace, now), true, 'weekly, ended on a date in 2024');
+  assert.equal(parser.isArchivedElfsightRow(rows.bluf2025, now), true, 'monthly, ended on a date last year');
+  // "ends after 2 times", weekly: no night later than two weeks after the first.
+  assert.equal(parser.getElfsightRepeatLastDay(rows.studioTwice), '2026-07-19');
+  assert.equal(parser.isArchivedElfsightRow(rows.studioTwice, now), true);
+  // Left exactly alone: a repeat with no stated end, whatever its first night.
+  assert.equal(parser.getElfsightRepeatLastDay(rows.studioOpen), '');
+  assert.equal(parser.isArchivedElfsightRow(rows.studioOpen, now), false);
+  assert.equal(parser.isArchivedElfsightRow(rows.nakedNight, now), false, 'the widget defaults (frequency "daily", occurrences 1) are not an end');
+  // A repeat that ends later, or ended inside the month, is not archive.
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: { date: '2026-12-31' } }, now), false);
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: { date: '2026-10-20' } }, now), false, 'inside the archive window');
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: { date: '2026-10-05' } }, now), true);
+  // An end that cannot be read archives nothing.
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: null }, now), false);
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: { date: 'May 1' } }, now), false);
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.studioTwice, repeatEndsOccurrences: 0 }, now), false);
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.studioTwice, repeatFrequency: 'fortnightly' }, now), false, 'an unknown step is not guessed at');
+  // The bound is an upper bound: interval and count stretch it.
+  assert.equal(parser.getElfsightRepeatLastDay({ ...rows.studioTwice, repeatInterval: 2, repeatEndsOccurrences: 3 }), '2026-08-16');
+  assert.equal(parser.getElfsightRepeatLastDay({ ...rows.nakedNight, repeatEnds: 'afterOccurrences', repeatEndsOccurrences: 3 }), '2026-10-17', 'a monthly shape counts 31-day steps');
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.nakedNight, repeatEnds: 'afterOccurrences', repeatEndsOccurrences: 3 }, now), false, 'three months from July ends inside the window');
+  // A one-off is judged by its own day, as before — repeat fields on it are ignored.
+  assert.equal(parser.getElfsightRepeatLastDay({ name: 'ONE NIGHT', start: { date: '2026-11-20' }, repeatPeriod: 'noRepeat', repeatEnds: 'onDate', repeatEndsDate: { date: '2024-01-01' } }), '');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'ONE NIGHT', start: { date: '2026-11-20' }, repeatPeriod: 'noRepeat', repeatEnds: 'onDate', repeatEndsDate: { date: '2024-01-01' } }, now), false);
+});
+
+test('ended repeats: the widget reader leaves the ended repeat out, names it in the log, and still reads the open one', async () => {
+  const parser = createParser();
+  const widgetId = 'e122bc50-bc4f-4cde-a6b9-ee6d4e31531a';
+  const rows = ENDED_REPEAT_ROWS;
+  // 2037: an entry that repeats with no stated end, and one whose repeat ends in the future.
+  const open = { ...rows.studioOpen, name: 'OPEN REPEAT', start: { date: '2037-10-25', time: '21:00' }, end: { date: '2037-10-25', time: '23:45' } };
+  const endsLater = { ...rows.dragRace, name: 'ENDS LATER', visible: true, start: { date: '2037-02-06', time: '19:00' }, end: { date: '2037-02-06', time: '22:00' }, repeatEndsDate: { date: '2037-05-01' } };
+  const payload = JSON.stringify({ data: { widgets: { [widgetId]: { data: { settings: { events: [{ ...rows.dragRace, visible: true }, rows.bluf2025, rows.studioTwice, open, endsLater] } } } } } });
+  const httpAdapter = { fetchData: async () => ({ html: payload }) };
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let read;
+  try {
+    read = await parser.collectElfsightCalendarEvents(
+      { html: `<html><body><div class="elfsight-app-${widgetId}"></div></body></html>`, url: 'https://bar.example/calendar' },
+      { urls: ['https://bar.example/calendar'] },
+      httpAdapter
+    );
+  } finally { console.log = original; }
+  assert.deepEqual(read.map(row => row.name), ['OPEN REPEAT', 'ENDS LATER']);
+  assert.ok(logs.some(line => line.includes('"Drag Race Viewing Party" (from 2024-02-02) is a repeat the widget itself ended by 2024-05-01')), logs.join('\n'));
+  assert.ok(logs.some(line => line.includes('"BLUF TORONTO" (from 2025-10-25) is a repeat the widget itself ended by 2025-12-30')), logs.join('\n'));
+  assert.ok(logs.some(line => line.includes('"STUDIO 457 •  RETRO DANCE PARTY" (from 2026-07-05) is a repeat the widget itself ended by 2026-07-19')), logs.join('\n'));
+  assert.ok(logs.some(line => line.includes('published 5 event(s) — 3 ended more than 30 days ago')), logs.join('\n'));
+});
+
+// ---------------------------------------------------------------------------
+// The feed's own "past" list (2026-11-09). bosf.org/events?format=json
+// answered "0 upcoming, 30 past" in run 20261109-053706 and all 30 rows were
+// analyzed as new events. Rows below are that cached twin's, trimmed.
+// ---------------------------------------------------------------------------
+
+const SQUARESPACE_PAST_ONLY_TWIN = {
+  collection: { typeName: 'events', title: 'Events', fullUrl: '/events' },
+  upcoming: [],
+  past: [
+    { id: '6a5bdf420a13915c9c50a578', title: 'Barbells, Bears, and Butts Deadlift Competition 2026', startDate: 1792267200730, endDate: 1792278000730,
+      fullUrl: '/events/barbells-bears-and-butts-deadlift-competition-2026', urlId: 'barbells-bears-and-butts-deadlift-competition-2026', excerpt: '',
+      location: { mapZoom: 12, addressTitle: '', addressLine1: '', addressLine2: '', addressCountry: '' } },
+    { id: '6ab59f5cac137d2ea8f17f61', title: 'BOSF Brunch', startDate: 1791662400478, endDate: 1791673200478,
+      fullUrl: '/events/july-dinner-night-pte22', urlId: 'july-dinner-night-pte22', excerpt: '',
+      location: { mapZoom: 12, addressTitle: '', addressLine1: '', addressLine2: '', addressCountry: '' } }
+  ]
+};
+
+test('Squarespace collection: a row the feed files under past is stamped with that filing; an upcoming row, and a row the feed lists in both, is not', async () => {
+  const parser = createParser();
+
+  // A feed with nothing upcoming: every row it publishes is a past-list row.
+  const pastOnly = squarespaceStubAdapter(SQUARESPACE_PAST_ONLY_TWIN);
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let pastRows;
+  try {
+    pastRows = await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.bosf.example/events' }, { urls: ['https://www.bosf.example/events'] }, pastOnly.httpAdapter);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(pastRows.length, 2);
+  assert.ok(logs.some(line => line.includes('published 2 dated item(s) (0 upcoming, 2 past on this page) — a past-list row may update a saved event, it is never proposed as a new one')), logs.join('\n'));
+  const pastEvents = pastRows.map(row => parser.buildEventFromSquarespaceItem(row, 'https://www.bosf.example/events'));
+  assert.deepEqual(pastEvents.map(event => event._feedPastList), [
+    { feed: 'https://www.bosf.example/events', page: 'https://www.bosf.example/events/barbells-bears-and-butts-deadlift-competition-2026' },
+    { feed: 'https://www.bosf.example/events', page: 'https://www.bosf.example/events/july-dinner-night-pte22' }
+  ]);
+  assert.equal(pastEvents[1].title, 'BOSF Brunch', 'the row is still read in full — it is evidence for a saved event');
+  assert.equal(pastEvents[1].startDate.toISOString(), '2026-10-10T20:00:00.000Z');
+  // The rows themselves are returned untouched.
+  assert.deepEqual(Object.keys(pastRows[0]).filter(key => key.startsWith('_')), []);
+
+  // A split listing: upcoming rows carry no stamp; "Bear Tea" is in both
+  // lists and the upcoming filing is the one that counts.
+  const split = squarespaceStubAdapter();
+  const rows = await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, { urls: ['https://www.3dollarbillbk.example/rsvp'] }, split.httpAdapter);
+  const events = rows.map(row => parser.buildEventFromSquarespaceItem(row, 'https://www.3dollarbillbk.example/rsvp'));
+  assert.deepEqual(events.map(event => [event.title, Boolean(event._feedPastList)]), [['Bear Tea', false], ['WANTED', false], ['GraveSTONED', true]]);
+  assert.deepEqual(events[2]._feedPastList, { feed: 'https://www.3dollarbillbk.example/rsvp', page: 'https://www.3dollarbillbk.example/rsvp/2026/8/11/gravestoned' });
+
+  // A plain collection (items[] only) says nothing about past or upcoming.
+  const plain = parser.collectSquarespaceCollectionItems({ items: SQUARESPACE_PAST_ONLY_TWIN.past.map(item => ({ ...item })) });
+  assert.deepEqual(plain.map(row => Boolean(parser.buildEventFromSquarespaceItem(row, 'https://www.bosf.example/events')._feedPastList)), [false, false]);
+  // An item built with no read behind it (another parser instance) is unstamped.
+  assert.equal(createParser().buildEventFromSquarespaceItem(SQUARESPACE_PAST_ONLY_TWIN.past[0], 'https://www.bosf.example/events')._feedPastList, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): series expansion subtracts the nights the
+// feed itself cancelled or moved. XL Bears "Game Night" (2nd Sundays) was kept
+// on 2026-11-08 although a RECURRENCE-ID record moved that night to 11-15;
+// Lodge NY "Manhole" likewise on 11-15 / 11-22.
+// ---------------------------------------------------------------------------
+function feedFidelityWeeklySeries() {
+  // A weekly series that began four weeks ago at 16:00 wall clock; the rows
+  // are in the shape shared-core's icsRecordToFeedRow hands over.
+  const day = 24 * 60 * 60 * 1000;
+  const first = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() - 28, 16, 0, 0));
+  const wall = (date) => date.toISOString().slice(0, 19);
+  const night = (weeks) => new Date(first.getTime() + weeks * 7 * day);
+  const series = {
+    uid: 'game-night@calendar.example', title: 'Game Night', description: 'Board games for bears & friends',
+    start: wall(first), end: wall(new Date(first.getTime() + 5 * 60 * 60 * 1000)),
+    venue: 'Phoenix Comics & Games', address: '113 Broadway E, Seattle, WA 98102', all_day: false,
+    rrule: 'FREQ=WEEKLY', timezone: 'America/Los_Angeles'
+  };
+  return { day, first, wall, night, series };
+}
+
+test('feed fidelity: a series night another record replaces is emitted once, as the override says', () => {
+  const parser = createParser();
+  const { day, wall, night, series } = feedFidelityWeeklySeries();
+  const moved = night(5);
+  const movedTo = new Date(moved.getTime() + day + 2 * 60 * 60 * 1000); // next day, 18:00
+  const cancelled = night(7);
+  const payload = { events: [
+    { ...series, exdates: [wall(cancelled), wall(moved)] },
+    { uid: series.uid, title: 'Game Night (moved)', description: 'Moved a day for the prerelease', start: wall(movedTo), end: wall(new Date(movedTo.getTime() + 3 * 60 * 60 * 1000)), venue: 'The Other Shop', address: '500 Pine St, Seattle, WA 98101', all_day: false, timezone: 'America/Los_Angeles' }
+  ] };
+  let events;
+  const logs = captureLogs(() => { events = parser.extractEventsFromJsonApiPayload(payload, 'https://calendar.example/public/basic.ics', null); });
+  const starts = events.map(event => event.startDate.toISOString());
+  assert.ok(!starts.includes(moved.toISOString()), 'the night that was moved away is not an event');
+  assert.ok(!starts.includes(cancelled.toISOString()), 'the EXDATE night is not an event');
+  assert.ok(starts.includes(night(6).toISOString()) && starts.includes(night(8).toISOString()), 'the nights around them stay');
+  const override = events.filter(event => event.startDate.toISOString() === movedTo.toISOString());
+  assert.equal(override.length, 1, 'the override row is the real night, once');
+  assert.equal(override[0].title, 'Game Night (moved)');
+  assert.equal(override[0].bar, 'The Other Shop');
+  assert.equal(override[0].endDate.toISOString(), new Date(movedTo.getTime() + 3 * 60 * 60 * 1000).toISOString());
+  assert.ok(logs.some(line => line.includes('🔁 SERIES: "Game Night"') && line.includes('2 night(s) the feed itself cancelled or moved are not events')
+    && line.includes(moved.toISOString().slice(0, 10)) && line.includes(cancelled.toISOString().slice(0, 10))), logs.join('\n'));
+  for (const event of events) {
+    assert.equal(event._jsonApiSeriesExclusions, undefined, 'the exception list never leaves the expander');
+    assert.equal(event.recurrence, undefined, 'the scraper writes nights, never a series');
+  }
+  // Without the exception list the expansion is what it was.
+  const before = parser.extractEventsFromJsonApiPayload({ events: [series] }, 'https://calendar.example/public/basic.ics', null);
+  assert.ok(before.map(event => event.startDate.toISOString()).includes(moved.toISOString()));
+});
+
+test('feed fidelity: exception values are read in every form a feed writes them', () => {
+  const parser = createParser();
+  assert.deepEqual(parser.readJsonApiSeriesExclusions(['2026-11-08T16:00:00', '2026-11-08', '20261108T160000', '20261108', '2026-11-09T00:00:00.000Z', '', 'soon', 7]), [
+    { ms: Date.UTC(2026, 10, 8, 16), dayOnly: false },
+    { ms: Date.UTC(2026, 10, 8), dayOnly: true },
+    { ms: Date.UTC(2026, 10, 8, 16), dayOnly: false },
+    { ms: Date.UTC(2026, 10, 8), dayOnly: true },
+    { ms: Date.UTC(2026, 10, 9), dayOnly: false }
+  ]);
+  assert.deepEqual(parser.readJsonApiSeriesExclusions('20261108T160000,20261213T160000').map(entry => entry.ms), [Date.UTC(2026, 10, 8, 16), Date.UTC(2026, 11, 13, 16)]);
+  assert.deepEqual(parser.readJsonApiSeriesExclusions(null), []);
+});
+
+test('feed fidelity: an all-day exception takes the whole day; a series with every night excepted is no event', () => {
+  const parser = createParser();
+  const { night, series } = feedFidelityWeeklySeries();
+  const base = { title: 'Game Night', startDate: night(0), endDate: new Date(night(0).getTime() + 5 * 3600000), _jsonApiRrule: 'FREQ=WEEKLY' };
+  const dayOnly = parser.expandJsonApiSeriesRow({ ...base, _jsonApiSeriesExclusions: [{ ms: Date.UTC(night(5).getUTCFullYear(), night(5).getUTCMonth(), night(5).getUTCDate()), dayOnly: true }] });
+  assert.ok(!dayOnly.map(event => event.startDate.toISOString()).includes(night(5).toISOString()));
+  assert.ok(dayOnly.map(event => event.startDate.toISOString()).includes(night(6).toISOString()));
+  // A timed exception at another hour of the same day excepts nothing.
+  const otherHour = parser.expandJsonApiSeriesRow({ ...base, _jsonApiSeriesExclusions: [{ ms: night(5).getTime() + 3600000, dayOnly: false }] });
+  assert.ok(otherHour.map(event => event.startDate.toISOString()).includes(night(5).toISOString()));
+  // Every night in the window excepted (a two-night run): nothing is left, and the first night is not resurrected.
+  const until = night(5).toISOString().slice(0, 10).replace(/-/g, '');
+  const all = parser.expandJsonApiSeriesRow({ ...base, _jsonApiRrule: `FREQ=WEEKLY;UNTIL=${until}T235959Z`, _jsonApiSeriesExclusions: [4, 5].map(week => ({ ms: night(week).getTime(), dayOnly: false })) });
+  assert.deepEqual(all, []);
+  assert.equal(series.rrule, 'FREQ=WEEKLY');
+});
+
+// ---------------------------------------------------------------------------
+// Feed fidelity (audit 2026-11-09): a feed row that types its street address
+// after its name states its place there, and the feed gate never drops a row
+// without saying so. Lodge NY's monthly "Chub Chaser Party" has no LOCATION
+// line and was lost at the gate on every run; "The Fuck Stop" says only
+// "Garment District, New York, NY, USA" and kept the address in its name.
+// Rows are in the shape shared-core's icsRecordToFeedRow hands over, trimmed
+// from the cached feed of run 20261109-053706.
+// ---------------------------------------------------------------------------
+function feedFidelityTitleAddressRows() {
+  const start = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 6, 13, 0, 0));
+  const wall = (date) => date.toISOString().slice(0, 19);
+  const row = (uid, title, days, place = {}) => {
+    const at = new Date(start.getTime() + days * 24 * 60 * 60 * 1000);
+    return { uid, title, start: wall(at), end: wall(new Date(at.getTime() + 3 * 60 * 60 * 1000)), all_day: false, timezone: 'America/New_York', ...place };
+  };
+  return { events: [
+    row('bear-1@google.com', 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', 0, { address: '232 W 37th St 2nd fl, New York, NY 10018, USA' }),
+    row('bear-2@google.com', 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues', 7, { address: '232 W 37th St 2nd fl, New York, NY 10018, USA' }),
+    row('dads-1@google.com', "Dads 'n' Lads 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues", 1, { address: '232 W 37th St, 2nd Fl, New York, NY, USA' }),
+    row('squeeze-1@google.com', 'Squeeze 457 W 56th St, 2nd Fl b/w 9th and 10th Avenues', 2, { address: '457 W 56th St 2nd fl, New York, NY 10019, USA' }),
+    // No LOCATION line at all.
+    row('0n89pkstn30gf5ku8hl3igju05@google.com', 'Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues ', 3),
+    // A neighbourhood-only LOCATION ("Garment District\, New York\, NY\, USA").
+    row('fstop-1@google.com', 'The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues', 4, { venue: 'Garment District', address: 'New York, NY, USA' }),
+    // No LOCATION, and a door no other row of the feed states.
+    row('island-1@google.com', 'Lodge Long Island 92 Kean St, West Babylon, NY', 5),
+    // No LOCATION and no house number in the title: nothing to read.
+    row('chub-old@google.com', 'Chub Chaser Party on 37th b/w 7th and 8th Aves', 8),
+    row('chub-old@google.com-2', 'Chub Chaser Party on 37th b/w 7th and 8th Aves', 9)
+  ] };
+}
+
+test('feed fidelity: a feed row with no place reads the street address its title ends in', () => {
+  const parser = createParser();
+  const feedUrl = 'https://calendar.example/calendar/ical/parties/public/basic.ics';
+  let events;
+  let read;
+  const logs = captureLogs(() => {
+    events = parser.extractEventsFromJsonApiPayload(feedFidelityTitleAddressRows(), feedUrl, null);
+    read = parser.readFeedRowTitleAddresses(events);
+  });
+  assert.equal(events.length, 9);
+  assert.equal(read, 3, logs.join('\n'));
+  const chub = events.find(event => event.title === 'Chub Chaser Party');
+  assert.ok(chub, 'the address left the name');
+  assert.equal(chub.address, '232 W 37th St 2nd fl, New York, NY 10018, USA', 'the full address is the one most rows of the feed state for that door');
+  assert.equal(chub.bar || '', '');
+  const stop = events.find(event => event.title === 'The Fuck Stop');
+  assert.equal(stop.address, '232 W 37th St, 2nd Fl, New York, NY, USA', 'the street line leads the locality the row itself states');
+  const island = events.find(event => event.title === 'Lodge Long Island');
+  assert.equal(island.address, '92 Kean St, West Babylon, NY', 'no other row states this door: the title\'s own address');
+  // A row that states its street address is left to the existing strip.
+  const bear = events.filter(event => event.title.startsWith('The Bear Party'));
+  assert.equal(bear.length, 2);
+  for (const event of bear) {
+    assert.equal(event.title, 'The Bear Party 232 W 37th St, 2nd Fl. b/w 7th & 8th Avenues');
+    assert.equal(event.address, '232 W 37th St 2nd fl, New York, NY 10018, USA');
+  }
+  // Every read says what it did and why.
+  assert.ok(logs.some(line => line.startsWith('📍 TITLE ADDRESS: "Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues" → "Chub Chaser Party"')
+    && line.includes('the row states no place; the full address is the one this feed\'s other rows state for that door')
+    && line.includes('address = 232 W 37th St 2nd fl, New York, NY 10018, USA (b/w 7th and 8th Avenues)')), logs.join('\n'));
+  assert.ok(logs.some(line => line.startsWith('📍 TITLE ADDRESS: "The Fuck Stop 232 W 37th St, 2nd Fl between 7th and 8th Avenues" → "The Fuck Stop"')
+    && line.includes('the row states only "Garment District, New York, NY, USA"')), logs.join('\n'));
+  assert.ok(logs.some(line => line.startsWith('📍 TITLE ADDRESS: "Lodge Long Island 92 Kean St, West Babylon, NY" → "Lodge Long Island"')
+    && line.includes('the row states no place: address = 92 Kean St, West Babylon, NY')), logs.join('\n'));
+  // Reading twice changes nothing.
+  assert.equal(parser.readFeedRowTitleAddresses(events), 0);
+});
+
+test('feed fidelity: the feed gate names every row it does not keep', () => {
+  const parser = createParser();
+  const feedUrl = 'https://calendar.example/calendar/ical/parties/public/basic.ics';
+  const events = parser.extractEventsFromJsonApiPayload(feedFidelityTitleAddressRows(), feedUrl, null);
+  // Before the title is read: the three rows with no place field are not kept, and each is named.
+  let kept;
+  const before = captureLogs(() => { kept = parser.keepPlacedFeedRows(events, feedUrl); });
+  assert.equal(kept.length, 5);
+  const gate = before.filter(line => line.startsWith('🚧 FEED GATE:'));
+  assert.equal(gate.length, 3, before.join('\n'));
+  assert.ok(gate.some(line => line.includes('"Chub Chaser Party 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues" (1 night(s): ')
+    && line.includes(`names no bar, address or city in ${feedUrl} — not kept as a structured event`)), gate.join('\n'));
+  assert.ok(gate.some(line => line.includes('"Lodge Long Island 92 Kean St, West Babylon, NY"')), gate.join('\n'));
+  // Two nights of one party share a line that dates both.
+  const twoNights = gate.find(line => line.includes('"Chub Chaser Party on 37th b/w 7th and 8th Aves" (2 night(s): '));
+  assert.ok(twoNights, gate.join('\n'));
+  assert.equal((twoNights.match(/\d{4}-\d{2}-\d{2}/g) || []).length, 2);
+  // After it: only the row whose title names no door is left out — still by name.
+  parser.readFeedRowTitleAddresses(events);
+  const after = captureLogs(() => { kept = parser.keepPlacedFeedRows(events, feedUrl); });
+  assert.equal(kept.length, 7);
+  assert.deepEqual(after.filter(line => line.startsWith('🚧 FEED GATE:')).map(line => line.replace(/ night\(s\).*$/, '')), ['🚧 FEED GATE: "Chub Chaser Party on 37th b/w 7th and 8th Aves" (2']);
+  // A city alone is place evidence; nothing is said about rows that are kept.
+  const quiet = captureLogs(() => { kept = parser.keepPlacedFeedRows([{ title: 'BEAR POOL PARTY', startDate: new Date(), city: 'sitges' }, null], feedUrl); });
+  assert.equal(kept.length, 1);
+  assert.deepEqual(quiet, []);
+  assert.deepEqual(parser.keepPlacedFeedRows(null, feedUrl), []);
+});
+
+// ---------------------------------------------------------------------------
+// FEED FIDELITY — ONE FEED QUERY IS ASKED ONCE PER RUN. precinctdtla.com, run
+// 20261109-053706: the home page and /calendar/ both carry the venue's
+// EventON calendar (the same endpoint, the same shortcode), each replayed the
+// same months, and the run built 77 events twice. The claim is on the QUERY —
+// endpoint + the shortcode fields that select rows + the month — so a
+// differently-filtered calendar elsewhere on the site is still read.
+// Fixtures: the two pages' frames as cached on 2026-11-08, shortcodes trimmed.
+// ---------------------------------------------------------------------------
+const feedEvoSc = (overrides = {}) => ({ accord: 'no', calendar_type: 'fullcal', day_incre: 0, event_location: 'all', event_order: 'ASC', event_past_future: 'all', event_type: 'all', event_type_2: 'all', fixed_day: '7', fixed_month: '11', fixed_year: '2026', focus_end_date_range: '1796111999', focus_start_date_range: '1793516400', hide_past: 'no', lang: 'L1', month_incre: 0, number_of_months: '1', ...overrides });
+const feedEvoPage = (origin, frames) => `<html><body><nav><a href="/menu/">Menu</a><a href="/calendar/">Calendar</a><a href="/lostandfound/">Lost and Found</a></nav>
+<script>var evo_general_params = {"is_admin":"","ajaxurl":"${origin}/wp-admin/admin-ajax.php","evo_ajax_url":"/?evo-ajax=%%endpoint%%","ajax_method":"endpoint","n":"4e064a44c4","evo_v":"5.0.2"};</script>
+<h2>THIS MONTH</h2>
+${frames.map(frame => `<div id='${frame.id}' class='ajde_evcal_calendar sev cev color esty_2 etttc_custom evofc_nolist evoFC ajax_loading_cal' data-cal=''><div class='evo_cal_data' data-sc="${JSON.stringify(frame.sc).replace(/"/g, '&quot;')}"></div></div>`).join('\n')}
+<footer><h4>HOURS</h4><p>Monday: Closed</p><p>Tues-Friday: 6pm-2am</p><p>Saturday: 5pm-2am</p><p>Sunday: 3pm-12am</p><h4>ADDRESS</h4><p>357 S Broadway</p><p>Los Angeles, CA 90013</p></footer>
+</body></html>`;
+// The home page: a day strip and the month grid. /calendar/: this month's grid and next month's.
+const FEED_EVO_HOME = [{ id: 'evcal_calendar_269', sc: feedEvoSc({ calendar_type: 'daily', fixed_day: '8', dv_view_style: 'def' }) }, { id: 'evcal_calendar_579', sc: feedEvoSc() }];
+const FEED_EVO_CALENDAR = [{ id: 'evcal_calendar_678', sc: feedEvoSc() }, { id: 'evcal_calendar_476', sc: feedEvoSc({ fixed_month: '12', month_incre: '+1', focus_start_date_range: '1796112000', focus_end_date_range: '1798790399' }) }];
+function feedEvoAdapter({ refuse = () => false } = {}) {
+  const posts = [];
+  return {
+    posts,
+    postForm: async (endpoint, body, options) => {
+      const frames = Array.from(new Set((decodeURIComponent(body).match(/cals\[([^\]]+)\]/g) || []).map(m => m.slice(5, -1))));
+      const field = (id, name) => (decodeURIComponent(body).split('&').find(pair => pair.startsWith(`cals[${id}][sc][${name}]=`)) || '=').split('=')[1];
+      const monthOf = (id) => `${field(id, 'fixed_year')}-${String(field(id, 'fixed_month')).padStart(2, '0')}`;
+      posts.push({ endpoint, frames, cacheUrl: options.cacheUrl });
+      if (refuse(options.cacheUrl)) return { ok: true, status: 200, text: '{"status":"bad","msg":"Nonce validation failed"}' };
+      const cals = {};
+      for (const id of frames) cals[id] = { sc: {}, json: [], html: eventOnCard(`${id.slice(-3)}${monthOf(id).replace('-', '')}`, `Bear Night ${monthOf(id)}`, `${monthOf(id)}-14T21:00-8:00`, `${monthOf(id)}-15T02:00-8:00`) };
+      return { ok: true, status: 200, text: JSON.stringify({ cals }) };
+    },
+    fetchData: async (requestUrl) => ({ html: '<html><body>no calendar here now</body></html>', url: requestUrl })
+  };
+}
+
+test('feed fidelity: a calendar another page of the site already asked for is not asked again — the page that read it is named', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', calendarLookaheadMonths: 1 };
+  const adapter = feedEvoAdapter();
+  const home = 'https://bar.example/';
+  const calendar = 'https://bar.example/calendar/';
+  const first = await parser.collectEventOnCalendarHtml({ url: home, html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  assert.deepEqual(adapter.posts.map(p => p.cacheUrl), ['https://bar.example/?eventon_month=2026-11', 'https://bar.example/?eventon_month=2026-12'], 'the first page asks as before, under the same cache names');
+  assert.deepEqual(adapter.posts[0].frames, ['evcal_calendar_269', 'evcal_calendar_579'], 'a day strip and a month grid are two questions');
+  assert.ok(first.includes('Bear Night 2026-11') && first.includes('Bear Night 2026-12'));
+  let second;
+  const lines = await captureLogsAsync(async () => {
+    second = await parser.collectEventOnCalendarHtml({ url: calendar, html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, config, adapter);
+  });
+  assert.equal(adapter.posts.length, 2, 'the same grid for the same months: nothing is asked');
+  assert.equal(second, '');
+  assert.deepEqual(lines.filter(line => line.startsWith('📅 EVENTON:')), [
+    `📅 EVENTON: the calendar on ${calendar} is the one already read on ${home} (same endpoint, same shortcode) — month(s) 2026-11, 2026-12 not asked for again`
+  ]);
+  // Being a configured page buys no turn of its own: the question is the same whoever asks.
+  const configured = { ...config, urls: [home, calendar] };
+  assert.equal(await parser.collectEventOnCalendarHtml({ url: calendar, html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, configured, adapter), '');
+  assert.equal(adapter.posts.length, 2);
+  // The page that asked may ask again (a retry of its own read).
+  await parser.collectEventOnCalendarHtml({ url: home, html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  assert.equal(adapter.posts.length, 4);
+  // Another source reading the same site keeps its own read (twins fold in dedup).
+  await parser.collectEventOnCalendarHtml({ url: calendar, html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, { name: 'Another Source', calendarLookaheadMonths: 1 }, adapter);
+  assert.equal(adapter.posts.length, 5);
+  // Its http spelling is the page that read, visited again.
+  const twin = await captureLogsAsync(async () => {
+    assert.equal(await parser.collectEventOnCalendarHtml({ url: 'http://www.bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter), '');
+  });
+  assert.equal(adapter.posts.length, 5);
+  assert.ok(twin.some(line => line.includes(`the calendar on http://www.bar.example/ is the one already read on ${home}`)), twin.join('\n'));
+});
+
+test('feed fidelity: a differently-filtered calendar on another page is another feed and is read; a page mixing both asks only for the new one', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', calendarLookaheadMonths: 1 };
+  const adapter = feedEvoAdapter();
+  await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  assert.equal(adapter.posts.length, 2);
+  // Same host, same endpoint, one selecting field different: the rows differ, so it is read.
+  const bears = [{ id: 'evcal_calendar_101', sc: feedEvoSc({ event_type: '12' }) }];
+  const html = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/bear-nights/', html: feedEvoPage('https://bar.example', bears) }, config, adapter);
+  assert.deepEqual(adapter.posts.slice(2).map(p => p.cacheUrl), ['https://bar.example/bear-nights/?eventon_month=2026-11', 'https://bar.example/bear-nights/?eventon_month=2026-12']);
+  assert.ok(html.includes('Bear Night 2026-11'));
+  // Where the frame is opened (its month, its focused day) is not part of what it asks for; what it selects is.
+  assert.equal(parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', FEED_EVO_CALENDAR[0].sc),
+    parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', FEED_EVO_CALENDAR[1].sc));
+  assert.notEqual(parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', feedEvoSc()),
+    parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', feedEvoSc({ event_type: '12' })));
+  assert.notEqual(parser.getEventOnFeedIdentity('https://bar.example/?evo-ajax=eventon_init_load', feedEvoSc()),
+    parser.getEventOnFeedIdentity('https://other.example/?evo-ajax=eventon_init_load', feedEvoSc()));
+  // A page with the grid already read AND a calendar of its own: only the new one is asked for,
+  // and the shorter request is remembered under its own name (the whole-page answer holds both frames).
+  const mixed = [{ id: 'evcal_calendar_678', sc: feedEvoSc() }, { id: 'evcal_calendar_202', sc: feedEvoSc({ event_location: '44' }) }];
+  const before = adapter.posts.length;
+  let mixedHtml;
+  const lines = await captureLogsAsync(async () => {
+    mixedHtml = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/patio/', html: feedEvoPage('https://bar.example', mixed) }, config, adapter);
+  });
+  const asked = adapter.posts.slice(before);
+  assert.deepEqual(asked.map(p => p.frames), [['evcal_calendar_202'], ['evcal_calendar_202']]);
+  assert.match(asked[0].cacheUrl, /^https:\/\/bar\.example\/patio\/\?eventon_month=2026-11&eventon_asked=[0-9a-f]{8}$/);
+  assert.equal(asked[1].cacheUrl, 'https://bar.example/patio/?eventon_month=2026-12', 'the later months walk one frame, as before');
+  assert.ok(mixedHtml.includes('Bear Night 2026-11'));
+  assert.ok(lines.some(line => line.includes('the calendar on https://bar.example/patio/ is the one already read on https://bar.example/ (same endpoint, same shortcode) — month(s) 2026-11 not asked for again')), lines.join('\n'));
+  assert.ok(!(parser.feedReadElsewhere instanceof Map) || !parser.feedReadElsewhere.has(parser.getUrlDedupeKey('https://bar.example/patio/')), 'a page that read something is read as usual');
+});
+
+test('feed fidelity: a calendar request that failed gives the question back to the next page that carries it', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', calendarLookaheadMonths: 1 };
+  // The home page's requests are refused (and stay refused after the one fresh read).
+  const adapter = feedEvoAdapter({ refuse: cacheUrl => cacheUrl.startsWith('https://bar.example/?') });
+  let first;
+  const failed = await captureLogsAsync(async () => {
+    first = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, adapter);
+  });
+  assert.equal(first, '');
+  assert.ok(failed.some(line => line.includes('month 2026-11 failed for https://bar.example/')), failed.join('\n'));
+  const before = adapter.posts.length;
+  const second = await parser.collectEventOnCalendarHtml({ url: 'https://bar.example/calendar/', html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, config, adapter);
+  assert.deepEqual(adapter.posts.slice(before).map(p => p.frames), [['evcal_calendar_678', 'evcal_calendar_476']], 'the next page asks for the whole calendar');
+  assert.ok(second.includes('Bear Night 2026-11') && second.includes('Bear Night 2026-12'));
+  assert.ok(!(parser.feedReadElsewhere instanceof Map) || parser.feedReadElsewhere.size === 0);
+});
+
+test('feed fidelity: the page whose calendar was read elsewhere builds no events again and sends no empty frame to OCR or the AI; its links are still followed', async () => {
+  const parser = createParser();
+  const config = { name: 'Venue', urls: ['https://bar.example/'], calendarLookaheadMonths: 1 };
+  const adapter = feedEvoAdapter();
+  let aiCalls = 0;
+  parser.extractOcrFromAllImages = async () => { aiCalls++; throw new Error('no OCR'); };
+  parser.callAi = async () => { aiCalls++; throw new Error('no AI'); };
+  parser.core.callAiGenerate = async () => { aiCalls++; throw new Error('no AI'); };
+  const home = await parser.parseEvents({ url: 'https://bar.example/', html: feedEvoPage('https://bar.example', FEED_EVO_HOME) }, config, null, 'link-aggregator', adapter);
+  assert.deepEqual(home.events.map(e => e.title).sort(), ['Bear Night 2026-11', 'Bear Night 2026-12'], 'the day strip repeats the grid\'s card: one event per night');
+  assert.equal(home.extractionSummary.source, 'eventon');
+  let second;
+  const lines = await captureLogsAsync(async () => {
+    second = await parser.parseEvents({ url: 'https://bar.example/calendar/', html: feedEvoPage('https://bar.example', FEED_EVO_CALENDAR) }, config, null, 'multi-event-page', adapter);
+  });
+  assert.equal(adapter.posts.length, 2, 'two months, asked once');
+  assert.deepEqual(second.events, []);
+  assert.equal(second.extractionSummary.source, 'eventon');
+  assert.equal(aiCalls, 0, 'the opening-hours shell around the empty frame is not sent for extraction');
+  assert.ok(second.additionalLinks.some(link => /\/menu\/$/.test(link)) && second.additionalLinks.some(link => /\/lostandfound\/$/.test(link)), JSON.stringify(second.additionalLinks));
+  assert.ok(lines.some(line => line.startsWith('📅 EVENTON: https://bar.example/calendar/ is read through its calendar, and that calendar was read on https://bar.example/ — no events built here again')
+    && / \d+ link\(s\) still followed$/.test(line)), lines.join('\n'));
+});
+
+test('feed fidelity: at a once-per-host door the http spelling of the page that read is that page again — not read twice, configured or not', () => {
+  const parser = createParser();
+  // blackeagletoronto.com, run 20261109-053706: the site's RSS twin links the http home page.
+  const config = { name: 'Venue', urls: ['http://www.venue.example/', 'https://www.venue.example/'] };
+  for (const kind of ['elfsight', 'dice', 'squarespace-collection', 'wix']) {
+    assert.equal(parser.claimHostDoor(kind, 'https://www.venue.example/', config, 'door-1'), '');
+    assert.equal(parser.claimHostDoor(kind, 'http://www.venue.example/', config, 'door-1'), 'https://www.venue.example/', `${kind}: the other spelling`);
+    assert.equal(parser.claimHostDoor(kind, 'http://venue.example', config, 'door-1'), 'https://www.venue.example/', `${kind}: without www`);
+    assert.equal(parser.claimHostDoor(kind, 'https://www.venue.example/', config, 'door-1'), '', `${kind}: the page that read may read again`);
+  }
+  assert.equal(parser.isSchemeTwinPage('https://venue.example/a', 'http://venue.example/a'), true);
+  assert.equal(parser.isSchemeTwinPage('https://venue.example/a', 'https://venue.example/a'), false);
+  assert.equal(parser.isSchemeTwinPage('https://venue.example/a', 'http://venue.example/b'), false);
+  assert.equal(parser.isSchemeTwinPage('', ''), false);
+  // A feed claim is on the feed alone: it takes no host-wide claim with it.
+  const other = createParser();
+  assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/', config), '');
+  assert.equal(other.claimFeedDoor('eventon', 'feed-b-2026-11', 'https://venue.example/shows/', config), '', 'another feed on the host');
+  assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/shows/', config), 'https://venue.example/');
+  assert.equal(other.claimFeedDoor('eventon', '', 'https://venue.example/shows/', config), '', 'no identity, no claim');
+  other.releaseHostDoor('eventon', 'https://venue.example/', 'feed-a-2026-11');
+  assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/shows/', config), '', 'a released question may be asked');
+});
+
+// ---------------------------------------------------------------------------
+// Feed fidelity: a feed row whose start is a bare calendar date names a day.
+// Rows are whereto.party's page data as cached for run 20261109-053706, trimmed.
+// ---------------------------------------------------------------------------
+test('feed fidelity: a feed row dated by a bare day and no clock is stamped date-only — its days are written through the end date, not midnight to midnight', () => {
+  const parser = createParser();
+  const core = parser.core;
+  const sourceUrl = 'https://whereto.example/in/madrid';
+  const build = (row) => {
+    const event = parser.buildEventFromJsonApiObject(row, sourceUrl);
+    if (event && !event.timezone && row.city && row.city.time_zone) event.timezone = row.city.time_zone;
+    return event;
+  };
+  const settle = (event) => { core.resolveWallClockDates(event); core.applyAllDayConvention(event); return event; };
+  const iso = (value) => new Date(value).toISOString();
+
+  // MADBEAR 2026: { start_date, end_date } bare days, both clocks null.
+  const festival = build({ id: 'a9303a95-e6e7-4c1f-bdde-a74ce6811968', slug: 'madbear-2026', name: 'MADBEAR 2026', start_date: '2026-12-03', end_date: '2026-12-10', start_time: null, end_time: null, pricing: null, ticketing_url: null, city: { name: 'Madrid', time_zone: 'Europe/Madrid' }, place: null, tag_slugs: [{ slug: 'gay' }] });
+  assert.equal(festival._noTimeStated, true);
+  settle(festival);
+  assert.equal(iso(festival.startDate), '2026-12-02T23:00:00.000Z', 'the 3rd, from its own midnight in Madrid');
+  assert.equal(iso(festival.endDate), '2026-12-10T22:59:59.000Z', 'through the end of the 10th — the end date names its day too');
+  assert.equal(festival.allDay, true);
+  assert.equal(festival.timeUnknown, undefined);
+
+  // A one-day row at a venue with no clock: a night whose time nobody printed — never "12:00 AM – 3:00 AM".
+  const oneDay = build({ id: 'b', slug: 'froth-and-fury-fest-2027', name: 'Froth & Fury Fest 2027', start_date: '2027-01-30', end_date: null, start_time: null, end_time: null, city: { name: 'Adelaide', time_zone: 'Australia/Adelaide' }, place: { name: 'Adelaide Showground' } });
+  assert.equal(oneDay._noTimeStated, true);
+  settle(oneDay);
+  assert.equal(iso(oneDay.startDate), '2027-01-29T13:30:00.000Z');
+  assert.equal(iso(oneDay.endDate), '2027-01-30T13:29:59.000Z');
+  assert.equal(oneDay.timeUnknown, true);
+
+  // The same row with its clock stated is a timed night, as before (THICK 'N' JUICY Brisbane, run 20260930-150601).
+  const timed = build({ id: 'c', slug: 'thick-n-juicy', name: "THICK 'N' JUICY Brisbane", start_date: '2026-11-13', end_date: null, start_time: '21:00:00', end_time: '03:00:00', city: { name: 'Brisbane', time_zone: 'Australia/Brisbane' } });
+  assert.equal(timed._noTimeStated, undefined);
+  assert.equal(timed.startDate.toISOString(), '2026-11-13T21:00:00.000Z');
+  settle(timed);
+  assert.equal(timed.allDay, undefined);
+  assert.equal(timed.timeUnknown, undefined);
+
+  // A midnight the feed STATES is a clock: an instant at 00:00Z (7pm in New York) and a written "T00:00:00" are left alone.
+  const instant = build({ id: 'd', name: 'Drag Rumble', start_at: '2026-11-12T00:00:00Z', end_at: '2026-11-12T05:00:00Z' });
+  assert.equal(instant._noTimeStated, undefined);
+  const statedMidnight = build({ id: 'e', name: 'Midnight Mass', start_at: '2026-11-12T00:00:00', end_at: '2026-11-12T04:00:00' });
+  assert.equal(statedMidnight._noTimeStated, undefined);
+
+  // A bare start day beside an end that carries a clock is not "no time stated": the row is left as it was read.
+  const mixed = build({ id: 'f', name: 'Pool Party', start_date: '2026-12-05', end_at: '2026-12-05T19:00:00', city: { name: 'Madrid', time_zone: 'Europe/Madrid' } });
+  assert.equal(mixed._noTimeStated, undefined);
+
+  // A row the feed flags all-day already has its own shape (midnight through 23:59:59, wall clock) and takes no stamp.
+  const flagged = build({ id: 'g', title: 'Bear Frolic', start_date: '2026-10-08', end_date: '2026-10-11', all_day: true });
+  assert.equal(flagged._noTimeStated, undefined);
+  assert.equal(flagged.startDate.toISOString(), '2026-10-08T00:00:00.000Z');
+  assert.equal(flagged.endDate.toISOString(), '2026-10-11T23:59:59.000Z');
+
+  // The mark itself: only a bare YYYY-MM-DD carries it.
+  assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03').dateOnly, true);
+  assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03T00:00:00').dateOnly, undefined);
+  assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03T21:00:00+01:00').dateOnly, undefined);
+  assert.equal(parser.jsonApiScalarDateCandidate({ millis: 1796256000000, tzid: 'Europe/Madrid' }).dateOnly, undefined);
+});
+
+// ── Crawl scope (2026-11-09) ─────────────────────────────────────────────────
+// tickettailor.com (page cache, run 20261106) writes its canonical, og:url and
+// hrefs with every structural character as a numeric entity. Trimmed markup.
+const ENTITY_ENCODED_BOX_OFFICE_HTML = `<!DOCTYPE html><html lang="en-GB"><head>
+<link rel="canonical" href="https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;toucanstikilounge" />
+<meta property="og:url" content="https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;toucanstikilounge" />
+</head><body>
+<a href="&#x2F;events&#x2F;toucanstikilounge" class="header__logo" notranslate>Toucan's</a>
+<a notranslate href="&#x2F;events&#x2F;toucanstikilounge&#x2F;2424070" class="event__link">Luau</a>
+</body></html>`;
+
+test('a declared address written with numeric entities is decoded, and is never an alias when it is not absolute', () => {
+  // Wired as in production (bear-event-scraper-unified.js): the parser resolves URLs with the core's normalizeUrl.
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const parser = new AiWebParser({ normalizeUrl: core.normalizeUrl.bind(core) });
+  parser.core = core;
+  const lines = [];
+  const original = console.log;
+  console.log = (line) => { lines.push(String(line)); };
+  try {
+    // The page as fetched, and the same markup reached under its event URL (run 20261109, log line 2257).
+    parser.noteSelfDeclaredAliases(ENTITY_ENCODED_BOX_OFFICE_HTML, 'https://www.tickettailor.com/events/toucanstikilounge');
+    parser.noteSelfDeclaredAliases(
+      ENTITY_ENCODED_BOX_OFFICE_HTML.replace(/toucanstikilounge/g, 'asociacionmadbear&#x2F;2409132'),
+      'https://www.tickettailor.com/events/asociacionmadbear/2409132');
+    // A relative canonical is our resolution, not the page's declaration.
+    parser.noteSelfDeclaredAliases('<link rel="canonical" href="/event/v3x3n7-spookmince-tickets">', 'https://dice.fm/event/6a5e399f126db80001fe9c5c');
+    parser.noteSelfDeclaredAliases('<link rel="canonical" href="v3x3n7-spookmince-tickets">', 'https://dice.fm/event/6a5e399f126db80001fe9c5c');
+  } finally { console.log = original; }
+  assert.deepEqual(lines.filter(line => line.includes('ALIAS')), [], 'no alias was recorded');
+  // Even a resolver that does not decode (the stub this suite uses elsewhere) cannot get the mis-resolved value past the core.
+  const undecoding = createParser();
+  undecoding.core = core;
+  undecoding.noteSelfDeclaredAliases(ENTITY_ENCODED_BOX_OFFICE_HTML, 'https://www.tickettailor.com/events/toucanstikilounge');
+  assert.deepEqual(lines.filter(line => line.includes('ALIAS')), [], 'the core refuses an address with entity text in it');
+  assert.equal(core.resolveUrlAlias('https://www.tickettailor.com/events/toucanstikilounge'), 'https://www.tickettailor.com/events/toucanstikilounge');
+  assert.equal(core.resolveUrlAlias('https://dice.fm/event/6a5e399f126db80001fe9c5c'), 'https://dice.fm/event/6a5e399f126db80001fe9c5c');
+
+  // The entity-encoded canonical IS the page: it reads as a self-reference, not as a new link.
+  assert.equal(
+    parser.normalizeUrl(parser.extractSelfDeclaredCanonicalUrls(ENTITY_ENCODED_BOX_OFFICE_HTML)[0], 'https://www.tickettailor.com/events/toucanstikilounge'),
+    'https://www.tickettailor.com/events/toucanstikilounge');
+  // …and the page's entity-encoded hrefs resolve to the addresses they name.
+  const hrefs = parser.extractHrefCandidates(ENTITY_ENCODED_BOX_OFFICE_HTML)
+    .map(candidate => parser.normalizeUrl(candidate.url, 'https://www.tickettailor.com/events/toucanstikilounge'));
+  assert.ok(hrefs.includes('https://www.tickettailor.com/events/toucanstikilounge/2424070'), hrefs.join(' | '));
+  assert.ok(hrefs.every(href => !/&#|%26%23/i.test(href)), hrefs.join(' | '));
+
+  // An absolute, entity-encoded declaration of ANOTHER spelling still folds.
+  const idUrl = 'https://dice.fm/event/6a5e399f126db80001fe9c5c';
+  const slugUrl = 'https://dice.fm/event/v3x3n7-spookmince-31st-oct-unlocked-shoreditch-london-tickets';
+  console.log = () => {};
+  try {
+    parser.noteSelfDeclaredAliases(`<link rel="canonical" href="${slugUrl.replace(/:/g, '&#x3A;').replace(/\//g, '&#x2F;')}">`, idUrl);
+  } finally { console.log = original; }
+  assert.equal(core.resolveUrlAlias(idUrl), slugUrl);
+});
+
+// outsavvy.com/event/20231/soho-school-of-burlesque-scratch (page cache, run
+// 20261109-053706): the share buttons carry the page's own address unencoded
+// inside another URL's query. Markup verbatim, trimmed to the two anchors.
+const SHARE_BUTTON_HTML = `<div class="jssocials-shares">
+<a target="_blank" href="fb-messenger://share/?link=https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch&app_id=179821335543821&redirect_uri=https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch" class="jssocials-share-link" title="Share on Messenger" name="Share on Messenger">
+<a target="_blank" href="https://wa.me/?text=OutSavvy%20-%20Soho School of Burlesque Scratch Show%20-%20Sunday 8th November 2026 (+ 1 other date)%20at%20The Cavendish Arms.%20https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch&app_absent=1" class="jssocials-share-link" title="Share on Whats App" name="Share on Whats App">
+</div>`;
+
+test('URL discovery: a URL embedded in another URL\'s query string ends at the enclosing "&"', () => {
+  const parser = createParser();
+  const page = 'https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch';
+  const found = parser.extractUrlCandidatesFromRawHtml(SHARE_BUTTON_HTML);
+  assert.ok(found.includes(page), found.join(' | '));
+  assert.deepEqual(found.filter(url => /app_id=|app_absent=|redirect_uri=/.test(url) && url.startsWith('https://www.outsavvy.com/')), [],
+    'the enclosing URL\'s parameters are not part of the embedded address');
+  // The same markup with &amp; (how a serializer writes it) and inside JSON.
+  const encoded = parser.extractUrlCandidatesFromRawHtml(SHARE_BUTTON_HTML.replace(/&/g, '&amp;'));
+  assert.ok(encoded.includes(page), encoded.join(' | '));
+  assert.ok(!encoded.some(url => url.startsWith(`${page}&`)), encoded.join(' | '));
+  const json = parser.extractUrlCandidatesFromRawHtml(`<script>var share = {"messenger":"fb-messenger://share/?link=${page}&app_id=1"};</script>`);
+  assert.deepEqual(json, [page]);
+
+  // Left exactly as scanned:
+  // a URL's own query,
+  assert.deepEqual(parser.extractUrlCandidatesFromRawHtml('<a href="https://x.example/list?page=2&sort=date">next</a>'), ['https://x.example/list?page=2&sort=date']);
+  // an embedded URL that has a query of its own (whose "&" it is cannot be told),
+  assert.ok(parser.extractUrlCandidatesFromRawHtml('<a href="app://open/?link=https://x.example/e?id=7&ref=share">x</a>').includes('https://x.example/e?id=7&ref=share'));
+  // a URL that follows prose or sits alone in its attribute,
+  assert.deepEqual(parser.extractUrlCandidatesFromRawHtml('<p title="Tickets and more: https://x.example/a&b">x</p>'), ['https://x.example/a&b']);
+  assert.deepEqual(parser.extractUrlCandidatesFromRawHtml('<a href="https://x.example/a&b">x</a>'), ['https://x.example/a&b']);
+  // and a whole URL that carries another one in its query stays one URL.
+  assert.deepEqual(
+    parser.extractUrlCandidatesFromRawHtml('<a href="https://share.example/sharer.php?u=https://x.example/e/1&t=Title">x</a>'),
+    ['https://share.example/sharer.php?u=https://x.example/e/1&t=Title']);
+  // Direct helper edges.
+  assert.equal(parser.cutUrlEmbeddedInQuery('', 0, 'https://x.example/a&b'), 'https://x.example/a&b');
+  assert.equal(parser.cutUrlEmbeddedInQuery('"app://s/?l=https://x.example/a&b"', 12, 'https://x.example/a&b'), 'https://x.example/a');
+});
+
+// ---------------------------------------------------------------------------
+// Page-scan bound counts what a scan can READ, not template padding
+// (gruntparty.monster/goodbyegrunt, 2026-11-08: 873,845 characters, ~670,000
+// of them whitespace inside four template tags — the raw 500,000 cut landed
+// inside the second one, the party's date and venue were never read and the
+// orphaned tag's attribute JSON was served as the page's text; 0 events).
+// ---------------------------------------------------------------------------
+
+function paddedTemplatePage(bodyHtml, padChars) {
+  // The real shape, trimmed: a builder writes its header settings into a
+  // data attribute and indents every key with tens of thousands of blanks.
+  const pad = `\n${' '.repeat(padChars)}`;
+  const styles = `{${pad}&quot;layout&quot;: &quot;navRight&quot;,${pad}&quot;action&quot;: {${pad}&quot;buttonText&quot;: &quot;March 28 TIXXX&quot;,${pad}&quot;newWindow&quot;: true${pad}}${pad}}`;
+  return [
+    '<!doctype html><html><head><title>Season Closer — GRUNT</title>',
+    '<meta property="og:title" content="Season Closer — GRUNT"/>',
+    '</head><body>',
+    `<header class="header theme-col--primary${pad}" data-section-theme="" data-current-styles="${styles}">`,
+    '<a href="/">GRUNT</a></header>',
+    `<div class="header-menu header-menu--folder-list${pad}" data-section-theme="" data-current-styles="${styles}">`,
+    '</div>',
+    bodyHtml,
+    '</body></html>'
+  ].join('\n');
+}
+
+test('scan bound: whitespace padding inside template tags does not push the event text out of the scan', () => {
+  const parser = createParser();
+  const html = paddedTemplatePage([
+    '<main><h1>Season Closer</h1>',
+    '<p>Come to GRUNT to say goodbye, for now.</p>',
+    '<h2>NOVEMBER 28 at THE STUD</h2>',
+    '<p>At THE STUD (1123 FOLSOM STREET, SF, CA)</p></main>'
+  ].join('\n'), 40000);
+  assert.ok(html.length > 500000, 'the fixture must exceed the raw bound');
+  assert.ok(html.indexOf('NOVEMBER 28') > 500000, 'the event text sits past the raw bound, as on the real page');
+  assert.ok(html.slice(0, 500000).lastIndexOf('<div class="header-menu') > html.slice(0, 500000).lastIndexOf('">'),
+    'the raw cut lands inside the second template tag, as on the real page');
+
+  const bundle = parser.getPromptSectionBundle(html, {});
+  const contentLines = bundle.content ? bundle.content.lines.join('\n') : '';
+  assert.ok(contentLines.includes('NOVEMBER 28 at THE STUD'), `the date line is read: ${contentLines.slice(0, 300)}`);
+  assert.ok(contentLines.includes('At THE STUD (1123 FOLSOM STREET, SF, CA)'), 'the venue line is read');
+  assert.equal(/buttonText|navRight|header-menu/.test(contentLines), false, 'no tag attribute is served as page text');
+
+  const cleaned = parser.cleanHtml(html, {});
+  assert.ok(cleaned.includes('NOVEMBER 28 at THE STUD'));
+  assert.equal(cleaned.includes('buttonText'), false);
+  assert.equal(parser.extractOgMetaContent(html, 'og:title'), 'Season Closer — GRUNT');
+});
+
+test('scan bound: a page under the bound is scanned exactly as fetched; over it only unread markup is dropped', () => {
+  const parser = createParser();
+  const small = '<html><head><style>a{}</style><script>var a = 1;</script></head><body><!-- note --><p>hi   there</p></body></html>';
+  assert.equal(parser.boundHtmlForScan(small), small, 'under the bound nothing changes');
+  assert.equal(parser.boundHtmlForScan(''), '');
+  assert.equal(parser.boundHtmlForScan(null), '');
+
+  // Over the bound: inline scripts, styles and comments are not page text and
+  // go; an Event's JSON-LD (which the scans DO read) stays, wherever it sits.
+  const jsonLd = '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"Season Closer","startDate":"2026-11-28T22:00:00-08:00"}</script>';
+  const big = [
+    '<html><head><title>Season Closer</title>',
+    `<style>.a{color:red}/* ${'s'.repeat(200000)} */</style>`,
+    `<script>window.__boot = "${'x'.repeat(200000)}";</script>`,
+    `<!-- ${'c'.repeat(200000)} -->`,
+    jsonLd,
+    '</head><body><p>NOVEMBER 28 at THE STUD</p></body></html>'
+  ].join('\n');
+  assert.ok(big.indexOf('application/ld+json') > 500000);
+  const bounded = parser.boundHtmlForScan(big);
+  assert.ok(bounded.length < 2000, `only the readable page is left (${bounded.length})`);
+  assert.ok(bounded.includes(jsonLd), 'the JSON-LD block survives whole');
+  assert.equal(/__boot|color:red|ccccc/.test(bounded), false);
+  assert.ok(bounded.includes('<p>NOVEMBER 28 at THE STUD</p>'));
+  assert.equal(parser.pageHasEventTypedJsonLd({ url: 'https://example.com/closer', html: big }), true, 'an Event past the raw bound is still seen');
+  assert.equal(parser.boundHtmlForScan(big), bounded, 'the same page is bounded once');
+});
+
+test('scan bound: a page with more readable text than the bound is cut between tags, and says so', () => {
+  const parser = createParser();
+  const row = '<p class="row" data-kind="listing-row">row text that is really on the page</p>\n';
+  const html = `<html><body>${row.repeat(Math.ceil(520000 / row.length))}<p>LAST LINE</p></body></html>`;
+  let bounded = '';
+  const logs = captureLogs(() => { bounded = parser.boundHtmlForScan(html); });
+  assert.ok(bounded.length <= 500000);
+  assert.equal(bounded.includes('LAST LINE'), false, 'the bound still holds for real text');
+  assert.ok(bounded.lastIndexOf('<') < bounded.lastIndexOf('>'), 'no orphaned tag opener is left at the cut');
+  assert.ok(logs.some(line => line.includes('Page scan bound reached') && line.includes(`of ${html.length}`)),
+    `the cut is logged: ${JSON.stringify(logs)}`);
+});
+
+test('confidence retry: a retry that answers blank never erases what the first pass read', () => {
+  const parser = createParser();
+  const firstPass = { title: 'Season Closer — GRUNT', bar: 'THE STUD', address: '1123 FOLSOM STREET, SF, CA', startDate: '2026-11-28' };
+  const merged = parser.mergeAiEventFields(firstPass, { bar: '', address: null, startDate: '   ', city: 'san francisco' });
+  assert.equal(merged.bar, 'THE STUD');
+  assert.equal(merged.address, '1123 FOLSOM STREET, SF, CA');
+  assert.equal(merged.startDate, '2026-11-28');
+  assert.equal(merged.city, 'san francisco', 'a retry may still ADD a field');
+});
+
+// ---------------------------------------------------------------------------
+// The programme's own day headings state its year.
+//
+// bearssitges.org/bears-sitges-week (page cached 2026-11-08, run 2026-11-09):
+// the organiser put next year's banner on top and left the finished 2026
+// programme underneath it. The header's "2027" anchored every "JUEVES- 03"
+// section to September 2027 — where the 3rd is a Friday — and 34 parties that
+// were over came back as new events ten months out.
+// ---------------------------------------------------------------------------
+
+// The cached page's own lines, trimmed (rows shortened, eleven headings kept).
+const STALE_PROGRAMME_LINES = [
+  'PROGRAMA oficial 2027',
+  'PRóXIMAMENTE',
+  'BEARS SITGES WEEK 2027',
+  'Del 3 al 12 de SEPTIEMBRE',
+  '(Bear-Village abierto del 6 al 12)',
+  'JUEVES- 03',
+  '19h. INAUGURACIÓN BEARS SITGES WEEK 2025 Brindaremos con Cava y Aperitivo. Hotel Calipolis. Entrada Libre',
+  'VIERNES - 04',
+  '20:30h a 03:30h: OPENING «EARLY-VILLAGE» 2026 Con motivo del 25º aniversario de Bears Sitges abrimos el Bear-Village',
+  'SÁBADO - 05',
+  '14:00h: BBQ & Music – POP-Air en Restaurant LE PATIO. **Tickets a la venta en Clica AQUÍ',
+  'DOMINGO - 06',
+  '20:30h a 03h: EARLY-VILLAGE 2026 Para celebrar el 25 aniversario de Bears Sitges',
+  'LUNES - 07',
+  '16h a 21h: Inauguración BEARS SITGES MARKET en Hotel Calipolis',
+  'MARTES - 08',
+  '20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village con DJ PAW.L',
+  'MIÉRCOLES - 09',
+  '16h a 20:30h BEAR TEA-DANCE : En el RoofTop del Hotel MiM **Plazas Limitadas**',
+  'JUEVES - 10',
+  '01h a 06h CAPITÁN Party en «BEARS DISCO» by Scandal',
+  'VIERNES - 11',
+  '21:30h to 03:30h 25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village with DJ PERFECTO.',
+  'SABADO -12',
+  '21h a 04h Noche Especial Mr. BEAR SITGES 2026: en Bear-Village con DJ Radio Chi.',
+  'DOMINGO - 13',
+  '12h BEARS SITGES MARKET en Hotel Calipolis'
+];
+const wrapProgrammeLines = (lines) => `<html><body>${lines.map(l => `<p>${l}</p>`).join('\n')}</body></html>`;
+// The day of the run that found it: 2026-11-09.
+const STALE_PROGRAMME_NOW = () => new Date(Date.UTC(2026, 10, 9, 12, 0, 0));
+const capturePageYearLogs = (run) => {
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+  try {
+    return { result: run(), logs: logs.filter(line => line.includes('PAGE YEAR')) };
+  } finally {
+    console.log = originalLog;
+  }
+};
+
+test('page year: a programme whose day headings fall on last year\'s weekdays is last year\'s programme, whatever the banner above it says — and the log names the headings', () => {
+  const parser = createParser();
+  parser.now = STALE_PROGRAMME_NOW;
+  const { result: ctx, logs } = capturePageYearLogs(() => parser.derivePageDateContext(wrapProgrammeLines(STALE_PROGRAMME_LINES)));
+
+  assert.equal(ctx.month, 9);
+  assert.equal(ctx.year, 2026, 'eleven headings, every one true of September 2026 and none of September 2027');
+  assert.equal(ctx.headerYear, 2027, 'what the banner said is kept beside it');
+  assert.equal(ctx.yearSource, 'day-headings');
+  assert.equal(logs.length, 1, 'one line, and only one, says the page year was not the banner\'s');
+  assert.match(logs[0], /says 2027/);
+  assert.match(logs[0], /11 of 11 day headings/);
+  assert.match(logs[0], /"JUEVES- 03"/);
+  assert.match(logs[0], /anchored to 2026, not 2027/);
+
+  // What the model is told for each day section follows the page's year.
+  const friday = { lines: ['VIERNES - 04', '20:30h a 03:30h: OPENING «EARLY-VILLAGE» 2026 Con motivo del 25º aniversario'] };
+  assert.ok(parser.buildSegmentDateContextLine(friday, ctx).startsWith('SEGMENT_DATE_CONTEXT: September 4, 2026 ('),
+    `got: ${parser.buildSegmentDateContextLine(friday, ctx)}`);
+});
+
+test('page year: the banner stands when the headings agree with it, when there are too few of them, when the page states no year, and when no single year fits', () => {
+  const parser = createParser();
+  parser.now = STALE_PROGRAMME_NOW;
+  const header = ['PROGRAMA oficial 2027', 'BEARS SITGES WEEK 2027', 'Del 3 al 12 de SEPTIEMBRE'];
+  const derive = (lines) => capturePageYearLogs(() => parser.derivePageDateContext(wrapProgrammeLines(lines)));
+
+  // Next year's programme really is up: 3 September 2027 is a Friday.
+  const published = derive([...header, 'VIERNES - 03', '19h. INAUGURACIÓN', 'SÁBADO - 04', '21h Fiesta', 'DOMINGO - 05', '12h Market']);
+  assert.equal(published.result.year, 2027);
+  assert.equal(published.result.headerYear, undefined, 'nothing was changed, nothing is stamped');
+  assert.deepEqual(published.logs, []);
+
+  // Two day headings are not a programme.
+  const two = derive([...header, 'JUEVES- 03', '19h. INAUGURACIÓN', 'VIERNES - 04', '21h Fiesta']);
+  assert.equal(two.result.year, 2027);
+  assert.deepEqual(two.logs, []);
+
+  // No year on the page: the vote checks a stated year, it never supplies one.
+  const yearless = derive(['PROGRAMA oficial', 'Del 3 al 12 de SEPTIEMBRE', 'JUEVES- 03', 'x', 'VIERNES - 04', 'y', 'SÁBADO - 05', 'z']);
+  assert.equal(yearless.result.year, null);
+  assert.deepEqual(yearless.logs, []);
+
+  // Headings no year can make true (three consecutive days all "Monday"):
+  // the banner's year is left alone, and the log says it was doubted.
+  const impossible = derive([...header, 'LUNES - 03', 'a', 'LUNES - 04', 'b', 'LUNES - 05', 'c']);
+  assert.equal(impossible.result.year, 2027);
+  assert.equal(impossible.logs.length, 1);
+  assert.match(impossible.logs[0], /no single nearby year fits them/);
+  assert.match(impossible.logs[0], /report-only/);
+
+  // A programme older than last year fits no year in reach either (3
+  // September 2024 was a Tuesday): never guessed at.
+  const older = derive([...header, 'MARTES - 03', 'a', 'MIÉRCOLES - 04', 'b', 'JUEVES - 05', 'c']);
+  assert.equal(older.result.year, 2027);
+  assert.match(older.logs[0], /report-only/);
+
+  // One day headed by two different weekdays votes for nothing — and takes
+  // the count under three here.
+  const twice = derive([...header, 'JUEVES- 03', 'a', 'VIERNES - 03', 'b', 'VIERNES - 04', 'c', 'SÁBADO - 05', 'd']);
+  assert.equal(twice.result.year, 2027);
+  assert.deepEqual(twice.logs, []);
+});
+
+test('page year: one mistyped heading does not outvote the rest, short weekday forms vote too, and a short form that could be two days names none', () => {
+  const parser = createParser();
+  parser.now = STALE_PROGRAMME_NOW;
+  const header = ['BEARS SITGES WEEK 2027', 'Del 3 al 12 de SEPTIEMBRE'];
+  const quiet = (lines) => capturePageYearLogs(() => parser.derivePageDateContext(wrapProgrammeLines(lines))).result;
+
+  // "LUNES - 06" is a slip (the 6th was a Sunday); four other headings agree.
+  const typo = quiet([...header, 'JUEVES- 03', 'a', 'VIERNES - 04', 'b', 'SÁBADO - 05', 'c', 'LUNES - 06', 'd', 'LUNES - 07', 'e']);
+  assert.equal(typo.year, 2026);
+
+  const shortForms = quiet([...header, 'JUE 03', 'a', 'VIE 04', 'b', 'SAB 05', 'c']);
+  assert.equal(shortForms.year, 2026, 'abbreviated day headings are the same statement');
+
+  // The weekday a word names comes from the position the locale tables list
+  // it at, Monday first — never from a hand-kept table.
+  const { weekdayIndexByName } = parser.getMultilingualDateVocabulary();
+  assert.equal(weekdayIndexByName.jueves, 3);
+  assert.equal(weekdayIndexByName.sabado, 5);
+  assert.equal(weekdayIndexByName.donnerstag, 3);
+  assert.equal(weekdayIndexByName.dimanche, 6);
+  assert.equal(weekdayIndexByName['sexta-feira'], 4);
+  assert.equal(weekdayIndexByName.sexta, 4, 'a short form names the day whose full names it begins');
+  assert.equal(weekdayIndexByName.mar, 1);
+  assert.equal(weekdayIndexByName.dim, undefined, '"dim" begins fr "dimanche" and ca "dimarts"/"dimecres" — it names none');
+  assert.equal(weekdayIndexByName.sonnabend, undefined, 'a curated synonym has no position, so it does not vote');
+});
+
+test('page year: with the day sections anchored to the year their weekdays state, a finished programme is dropped as an archive instead of coming back as next year\'s events', async () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema
+  const read = async (contextYear, answeredYear) => {
+    const parser = createParser();
+    parser.now = STALE_PROGRAMME_NOW;
+    const html = [
+      'SEGMENT_INDEX: 3/37',
+      `SEGMENT_DATE_CONTEXT: September 4, ${contextYear} (day-of-month heading anchored to this page's date context "Del 3 al 12 de SEPTIEMBRE")`,
+      'VIERNES - 04',
+      '20:30h a 03:30h: OPENING «EARLY-VILLAGE» Con motivo del 25º aniversario de Bears Sitges abrimos el Bear-Village'
+    ].join('\n');
+    // The model quotes the heading, not the context line — the shape of the
+    // real answers for this page.
+    parser.core.callAiGenerate = async () => JSON.stringify({
+      title: { value: 'OPENING «EARLY-VILLAGE»', evidence: 'OPENING «EARLY-VILLAGE»', confidence: 95 },
+      startDate: { value: `${answeredYear}-09-04`, evidence: 'VIERNES - 04', confidence: 85 },
+      startTime: { value: '20:30', evidence: '20:30h a 03:30h', confidence: 95 }
+    });
+    const htmlData = { html, url: 'https://bearssitges.example/bears-sitges-week/' };
+    const logs = [];
+    const original = { log: console.log, warn: console.warn };
+    console.log = (...args) => logs.push(args.join(' '));
+    console.warn = (...args) => logs.push(args.join(' '));
+    try {
+      const extracted = await parser.extractEventWithTwoPassAi(htmlData, {}, null, {}, ['title', 'startDate', 'startTime'], html, 'test', { dataFlags: { segment: true } });
+      return { extracted, event: parser.normalizeAiEvent({ ...extracted }, htmlData, null, null, null), logs };
+    } finally {
+      console.log = original.log;
+      console.warn = original.warn;
+    }
+  };
+
+  // The defect, reproduced: anchored to the banner's year, the 2027 date is
+  // "stated by the source" and ships.
+  const before = await read(2027, 2027);
+  assert.deepEqual(before.extracted.__explicitSourceYears, { start: 2027 });
+  assert.equal(before.event.startDate.toISOString().slice(0, 10), '2027-09-04');
+
+  // Anchored to the programme's own year: a stated, finished date. Dropped,
+  // and the log names the record and the reason.
+  const after = await read(2026, 2026);
+  assert.deepEqual(after.extracted.__explicitSourceYears, { start: 2026 });
+  assert.equal(after.event, null);
+  assert.ok(after.logs.some(line => /Dropping "OPENING «EARLY-VILLAGE»" — source states an explicit 2026 date/.test(line)));
+
+  // …and a model that answers next year anyway has nothing on the page to
+  // stand on: the date is not held as stated, and never ships as 2027.
+  const stubborn = await read(2026, 2027);
+  assert.equal(stubborn.extracted.__explicitSourceYears, undefined);
+  assert.notEqual(stubborn.event && stubborn.event.startDate.getUTCFullYear(), 2027);
+});
+
+// ---------------------------------------------------------------------------
+// Series shape: the dates WE made from a feed row's rule are not the site's
+// expansion (run 20261109-053706, thebearcalendar.com "Furry Friday").
+// The row below is that feed row, trimmed. The feed states ONE row and one
+// rule; expandJsonApiSeriesRow fans it into 13 Fridays, all wearing the same
+// event page and the same ticket link. The enrich crawl follows that ticket
+// link once and reads one record, dated to the next Friday, whose own page
+// is the ticket page and whose poster is that page's. One date wearing a
+// page and a poster the other twelve do not read as "the site publishes a
+// page per night": the stated rule was demoted and 13 separate new events
+// were proposed, while every other rule row of the feed stayed one series.
+// ---------------------------------------------------------------------------
+const OWN_EXPANSION_FEED_ROW = {
+  slug: 'furry-friday-2026',
+  title: 'Furry Friday',
+  url: 'https://thebearcalendar.example/events/furry-friday-2026/',
+  start: '2026-08-28T19:00:00', // the wall clock the feed-clock step hands over (the feed prints +00:00)
+  end: null,
+  tz: 'UTC',
+  recurrence: 'Fridays',
+  rrule: 'FREQ=WEEKLY;BYDAY=FR',
+  category: 'party',
+  venue: 'Kings Cross Hotel',
+  city: 'Sydney',
+  country: 'Australia',
+  organizer: 'Harbour City Bears',
+  ticket_url: 'https://hcbears.example/event-6700980/Registration',
+  website_url: 'https://hcbears.example/event-6700980',
+  image: 'https://feed-images.example/event-images/8f34856f66beb1b0.png'
+};
+
+// By the time the shape is judged the copies carry no `url` of their own
+// (run file: url null on all 13 rows; the shape line named `website`).
+function expandOwnSeriesRows(parser, rows) {
+  const copies = withCapturedLogsReturning(() => parser.extractEventsFromJsonApiPayload(
+    { events: rows.map(row => JSON.parse(JSON.stringify(row))) }, 'https://thebearcalendar.example/feed.json', null));
+  for (const copy of copies) copy.url = '';
+  return copies;
+}
+
+function withCapturedLogsReturning(run) {
+  const original = console.log;
+  console.log = () => {};
+  try { return run(); } finally { console.log = original; }
+}
+
+// The record the enrich crawl reads off the ticket link every copy shares.
+function buildSharedLinkPageRecord(copy, overrides = {}) {
+  return {
+    title: 'Furry Friday',
+    bar: 'Kings Cross Hotel',
+    address: '244-248 William Street, Kings Cross',
+    startDate: new Date(copy.startDate.getTime()),
+    endDate: new Date(copy.startDate.getTime()),
+    url: 'https://hcbears.example/event-6700980/Registration',
+    website: 'https://hcbears.example/event-6700980/Registration',
+    image: 'https://hcbears.example/resources/Pictures/furry-friday.jpg',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+
+test('series shape: thirteen dates we made from ONE feed row that states a rule stay one series when the row\'s shared link is read once — and the log says whose dates they are', () => {
+  const parser = createParser();
+  const copies = expandOwnSeriesRows(parser, [OWN_EXPANSION_FEED_ROW]);
+  assert.equal(copies.length, 13, 'the rule row is fanned into thirteen Fridays');
+  assert.ok(copies.every(copy => typeof copy._seriesRowExpansion === 'string' && copy._seriesRowExpansion.startsWith('FREQ=WEEKLY;BYDAY=FR@')),
+    'every copy says it is our own expansion of the rule row');
+  assert.equal(new Set(copies.map(copy => copy._seriesRowExpansion)).size, 1, 'one row, one stamp');
+
+  // The defect, reproduced on the same records without the stamp: one date
+  // wears a page the others do not, so the family is taken for per-night
+  // publication and nothing is a series.
+  const unstamped = copies.map(copy => { const bare = { ...copy }; delete bare._seriesRowExpansion; return bare; });
+  const unstampedRecords = [...unstamped, buildSharedLinkPageRecord(unstamped[0])];
+  const before = withCapturedLogs(() => parser.applyDerivedCadenceStamps(unstampedRecords));
+  assert.ok(before.some(line => line.includes('🔁 SHAPE: "Furry Friday" is occurrence-expanded (distinct per-date website artifacts across 13 dates) — 14 record(s) over 13 date(s) kept individual')),
+    `the old verdict is reproduced, got: ${JSON.stringify(before)}`);
+  assert.ok(unstampedRecords.every(record => record.recurrenceRule === undefined));
+
+  // With the dates known to be ours: one stated series.
+  const records = [...copies, buildSharedLinkPageRecord(copies[0])];
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  const rules = new Set(records.map(record => record.recurrenceRule));
+  assert.deepEqual([...rules], ['FREQ=WEEKLY;BYDAY=FR'], 'all fourteen records carry the one rule');
+  assert.equal(new Set(records.map(record => record._cadenceGroup)).size, 1, 'one same-series marker, so the series collapse can fold them');
+  assert.ok(records.every(record => record._seriesInfo === undefined), 'not an occurrence-expanded family');
+  const shape = logs.find(line => line.includes('🔁 SHAPE: "Furry Friday" is stated-series'));
+  assert.ok(shape, `stated-series line expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(shape.includes('every one of its 13 dates is our own copy of one feed row that states FREQ=WEEKLY;BYDAY=FR'), shape);
+  assert.ok(shape.includes('the 1 other record(s) read, on 1 date(s), show no page published per date'), shape);
+  assert.ok(!logs.some(line => line.includes('occurrence-expanded')), JSON.stringify(logs));
+});
+
+test('series shape: pages really read on two of those dates still make separate nights; two rule rows, or a date no copy covers, are judged by their artifacts as before', () => {
+  // Two different pages read on two different nights: the site does publish
+  // a page per night, whatever the feed's one row says.
+  const twoPagesParser = createParser();
+  const copies = expandOwnSeriesRows(twoPagesParser, [OWN_EXPANSION_FEED_ROW]);
+  const twoPages = [
+    ...copies,
+    buildSharedLinkPageRecord(copies[0], { url: 'https://hcbears.example/event-6700980', website: 'https://hcbears.example/event-6700980' }),
+    buildSharedLinkPageRecord(copies[1], { url: 'https://hcbears.example/event-6700981', website: 'https://hcbears.example/event-6700981' })
+  ];
+  const twoPagesLogs = withCapturedLogs(() => twoPagesParser.applyDerivedCadenceStamps(twoPages));
+  assert.ok(twoPagesLogs.some(line => line.includes('🔁 SHAPE: "Furry Friday" is occurrence-expanded') && line.includes('distinct per-date url artifacts across 2 dates')),
+    JSON.stringify(twoPagesLogs));
+  assert.ok(twoPages.every(record => record.recurrenceRule === undefined), 'no series conversion');
+
+  // Two rule rows for one party (the feed lists the Friday night and the
+  // Wednesday night separately): two rows are two publications — the feed
+  // row ids differ across dates exactly as before.
+  const twoRowsParser = createParser();
+  const twoRows = expandOwnSeriesRows(twoRowsParser, [
+    OWN_EXPANSION_FEED_ROW,
+    { ...OWN_EXPANSION_FEED_ROW, slug: 'furry-friday-2026-2', start: '2026-08-26T19:00:00', recurrence: 'Wednesdays', rrule: 'FREQ=WEEKLY;BYDAY=WE' }
+  ]);
+  assert.equal(twoRows.length, 26);
+  assert.equal(new Set(twoRows.map(copy => copy._seriesRowExpansion)).size, 2);
+  const twoRowsLogs = withCapturedLogs(() => twoRowsParser.applyDerivedCadenceStamps(twoRows));
+  assert.ok(twoRowsLogs.some(line => line.includes('is occurrence-expanded') && line.includes('distinct per-date feed row id artifacts')),
+    JSON.stringify(twoRowsLogs));
+
+  // A dated row of its own on a night the rule does not reach: that date is
+  // the feed's, not ours, so the family is not "all our own copies".
+  const extraParser = createParser();
+  const ruleCopies = expandOwnSeriesRows(extraParser, [OWN_EXPANSION_FEED_ROW]);
+  const special = {
+    ...ruleCopies[0],
+    startDate: new Date(ruleCopies[0].startDate.getTime() + 24 * 60 * 60 * 1000),
+    endDate: null,
+    _sourceRowId: 'furry-friday-special-2026'
+  };
+  delete special._seriesRowExpansion;
+  const withSpecial = [...ruleCopies, special];
+  const specialLogs = withCapturedLogs(() => extraParser.applyDerivedCadenceStamps(withSpecial));
+  assert.ok(specialLogs.some(line => line.includes('is occurrence-expanded') && line.includes('distinct per-date feed row id artifacts')),
+    JSON.stringify(specialLogs));
+
+  // And a family nobody expanded keeps the old rule to the letter: a page
+  // only one date wears is that date's own publication.
+  const plainParser = createParser();
+  const plain = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) => buildCadenceStampRecord({
+    startDate: new Date(`${date}T20:00:00.000Z`),
+    endDate: new Date(`${date}T23:00:00.000Z`),
+    url: '',
+    website: index === 0 ? 'https://fixture-eagle.example/events/karaoke/tickets' : 'https://fixture-eagle.example/events/karaoke/'
+  }));
+  const plainLogs = withCapturedLogs(() => plainParser.applyDerivedCadenceStamps(plain));
+  assert.ok(plainLogs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is occurrence-expanded') && line.includes('distinct per-date website artifacts')),
+    JSON.stringify(plainLogs));
+});
+
+// ---------------------------------------------------------------------------
+// Weekday pin: opening hours are not a date (run 20261109-053706,
+// thelumberyardbar.com home page). The model answered an invented
+// startDate "2024-01-01" for the bar's happy hour with the evidence
+// "TUE-SAT 4-6PM • SUN 12-7PM (recurring weekly)". The weekday reader took
+// "SAT 4-6" for a weekday beside a numeric date, so the pin moved the made-up
+// day to the nearest year in which January 1st is a Saturday — 2028 — and
+// held it there against the window repair.
+// ---------------------------------------------------------------------------
+
+test('weekday pin: a weekday beside opening hours states no day of any month — a made-up date is not pinned to it', () => {
+  const parser = createParser();
+  parser.now = () => new Date(Date.UTC(2026, 10, 9, 13, 0, 0));
+  const hours = 'TUE-SAT 4-6PM • SUN 12-7PM (recurring weekly)';
+  assert.equal(parser.extractStatedWeekdayAdjacentToDate(hours), null);
+  const { result, logs } = (() => {
+    const lines = [];
+    const original = console.log;
+    console.log = (...args) => { lines.push(args.join(' ')); };
+    try {
+      return { result: parser.resolveWeekdayPinnedYear('2024-01-01', hours, 'Happy Hour Menu\nTUE-SAT 4-6PM • SUN 12-7PM'), logs: lines };
+    } finally {
+      console.log = original;
+    }
+  })();
+  assert.equal(result, null, 'the invented date is left to the ordinary year repair');
+  assert.ok(!logs.some(line => line.includes('Weekday-pinned year')), logs.join('\n'));
+
+  // Every clock shape a weekday can sit in front of.
+  for (const clock of [
+    'SAT 4-6PM', 'Sat 4-6 pm', 'SUN 12-7PM', 'Sat 10-2AM', 'Sat 10-12PM', 'Fri 9-10:30pm', 'Fri 9.30pm',
+    'Sat 4.30-6pm', 'Sat 4.30 – 6 p.m.', 'Sa 16-19h', '4-6pm Saturday', '9.30pm, Friday'
+  ]) {
+    assert.equal(parser.extractStatedWeekdayAdjacentToDate(clock), null, clock);
+    assert.equal(parser.resolveWeekdayPinnedYear('2024-01-01', clock), null, clock);
+  }
+});
+
+test('weekday pin: a numeric date beside a weekday still pins, with its clock time after it', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // 2026-08-22 is a Saturday (the 2026-07-12 run's own example).
+  for (const evidence of [
+    'Sat 8/22', 'Sat 8/22 9PM', 'Sat 8/22 - 9pm', 'Sat 8/22: doors 9pm', 'Sat, 8/22 • 4-6PM', 'Sat 8-22', 'Sat 8-22 9PM',
+    'Sat 8-22: doors 9pm', 'Sat 22.8', 'Sat 22.8. 21h', '8/22 (Sat) 4-6pm', 'Sat, Aug 22 • 4-6PM', 'Saturday 22 August, 4.30-6pm'
+  ]) {
+    assert.equal(parser.extractStatedWeekdayAdjacentToDate(evidence), 6, evidence);
+    const pinned = parser.resolveWeekdayPinnedYear('2024-08-22', evidence);
+    assert.ok(pinned, evidence);
+    assert.equal(pinned.value, '2026-08-22', evidence);
+  }
+});
+
+// ---------------------------------------------------------------------------
+// The name the page stated rides beside a trimmed title (2026-11-09)
+//   atlantaeagle.com's listing card (page cache, trimmed): the model answered
+//   title "Lumberjack" for the line "Southern Bears Lumberjack ft. Fer Juz"
+//   and the bear check dropped the party (run 20261109-053706).
+// ---------------------------------------------------------------------------
+
+test('stated name: a model title that is a trim of the card\'s own line keeps the line beside it; the saved title is not changed', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(Date.UTC(2026, 10, 9, 12, 0, 0));
+  const cardLines = ['Nov', 'Events', 'Southern Bears Lumberjack ft. Fer Juz', 'November 14, 2026 9:00 pm – November 15, 2026 3:00 am', 'Atlanta Eagle', 'View More →'];
+  const htmlData = {
+    html: cardLines.join('\n'),
+    url: 'https://atlantaeagle.com/events/',
+    // What the run derived for this card: a category label, not the name.
+    segmentListingTitle: 'Events',
+    segmentCardLines: cardLines
+  };
+  // The model's real answer shape for this card (cached extraction 7tihv2):
+  // single-quoted evidence naming the whole line.
+  parser.getAiEvent = async () => ({
+    title: 'Lumberjack',
+    startDate: '2026-11-14T21:00:00',
+    bar: 'Atlanta Eagle',
+    __fieldEvidence: { title: "LUMBERJACK in OCR_IMAGE_TEXT and 'Southern Bears Lumberjack ft. Fer Juz' in page body" }
+  });
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let event;
+  try {
+    event = await parser.extractSingleEvent(htmlData, {}, null, ['title', 'bar', 'startDate']);
+  } finally { console.log = original; }
+  assert.ok(event, logs.join('\n'));
+  assert.equal(event.title, 'Lumberjack');
+  assert.deepEqual(event._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+  assert.ok(logs.some(line => line.includes('🏷️ TITLE: "Lumberjack" is a trim of the name the page stated, "Southern Bears Lumberjack ft. Fer Juz"')), logs.join('\n'));
+
+  // The pointer alone is enough (no card lines: a single page).
+  const pointerOnly = createParser();
+  pointerOnly.now = parser.now;
+  pointerOnly.getAiEvent = parser.getAiEvent;
+  console.log = () => {};
+  let single;
+  try {
+    single = await pointerOnly.extractSingleEvent({ html: htmlData.html, url: htmlData.url }, {}, null, ['title', 'bar', 'startDate']);
+  } finally { console.log = original; }
+  assert.deepEqual(single._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+
+  // A title the page states whole gets no stamp, and neither does one whose
+  // only longer form is the page's own name after a separator.
+  const whole = createParser();
+  whole.now = parser.now;
+  whole.getAiEvent = async () => ({ title: 'Southern Bears Lumberjack ft. Fer Juz', startDate: '2026-11-14T21:00:00', __fieldEvidence: { title: 'Southern Bears Lumberjack ft. Fer Juz' } });
+  console.log = () => {};
+  let full; let branded;
+  try {
+    full = await whole.extractSingleEvent(htmlData, {}, null, ['title', 'startDate']);
+    whole.getAiEvent = async () => ({ title: 'Riptide', startDate: '2026-11-14T21:00:00', __fieldEvidence: { title: '"Riptide | Bear Jamboree"' } });
+    branded = await whole.extractSingleEvent({ html: 'Riptide | Bear Jamboree\nNovember 14, 2026 9:00 pm', url: 'https://www.bearjamboree.com/riptide', segmentCardLines: ['Riptide | Bear Jamboree', 'November 14, 2026 9:00 pm'] }, {}, null, ['title', 'startDate']);
+  } finally { console.log = original; }
+  assert.equal(full._statedTitles, undefined);
+  assert.ok(branded, 'the page is still read');
+  assert.equal(branded._statedTitles, undefined, 'a site name after a separator is not part of the event\'s name');
+});
+
+// ---------------------------------------------------------------------------
+// A SHORT CITY ALIAS INSIDE A LONGER PLACE NAME (whereto.party, run
+// 20261109-053706): the row's place "Ho Chi Minh City" carries the whole word
+// "chi" — an alias of another configured city — and a Saigon night was given
+// that city's key and clock.
+// ---------------------------------------------------------------------------
+
+test('city alias: a short alias that is a syllable of a longer place name names no city in place-shaped text', () => {
+  const parser = createParser();
+  const cityConfig = {
+    chicago: { timezone: 'America/Chicago', patterns: ['chicago', 'chi'] },
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] },
+    'hong-kong': { timezone: 'Asia/Hong_Kong', patterns: ['hong kong', 'hk'] }
+  };
+  const place = { placeName: true };
+  assert.equal(parser.findCityKeyInText('Ho Chi Minh City, Vietnam', cityConfig, place), '');
+  assert.equal(parser.findCityKeyInText('HO CHI MINH CITY', cityConfig, place), '');
+  assert.equal(parser.findCityKeyInText('District 1, Ho Chi Minh', cityConfig, place), '');
+  // The abbreviation written as one is still the city: alone, after a comma,
+  // or in capitals inside mixed-case text.
+  assert.equal(parser.findCityKeyInText('Chi', cityConfig, place), 'chicago');
+  assert.equal(parser.findCityKeyInText('3160 N Clark St, Chi, IL', cityConfig, place), 'chicago');
+  assert.equal(parser.findCityKeyInText('123 Main St NYC NY 10001', cityConfig, place), 'nyc');
+  assert.equal(parser.findCityKeyInText('3160 N Clark St, Chicago, IL', cityConfig, place), 'chicago');
+  // Free text keeps its reading: the mode is only for place-shaped fields.
+  assert.equal(parser.findCityKeyInText('FURBALL NYC PRIDE', cityConfig), 'nyc');
+
+  // The real row, trimmed (in__ho-chi-minh-city flight data).
+  const row = {
+    id: '787461f1-a783-4c74-8e5c-545c5e1ae526',
+    slug: 'on-ao-vol3-presents-skin-on-skin-sai-gon',
+    name: 'Ồn Ào Vol.3 presents Skin On Skin - Sài Gòn',
+    start_date: '2026-11-14', end_date: null, start_time: '20:30:00', end_time: '03:00:00',
+    ticketing_url: 'https://tally.so/r/NpKkBB',
+    city: { name: 'Ho Chi Minh City', time_zone: 'Asia/Ho_Chi_Minh' },
+    place: { name: 'Panorama studio rental & setdesign' }
+  };
+  const event = parser.buildEventFromJsonApiObject(row, 'https://whereto.party/in/ho-chi-minh-city', cityConfig);
+  assert.ok(event, 'the row is still read');
+  assert.notEqual(event.city, 'chicago');
+  assert.notEqual(event.timezone, 'America/Chicago');
+});
+
+// ---------------------------------------------------------------------------
+// Furniture reads the name the PAGE stated (run 20261109-053706,
+// bearjamboree.com): the brand prefixer ran before every furniture test, so
+// a menu label left as "Bear Jamboree: Hotel" — a shape none of them tests.
+// ---------------------------------------------------------------------------
+
+// bearjamboree.com/hotel as cached on 2026-11-08, trimmed: the <title>, the
+// site's <nav> (verbatim structure, attributes removed) and the body lines
+// that carry the word "hotel" and the phrase the date was taken from.
+const HOTEL_MENU_PAGE = '<html><head><title>Hotel | Bear Jamboree</title>'
+  + '<meta property="og:site_name" content="Bear Jamboree"/></head><body>'
+  + '<header><a href="https://www.bearjamboree.com/booking"><span>book hotel</span></a>'
+  + '<nav><ul><li><div><a href="https://www.bearjamboree.com"><div><span>Home</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/about"><div><span>About</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/bear-tea-dance"><div><span>Sunday tea dance</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/hotel"><div><span>Hotel</span></div></a><div><button><svg width="0" height="0"></svg></button></div></div>'
+  + '<div role="group"><div><div><ul><li><div><a href="https://www.bearjamboree.com/booking"><div><span>Booking</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/travel"><div><span>Travel</span></div></a></div></li></ul></div></div></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/gallery"><div><span>Gallery</span></div></a></div></li></ul></nav></header>'
+  + '<main><h2>100% BUYOUT OF the OFFICIAL HOST HOTEL</h2>'
+  + '<p>Balance play, and relaxation AT the bj host hotel, FT. plush bedding, a sofa nook, and a spacious workstation.</p>'
+  + '<a href="https://www.bearjamboree.com/booking"><span>book hotel</span></a>'
+  + '<h3>rooms</h3>'
+  + '<p>Rooms right in the action of the daily Bearchella Pool Parties (running 11:00 AM &ndash; 8:00 PM on Friday, and extending until 2:00 AM on Saturday and Sunday nights).</p>'
+  + '<p>Cityview: Rooms facing the exterior of the property for a quieter stay.</p></main></body></html>';
+// The record as run 20261109-053706 kept it (stamps verbatim).
+const hotelMenuRecord = () => ({
+  title: 'Bear Jamboree: Hotel',
+  _titleBeforeBrandPrefix: 'Hotel',
+  startDate: new Date('2026-11-15T00:00:00.000Z'),
+  recurrenceRule: 'FREQ=WEEKLY;BYDAY=SU',
+  _timezoneUnresolved: true,
+  _dateOrigin: { kind: 'rrule-fallback', rrule: 'FREQ=WEEKLY;BYDAY=SU', source: 'day-phrase', derivedDate: '2026-11-15', real: true,
+    vouchedBy: 'sunday nights', vouchKind: 'cadence', matchesRule: true, window: 'page', statedFutureDate: '' },
+  source: 'ai-web'
+});
+
+test('menu label: the only event of a crawled page, named only by a label of the page\'s own menu and dated only by a cadence phrase somewhere on the page, is withheld for the owner with a reason; a page that prints the name as its own line is left alone', () => {
+  const parser = createParser();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const parserConfig = { urls: ['https://www.bearjamboree.com/events'] };
+    const url = 'https://www.bearjamboree.com/hotel';
+    assert.equal(parser.titleIsOnlyAMenuLabel('Hotel', HOTEL_MENU_PAGE), true, 'the menu says Hotel; the body only says "host hotel" and "book hotel"');
+    assert.equal(parser.titleIsOnlyAMenuLabel('Rooms', HOTEL_MENU_PAGE), false, 'a body heading is not a menu label');
+    assert.equal(parser.titleIsOnlyAMenuLabel('Bearchella Pool Parties', HOTEL_MENU_PAGE), false);
+
+    const hotel = hotelMenuRecord();
+    parser.markLoneCrawlEvent([hotel], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.ok(hotel._loneCrawlWithheld, 'withheld');
+    assert.equal(hotel._loneCrawlWithheld.page, url);
+    assert.equal(hotel._loneCrawlWithheld.day, '2026-11-15');
+    assert.match(hotel._loneCrawlWithheld.reason, /label of the page's own menu/);
+    assert.match(hotel._loneCrawlWithheld.reason, /"sunday nights"/);
+    assert.ok(hotel._loneCrawlWithheld.near.some((line) => /Sunday nights/.test(line)), 'the deck is shown the line the date was read from');
+    assert.ok(logs.some((line) => line.includes('🧭 LONE EVENT: "Bear Jamboree: Hotel"') && line.includes('menu')), logs.join('\n'));
+
+    // The same page with the name as a heading of its own: the page names
+    // the night, the stated rule dates it — untouched (a bar's weekly night
+    // with a menu entry and a page of its own).
+    const headed = HOTEL_MENU_PAGE.replace('<main>', '<main><h1>Hotel</h1>');
+    const named = hotelMenuRecord();
+    parser.markLoneCrawlEvent([named], { html: headed, url }, parserConfig, url, 'event-page');
+    assert.equal(named._loneCrawlWithheld, undefined, 'a heading outside the menu names it');
+
+    // Not a menu label: a cadence-dated event of a crawled page keeps the
+    // exemption it had.
+    const pool = { ...hotelMenuRecord(), title: 'Bear Jamboree: Bearchella Pool Parties', _titleBeforeBrandPrefix: 'Bearchella Pool Parties' };
+    parser.markLoneCrawlEvent([pool], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.equal(pool._loneCrawlWithheld, undefined);
+
+    // A rule the row itself vouched for (a card's own window), or a stated
+    // future date, is the page's statement even under a menu label.
+    const rowVouched = hotelMenuRecord();
+    rowVouched._dateOrigin.window = 'card';
+    parser.markLoneCrawlEvent([rowVouched], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.equal(rowVouched._loneCrawlWithheld, undefined);
+
+    // The configured page and a page with two events are never judged.
+    const configured = hotelMenuRecord();
+    parser.markLoneCrawlEvent([configured], { html: HOTEL_MENU_PAGE, url }, { urls: [url] }, url, 'event-page');
+    assert.equal(configured._loneCrawlWithheld, undefined);
+    const first = hotelMenuRecord(); const second = hotelMenuRecord();
+    parser.markLoneCrawlEvent([first, second], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.equal(first._loneCrawlWithheld, undefined);
+  } finally { console.log = quiet; }
+});
+
+test('menu label: the lone-event check looks for the name the page stated, not the brand-prefixed title', () => {
+  const parser = createParser();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const parserConfig = { urls: ['https://www.bearjamboree.com/events'] };
+    const url = 'https://www.bearjamboree.com/bear-tea-dance';
+    // "Bear Jamboree: Sunday tea dance" (run 20261109-053706) was reported
+    // as "its name is not in the page's text"; the page says "Sunday tea
+    // dance" and states the day beside it.
+    const page = '<html><body><h1>Sunday tea dance</h1><p>Sunday, November 15, 2026</p><p>4pm at the pool</p></body></html>';
+    const dated = { title: 'Bear Jamboree: Sunday tea dance', _titleBeforeBrandPrefix: 'Sunday tea dance', startDate: new Date('2026-11-15T21:00:00.000Z'), timezone: 'America/New_York', source: 'ai-web' };
+    parser.markLoneCrawlEvent([dated], { html: page, url }, parserConfig, url, 'multi-event-page');
+    assert.equal(dated._loneCrawlWithheld, undefined, 'the date sits beside the stated name');
+    const undated = { ...dated, _loneCrawlWithheld: undefined };
+    parser.markLoneCrawlEvent([undated], { html: page.replace('<p>Sunday, November 15, 2026</p>', ''), url }, parserConfig, url, 'multi-event-page');
+    assert.ok(undated._loneCrawlWithheld, 'no date beside the name');
+    assert.match(undated._loneCrawlWithheld.reason, /no date is stated within six lines of its name/, 'the name WAS found — the reason is the missing date');
+  } finally { console.log = quiet; }
+});
+
+test('furniture: the brand prefixer never runs on a furniture title, and both furniture drops read the title as it stood before the prefix', () => {
+  const parser = createChunkParser();
+  const brands = parser.getPageBrandNames(CHUNK_PAGE());
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const prefix = (title) => parser.buildBrandPrefixedTitle(title, brands, CHUNK_PAGE(), CHUNK_CONFIG);
+    // Shapes verbatim from run 20261018-161635 (PR #1907) and the guards
+    // beside them: each stays unprefixed, and says why.
+    for (const title of ['comprar entradas', '2. To apply', 'Events for July 27, 2026', 'Little West 12th St.', 'en-US', 'My Account', 'H2K 1X7']) {
+      logs.length = 0;
+      assert.equal(prefix(title), '', title);
+      assert.ok(logs.some((line) => line.includes('🪑 FURNITURE:') && line.includes(`"${title}"`) && line.includes('not prefixed')), `${title}: ${logs.join(' / ')}`);
+    }
+    // A real name is prefixed as before.
+    assert.equal(prefix('The RETURN'), 'CHUNK: The RETURN');
+    assert.equal(prefix('2 Bears 1 Cave'), 'CHUNK: 2 Bears 1 Cave');
+
+    // A record that was prefixed anyway (an older route, a stamp from a
+    // cached answer) is still read by its stated name.
+    logs.length = 0;
+    const prefixed = [
+      { title: 'CHUNK: comprar entradas', _titleBeforeBrandPrefix: 'comprar entradas' },
+      { title: 'CHUNK: The RETURN', _titleBeforeBrandPrefix: 'The RETURN' }
+    ];
+    assert.deepEqual(parser.dropFurnitureShapedTitles(prefixed, 'https://www.chunk-party.com/x').map((event) => event.title), ['CHUNK: The RETURN']);
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "CHUNK: comprar entradas" is a call to action')), logs.join('\n'));
+
+    logs.length = 0;
+    const html = '<html><body><h1>The RETURN</h1><p>Doors at ten.</p><button>Load More</button></body></html>';
+    const buttoned = [
+      { title: 'CHUNK: Load More', _titleBeforeBrandPrefix: 'Load More' },
+      { title: 'CHUNK: The RETURN', _titleBeforeBrandPrefix: 'The RETURN' }
+    ];
+    assert.deepEqual(parser.dropPageFurnitureTitledEvents(buttoned, html, 'https://www.chunk-party.com/x').map((event) => event.title), ['CHUNK: The RETURN']);
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "CHUNK: Load More" is the label of a button')), logs.join('\n'));
+    assert.equal(parser.pageStatedTitle({ title: 'CHUNK: The RETURN' }), 'CHUNK: The RETURN', 'no stamp: the title itself');
+  } finally { console.log = quiet; }
+});
+
+// ── 2026-11-09 audit, crawl-junk 1c: titles that are hours, numbers or a byline ──
+// bearssitges.org, run 20261109-053706: the day programme prints the hours
+// before every name, and eight records kept them in the title ("1h a 06h
+// BEEFMINCE DISCO Party", "13h Sitges Drag Brunch", "10h a 21h:", "25").
+test('clock titles: a leading clock or clock range is cut from a title, with a log line; a name that opens with a number stays whole', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const strip = (title) => parser.stripLeadingClockFromTitle(title);
+  // The page's own lines.
+  assert.equal(strip('1h a 06h BEEFMINCE DISCO Party'), 'BEEFMINCE DISCO Party');
+  assert.equal(strip('20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village'), 'Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village');
+  assert.equal(strip('21:30h to 03:30h 25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village'), '25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village');
+  assert.equal(strip('20:30h. a 03:00h BEARS on CRUISE Special Night'), 'BEARS on CRUISE Special Night');
+  assert.equal(strip('20:30h a 03h: EARLY-VILLAGE 2026'), 'EARLY-VILLAGE 2026');
+  assert.equal(strip('20 h: CENA OFICIAL 25º aniBEARSari'), 'CENA OFICIAL 25º aniBEARSari');
+  assert.equal(strip('13h Sitges Drag Brunch'), 'Sitges Drag Brunch');
+  assert.equal(strip('10 PM – 4 AM | FURBALL NYC'), 'FURBALL NYC');
+  // Names, not hours: no marker, not an hour, one word of name, or a
+  // remainder that is a place or the rest of the hours.
+  for (const name of ['2AM Club', '12h Rave', '24h Party', '5 à 7 des Ours', '9 to 5 Party', '2 Bears 1 Cave',
+    '10 Years of Bearracuda', '3 Dollar Bill', '21+ Bear Night', '501 Party Night', '6-9 Beer Bust',
+    '8:00 Showtime', '10.30 Brunch Club', '4pm to the Floor party', '9pm til late', '9pm-late Bear Night',
+    '11PM-5AM @ The Eagle', '10pm at the bar', 'BEEFMINCE DISCO Party', '']) {
+    assert.equal(strip(name), name, name);
+  }
+
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const day = (lines) => ({ segmentText: lines.join('\n'), html: lines.join('\n'), segmentCardLines: lines });
+    const disco = parser.normalizeAiEvent({ title: '1h a 06h BEEFMINCE DISCO Party', startDate: '2026-09-10', startTime: '01:00' }, {},
+      day(['JUEVES - 10', '1h a 06h BEEFMINCE DISCO Party en «BEARCAVE» compra tus entradas AQUÍ']), null, null);
+    assert.equal(disco.title, 'BEEFMINCE DISCO Party');
+    assert.ok(logs.some((line) => line.includes('Stripped leading clock from title "1h a 06h BEEFMINCE DISCO Party" → "BEEFMINCE DISCO Party"')), logs.join('\n'));
+    // A real name that opens with a number goes through untouched.
+    const cave = parser.normalizeAiEvent({ title: '2 Bears 1 Cave', startDate: '2026-09-10', startTime: '21:00' }, {},
+      day(['JUEVES - 10', '2 Bears 1 Cave']), null, null);
+    assert.equal(cave.title, '2 Bears 1 Cave');
+  } finally { console.log = quiet; }
+});
+
+test('clock titles: a title that is only a clock range ending in a colon, or only a one- or two-digit number, is no title — the record is not kept under it, and the log says why', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  assert.equal(parser.isTimeOnlyLineText('10h a 21h:'), true);
+  assert.equal(parser.isTimeOnlyLineText('10h a 21h'), true, 'as before');
+  assert.equal(parser.isTimeOnlyLineText('CENA OFICIAL:'), false);
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const day = (lines) => ({ segmentText: lines.join('\n'), html: lines.join('\n'), segmentCardLines: lines });
+    // VIERNES - 11 / 10h a 21h: / 20 h: CENA OFICIAL 25º aniBEARSari …
+    assert.equal(parser.normalizeAiEvent({ title: '10h a 21h:', startDate: '2026-09-11', startTime: '10:00' }, {},
+      day(['VIERNES - 11', '10h a 21h:']), null, null), null);
+    assert.ok(logs.some((line) => line.includes('Title "10h a 21h:" is only a time of day')), logs.join('\n'));
+    logs.length = 0;
+    assert.equal(parser.normalizeAiEvent({ title: '25', startDate: '2026-09-11', startTime: '20:00' }, {},
+      day(['VIERNES - 11', '20 h: CENA OFICIAL 25º aniBEARSari en «HOTEL CALIPOLIS»']), null, null), null);
+    assert.ok(logs.some((line) => line.includes('Title "25" is only a number')), logs.join('\n'));
+    // Three digits, or a number with a word, is still a name.
+    logs.length = 0;
+    const named = parser.normalizeAiEvent({ title: '501 Night', startDate: '2026-09-11', startTime: '20:00' }, {},
+      day(['VIERNES - 11', '501 Night']), null, null);
+    assert.equal(named.title, '501 Night');
+    assert.ok(!logs.some((line) => line.includes('is only a number')));
+  } finally { console.log = quiet; }
+});
+
+// studsf.com/podcast, run 20261109-053706: the coverage audit handed thirteen
+// post bylines to extraction as one-line windows ("April 06, 2021 / Stud
+// SF"); the compact-row reader read each as a party called "/ Stud SF" and
+// the year repair walked 2021 forward to 2026-27.
+test('byline rows: a compact row that prints its year hands it on as the stated year, so a past one is an archived line and is never walked forward; what is left of a byline is furniture', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const byline = { segmentText: 'April 06, 2021 / Stud SF' };
+  assert.deepEqual(parser.readCompactListingRowParts(byline), { title: '/ Stud SF', startDate: '2021-04-06', bar: '', statedYear: 2021 });
+  assert.deepEqual(parser.readCompactListingRow(byline), { title: '/ Stud SF', startDate: '2021-04-06', bar: '' }, 'the row itself reads as before');
+  assert.equal(parser.readCompactListingRowParts({ segmentText: 'September 5, 2026 FURBALL NOLA - Santos Bar' }).statedYear, 2026);
+  assert.equal(parser.readCompactListingRowParts({ segmentText: '10/10 FURBALL Boston - Legacy' }).statedYear, 0, 'no year printed, none stated');
+  assert.equal(parser.readCompactListingRowParts({ segmentText: '1/15/27 FURBALL Boston - Legacy' }).statedYear, 2027);
+
+  const logs = [];
+  const quiet = console.log;
+  const quietWarn = console.warn;
+  console.log = (line) => logs.push(String(line));
+  console.warn = (line) => logs.push(String(line));
+  try {
+    const window = { segmentText: byline.segmentText, html: byline.segmentText };
+    const parts = parser.readCompactListingRowParts(window);
+    const stated = parser.normalizeAiEvent({ title: parts.title, startDate: parts.startDate, bar: parts.bar, __explicitSourceYears: { start: parts.statedYear } }, {}, window, null, null);
+    assert.equal(stated, null, 'a row dated 2021 by its own words is not an upcoming event');
+    assert.ok(logs.some((line) => line.includes('Dropping "/ Stud SF"') && line.includes('explicit 2021 date') && line.includes('archived event')), logs.join('\n'));
+    // A row that states this year's date is read as before.
+    const nola = { segmentText: 'September 5, 2026 FURBALL NOLA - Santos Bar', html: 'September 5, 2026 FURBALL NOLA - Santos Bar' };
+    const kept = parser.normalizeAiEvent({ title: 'FURBALL NOLA', startDate: '2026-09-05', bar: 'Santos Bar', __explicitSourceYears: { start: 2026 } }, {}, nola, null, null);
+    assert.equal(kept.title, 'FURBALL NOLA');
+    assert.equal(new Date(kept.startDate).toISOString().slice(0, 10), '2026-09-05');
+
+    // The shape rule, for any route that still produces the fragment.
+    assert.equal(AiWebParser.furnitureTitleShape('/ Stud SF'), 'a byline fragment');
+    assert.equal(AiWebParser.furnitureTitleShape('AC/DC Night'), '');
+    assert.equal(AiWebParser.furnitureTitleShape('Bears / Cubs'), '');
+    logs.length = 0;
+    const rows = [{ title: '/ Stud SF', startDate: '2027-04-06' }, { title: 'Bear Happy Hour SF', startDate: '2026-11-12' }];
+    assert.deepEqual(parser.dropFurnitureShapedTitles(rows, 'https://www.studsf.com/podcast').map((event) => event.title), ['Bear Happy Hour SF']);
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "/ Stud SF" is a byline fragment')), logs.join('\n'));
+  } finally { console.log = quiet; console.warn = quietWarn; }
+});
+
+// ── 2026-11-09 audit, crawl-junk 1d: a page's sign-up form and its currency twin are not pages of their own ──
+// eaglemanchester.com, run 20261109-053706: the home page's embedded event
+// data names each event's "registrationUrl" (…/event-details/<slug>/form);
+// the raw scan queued four of them, each was read as an event of its own
+// ("Spank Guys" dated to a night its parent page does not state) and each
+// won as its event's link.
+test('form pages: the sign-up form of a page is ticket plumbing — never crawled; the page itself still is', () => {
+  const parser = createParser();
+  const home = 'https://www.eaglemanchester.com/';
+  const html = `<html><body>
+    <a href="https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00">Spank Guys</a>
+    <script type="application/json">{"events":[{"title":"Spank Guys","scheduleStartTimeFormatted":"13:00","registrationUrl":"https:\\/\\/www.eaglemanchester.com\\/event-details\\/spank-guys-2026-12-19-13-00\\/form","scheduleTbd":false}]}</script>
+  </body></html>`;
+  const quiet = console.log;
+  console.log = () => {};
+  let links;
+  try { links = parser.extractAdditionalUrls(html, home, {}); } finally { console.log = quiet; }
+  assert.ok(links.includes('https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00'), JSON.stringify(links));
+  assert.deepEqual(links.filter((link) => /\/form(?:[/?#]|$)/.test(link)), [], JSON.stringify(links));
+
+  const reason = (url) => parser.validateEventUrl(url, home, { urls: [home] }).reason;
+  assert.equal(reason('https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00/form'), 'ticket-utility-page');
+  assert.equal(reason('https://www.eaglemanchester.com/event-details/collared-manchester-2026-12-05-19-00/form/'), 'ticket-utility-page');
+  assert.equal(reason('https://bears.example/weekend-2027/rsvp'), 'ticket-utility-page');
+  // Only as the last segment of a deeper page: a name that merely contains
+  // the word, or a page under it, is not the form.
+  assert.equal(parser.validateEventUrl('https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00', home, { urls: [home] }).valid, true);
+  assert.equal(parser.validateEventUrl('https://bears.example/events/free-form-friday', 'https://bears.example/', { urls: ['https://bears.example/'] }).valid, true);
+  assert.notEqual(reason('https://bears.example/form'), 'ticket-utility-page', 'a top-level page is left to the page classifier');
+});
+
+// bearitmtl.com, run 20261109-053706: every page carries
+// <a href="?currency=CAD">Utilisez Dollar canadien à la place.</a>; four
+// pages were crawled a second time under that address (each declaring the
+// plain URL as its canonical) and the listing's events were read twice.
+test('currency twins: a currency selector names how prices are shown, never another page — it is dropped from crawl URLs and link identity like a language selector', () => {
+  const parser = createParser();
+  const plain = 'https://www.bearitmtl.com/events/';
+  assert.equal(parser.stripTrackingParams(`${plain}?currency=CAD`), plain);
+  assert.equal(parser.stripLocaleParams(`${plain}?currency=CAD`), plain);
+  assert.equal(parser.getUrlDedupeKey(`${plain}?currency=CAD`), parser.getUrlDedupeKey(plain));
+  assert.equal(parser.core.getUrlDedupeKey(`${plain}?currency=CAD`), parser.core.getUrlDedupeKey(plain));
+  // A parameter that selects content stays.
+  assert.notEqual(parser.getUrlDedupeKey(`${plain}?paged=2`), parser.getUrlDedupeKey(plain));
+  assert.equal(parser.stripTrackingParams(`${plain}?paged=2&currency=CAD`), `${plain}?paged=2`);
+
+  const html = `<html><head><link rel="canonical" href="${plain}" /></head><body>
+    <a href="?currency=CAD">Utilisez Dollar canadien à la place.</a>
+    <a href="https://www.bearitmtl.com/event/furry-takeover/?currency=CAD">FURRY TAKEOVER</a>
+    <a href="https://www.bearitmtl.com/event/furry-takeover/">FURRY TAKEOVER</a>
+    <a href="https://www.bearitmtl.com/event/apero-ours-novembre/?currency=CAD">APÉRO OURS</a>
+  </body></html>`;
+  const quiet = console.log;
+  console.log = () => {};
+  let links;
+  try { links = parser.extractAdditionalUrls(html, plain, {}); } finally { console.log = quiet; }
+  assert.deepEqual(links.filter((link) => /currency=/i.test(link)), [], JSON.stringify(links));
+  assert.equal(links.filter((link) => /furry-takeover/.test(link)).length, 1, 'one page, not two');
+  assert.ok(links.includes('https://www.bearitmtl.com/event/apero-ours-novembre/'), JSON.stringify(links));
+  assert.ok(!links.some((link) => parser.getUrlDedupeKey(link) === parser.getUrlDedupeKey(plain)), 'the page does not queue itself');
+});
+
+// akbarsilverlake.com, run 20261109-053706: /about-us/our-team/ — staff and DJ
+// biographies — was followed from the menu and gave six "events" dated from
+// the cadence words of a biography ("Experimental Cabaret", "Soundtrack
+// Sundays" were kept). "/about/" and "/contact/" were already never followed;
+// their other spellings and the people-and-hiring sections were.
+test('site sections: about-us / contact-us / team / staff pages are never followed, as whole path segments only', () => {
+  const parser = createParser();
+  const home = 'https://akbarsilverlake.com/';
+  const check = (url, source = home) => parser.validateEventUrl(url, source, { urls: [source] });
+  for (const url of [
+    'https://akbarsilverlake.com/about-us/',
+    'https://akbarsilverlake.com/about-us/our-team/',
+    'https://akbarsilverlake.com/contact-us/',
+    'https://campoutpoconos.com/team/',
+    'https://www.thelumberyardbar.com/about-us',
+    'https://bears.example/staff/',
+    'https://bears.example/team?ref=menu'
+  ]) {
+    const result = check(url, new URL(url).origin + '/');
+    assert.equal(result.valid, false, url);
+    assert.match(String(result.reason), /^blocked-pattern:/, url);
+  }
+  // A slug that merely contains one of the words is an event page.
+  for (const url of [
+    'https://akbarsilverlake.com/event/team-trivia-night/',
+    'https://akbarsilverlake.com/event/staff-picks-dance-party/',
+    'https://akbarsilverlake.com/events/press-play/',
+    'https://akbarsilverlake.com/upcoming-events/'
+  ]) {
+    assert.equal(check(url).valid, true, url);
+  }
+  const html = `<html><body><nav>
+    <a href="https://akbarsilverlake.com/upcoming-events/">Events</a>
+    <a href="https://akbarsilverlake.com/about-us/">About Us</a>
+    <a href="https://akbarsilverlake.com/about-us/our-team/">Our Team</a>
+    <a href="https://akbarsilverlake.com/contact-us/">Contact</a>
+  </nav></body></html>`;
+  const quiet = console.log;
+  console.log = () => {};
+  let links;
+  try { links = parser.extractAdditionalUrls(html, home, {}); } finally { console.log = quiet; }
+  assert.deepEqual(links, ['https://akbarsilverlake.com/upcoming-events/']);
+});
+
+// rockbarnyc.com, run 20261109-053706: the calendar widget row "PRIVATE EVENT"
+// ("Tonight, we will be CLOSED after 10pm for a PRIVATE EVENT") was read as an
+// event and left to the bear check to turn away.
+test('closure notices: a row named only "private event" is a notice, not an event, and the log says so; a named private party is still a name', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  for (const title of ['PRIVATE EVENT', 'Private Party!', 'A private event']) assert.equal(parser.isVenueClosureNoticeTitle(title), true, title);
+  for (const title of ['Private Dancer: 80s Night', 'BEARS NIGHT OUT', 'Private Event Space Open House', 'Private']) assert.equal(parser.isVenueClosureNoticeTitle(title), false, title);
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const row = { segmentText: 'PRIVATE EVENT\nTonight, we will be CLOSED after 10pm for a PRIVATE EVENT. Yes, that one. IYKYK', html: 'PRIVATE EVENT' };
+    assert.equal(parser.normalizeAiEvent({ title: 'PRIVATE EVENT', startDate: '2026-10-10', startTime: '22:00' }, {}, row, null, null), null);
+    assert.ok(logs.some((line) => line.includes('🚪 CLOSED: "PRIVATE EVENT" is a closure notice')), logs.join('\n'));
+  } finally { console.log = quiet; }
+});
+
+// studsf.com, run 20261109-053706: the site's name is a lone left-to-right
+// mark (U+200E), so every item page's "<event> — <site name>" template —
+// <title>, og:title and the JSON-LD Event name — reads "Muscle Mommy Pageant
+//  —   <U+200E> ". Eleven records carried that tail (three kept, e.g. "Bear
+// Happy Hour SF — <U+200E>"), and it replaced the collection's clean title in
+// the fold. A mark that prints nothing is not part of a name, and the
+// separator left dangling beside it goes with it.
+test('invisible marks: a zero-width or direction mark and the separator left dangling beside it are cut from a title; emoji joiners, soft hyphens and unmarked titles stay', () => {
+  const parser = createParser();
+  assert.equal(parser.stripInvisibleTitleMarks('Muscle Mommy Pageant  —   ‎ '), 'Muscle Mommy Pageant');
+  assert.equal(parser.stripInvisibleTitleMarks('Bear Happy Hour SF — ‎'), 'Bear Happy Hour SF');
+  assert.equal(parser.stripInvisibleTitleMarks('‏ | Bear Night'), 'Bear Night');
+  assert.equal(parser.stripInvisibleTitleMarks('﻿Bear​ Night⁠'), 'Bear Night');
+  assert.equal(parser.stripInvisibleTitleMarks('  ‎ '), '');
+  // A joiner that builds an emoji is the emoji; a soft hyphen is a deliberate
+  // break hint; a title with no mark is returned as it came, separator and all.
+  assert.equal(parser.stripInvisibleTitleMarks("THICK 'N' JUICY ❤️‍🔥 Brisbane"), "THICK 'N' JUICY ❤️‍🔥 Brisbane");
+  assert.equal(parser.stripInvisibleTitleMarks('Bear­racuda'), 'Bear­racuda');
+  assert.equal(parser.stripInvisibleTitleMarks('Bear Night —'), 'Bear Night —');
+  assert.equal(parser.stripInvisibleTitleMarks('Bears — Cubs'), 'Bears — Cubs');
+  assert.equal(parser.showInvisibleTitleMarks('SF — ‎'), 'SF — <U+200E>');
+});
+
+test('invisible marks: an item page whose template appends an invisible site name gives the event its printed name, and the log shows the mark that was cut', async () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // Trimmed from the cached page www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant.
+  const html = `<!doctype html><html><head>
+<title>Muscle Mommy Pageant  &mdash;   ‎ </title>
+<meta property="og:site_name" content="  ‎ "/>
+<meta property="og:title" content="Muscle Mommy Pageant  &mdash;   ‎ "/>
+<script type="application/ld+json">{"url":"https://www.studsf.com","name":"  \\u200E ","description":"","@context":"http://schema.org","@type":"WebSite"}</script>
+<script type="application/ld+json">{"legalName":"The Stud","address":"1123 Folsom St\\nSan Francisco, CA, 94103","@context":"http://schema.org","@type":"Organization"}</script>
+<script type="application/ld+json">{"name":"Muscle Mommy Pageant  \\u2014   \\u200E ","startDate":"2026-11-20T21:00:00-0800","endDate":"2026-11-21T02:00:00-0800","image":["http://static1.squarespace.com/static/5899708ee3df288fed2979ab/t/5c5d91ecb208fcb27d09a61b/1549636078416/studlogo_box.jpg?format=1500w"],"location":{"name":"The Stud","address":"SOMA\\nSan Francisco, CA","@context":"http://schema.org","@type":"Place"},"@context":"http://schema.org","@type":"Event"}</script>
+</head><body>
+<article class="eventitem"><h1 class="eventitem-title">Muscle Mommy Pageant </h1>
+<ul class="eventitem-meta event-meta"><li class="eventitem-meta-item eventitem-meta-date"><time class="event-date" datetime="2026-11-20">Friday, November 20, 2026</time></li>
+<li class="eventitem-meta-item eventitem-meta-time"><time class="event-time-12hr-start" datetime="2026-11-20">9:00 PM</time> <time class="event-time-12hr-end" datetime="2026-11-20">2:00 AM</time></li></ul>
+</article></body></html>`;
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  let result;
+  try {
+    result = await parser.parseEvents({ html, url: 'https://www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant' }, {});
+  } finally { console.log = quiet; }
+  assert.equal(result.events.length, 1, logs.join('\n'));
+  assert.equal(result.events[0].title, 'Muscle Mommy Pageant');
+  assert.equal(result.events[0].startDate && new Date(result.events[0].startDate).toISOString().slice(0, 10), '2026-11-21');
+  assert.ok(logs.some((line) => line.includes('🏷️ TITLE: "Muscle Mommy Pageant — <U+200E>" → "Muscle Mommy Pageant" — invisible marks')), logs.filter((line) => /TITLE/.test(line)).join('\n'));
+});
+
+test('invisible marks: a model title that copied the marked page title is cleaned, and a title made only of marks is no title', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const row = { segmentText: 'Bear Happy Hour SF\nThursday, December 10, 2026 5:00 PM 9:00 PM\nThe Stud', html: '<h1>Bear Happy Hour SF</h1>' };
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const event = parser.normalizeAiEvent({ title: 'Bear Happy Hour SF — ‎', startDate: '2026-12-10', startTime: '17:00' }, {}, row, null, null);
+    assert.ok(event, logs.join('\n'));
+    assert.equal(event.title, 'Bear Happy Hour SF');
+    assert.ok(logs.some((line) => line.includes('🏷️ TITLE: "Bear Happy Hour SF — <U+200E>" → "Bear Happy Hour SF"')), logs.join('\n'));
+    assert.equal(parser.normalizeAiEvent({ title: ' ‎ ', startDate: '2026-12-10', startTime: '17:00' }, {}, { segmentText: 'Thursday, December 10, 2026 5:00 PM', html: '' }, null, null), null);
+  } finally { console.log = quiet; }
 });

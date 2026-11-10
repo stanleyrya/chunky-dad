@@ -976,3 +976,45 @@ test('deriveFestivalTags: a city-reach run tags every event in town inside its w
   assert.deepEqual(derive({ city: 'sf', startDate: '2026-09-27T20:00:00Z' }), [], 'only bear runs derive bear-run');
   assert.deepEqual(derive({ city: 'ptown' }), [], 'no date, no window');
 });
+
+test('bear runs: a destination town implies city reach; a big city implies none; a stated reach overrules the town; keepingEventTags is the keep list', () => {
+  const festivals = [
+    { key: 'spooky-bear', name: 'Spooky Bear', category: 'bear-run', cityKey: 'ptown', nextDates: { start: '2026-10-29', end: '2026-11-01' } },
+    { key: 'urban-bear-nyc', category: 'bear-run', cityKey: 'nyc', nextDates: { start: '2026-09-17', end: '2026-09-20' } },
+    { key: 'quiet-run', category: 'bear-run', cityKey: 'sitges', reach: 'none', nextDates: { start: '2026-09-04', end: '2026-09-13' } },
+    { key: 'ptown-pride', category: 'pride', cityKey: 'ptown', nextDates: { start: '2026-06-05', end: '2026-06-07' } },
+    { key: 'no-city', category: 'bear-run', nextDates: { start: '2026-10-29', end: '2026-11-01' } }
+  ];
+  const config = { ptown: { destination: true }, sitges: { destination: true }, nyc: {} };
+  const shapes = [config, ['ptown', 'sitges'], new Set(['ptown', 'sitges']), { ptown: true, sitges: true }];
+  for (const destinations of shapes) {
+    assert.equal(EventSchema.isDestinationCity('PTOWN', destinations), true);
+    assert.equal(EventSchema.isDestinationCity('nyc', destinations), false);
+    const found = EventSchema.findBearRunForEvent({ city: 'ptown', startDate: '2026-10-30T22:00:00Z' }, festivals, { destinations });
+    assert.equal(found && found.key, 'spooky-bear');
+    assert.deepEqual(EventSchema.deriveFestivalTags({ city: 'ptown', startDate: '2026-10-30T22:00:00Z' }, festivals, { destinations }), ['bear-run']);
+    assert.equal(EventSchema.findBearRunForEvent({ city: 'nyc', startDate: '2026-09-18T23:00:00Z' }, festivals, { destinations }), null, 'a big city: not necessarily bear');
+    assert.equal(EventSchema.findBearRunForEvent({ city: 'sitges', startDate: '2026-09-05T20:00:00Z' }, festivals, { destinations }), null, 'reach: none overrules the town');
+    assert.equal(EventSchema.findBearRunForEvent({ city: 'ptown', startDate: '2026-06-06T20:00:00Z' }, festivals, { destinations }), null, 'a pride is not a bear run');
+  }
+  assert.equal(EventSchema.isDestinationCity('ptown', null), false);
+  assert.equal(EventSchema.isDestinationCity('', config), false);
+  assert.equal(EventSchema.findBearRunForEvent({ city: 'ptown', startDate: '2026-10-30T22:00:00Z' }, festivals), null, 'no destinations handed in, no implied reach');
+
+  assert.deepEqual(EventSchema.keepingEventTags('drag, kink, pup, underwear, rubber, diaper'), []);
+  assert.deepEqual(EventSchema.keepingEventTags('kink, leather'), ['leather']);
+  assert.deepEqual(EventSchema.keepingEventTags(['bear-crowd', 'drag']), ['bear-crowd']);
+  for (const [tag, entry] of Object.entries(EventSchema.EVENT_TAGS)) {
+    assert.equal(Boolean(entry.keeps), ['leather', 'bear-crowd', 'bear-run'].includes(tag), `${tag} keeps flag`);
+  }
+});
+
+test('destination towns: scripts/scraper-cities.js carries exactly the flags js/city-config.js states (generated, never hand-edited)', () => {
+  const siteConfig = require('../js/city-config.js');
+  const siteCities = siteConfig.CITY_CONFIG || siteConfig;
+  const scraperCities = require('./scraper-cities');
+  const stated = Object.keys(siteCities).filter(key => siteCities[key] && siteCities[key].destination === true).sort();
+  const generated = Object.keys(scraperCities).filter(key => scraperCities[key] && scraperCities[key].destination === true).sort();
+  assert.ok(stated.length > 0, 'at least one destination town is stated');
+  assert.deepEqual(generated, stated);
+});

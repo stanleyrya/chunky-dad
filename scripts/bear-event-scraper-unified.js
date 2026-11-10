@@ -529,7 +529,13 @@ class BearEventScraperOrchestrator {
                             console.log(`👯 Orchestrator: calendar twins check skipped — ${twinError && twinError.message ? twinError.message : twinError}`);
                         }
                         const s = gone.summary;
-                        console.log(`🕳️ Orchestrator: gone from source — ${s.saved} saved upcoming event(s) in ${s.cities} city calendar(s), ${s.attributed} pointing into ${s.sites} site(s) read this run: ${s.seen} matched, ${s.firstMisses} first miss(es), ${s.candidates} on the deck (missing 2+ runs)${s.beyondHorizon ? `, ${s.beyondHorizon} beyond the source's horizon` : ''}${s.series ? `, ${s.series} series occurrence(s) left alone` : ''}${s.suppressedThin ? `, ${s.suppressedThin} frozen (thin read)` : ''}${s.suppressedDrift ? `, ${s.suppressedDrift} frozen (host in drift)` : ''}${s.identityMisses ? `, ${s.identityMisses} listed by the site but not folded by the run (identity miss — logged, no card)` : ''}`);
+                        console.log(`🕳️ Orchestrator: gone from source — ${s.saved} saved upcoming event(s) in ${s.cities} city calendar(s), ${s.attributed} pointing into ${s.sites} site(s) read this run: ${s.seen} matched, ${s.firstMisses} first miss(es), ${s.candidates} on the deck (missing 2+ runs)${s.beyondHorizon ? `, ${s.beyondHorizon} beyond the source's horizon` : ''}${s.series ? `, ${s.series} series occurrence(s) left alone` : ''}${s.suppressedThin ? `, ${s.suppressedThin} frozen (thin read)` : ''}${s.suppressedDrift ? `, ${s.suppressedDrift} frozen (host in drift)` : ''}${s.suppressedCollapse ? `, ${s.suppressedCollapse} frozen (source degraded — a batch of its events went missing together)` : ''}${s.notRead ? `, ${s.notRead} pointing into a source that was NOT READ this run (nothing concluded)` : ''}${s.heldNoProof ? `, ${s.heldNoProof} not seen but held (no proof the site removed it)` : ''}${s.identityMisses ? `, ${s.identityMisses} listed by the site but not folded by the run (identity miss — logged, no card)` : ''}`);
+                        // Held back, never silently: a card was due and
+                        // nothing PROVES the site removed the event.
+                        for (const item of Array.isArray(gone.held) ? gone.held : []) {
+                            const label = item.reason === 'not-read' ? 'source not read' : item.reason === 'collapse' ? 'source degraded' : 'no proof';
+                            console.log(`🕳️ HELD: "${item.title}" (${item.city}, ${item.day}) — no removal card (${label}): ${item.detail}.`);
+                        }
                         for (const miss of Array.isArray(gone.identityMisses) ? gone.identityMisses : []) {
                             if (miss.proposal === 'still-listed' || miss.proposal === 'set-aside') {
                                 console.log(`🕳️ IDENTITY: saved "${miss.title}" (${miss.city}, ${miss.day}${miss.bar ? `, ${miss.bar}` : ''}) is missing from ${miss.host}'s read, but the audit's deep check says ${miss.proposal === 'still-listed' ? 'its words are still on the site' : 'the run holds it under another title'} — a read problem, not a gone event; no card.`);
@@ -544,7 +550,7 @@ class BearEventScraperOrchestrator {
                                 ? ` — that night it lists: ${card.instead.sameNight.slice(0, 3).map((row) => `"${row.title}"${row.bar ? ` at ${row.bar}` : ''}${row.similar ? ' (similar name, other place — moved?)' : ''}`).join(', ')}`
                                 : ' — nothing that night';
                             const moved = card.instead.sameTitle.length > 0 ? `; same name on ${card.instead.sameTitle.map((row) => row.day).join(', ')}` : '';
-                            const deep = card.deepCheck ? `; deep check: ${card.deepCheck.verdict}` : '';
+                            const deep = `${card.deepCheck ? `; deep check: ${card.deepCheck.verdict}` : ''}${card.proof && card.proof.detail ? `; proof: ${card.proof.detail}` : ''}`;
                             console.log(`🕳️ GONE: "${card.title}" (${card.city}, ${card.startDate ? card.startDate.slice(0, 10) : '?'}) — ${card.source} read ${card.host} this run (${card.siteEvents} events, through ${card.horizonDay}) and has not listed it for ${card.misses} runs${instead}${moved}${deep}. On the deck.`);
                         }
                     }

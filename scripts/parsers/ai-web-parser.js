@@ -92,9 +92,11 @@ const LISTED_OCCURRENCE_MIN_SPAN_DAYS = 8;
 // How many images to CONSIDER per page. Not an OCR budget — the budget below
 // counts only uncached reads — just a bound on scanning an enormous document.
 const OCR_CANDIDATE_SCAN_LIMIT = 300;
-// Page-identity scans (JSON-LD, meta tags, brand names, footer text) read at
-// most this many characters of the raw HTML — a bound on scanning an
-// enormous document, not a content window.
+// Page scans (JSON-LD, meta tags, brand names, footer text, the prompt's
+// body text) read at most this many characters of the page — a bound on
+// scanning an enormous document, not a content window. The bound counts what
+// those scans can READ, not what the template pads the page with: see
+// boundHtmlForScan.
 const HTML_SCAN_MAX_CHARS = 500000;
 // The smallest HTML budget an extraction prompt is ever built with, whatever
 // aiConfig.maxHtmlChars says.
@@ -1001,7 +1003,13 @@ class AiWebParser {
         // eaglemanchester.com/event-details/hellbent-12?lang=de beside the
         // plain page and the model then picked the "more canonical" ?lang=de
         // as the event's url. Mirrors SharedCore.localeParamPattern.
-        this.localeParamPattern = /^(lang|locale|hl|language)$/i;
+        //
+        // A currency selector is the same kind of parameter: it names the
+        // money the prices are shown in, never a different page. Run
+        // 20261109-053706 crawled four bearitmtl.com pages a second time as
+        // "?currency=CAD" (each declaring the plain URL as its canonical) and
+        // read the listing's events twice.
+        this.localeParamPattern = /^(lang|locale|hl|language|currency)$/i;
         // Detects lines that are primarily CSS content (e.g. leaked from unclosed or inline <style> blocks).
         // Matches 3+ occurrences of a CSS property name immediately followed by ":" with no space before the colon.
         this.cssContentLineRegex = /\b(cursor|color|background-color|background-image|background-size|font-size|font-weight|font-family|font-style|border-radius|border-color|border-width|border-style|margin|margin-top|margin-bottom|margin-left|margin-right|padding|padding-top|padding-bottom|padding-left|padding-right|display|position|overflow|z-index|box-sizing|box-shadow|flex|flex-shrink|flex-grow|flex-basis|align-items|justify-content|line-height|text-decoration|text-align|text-transform|opacity|min-width|max-width|min-height|max-height|width|height|top|left|right|bottom|transform|transition|animation|white-space|word-break|word-wrap|outline|visibility|pointer-events|vertical-align|letter-spacing|gap):/gi;
@@ -1405,6 +1413,9 @@ class AiWebParser {
             // JSON that arrived through a SPA data door carries context the
             // payload itself lacks — fills blanks before the completeness gate.
             this.applyDataDoorContext(jsonApiEvents, effectiveHtmlData && effectiveHtmlData.dataDoor, cityConfig);
+            // A row that types its street address after its name states its
+            // place there (readFeedRowTitleAddresses) — read before the gate.
+            this.readFeedRowTitleAddresses(jsonApiEvents);
             await this.resolveJsonApiSlugLinks(jsonApiEvents, sourceUrl, httpAdapter);
             await this.resolveJsonApiImageIdUrls(jsonApiEvents, sourceUrl, httpAdapter);
             // On a venue's or promoter's own site (config siteRole, or the
@@ -1435,10 +1446,9 @@ class AiWebParser {
                 // venue (placeVenueFeedRowsFromCuratedHost).
                 if ((configuredRole || pageRole) === 'venue') this.placeVenueFeedRowsFromCuratedHost(jsonApiEvents, sourceUrl);
             }
-            // A stated city is place evidence too: an aggregator row with no
-            // venue yet ("BEAR POOL PARTY", Sitges) is a real event somewhere
-            // in that city, not an incomplete record.
-            const completeJsonApiEvents = jsonApiEvents.filter(event => event.bar || event.address || event.city);
+            // The completeness gate (keepPlacedFeedRows): a row that names no
+            // place is not kept, and says so.
+            const completeJsonApiEvents = this.keepPlacedFeedRows(jsonApiEvents, sourceUrl);
             // The page's own data, streamed to the browser as React flight
             // chunks (see collectPageFlightDataRows): read as feed rows, with
             // the same builder, completeness gate and enrichment as a feed.
@@ -1448,9 +1458,11 @@ class AiWebParser {
                 const more = await this.continuePageFlightRows(html, sourceUrl, pageDataRows, pageFlight.continuation, httpAdapter);
                 for (const row of more) pageDataRows.push(row);
             }
-            const pageDataEvents = pageDataRows
+            const builtPageDataEvents = pageDataRows
                 .map(row => this.buildEventFromJsonApiObject(row, sourceUrl, cityConfig))
-                .filter(event => event && (event.bar || event.address || event.city));
+                .filter(Boolean);
+            this.readFeedRowTitleAddresses(builtPageDataEvents);
+            const pageDataEvents = this.keepPlacedFeedRows(builtPageDataEvents, sourceUrl);
             if (pageDataRows.length > 0) {
                 console.log(`📦 PAGE DATA: ${sourceUrl} ships ${pageDataRows.length} event row(s) in its own flight data — built ${pageDataEvents.length} event(s)`);
             }
@@ -1561,10 +1573,22 @@ class AiWebParser {
                 // normalizeAiEvent never saw them.
                 structuredEvents.forEach(event => {
                     if (!event || typeof event.title !== 'string' || !event.title.trim()) return;
+                    // First of the cleanups: every one below reads letters.
+                    const unmarkedTitle = this.stripInvisibleTitleMarks(event.title);
+                    if (unmarkedTitle !== event.title) {
+                        console.log(`🏷️ TITLE: "${this.showInvisibleTitleMarks(event.title)}" → "${unmarkedTitle}" — invisible marks (and the separator left dangling beside them) are not part of a name`);
+                        event.title = unmarkedTitle;
+                        if (!event.title) return;
+                    }
                     const strippedTitle = this.stripLeadingDatePhraseFromTitle(event.title);
                     if (strippedTitle !== event.title) {
                         console.log(`🤖 AI Web: Stripped leading date from title "${event.title}" → "${strippedTitle}"`);
                         event.title = strippedTitle;
+                    }
+                    const unclockedTitle = this.stripLeadingClockFromTitle(event.title);
+                    if (unclockedTitle !== event.title) {
+                        console.log(`🤖 AI Web: Stripped leading clock from title "${event.title}" → "${unclockedTitle}"`);
+                        event.title = unclockedTitle;
                     }
                     // …and the redundant-date strip, for the same reason. Only
                     // the leading-phrase strip was copied here originally, so
@@ -1780,6 +1804,31 @@ class AiWebParser {
                     // has to say so or the run reports OCR it actually did as
                     // OCR it skipped.
                     extractionSummary: { source: structuredSource, aiPasses: this.aiPromptHistory.length, ocrImages: structuredArtworkOcrCount },
+                    source: this.config.source,
+                    url: sourceUrl
+                };
+            }
+
+            // The page's calendar is a feed ANOTHER page of the site already
+            // answered for in this run (see claimFeedDoor): its listing has
+            // been read. Had this page asked first, the calendar's cards
+            // would have been its whole read — the route above skips the OCR
+            // sweep and the AI — so, second, it gets the same read minus the
+            // repeated rows, and its links are still followed. Without this
+            // the empty calendar frame's shell goes to the AI
+            // (precinctdtla.com/calendar/, offline replay 2026-11-09: 231
+            // characters of opening hours sent for whole-page extraction —
+            // the shape that once shipped an hours block as an event,
+            // woofsatlanta.com, run 20261017-054812).
+            const calendarReadOn = this.feedReadElsewhere instanceof Map ? (this.feedReadElsewhere.get(this.getUrlDedupeKey(sourceUrl)) || '') : '';
+            if (calendarReadOn && jsonApiPayload === null) {
+                console.log(`📅 EVENTON: ${sourceUrl} is read through its calendar, and that calendar was read on ${calendarReadOn} — no events built here again, no OCR sweep or AI extraction of the empty frame; ${additionalLinks.length} link(s) still followed`);
+                return {
+                    events: [],
+                    additionalLinks: additionalLinks,
+                    discoveredSegments: null,
+                    ocrResults: [],
+                    extractionSummary: { source: 'eventon', aiPasses: this.aiPromptHistory.length, ocrImages: 0 },
                     source: this.config.source,
                     url: sourceUrl
                 };
@@ -3127,9 +3176,16 @@ class AiWebParser {
             // over; when the model returns nothing for it, the row itself is
             // the extraction. furball.nyc's ticker lost Boston this way
             // (title returned, startdate null on both passes).
-            const compactRow = this.readCompactListingRow(promptHtmlData);
+            const compactRowParts = this.readCompactListingRowParts(promptHtmlData);
+            const compactRow = compactRowParts
+                ? { title: compactRowParts.title, startDate: compactRowParts.startDate, bar: compactRowParts.bar }
+                : null;
             const rowEvent = compactRow
-                ? this.normalizeAiEvent({ ...compactRow }, parserConfig, promptHtmlData, cityConfig, promptFields)
+                ? this.normalizeAiEvent({
+                    ...compactRow,
+                    // The year the row printed is the page's statement.
+                    ...(compactRowParts.statedYear ? { __explicitSourceYears: { start: compactRowParts.statedYear } } : {})
+                }, parserConfig, promptHtmlData, cityConfig, promptFields)
                 : null;
             if (rowEvent && rowEvent.title && rowEvent.startDate) {
                 console.log(`🤖 AI Web: Compact listing row read as the event: "${compactRow.title}" on ${compactRow.startDate}${compactRow.bar ? ` at ${compactRow.bar}` : ''}`);
@@ -3146,7 +3202,12 @@ class AiWebParser {
         // schedule notice is not an event; reject it here at the single
         // normalization choke point so every extraction path (segments,
         // single pages, detail crawls) is covered.
-        if (this.isVenueHoursNoticeTitle(event.title)) {
+        // Every title-shape guard below reads the name the PAGE stated: the
+        // brand prefixer runs inside normalizeAiEvent, before them, and a
+        // prefixed label ("Bear Jamboree: Hotel", run 20261109-053706) is
+        // no longer the shape any of them tests (see pageStatedTitle).
+        const statedTitle = this.pageStatedTitle(event);
+        if (this.isVenueHoursNoticeTitle(statedTitle)) {
             console.log(`🤖 AI Web: Skipped venue-hours notice "${event.title}" — not an event`);
             return null;
         }
@@ -3156,7 +3217,7 @@ class AiWebParser {
         // through to preview). Same linguistic-generic contract as the
         // venue-hours gate above: shape classes only, no site rules, and only
         // a title that is NOTHING but a postal code is rejected.
-        if (this.isPostalCodeOnlyTitle(event.title)) {
+        if (this.isPostalCodeOnlyTitle(statedTitle)) {
             console.log(`🤖 AI Web: Skipped degenerate event "${event.title}" — title is a postal code, not an event`);
             return null;
         }
@@ -3164,14 +3225,14 @@ class AiWebParser {
         // rejectDayHeaderEchoPassFields gate): if every pass still left a
         // weekday heading as the title, the segment named no real activity —
         // a schedule heading is not an event.
-        if (this.isDayHeaderEchoTitle(event.title)) {
+        if (this.isDayHeaderEchoTitle(statedTitle)) {
             console.log(`🤖 AI Web: Skipped day-header echo "${event.title}" — weekday heading, not an event name`);
             return null;
         }
         // Collection-name backstop (same class as the pass-level gate in
         // rejectPageTitleEchoPassFields): a title that is the page's own
         // JSON-LD CollectionPage/ItemList name is the listing, not a night.
-        if (this.titleIsPageCollectionName(event.title, htmlData)) {
+        if (this.titleIsPageCollectionName(statedTitle, htmlData)) {
             console.log(`🤖 AI Web: Skipped collection-page name "${event.title}" — the page's own name (JSON-LD CollectionPage/ItemList), not an event`);
             return null;
         }
@@ -3185,7 +3246,7 @@ class AiWebParser {
         // Night" — anything with a non-chrome word — never qualifies, and a
         // chrome-named listing that really does state a time or a cover is
         // kept and left for a human.
-        if (this.isSiteChromeTitle(event.title)) {
+        if (this.isSiteChromeTitle(statedTitle)) {
             if (this.hasScheduleOrPriceSignal(event)) {
                 console.log(`🤖 AI Web: Site-chrome title "${event.title}" carries a time/price signal — kept, verify manually`);
             } else {
@@ -3254,6 +3315,7 @@ class AiWebParser {
             }
             event._aiValidation = report;
         }
+        this.stampStatedTitles(event, aiEvent, promptHtmlData, evidenceContext);
         // Evidence-pointer rescue candidates (LOG-ONLY observation phase):
         // stash on the event as an underscore field (never serialized into
         // notes — same systematic exclusion as _geoPoi*) so the results-UI
@@ -3276,6 +3338,52 @@ class AiWebParser {
             }
         }
         return event;
+    }
+
+    // THE NAME THE PAGE STATED, stamped where the first trim happens: the
+    // model's answer. The model returns the short reusable name and quotes
+    // the page's line as its evidence — atlantaeagle.com's card line
+    // "Southern Bears Lumberjack ft. Fer Juz" came back as title
+    // "Lumberjack", and the bear check then never saw the word "Bears" (run
+    // 20261109-053706). The saved title is left alone; the longer name goes
+    // on event._statedTitles, which the bear keyword tier and the tag
+    // keyword match read beside the title (SharedCore.statedNameBehindTitle
+    // holds the one test for what counts). Candidates, all the page's own
+    // words: the listing title of the card, the card's own lines, and the
+    // span the model's title evidence points at. A brand the pipeline
+    // prefixed is not part of the name being compared.
+    stampStatedTitles(event, aiEvent, htmlData, evidenceContext) {
+        const core = this.core;
+        if (!event || !core || typeof core.noteStatedTitle !== 'function') return;
+        const title = typeof event._titleBeforeBrandPrefix === 'string' && event._titleBeforeBrandPrefix.trim()
+            ? event._titleBeforeBrandPrefix
+            : event.title;
+        if (typeof title !== 'string' || !title.trim()) return;
+        const candidates = [];
+        if (htmlData && typeof htmlData.segmentListingTitle === 'string') candidates.push(htmlData.segmentListingTitle);
+        for (const line of (htmlData && Array.isArray(htmlData.segmentCardLines) ? htmlData.segmentCardLines : [])) {
+            if (typeof line === 'string') candidates.push(line);
+        }
+        const evidence = aiEvent && aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object'
+            && typeof aiEvent.__fieldEvidence.title === 'string'
+            ? aiEvent.__fieldEvidence.title
+            : '';
+        const raw = evidenceContext && typeof evidenceContext.raw === 'string' ? evidenceContext.raw : '';
+        if (evidence && raw) {
+            // Models quote with single quotes as often as double.
+            const fragments = this.extractEvidenceQuoteFragments(evidence)
+                .concat((evidence.match(/'[^']{4,140}'/g) || []).map(quoted => quoted.slice(1, -1)));
+            for (const fragment of fragments) {
+                const span = this.locateEvidenceFragmentSpan(fragment, raw);
+                if (span) candidates.push(span);
+            }
+        }
+        for (const candidate of candidates) {
+            const added = core.noteStatedTitle(event, candidate, title);
+            if (added) {
+                console.log(`🏷️ TITLE: "${event.title}" is a trim of the name the page stated, "${added}" — the saved title stays; the bear check and the tags read both`);
+            }
+        }
     }
 
     // Deterministic venue-hours notice detector: true when a title consists of
@@ -3375,6 +3483,11 @@ class AiWebParser {
         if (/^(?:bar\s+|venue\s+|we\s+are\s+|we're\s+)?closed(?:\s*[!.]*$|\s+(?:for|due|until|till|today|tonight|tomorrow|on|this|thru|through|thanksgiving|christmas|x-?mas|new\s+year|labou?r|memorial|easter|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)/i.test(text)) return true;
         if (/^(?:no\s+events?|dark)\s*(?:tonight|today|this\s+\w+)?\s*[!.]*$/i.test(text)) return true;
         if (/^we\s+(?:will\s+)?re-?open\b/i.test(text)) return true;
+        // A row named only "PRIVATE EVENT" is the same notice without the
+        // word "closed" (rockbarnyc.com, run 20261109-053706: "PRIVATE
+        // EVENT" — "Tonight, we will be CLOSED after 10pm for a PRIVATE
+        // EVENT"). A private party with a name is still a name.
+        if (/^(?:a\s+)?private\s+(?:event|party|function|hire|booking)\s*[!.]*$/i.test(text)) return true;
         return false;
     }
 
@@ -3414,18 +3527,58 @@ class AiWebParser {
             .some(url => this.getUrlDedupeKey(this.normalizeUrl(url, url)) === this.getUrlDedupeKey(sourceUrl));
         if (configured) return;
         if (!(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return;
+        // The name is looked for as the page stated it — the brand
+        // prefixer's "Brand: <name>" is on no page ("Bear Jamboree: Sunday
+        // tea dance" was reported as "its name is not in the page's text").
+        const statedTitle = this.pageStatedTitle(event);
         // A date the page's own structured data or a stated rule produced
         // is not the model's guess.
-        if (event._barFromJsonLd || event._startDateRawText || event._dateOrigin || event._extractionSource === 'jsonld') return;
+        if (event._barFromJsonLd || event._startDateRawText || event._extractionSource === 'jsonld') return;
+        if (event._dateOrigin) {
+            // …with one exception. The rule may rest on nothing but a
+            // cadence phrase read off the WHOLE page (an unsplit page has
+            // no row to look in), and the name may be nothing but a label
+            // of the page's own menu: bearjamboree.com/hotel on run
+            // 20261109-053706 — the menu says "Hotel", the <title> says
+            // "Hotel | Bear Jamboree", a sentence about the pool's opening
+            // hours says "Sunday nights", and "Bear Jamboree: Hotel" became
+            // a weekly Sunday party. The page named no event and stated no
+            // date; the same shape can also be a real weekly night with a
+            // menu entry of its own, so it is shown to the owner, not
+            // dropped. A page that prints the name as a line of its own
+            // outside the menu (a heading) is untouched.
+            const origin = event._dateOrigin;
+            const cadenceOffWholePage = origin && origin.kind === 'rrule-fallback' && origin.vouchKind === 'cadence'
+                && origin.window === 'page' && !origin.statedFutureDate;
+            const pageHtml = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+            if (!cadenceOffWholePage || !this.titleIsOnlyAMenuLabel(statedTitle, pageHtml)) return;
+            const menuDayParts = this.localDateParts(event.startDate, event._timezoneUnresolved ? 'UTC' : (event.timezone || null));
+            const phrase = String(origin.vouchedBy || '').trim();
+            const menuReason = `the only event read from a page the crawl reached, named only by a label of the page's own menu, and dated only by ${phrase ? `the words "${phrase}"` : 'a cadence phrase'} somewhere on the page`;
+            const foldLine = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+            const pageLines = this.decodeBasicEntities(this.stripTags(pageHtml
+                .replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+                .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt)>/gi, '$&\n')))
+                .split('\n').map(line => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+            const phraseAt = phrase ? pageLines.findIndex(line => foldLine(line).includes(foldLine(phrase))) : -1;
+            event._loneCrawlWithheld = {
+                page: sourceUrl,
+                day: menuDayParts ? `${menuDayParts.year}-${String(menuDayParts.month).padStart(2, '0')}-${String(menuDayParts.day).padStart(2, '0')}` : '',
+                reason: menuReason,
+                near: (phraseAt >= 0 ? pageLines.slice(Math.max(0, phraseAt - 3), phraseAt + 4) : []).map(line => line.slice(0, 160))
+            };
+            console.log(`🧭 LONE EVENT: "${event.title}" on ${sourceUrl} — ${menuReason}; withheld for the owner`);
+            return;
+        }
         // Block boundaries are line breaks: "beside the name" is measured in
         // the page's own lines, not in whatever whitespace the markup had.
         const lined = htmlData && typeof htmlData.html === 'string'
             ? { ...htmlData, html: htmlData.html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt)>/gi, '$&\n') }
             : htmlData;
-        const windowInfo = this.undatedRowWindow(lined, event.title);
+        const windowInfo = this.undatedRowWindow(lined, statedTitle);
         if (!windowInfo) return;
         const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
-        const title = fold(event.title);
+        const title = fold(statedTitle);
         const lines = windowInfo.lines.slice(1); // the first entry is the title itself (undatedRowWindow prepends it)
         let at = -1;
         for (let i = 0; i < lines.length; i++) { if (title && fold(lines[i]).includes(title)) { at = i; break; } }
@@ -3533,7 +3686,7 @@ class AiWebParser {
         const prose = ` ${fold(furniture.prose)} `;
         const kept = [];
         for (const event of list) {
-            const title = fold(event.title);
+            const title = fold(this.pageStatedTitle(event));
             if (!title || prose.includes(` ${title} `)) { kept.push(event); continue; }
             let reason = '';
             if (furniture.buttons.has(title)) reason = 'the label of a button';
@@ -3588,14 +3741,53 @@ class AiWebParser {
                 || new RegExp(`^${STREET_FIRST}\\.?\\s+(?:[\\p{L}.'-]+\\s){1,4}\\d{1,4}[a-z]?$`, 'iu').test(line))) return 'a street line';
         // A locale tag or a bare language name from a feed.
         if (/^[a-z]{2}(?:[-_][A-Z]{2})?$/.test(line)) return 'a locale tag';
+        // What is left of a post's byline once its date is read off the
+        // front: "June 25, 2021 / Stud SF" → "/ Stud SF" (studsf.com/podcast,
+        // run 20261109-053706, thirteen "events"). No name opens with a slash.
+        if (/^[\/\\]\s*\S/.test(line)) return 'a byline fragment';
         return '';
+    }
+
+    // The name the page stated for this record: the title as it stood
+    // before the brand prefixer rewrote it, else the title. Every
+    // furniture test reads this — "Bear Jamboree: Hotel" is no shape at
+    // all, "Hotel" is the page's menu label (run 20261109-053706).
+    pageStatedTitle(event) {
+        const stated = event && typeof event._titleBeforeBrandPrefix === 'string' ? event._titleBeforeBrandPrefix.trim() : '';
+        return stated || (event && typeof event.title === 'string' ? event.title : '');
+    }
+
+    // Is this title page furniture by its shape alone — and which kind?
+    // One answer for the brand prefixer (which never dresses furniture up
+    // as "Brand: <label>") from the same shape rules the drops use.
+    describeFurnitureTitle(title) {
+        const shape = AiWebParser.furnitureTitleShape(title);
+        if (shape) return shape;
+        if (this.isVenueHoursNoticeTitle(title)) return 'an opening-hours notice';
+        if (this.isPostalCodeOnlyTitle(title)) return 'a postal code';
+        if (this.isDayHeaderEchoTitle(title)) return 'a weekday heading';
+        if (this.isSiteChromeTitle(title)) return 'a navigation or account link';
+        return '';
+    }
+
+    // The title is the label of a link in the page's own menu (<nav>, or
+    // role=navigation) and stands as a line of its own nowhere outside
+    // that menu: the page never names an event by it — the model took the
+    // name from the menu, or from the <title> tag the menu label repeats.
+    titleIsOnlyAMenuLabel(title, html) {
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+        const key = fold(title);
+        if (!key) return false;
+        const furniture = this.collectPageFurnitureTexts(html);
+        return furniture.menuLabels.has(key) && !furniture.linesOutsideMenu.has(key);
     }
 
     dropFurnitureShapedTitles(events, sourceUrl = '') {
         const list = Array.isArray(events) ? events.filter(Boolean) : [];
         const kept = [];
         for (const event of list) {
-            const reason = AiWebParser.furnitureTitleShape(event.title);
+            const reason = AiWebParser.furnitureTitleShape(this.pageStatedTitle(event));
             if (!reason) { kept.push(event); continue; }
             console.log(`🪑 FURNITURE: "${event.title}" is ${reason} on ${sourceUrl || 'this page'} — not an event`);
         }
@@ -3618,8 +3810,36 @@ class AiWebParser {
         };
         const buttons = new Set();
         const captions = [];
+        // The page's own menu: the label of every link inside <nav> or a
+        // role=navigation element, and the page's lines with those menus
+        // (and the <head>) removed — so "named only by the menu" can be
+        // asked (see titleIsOnlyAMenuLabel).
+        const menuLabels = new Set();
+        const linesOutsideMenu = new Set();
+        if (source && /<nav\b|role\s*=\s*["']navigation["']/i.test(source)) {
+            let outside = source.replace(/<head\b[\s\S]*?<\/head>/gi, ' ')
+                .replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ');
+            const takeMenu = (inner) => {
+                String(inner || '').replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, (whole, label) => {
+                    const text = textOf(label);
+                    if (text) menuLabels.add(text);
+                    return ' ';
+                });
+                return '\n';
+            };
+            outside = outside.replace(/<nav\b[^>]*>([\s\S]*?)<\/nav>/gi, (whole, inner) => takeMenu(inner));
+            outside = outside.replace(/<([a-z][a-z0-9]*)\b[^>]*\brole\s*=\s*["']navigation["'][^>]*>([\s\S]*?)<\/\1>/gi, (whole, name, inner) => takeMenu(inner));
+            if (menuLabels.size > 0) {
+                outside.replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt|a|span|button)>/gi, '$&\n')
+                    .split('\n').forEach(line => {
+                        const text = textOf(line);
+                        if (text) linesOutsideMenu.add(text);
+                    });
+            }
+        }
         if (!source || !/<(?:button|figcaption|input)\b|role\s*=\s*["']button["']/i.test(source)) {
-            return { buttons, captions, prose: '' };
+            return { buttons, captions, prose: '', menuLabels, linesOutsideMenu };
         }
         let prose = source.replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ');
         prose = prose.replace(/<button\b([^>]*)>([\s\S]*?)<\/button>/gi, (whole, tag, inner) => {
@@ -3646,7 +3866,7 @@ class AiWebParser {
             if (caption) captions.push(caption);
             return ' ';
         });
-        return { buttons, captions, prose: this.decodeBasicEntities(this.stripTags(prose)) };
+        return { buttons, captions, prose: this.decodeBasicEntities(this.stripTags(prose)), menuLabels, linesOutsideMenu };
     }
 
     foldSubheadingEvents(events, sourceUrl = '') {
@@ -3832,7 +4052,10 @@ class AiWebParser {
         if (tokens.length === 0) return false;
         let hasTimeMarker = false;
         for (const rawToken of tokens) {
-            const token = rawToken.replace(/[.,;]+$/, '');
+            // A programme line ends its clock range with a colon before the
+            // name it introduces ("10h a 21h:" on its own line —
+            // bearssitges.org, run 20261109-053706, kept as an event title).
+            const token = rawToken.replace(/[.,;:]+$/, '');
             if (!token) continue;
             if (/^(?:am|pm|h|hrs?)$/i.test(token)) {
                 hasTimeMarker = true;
@@ -4551,6 +4774,17 @@ class AiWebParser {
     // leading date token, then the name, then an optional " - VENUE" /
     // " @ VENUE" tail. Returns {title, startDate, bar} or null.
     readCompactListingRow(htmlData) {
+        const row = this.readCompactListingRowParts(htmlData);
+        return row ? { title: row.title, startDate: row.startDate, bar: row.bar } : null;
+    }
+
+    // The row, plus the year its own date token printed (0 when it printed
+    // none). A printed year is a STATED year: the caller hands it to
+    // normalizeAiEvent as an explicit source year, so a past one is an
+    // archived line and is never walked forward. studsf.com/podcast, run
+    // 20261109-053706: "April 06, 2021 / Stud SF" — a blog post's byline —
+    // was read as a row and its 2021 date shipped as 2027-04-06.
+    readCompactListingRowParts(htmlData) {
         const source = htmlData && typeof htmlData.segmentText === 'string' && htmlData.segmentText.trim()
             ? htmlData.segmentText
             : (htmlData && typeof htmlData.html === 'string' ? htmlData.html.replace(/<[^>]+>/g, '\n') : '');
@@ -4571,7 +4805,9 @@ class AiWebParser {
         if (!/[a-z]{3}/i.test(title) || this.isTimeOnlyLineText(title)) return null;
         const startDate = this.compactListingDateToIso(dateToken[1]);
         if (!startDate) return null;
-        return { title, startDate, bar };
+        const printsYear = /(?:[\/.-]\d{2}|[\/.-]\d{4}|,?\s\d{4})$/.test(this.normalizeWhitespace(dateToken[1]))
+            && !/^\d{1,2}[\/.-]\d{1,2}$/.test(this.normalizeWhitespace(dateToken[1]));
+        return { title, startDate, bar, statedYear: printsYear ? Number(startDate.slice(0, 4)) : 0 };
     }
 
     // "10/10", "Oct 3", "September 5, 2026" → YYYY-MM-DD, the form the
@@ -8742,6 +8978,39 @@ class AiWebParser {
         }
         const weekdaysAbbrev = CURATED_DATE_VOCABULARY.weekdayAbbreviations;
 
+        // Which day of the week a heading word names (0 = Monday … 6 =
+        // Sunday): the position the name was generated at, exactly like the
+        // month numbers above — the Intl-derived and static arrays are both
+        // Monday-first. English is included here (the map names a day; it
+        // adds nothing to the heading patterns). An abbreviation names the
+        // day whose full names it begins, and only when every full name it
+        // begins is the same day ("dim" starts fr "dimanche" AND ca
+        // "dimarts"/"dimecres", so it names none); a curated synonym with no
+        // position names none either. No hand-kept weekday table.
+        const weekdayIndexByName = {};
+        const weekdayIndexConflicts = new Set();
+        const addWeekdayIndexes = (weekdays) => weekdays.forEach((name, index) => {
+            if (!name || weekdayIndexConflicts.has(name)) return;
+            if (name in weekdayIndexByName && weekdayIndexByName[name] !== index) {
+                delete weekdayIndexByName[name];
+                weekdayIndexConflicts.add(name);
+                return;
+            }
+            weekdayIndexByName[name] = index;
+        });
+        for (const locale of DATE_VOCABULARY_LOCALES) {
+            addWeekdayIndexes(derived[locale].weekdays);
+            addWeekdayIndexes((STATIC_DATE_VOCABULARY_FALLBACK[locale] || { weekdays: [] }).weekdays);
+        }
+        const fullWeekdayNames = Object.keys(weekdayIndexByName);
+        for (const abbreviation of weekdaysAbbrev) {
+            if (abbreviation in weekdayIndexByName || weekdayIndexConflicts.has(abbreviation)) continue;
+            const named = new Set(fullWeekdayNames
+                .filter(name => name.startsWith(abbreviation))
+                .map(name => weekdayIndexByName[name]));
+            if (named.size === 1) weekdayIndexByName[abbreviation] = Array.from(named)[0];
+        }
+
         const alternation = (names) => names
             .slice()
             .sort((a, b) => b.length - a.length)
@@ -8768,6 +9037,7 @@ class AiWebParser {
             monthAdjacentPattern,
             weekdayHeaderPattern,
             weekdayAbbrevHeaderPattern,
+            weekdayIndexByName,
             monthNamePattern: new RegExp(`\\b(?:${monthAlternation})\\b`),
             weekdayNamePattern: new RegExp(`\\b(?:${alternation(weekdaysFull)}|${alternation(weekdaysAbbrev)})\\b\\.?`, 'gi')
         };
@@ -8872,7 +9142,79 @@ class AiWebParser {
             };
         };
 
-        return resolve(rangeMatches, false) || resolve(fullDateMatches, true);
+        return this.applyDayHeadingYearVote(lines, resolve(rangeMatches, false) || resolve(fullDateMatches, true));
+    }
+
+    // The programme's own day headings state which year it is. A heading
+    // "JUEVES- 03" under a September context says: the 3rd of September is a
+    // Thursday — true of one year in any four. The header's year is what
+    // every one of those headings is about to be anchored to (see
+    // buildSegmentDateContextLine), so the two must agree.
+    //
+    // bearssitges.org/bears-sitges-week (run 2026-11-09): the organiser put
+    // next year's banner on top — "PROGRAMA oficial 2027 / PRÓXIMAMENTE /
+    // BEARS SITGES WEEK 2027 / Del 3 al 12 de SEPTIEMBRE" — and left the
+    // finished 2026 programme underneath, "JUEVES- 03 … DOMINGO - 13". The
+    // header year anchored all eleven day sections to September 2027, where
+    // the 3rd is a Friday, and 34 parties that were over came back as new
+    // events ten months out.
+    //
+    // The rule, page shape only:
+    //   • it counts the headings the context would anchor — whole-line
+    //     weekday + day-of-month, no month of their own — one vote per day
+    //     number (a day headed by two different weekdays votes for nothing);
+    //   • fewer than three such headings is no programme, nothing changes;
+    //   • a header year that at least half the headings agree with stands;
+    //   • otherwise the ONE year from last year to two years out that most
+    //     of the headings (at least three) fall on is the programme's year,
+    //     and the log says which headings said so;
+    //   • no such year, or the header states none → the context is returned
+    //     exactly as it was (and a contradicted header says so in the log).
+    // Within those four years no two can fit the same headings: the weekday
+    // of a date moves one or two days a year.
+    applyDayHeadingYearVote(lines, context) {
+        if (!context || !Number.isFinite(context.month) || !Number.isFinite(context.year)) return context;
+        const vocab = this.getMultilingualDateVocabulary();
+        const byDay = new Map();
+        for (const rawLine of Array.isArray(lines) ? lines : []) {
+            const folded = this.foldDiacritics(this.normalizeWhitespace(rawLine));
+            if (!folded || folded.length > 40) continue;
+            const headerMatch = folded.match(vocab.weekdayHeaderPattern) || folded.match(vocab.weekdayAbbrevHeaderPattern);
+            if (!headerMatch) continue;
+            const dayText = headerMatch.slice(1).find(g => g && /^\d{1,2}$/.test(g));
+            const day = dayText ? parseInt(dayText, 10) : NaN;
+            if (!Number.isFinite(day) || day < 1 || day > 31) continue;
+            const nameMatch = folded.match(/[a-z]+(?:-[a-z]+)?/);
+            const weekdayIndex = nameMatch ? vocab.weekdayIndexByName[nameMatch[0]] : undefined;
+            if (!Number.isInteger(weekdayIndex)) continue;
+            const seen = byDay.get(day);
+            if (!seen) byDay.set(day, { day, weekdayIndex, heading: this.normalizeWhitespace(rawLine) });
+            else if (seen.weekdayIndex !== weekdayIndex) seen.weekdayIndex = null;
+        }
+        const headings = Array.from(byDay.values()).filter(entry => entry.weekdayIndex !== null);
+        if (headings.length < 3) return context;
+
+        const fits = (year) => headings.filter((entry) => {
+            const date = new Date(Date.UTC(year, context.month - 1, entry.day));
+            if (date.getUTCMonth() !== context.month - 1) return false;
+            return (date.getUTCDay() + 6) % 7 === entry.weekdayIndex;
+        }).length;
+        const headerFits = fits(context.year);
+        if (headerFits * 2 >= headings.length) return context;
+
+        const currentYear = this.now().getFullYear();
+        const fitting = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2]
+            .filter(year => year !== context.year)
+            .map(year => ({ year, count: fits(year) }))
+            .filter(candidate => candidate.count >= 3 && candidate.count * 2 > headings.length);
+        const sample = headings.slice(0, 3).map(entry => `"${entry.heading}"`).join(', ') + (headings.length > 3 ? ' …' : '');
+        if (fitting.length !== 1) {
+            console.log(`📅 PAGE YEAR: the header beside "${context.phrase}" says ${context.year}, but only ${headerFits} of ${headings.length} day headings (${sample}) fall on their weekday that year, and no single nearby year fits them — the page's year is left as stated (report-only)`);
+            return context;
+        }
+        const programmeYear = fitting[0].year;
+        console.log(`📅 PAGE YEAR: the header beside "${context.phrase}" says ${context.year}, but ${fitting[0].count} of ${headings.length} day headings (${sample}) fall on their weekday only in ${programmeYear} (${headerFits} in ${context.year}) — the programme under that header is ${programmeYear}'s; its days are anchored to ${programmeYear}, not ${context.year}`);
+        return { ...context, year: programmeYear, headerYear: context.year, yearSource: 'day-headings' };
     }
 
     // The programme's own header block states the year on the line ABOVE its
@@ -8892,7 +9234,7 @@ class AiWebParser {
     // the neighbours disagree, the page stays year-less as before.
     resolveAdjacentHeaderYear(lines, winners) {
         const vocab = this.getMultilingualDateVocabulary();
-        const currentYear = new Date().getFullYear();
+        const currentYear = this.now().getFullYear();
         const found = new Set();
         for (const winner of Array.isArray(winners) ? winners : []) {
             if (!Number.isFinite(winner.lineIndex)) continue;
@@ -9173,9 +9515,22 @@ class AiWebParser {
     // declaredUrl as its own address (rel=canonical / og:url). The core
     // decides, failing closed, whether that is one page under two spellings
     // (SharedCore.noteUrlAlias); nothing is guessed from URL shape here.
-    noteSelfDeclaredAlias(sourceUrl, declaredUrl) {
+    noteSelfDeclaredAlias(sourceUrl, declaredUrl, rawDeclared = declaredUrl) {
         if (!sourceUrl || !declaredUrl) return;
+        // Only an address the page WROTE OUT in full is its own address. A
+        // value that needed the page URL to become absolute (a relative
+        // canonical, or one that only looked relative because it was never
+        // entity-decoded) is our resolution, not the page's declaration.
+        if (!this.isAbsoluteDeclaredAddress(rawDeclared)) return;
         if (this.core && typeof this.core.noteUrlAlias === 'function') this.core.noteUrlAlias(sourceUrl, declaredUrl);
+    }
+
+    // Is this attribute value, once its entities are decoded, an absolute
+    // http(s) URL? (tickettailor.com writes its canonical as
+    // "https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;…".)
+    isAbsoluteDeclaredAddress(rawDeclared) {
+        const decoded = this.decodeEntitiesFully(String(rawDeclared || '')).trim();
+        return /^https?:\/\/[^\s"'<>]+$/i.test(decoded);
     }
 
     noteSelfDeclaredAliases(html, sourceUrl) {
@@ -9187,7 +9542,7 @@ class AiWebParser {
             } catch (_) {
                 resolved = '';
             }
-            if (resolved) this.noteSelfDeclaredAlias(sourceUrl, resolved);
+            if (resolved) this.noteSelfDeclaredAlias(sourceUrl, resolved, rawDeclared);
         }
     }
 
@@ -9636,7 +9991,8 @@ class AiWebParser {
      * All HTTP goes through the injected httpAdapter (postForm), so the
      * NetworkResilience wrapper and the page cache apply. Each month is
      * cached under a stable synthetic URL (ajax URL + mec_month_feed=YYYY-MM
-     * query suffix — query, not fragment: the cache normalizer strips
+     * + mec_atts=<hash of the widget's atts> — query, not fragment: the cache
+     * normalizer strips
      * fragments) so repeat runs inside the TTL replay the same grid without
      * touching the network.
      */
@@ -9694,6 +10050,15 @@ class AiWebParser {
             // month ago is the calendar's archive, read the way an iCalendar
             // export's archive is; a repeating entry stays, its rule decides.
             const rows = published.filter(row => !this.isArchivedElfsightRow(row));
+            // Flag, don't drop: a repeat the widget itself ended is named in
+            // the log with its own end, so nobody has to wonder where a
+            // "repeating" entry went.
+            for (const row of published) {
+                const repeatEnded = this.getElfsightRepeatLastDay(row);
+                if (repeatEnded && this.isArchivedElfsightRow(row)) {
+                    console.log(`🗓️ ELFSIGHT: "${String(row.name || '').trim()}" (from ${row.start && row.start.date ? row.start.date : 'an unknown date'}) is a repeat the widget itself ended by ${repeatEnded} — the calendar's archive, not read`);
+                }
+            }
             console.log(`🗓️ ELFSIGHT: widget ${widgetId} on ${sourceUrl} published ${published.length} event(s)${rows.length < published.length ? ` — ${published.length - rows.length} ended more than ${ELFSIGHT_ARCHIVE_DAYS} days ago (the calendar's archive), ${rows.length} read` : ''}`);
             if (rows.length === 0) continue;
             events.push(...rows);
@@ -9705,15 +10070,66 @@ class AiWebParser {
     // A widget entry with no repeat whose last day (end, else start) is more
     // than ELFSIGHT_ARCHIVE_DAYS days ago. Dates are the entry's own wall
     // dates (YYYY-MM-DD), so no zone is needed to tell a month-old night.
+    //
+    // A REPEATING entry is archive the same way when the widget ITSELF ended
+    // the repeat that long ago (its "ends on <date>" / "ends after N times").
+    // Until 2026-11 every repeating entry was kept "for its rule to decide" —
+    // but a `custom` repeat has no rule here (buildElfsightRecurrenceBase),
+    // so the entry shipped as its first night: rockbarnyc.com's "Drag Race
+    // Viewing Party" (from 2024-02-02, weekly, ended 2024-05-01) was read as
+    // a night and bear-checked in the 2026-11-09 run, and Black Eagle
+    // Toronto's 2025 "BLUF TORONTO" (ended 2025-12-30) sat beside the live
+    // entry of the same party. A repeat with no stated end is never archive.
     isArchivedElfsightRow(row, now = new Date()) {
         if (!row || typeof row !== 'object') return false;
         const period = typeof row.repeatPeriod === 'string' ? row.repeatPeriod : '';
-        if (period && period !== 'noRepeat' && period !== 'none') return false;
+        const cutoff = new Date(now.getTime() - ELFSIGHT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        if (period && period !== 'noRepeat' && period !== 'none') {
+            const repeatEnded = this.getElfsightRepeatLastDay(row);
+            return Boolean(repeatEnded) && repeatEnded < cutoff;
+        }
         const day = (entry) => (entry && typeof entry === 'object' && /^\d{4}-\d{2}-\d{2}$/.test(String(entry.date || '')) ? String(entry.date) : '');
         const last = day(row.end) || day(row.start);
         if (!last) return false;
-        const cutoff = new Date(now.getTime() - ELFSIGHT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
         return last < cutoff;
+    }
+
+    // The last day (YYYY-MM-DD) a repeating widget entry can still have a
+    // night, read from the entry's own end of repeat — '' when it repeats
+    // with no stated end, or the end cannot be read (then nothing is
+    // archived on it).
+    //   - "ends on <date>": that date.
+    //   - "ends after N times": no later than N steps after the first night,
+    //     a step being the entry's own period (a week for a weekly entry, 31
+    //     days for a monthly one, …) times its interval. Deliberately an
+    //     UPPER bound — a repeat on several weekdays finishes sooner — so an
+    //     entry is only ever called over late, never early.
+    getElfsightRepeatLastDay(row) {
+        if (!row || typeof row !== 'object') return '';
+        const period = typeof row.repeatPeriod === 'string' ? row.repeatPeriod.trim() : '';
+        if (!period || period === 'noRepeat' || period === 'none') return '';
+        const isDay = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+        const ends = String(row.repeatEnds || '').trim();
+        if (ends === 'onDate') {
+            const date = row.repeatEndsDate && typeof row.repeatEndsDate === 'object' ? row.repeatEndsDate.date : '';
+            return isDay(date) ? String(date) : '';
+        }
+        if (ends !== 'afterOccurrences') return '';
+        const count = Number(row.repeatEndsOccurrences);
+        const first = row.start && typeof row.start === 'object' ? row.start.date : '';
+        if (!Number.isFinite(count) || count < 1 || !isDay(first)) return '';
+        const frequencyDays = { daily: 1, weekly: 7, monthly: 31, yearly: 366 };
+        // The frequency/interval fields are the entry's own only for a
+        // `custom` repeat (every other shape carries the widget's defaults:
+        // a "3rd Wednesday" entry still says frequency "daily").
+        const stepDays = period === 'custom'
+            ? (frequencyDays[String(row.repeatFrequency || '').trim().toLowerCase()] || 0)
+                * (Number.isFinite(Number(row.repeatInterval)) && Number(row.repeatInterval) >= 1 ? Math.floor(Number(row.repeatInterval)) : 1)
+            : ({ weeklyOn: 7, nthDayInMonth: 31, lastDayInMonth: 31 }[period] || 0);
+        if (!stepDays) return '';
+        const firstMs = Date.parse(`${first}T00:00:00Z`);
+        if (!Number.isFinite(firstMs)) return '';
+        return new Date(firstMs + Math.floor(count) * stepDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     }
 
     // Is this URL one the parser was configured to fetch? Compared on the
@@ -9745,7 +10161,15 @@ class AiWebParser {
     // mirrors rockbarnyc.com, widget and all) — is the same calendar, read
     // once. Returns '' when this page may read, else the page that already
     // did.
-    claimHostDoor(kind, sourceUrl, parserConfig, doorId = '') {
+    // `feedOnly` is for a door whose id is the WHOLE query — an endpoint and
+    // the parameters that select its rows (see claimFeedDoor): the claim is
+    // on that query alone, so another feed on the same host keeps its own
+    // read, and no page has a turn of its own to keep — the same question
+    // has the same answer whichever page asks it.
+    // The page that read a door is the same page under either scheme: its
+    // http/https twin is that page VISITED AGAIN, and is not read again —
+    // configured or not (see isSchemeTwinPage).
+    claimHostDoor(kind, sourceUrl, parserConfig, doorId = '', { feedOnly = false } = {}) {
         if (!this.hostDoorReads) this.hostDoorReads = new Map();
         const hostMatch = String(sourceUrl || '').match(/^https?:\/\/([^/?#:@]+)/i);
         const host = hostMatch ? hostMatch[1].toLowerCase().replace(/^www\./, '') : '';
@@ -9756,17 +10180,50 @@ class AiWebParser {
         // found the door "already read" — its 43 events went to 0. Twins
         // fold in dedup; the claim only stops ONE source re-reading ONE door.
         const owner = String((parserConfig && parserConfig.name) || '').toLowerCase();
-        const claimKeys = [`${String(kind || '')}|owner:${owner}|host:${host}`];
+        const claimKeys = feedOnly && doorId ? [] : [`${String(kind || '')}|owner:${owner}|host:${host}`];
         if (doorId) claimKeys.push(`${String(kind || '')}|owner:${owner}|door:${String(doorId).toLowerCase()}`);
         const readOn = claimKeys.map(key => this.hostDoorReads.get(key) || '').find(Boolean) || '';
         if (readOn) {
             const samePage = this.getUrlDedupeKey(readOn) === this.getUrlDedupeKey(String(sourceUrl || ''));
-            if (!samePage && !this.isConfiguredParserUrl(sourceUrl, parserConfig)) return readOn;
+            if (!samePage && this.isSchemeTwinPage(readOn, sourceUrl)) return readOn;
+            const ownTurn = !feedOnly && this.isConfiguredParserUrl(sourceUrl, parserConfig);
+            if (!samePage && !ownTurn) return readOn;
         }
         for (const key of claimKeys) {
             if (!this.hostDoorReads.has(key)) this.hostDoorReads.set(key, String(sourceUrl || ''));
         }
         return '';
+    }
+
+    // http://x/p and https://x/p are one page (a site answers both with the
+    // same document, and its own markup — an RSS twin, an old menu — still
+    // writes the old spelling): when the page that read a door comes back
+    // under the other scheme it is the same page a second time, and the
+    // whole calendar would be published twice (blackeagletoronto.com, run
+    // 20261109-053706: 114 widget events read on the https home page and 114
+    // more on its http spelling). The crawl's visited set folds the two
+    // spellings first (shared-core getCrawlPageKey); this is the same rule
+    // at the door.
+    isSchemeTwinPage(a, b) {
+        const fold = (url) => this.getUrlDedupeKey(String(url || '')).replace(/^http:\/\//, 'https://');
+        const left = this.getUrlDedupeKey(String(a || ''));
+        const right = this.getUrlDedupeKey(String(b || ''));
+        return !!left && left !== right && fold(a) === fold(b);
+    }
+
+    // ONE FEED QUERY IS ASKED ONCE PER RUN. A reader that replays a page's
+    // own data call (a calendar plugin's month request) names the query —
+    // the endpoint and the parameters that select its rows, hashed — and
+    // claims it here; a second page of the site carrying the same calendar
+    // asks the same question and would publish the same rows again
+    // (precinctdtla.com, run 20261109-053706: the home page and /calendar/
+    // each replayed the same EventON months — 77 events, twice). Keyed by
+    // the query, not the host: a differently-filtered calendar on another
+    // page is another feed and is read. '' when this page may ask, else the
+    // page that already did.
+    claimFeedDoor(kind, feedId, sourceUrl, parserConfig) {
+        if (!feedId) return '';
+        return this.claimHostDoor(kind, sourceUrl, parserConfig, feedId, { feedOnly: true });
     }
 
     // A door that answered nothing was not the site's calendar — the claim
@@ -10145,7 +10602,7 @@ class AiWebParser {
         }
         const upcoming = Array.isArray(payload.upcoming) ? payload.upcoming.length : 0;
         const past = Array.isArray(payload.past) ? payload.past.length : 0;
-        console.log(`🟦 SQUARESPACE: ${twinUrl} published ${rows.length} dated item(s)${upcoming || past ? ` (${upcoming} upcoming, ${past} past on this page)` : ''}`);
+        console.log(`🟦 SQUARESPACE: ${twinUrl} published ${rows.length} dated item(s)${upcoming || past ? ` (${upcoming} upcoming, ${past} past on this page)` : ''}${past ? ' — a past-list row may update a saved event, it is never proposed as a new one' : ''}`);
         return rows;
     }
 
@@ -10166,6 +10623,14 @@ class AiWebParser {
     // Dated items from an events-collection payload: upcoming[] and past[]
     // (the split listing), else items[] (a plain collection). An item counts
     // when it has a title and an epoch-millisecond startDate.
+    // THE FEED'S OWN "PAST" LIST IS REMEMBERED. A row the feed files under
+    // past[] (and not also under upcoming[]) is noted per row object
+    // (_feedPastRows — the rows themselves are returned untouched), and
+    // buildEventFromSquarespaceItem stamps the event it builds from one
+    // with `_feedPastList`: evidence for a saved event, never a NEW one
+    // (SharedCore.assessPastCreateWithhold). Run 20261109-053706: one
+    // promoter's twin answered "0 upcoming, 30 past" and all 30 rows were
+    // analyzed as new events.
     collectSquarespaceCollectionItems(payload) {
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return [];
         const collection = payload.collection && typeof payload.collection === 'object' ? payload.collection : {};
@@ -10179,6 +10644,7 @@ class AiWebParser {
         const buckets = [payload.upcoming, payload.past, payload.items].filter(Array.isArray);
         const seen = new Set();
         const rows = [];
+        if (!this._feedPastRows) this._feedPastRows = new WeakSet();
         for (const bucket of buckets) {
             for (const item of bucket) {
                 if (!isDatedItem(item)) continue;
@@ -10187,6 +10653,7 @@ class AiWebParser {
                 if (seen.has(key)) continue;
                 seen.add(key);
                 rows.push(item);
+                if (bucket === payload.past) this._feedPastRows.add(item);
             }
         }
         return rows;
@@ -10309,6 +10776,10 @@ class AiWebParser {
         }
         const ticketUrl = this.pickTicketLinkFromBodyHtml(bodyHtml, origin);
         if (ticketUrl) event.ticketUrl = ticketUrl;
+        // A row from the feed's own past[] list (collectSquarespaceCollectionItems).
+        if (this._feedPastRows && this._feedPastRows.has(item)) {
+            event._feedPastList = { feed: String(sourceUrl || ''), page: eventPageUrl };
+        }
         return event;
     }
 
@@ -11392,6 +11863,21 @@ class AiWebParser {
             focus_start_date_range: String(nextStart), focus_end_date_range: String(nextEnd) };
     }
 
+    // What a calendar frame ASKS FOR, whatever month it is opened on: the
+    // endpoint plus its shortcode without the fields that only place the
+    // view in time (the ones shiftEventOnShortcodeMonth moves, the frame's
+    // own month/day offset and its focused day). Two frames with the same
+    // identity asked for the same month are the same question. The endpoint
+    // is named as a page is (www or not, http or https: one address).
+    getEventOnFeedIdentity(endpoint, sc) {
+        const position = new Set(['fixed_day', 'fixed_month', 'fixed_year', 'focus_start_date_range', 'focus_end_date_range', 'month_incre', 'day_incre']);
+        const asked = Object.keys(sc && typeof sc === 'object' ? sc : {}).sort()
+            .filter(key => !position.has(key) && sc[key] !== null && typeof sc[key] !== 'object')
+            .map(key => `${key}=${String(sc[key])}`);
+        const address = this.getUrlDedupeKey(String(endpoint || '')).replace(/^http:\/\//, 'https://');
+        return this.constructor.shortTextHash(`${address}|${asked.join('&')}`);
+    }
+
     // Which route reads a page: its structured events, or the segment/AI
     // pass. A link hub's own JSON-LD / page data is not read (bearracuda.com
     // marks up a partial set on its hub; the detail pages are read instead)
@@ -11457,27 +11943,53 @@ class AiWebParser {
         const steps = 1 + Math.max(0, 1 + Math.max(0, this.resolveCalendarLookaheadMonths(parserConfig)) - monthsCovered);
         const parts = [];
         let refreshed = false;
+        // One question — a feed and a month — is asked once per run (see
+        // claimFeedDoor): a frame whose month another page of the site
+        // already asked for is left out of the request, and a request with
+        // no frame left is not sent.
+        const monthOf = (sc) => `${Number(sc.fixed_year) || 0}-${String(Number(sc.fixed_month) || 0).padStart(2, '0')}`;
+        const alreadyRead = new Map(); // page that read → months it answered for
+        let refused = false;
+        if (this.feedReadElsewhere instanceof Map) this.feedReadElsewhere.delete(this.getUrlDedupeKey(sourceUrl));
         for (let step = 0; step < steps; step++) {
             const last = framesOf(evo)[evo.calendars.length - 1].sc;
             const base = new Date(Date.UTC(Number(last.fixed_year) || 1970, (Number(last.fixed_month) || 1) - 1 + step, 1));
             const label = step === 0
                 ? `${base.getUTCFullYear()}-${String(base.getUTCMonth() + 1).padStart(2, '0')}${monthsCovered > 1 ? ` (+${monthsCovered - 1} earlier)` : ''}`
                 : `${base.getUTCFullYear()}-${String(base.getUTCMonth() + 1).padStart(2, '0')}`;
+            const claimed = [];
             const post = async () => {
                 const fields = [['nonce', evo.nonce]];
                 if (evo.action) fields.push(['action', evo.action]);
                 const frames = framesOf(evo);
-                for (const calendar of (step === 0 ? frames : frames.slice(-1))) {
+                const stepFrames = step === 0 ? frames : frames.slice(-1);
+                const asking = new Set();
+                for (const calendar of stepFrames) {
                     const sc = this.shiftEventOnShortcodeMonth(calendar.sc, step);
+                    const question = `${this.getEventOnFeedIdentity(evo.endpoint, sc)}-${monthOf(sc)}`;
+                    if (asking.has(question)) continue; // the same frame twice on one page
+                    const readOn = this.claimFeedDoor('eventon', question, sourceUrl, parserConfig);
+                    if (readOn) {
+                        if (!alreadyRead.has(readOn)) alreadyRead.set(readOn, new Set());
+                        alreadyRead.get(readOn).add(monthOf(sc));
+                        continue;
+                    }
+                    asking.add(question);
+                    if (!claimed.includes(question)) claimed.push(question);
                     for (const [key, value] of Object.entries(sc)) {
                         if (value === null || typeof value === 'object') continue;
                         fields.push([`cals[${calendar.id}][sc][${key}]`, String(value)]);
                     }
                 }
+                if (asking.size === 0) return null;
                 const body = fields.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`).join('&');
+                // A request for only SOME of the page's frames is remembered
+                // under its own name: the answer stored for the whole page
+                // would hand back the frames that were left out.
+                const partial = asking.size < stepFrames.length ? `&eventon_asked=${this.constructor.shortTextHash(Array.from(asking).sort().join(','))}` : '';
                 const response = await httpAdapter.postForm(evo.endpoint, body, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest', Referer: sourceUrl },
-                    cacheUrl: `${sourceUrl}${sourceUrl.includes('?') ? '&' : '?'}eventon_month=${label.slice(0, 7)}`,
+                    cacheUrl: `${sourceUrl}${sourceUrl.includes('?') ? '&' : '?'}eventon_month=${label.slice(0, 7)}${partial}`,
                     // A refusal ("Nonce validation failed") is never remembered.
                     isCacheableResponse: (stored) => !/"status"\s*:\s*"bad"/.test(String((stored && (stored.text || stored.html)) || ''))
                 });
@@ -11498,6 +12010,8 @@ class AiWebParser {
                         payload = await post();
                     }
                 }
+                // Every frame of this step was already asked for elsewhere.
+                if (payload === null) continue;
                 if (!payload || payload.status === 'bad') throw new Error((payload && payload.msg) || 'calendar refused the request');
                 let cards = 0;
                 let answered = 0;
@@ -11516,8 +12030,20 @@ class AiWebParser {
                 console.log(`📅 EVENTON: month ${label} loaded for ${sourceUrl} — ${cards} event card(s) from ${answered} calendar frame(s)`);
             } catch (error) {
                 console.log(`📅 EVENTON: month ${label} failed for ${sourceUrl}: ${error && error.message ? error.message : error} — continuing without it`);
+                // Not answered: the question goes back for the next page that asks it.
+                refused = true;
+                for (const question of claimed) this.releaseHostDoor('eventon', sourceUrl, question);
                 if (step === 0) break; // the opening month refused: later months will too
             }
+        }
+        for (const [readOn, months] of alreadyRead) {
+            console.log(`📅 EVENTON: the calendar on ${sourceUrl} is the one already read on ${readOn} (same endpoint, same shortcode) — month(s) ${Array.from(months).sort().join(', ')} not asked for again`);
+        }
+        // Every month this page's calendar would show was answered on
+        // another page: its listing is read (see the route in parseEvents).
+        if (parts.length === 0 && !refused && alreadyRead.size > 0) {
+            if (!(this.feedReadElsewhere instanceof Map)) this.feedReadElsewhere = new Map();
+            this.feedReadElsewhere.set(this.getUrlDedupeKey(sourceUrl), Array.from(alreadyRead.keys())[0]);
         }
         return parts.join('\n');
     }
@@ -11788,7 +12314,7 @@ class AiWebParser {
             // The heading IS the place: "DC" names dc outright even though a
             // two-letter alias is too short to be found inside running text.
             const exact = cityConfig && cityText ? this.findCityConfigEntry(cityText, cityConfig) : null;
-            const cityKey = exact ? exact.key : (cityConfig && cityText ? this.findCityKeyInText(cityText, cityConfig) : '');
+            const cityKey = exact ? exact.key : (cityConfig && cityText ? this.findCityKeyInText(cityText, cityConfig, { placeName: true }) : '');
             const timezone = zoneFor(cityKey, cityText);
             const make = (startParsed, endParsed) => {
                 const event = {
@@ -11839,6 +12365,18 @@ class AiWebParser {
         return events;
     }
 
+    // FNV-1a, 32 bit, as 8 hex digits: a stable name for a blob of text in a
+    // cache key. Not for security — only "same text, same key".
+    static shortTextHash(text) {
+        let hash = 0x811c9dc5;
+        const value = String(text || '');
+        for (let index = 0; index < value.length; index++) {
+            hash ^= value.charCodeAt(index);
+            hash = Math.imul(hash, 0x01000193);
+        }
+        return (hash >>> 0).toString(16).padStart(8, '0');
+    }
+
     async collectMecMonthFeeds(htmlData, parserConfig, httpAdapter) {
         const html = htmlData && htmlData.html ? htmlData.html : '';
         const sourceUrl = htmlData && htmlData.url ? htmlData.url : '';
@@ -11871,7 +12409,15 @@ class AiWebParser {
             // The page's own protocol, replayed: fixed action/navigator fields
             // plus the atts blob EXACTLY as the page embedded it.
             const body = `action=mec_monthly_view_load_month&mec_year=${year}&mec_month=${monthNumber}&navigator_click=true&${mec.attsQuery}`;
-            const cacheUrl = `${mec.ajaxUrl}${mec.ajaxUrl.includes('?') ? '&' : '?'}mec_month_feed=${monthLabel}`;
+            // The cache key names WHICH widget asked, not just the month. One
+            // site can carry two month widgets with different atts — Eagle LA's
+            // home page has a category-filtered one and /calendar/ the full
+            // grid. Keyed by month alone, whichever page was read first
+            // answered for both: from 2026-10-12 the calendar was served the
+            // home page's filtered months, the December-February one-offs
+            // vanished from the read, and nine real events were offered to the
+            // owner as "gone from the source".
+            const cacheUrl = `${mec.ajaxUrl}${mec.ajaxUrl.includes('?') ? '&' : '?'}mec_month_feed=${monthLabel}&mec_atts=${this.constructor.shortTextHash(mec.attsQuery)}`;
             try {
                 const response = await httpAdapter.postForm(mec.ajaxUrl, body, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -12176,10 +12722,39 @@ class AiWebParser {
      * cross-date differences classify. Fail closed per the doctrine: when
      * the artifacts say per-date, the family stays individual occurrences —
      * unsure never converts to a series.
+     *
+     * DATES WE MADE OURSELVES are not the site's expansion. A feed row that
+     * states a rule is fanned by expandJsonApiSeriesRow into dated copies
+     * (stamped _seriesRowExpansion); when EVERY date of the family is a copy
+     * of that one row, the site published one row and one rule, and the
+     * copies — identical by construction — prove nothing either way. Only
+     * the records actually READ somewhere else can then show per-date
+     * publication, and it takes two of them on two dates with different
+     * artifacts: the single record read by following the link every copy
+     * shares is the series' own page, dated to its next night. That one
+     * record's url and poster are the series', not that night's
+     * (thebearcalendar.com "Furry Friday", run 20261109-053706: 13 copies of
+     * one FREQ=WEEKLY;BYDAY=FR row plus the record read from their shared
+     * ticket link — the family was called occurrence-expanded on `website`
+     * and stood as 13 separate new events, while every other rule row of
+     * the same feed stayed one series).
      */
     classifyCadenceSourceShape(group, hasOccurrenceLinkObservations) {
         if (hasOccurrenceLinkObservations) {
             return { shape: 'occurrence-expanded', reason: 'the site publishes per-date ?occurrence= links' };
+        }
+        const ownExpansion = this.getOwnSeriesRowExpansion(group);
+        if (ownExpansion) {
+            const readElsewhere = group.members.filter(member => !ownExpansion.copies.has(member));
+            const verdict = this.classifyCadenceSourceShape({ members: readElsewhere }, false);
+            if (verdict.shape === 'occurrence-expanded') return verdict;
+            const readDates = new Set(readElsewhere.map(member => member.nightKey));
+            return {
+                shape: 'stated-series',
+                reason: `every one of its ${ownExpansion.dates} dates is our own copy of one feed row that states ${ownExpansion.rrule}; ${readElsewhere.length === 0
+                    ? 'nothing else was read'
+                    : `the ${readElsewhere.length} other record(s) read, on ${readDates.size} date(s), show no page published per date`}`
+            };
         }
         // `_sourceRowId` is the feed's OWN per-row identity (Tockify eid.uid,
         // an aggregator slug, a VEVENT UID — see getJsonApiRowIdentity). A
@@ -12223,6 +12798,29 @@ class AiWebParser {
             }
         }
         return { shape: 'stated-series', reason: 'no per-date identity artifacts observed' };
+    }
+
+    // The family's dates are OURS when every one of them carries a copy of
+    // the same rule-stating feed row (see classifyCadenceSourceShape). One
+    // row only: two rows, or a date no copy covers, is a shape the feed
+    // itself published and is judged by its artifacts as before.
+    getOwnSeriesRowExpansion(group) {
+        const members = group && Array.isArray(group.members) ? group.members : [];
+        const copies = new Set();
+        const rows = new Set();
+        const copyDates = new Set();
+        const allDates = new Set();
+        for (const member of members) {
+            allDates.add(member.nightKey);
+            const stamp = member.event && typeof member.event._seriesRowExpansion === 'string' ? member.event._seriesRowExpansion : '';
+            if (!stamp) continue;
+            copies.add(member);
+            rows.add(stamp);
+            copyDates.add(member.nightKey);
+        }
+        if (rows.size !== 1 || copyDates.size < 2 || copyDates.size !== allDates.size) return null;
+        const stamp = Array.from(rows)[0];
+        return { copies, dates: copyDates.size, rrule: stamp.slice(0, stamp.indexOf('@')) };
     }
 
     /**
@@ -12550,7 +13148,7 @@ class AiWebParser {
                 resolved = '';
             }
             if (!resolved) continue;
-            this.noteSelfDeclaredAlias(sourceUrl, resolved);
+            this.noteSelfDeclaredAlias(sourceUrl, resolved, rawDeclared);
             const samePath = this.getUrlPathIdentityKey(resolved) === sourceKey;
             // The declared address carries the fetched address's own
             // identifier (see getUrlIdAliasKey): the same document under its
@@ -14190,7 +14788,7 @@ class AiWebParser {
         // and timezone from it directly so nothing downstream has to guess. Address only:
         // bar names produce false city matches ("Brooklyn Bowl" in Vegas).
         if (address && cityConfig) {
-            const cityKey = this.findCityKeyInText(address, cityConfig);
+            const cityKey = this.findCityKeyInText(address, cityConfig, { placeName: true });
             if (cityKey) {
                 event.city = cityKey;
                 const timezone = this.getTimezoneForCity(cityKey, cityConfig);
@@ -15604,12 +16202,16 @@ class AiWebParser {
     // timezoneUnresolved is false and the tzid rides along. Bare numbers are
     // NOT accepted: last_update_date / date_id / created_date are epoch
     // numbers too, and the key patterns cannot tell them from a start.
+    // `dateOnly` says the value was a bare calendar day ("2026-12-03"): it
+    // parses to that day's midnight, and only this mark tells the day the
+    // feed named from a midnight it stated.
     jsonApiScalarDateCandidate(value) {
         if (this.jsonApiValueIsIsoDateish(value)) {
             const parsed = this.parseJsonLdDateValue(value);
-            return parsed.date
-                ? { date: parsed.date, timezone: null, timezoneUnresolved: parsed.timezoneUnresolved }
-                : null;
+            if (!parsed.date) return null;
+            const candidate = { date: parsed.date, timezone: null, timezoneUnresolved: parsed.timezoneUnresolved };
+            if (/^\d{4}-\d{2}-\d{2}$/.test(String(value).trim())) candidate.dateOnly = true;
+            return candidate;
         }
         if (value && typeof value === 'object' && !Array.isArray(value)
             && typeof value.millis === 'number' && value.millis > 1e11 && value.millis < 1e13) {
@@ -16355,6 +16957,32 @@ class AiWebParser {
     // JSON_API_SERIES_MAX_OCCURRENCES), each a copy of the row with the
     // occurrence's own start (end shifted by the row's duration). A rule the
     // expander does not support leaves the row as it is.
+    // A series row's excluded nights → [{ ms, dayOnly }] in the clock the
+    // row's own start is read in. A bare day ("2026-11-08", an all-day
+    // exclusion) excludes whatever the rule yields on that day; a timed
+    // value excludes exactly that start. Unreadable values are skipped (the
+    // night is kept — fail open).
+    readJsonApiSeriesExclusions(value) {
+        const values = Array.isArray(value) ? value : (typeof value === 'string' ? value.split(/[,;\s]+(?=\d{4}-?\d{2}-?\d{2})/) : []);
+        const excluded = [];
+        for (const entry of values) {
+            const text = typeof entry === 'string' ? entry.trim() : '';
+            if (!text) continue;
+            // iCalendar's compact form ("20261108T160000", "20261108").
+            const compact = text.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/);
+            const iso = compact
+                ? `${compact[1]}-${compact[2]}-${compact[3]}${compact[4] ? `T${compact[4]}:${compact[5]}:${compact[6] || '00'}${compact[7] || ''}` : ''}`
+                : text;
+            const dayOnly = /^\d{4}-\d{2}-\d{2}$/.test(iso);
+            const candidate = dayOnly
+                ? { date: new Date(`${iso}T00:00:00Z`) }
+                : this.jsonApiScalarDateCandidate(iso);
+            if (!candidate || !(candidate.date instanceof Date) || Number.isNaN(candidate.date.getTime())) continue;
+            excluded.push({ ms: candidate.date.getTime(), dayOnly });
+        }
+        return excluded;
+    }
+
     expandJsonApiSeriesRow(event) {
         const rrule = event && typeof event._jsonApiRrule === 'string' ? event._jsonApiRrule : '';
         if (!rrule || !(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return [event];
@@ -16372,10 +17000,31 @@ class AiWebParser {
             occurrences = null;
         }
         if (!Array.isArray(occurrences)) return [event];
-        const starts = occurrences
+        // THE FEED'S OWN EXCEPTIONS COME OFF FIRST. A rule says "every 2nd
+        // Sunday"; the feed also says which of those nights were cancelled
+        // (EXDATE) or moved (a RECURRENCE-ID record, which is read as its
+        // own row with its own date, time, title and place). Expanding the
+        // rule alone kept the night that was moved away AND the night it
+        // moved to (XL Bears "Game Night" on 2026-11-08 and 11-15, Lodge NY
+        // "Manhole" on 11-15 and 11-22 — audit 2026-11-09).
+        const exclusions = Array.isArray(event._jsonApiSeriesExclusions) ? event._jsonApiSeriesExclusions : [];
+        const excludedStarts = new Set(exclusions.filter(entry => !entry.dayOnly).map(entry => entry.ms));
+        const excludedDays = new Set(exclusions.filter(entry => entry.dayOnly).map(entry => new Date(entry.ms).toISOString().slice(0, 10)));
+        const allStarts = occurrences
             .map(entry => (entry instanceof Date ? entry : (entry && entry.date instanceof Date ? entry.date : (entry && entry.start instanceof Date ? entry.start : null))))
-            .filter(date => date && !Number.isNaN(date.getTime()))
+            .filter(date => date && !Number.isNaN(date.getTime()));
+        const leftOut = allStarts.filter(date => excludedStarts.has(date.getTime()) || excludedDays.has(date.toISOString().slice(0, 10)));
+        const starts = allStarts
+            .filter(date => !leftOut.includes(date))
             .slice(0, JSON_API_SERIES_MAX_OCCURRENCES);
+        if (leftOut.length > 0) {
+            console.log(`🔁 SERIES: "${event.title}" (${rrule}) — ${leftOut.length} night(s) the feed itself cancelled or moved are not events: ${leftOut.map(date => date.toISOString().slice(0, 10)).join(', ')}`);
+        }
+        if (starts.length === 0 && leftOut.length > 0) {
+            // Every night the rule has in the window is excepted: nothing of
+            // the series is an event — its first night least of all.
+            return [];
+        }
         if (starts.length === 0) {
             // A rule whose UNTIL has passed is a series that has ENDED: its
             // first night (the row's own start, months or years back) is not
@@ -16398,10 +17047,16 @@ class AiWebParser {
             ? event.endDate.getTime() - event.startDate.getTime()
             : 0;
         console.log(`🔁 SERIES: "${event.title}" (${rrule}) → ${starts.length} dated occurrence(s) from ${starts[0].toISOString().slice(0, 10)}; the series row itself (${event.startDate.toISOString().slice(0, 10)}) is not an event`);
+        const seriesRowStamp = `${rrule}@${event.startDate.toISOString()}#${typeof event._sourceRowId === 'string' ? event._sourceRowId : ''}#${event.title || ''}`;
         return starts.map(start => {
             const copy = { ...event, startDate: start };
             copy.endDate = durationMs > 0 ? new Date(start.getTime() + durationMs) : null;
             delete copy._jsonApiRrule;
+            delete copy._jsonApiSeriesExclusions;
+            // This date is OURS, not the feed's: the rule, the row's own
+            // start and the row's id name the one row every copy came from
+            // (read by classifyCadenceSourceShape).
+            copy._seriesRowExpansion = seriesRowStamp;
             return copy;
         });
     }
@@ -16919,7 +17574,7 @@ class AiWebParser {
                 event.address = hit.address;
                 console.log(`🚪 SPA DOOR: "${event.title}" address ← the app's own venue directory ("${hit.name}"): ${hit.address}`);
                 if (!event.city && cityConfig) {
-                    const cityKey = this.findCityKeyInText(hit.address, cityConfig);
+                    const cityKey = this.findCityKeyInText(hit.address, cityConfig, { placeName: true });
                     if (cityKey) {
                         event.city = cityKey;
                         if (!event.timezone) {
@@ -17190,6 +17845,7 @@ class AiWebParser {
                 start.date = new Date(Date.UTC(startDay.year, startDay.month, startDay.day, startClock.hour, startClock.minute));
                 start.timezoneUnresolved = true;
                 start.timezone = start.timezone || null;
+                start.dateOnly = false;
                 const endClock = clockFor(/(^|_)end_time$/);
                 const endDay = dayFor(/(^|_)ends?(_(date|day))?$/);
                 if (endClock && (!end.date || endDay)) {
@@ -17198,9 +17854,26 @@ class AiWebParser {
                     if (endDate.getTime() <= start.date.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
                     end.date = endDate;
                     end.timezoneUnresolved = true;
+                    end.dateOnly = false;
                 }
             }
         }
+
+        // A BARE DAY IS A DAY. A row whose start is a calendar date and
+        // nothing else — no clock beside it, and an end that is absent or a
+        // bare date too — states no time: whereto.party's page data, run
+        // 20261109-053706, { start_date: "2026-12-03", end_date:
+        // "2026-12-10", start_time: null, end_time: null } was kept as a
+        // party from midnight on the 3rd to midnight on the 10th (its last
+        // day cut off), and a one-day row would have been written "12:00 AM
+        // – 3:00 AM". It is the rule every other reader already applies (a
+        // date and no time is a day): the row is stamped and
+        // SharedCore.applyAllDayConvention writes the day, or the days
+        // through the end date, once the zone is known. A row the feed
+        // flags all-day is shaped just below and needs no stamp; a row that
+        // states a midnight ("…T00:00:00") stated a clock and is not touched.
+        const namesDayOnly = start.dateOnly === true && (!end.date || end.dateOnly === true)
+            && !this.jsonApiRowStatesAllDay(view);
 
         // AN ALL-DAY ROW STATES A DAY, NOT AN INSTANT. A feed that publishes
         // "2026-10-08T00:00:00+00:00" with all_day: true is naming the 8th —
@@ -17372,6 +18045,8 @@ class AiWebParser {
             image,
             source: this.config.source
         };
+        // The row named a day and no time (see namesDayOnly above).
+        if (namesDayOnly) event._noTimeStated = true;
         // Surviving description chunks, for the feed-level repetition pass in
         // extractEventsFromJsonApiPayload (text every row shares is chrome).
         // Internal field, deleted once the batch has been judged.
@@ -17397,6 +18072,16 @@ class AiWebParser {
         const rruleValue = firstValue(/^(rrule|recurrence_rule|repeat_rule)$/,
             (value) => typeof value === 'string' && /^(RRULE:)?FREQ=/i.test(value.trim()));
         if (rruleValue) event._jsonApiRrule = rruleValue.trim();
+        // …and the nights the feed says that rule does NOT have (iCalendar
+        // EXDATE, and the RECURRENCE-ID of every override record — carried
+        // onto the series row by shared-core's icsRecordToFeedRow). Read
+        // with the same reader as the row's own start, so both sit in one
+        // clock. Internal field.
+        if (rruleValue) {
+            const excluded = this.readJsonApiSeriesExclusions(firstValue(/^(exdates?|excluded_dates|exception_dates)$/,
+                (value) => (Array.isArray(value) && value.length > 0) || isNonEmptyString(value)));
+            if (excluded.length > 0) event._jsonApiSeriesExclusions = excluded;
+        }
         // imageSource provenance (notes-serialized like pinSource): structured
         // data the API itself published. Absent image → no stamp (fail open).
         // An image set that publishes only IDS (owner + asset + dimensions,
@@ -17458,8 +18143,8 @@ class AiWebParser {
             // "Folsom Street Fair"), and that label names a place either in
             // its own words or as a curated festival that has one.
             const groupLabel = clean(firstValue(/^(region|group|category|section)_(label|name|title)$/, isNonEmptyString));
-            const cityKey = (address ? this.findCityKeyInText(address, cityConfig) : '')
-                || (placeText ? this.findCityKeyInText(placeText, cityConfig) : '')
+            const cityKey = (address ? this.findCityKeyInText(address, cityConfig, { placeName: true }) : '')
+                || (placeText ? this.findCityKeyInText(placeText, cityConfig, { placeName: true }) : '')
                 || (groupLabel ? (this.findCityKeyInText(groupLabel, cityConfig) || this.findCityKeyForFestivalLabel(groupLabel, cityConfig)) : '');
             if (cityKey) {
                 event.city = cityKey;
@@ -17762,7 +18447,7 @@ class AiWebParser {
         if (record.city && isEmpty(event.city)) {
             // Only configured city keys, resolved through the same alias matching
             // the rest of the parser uses — never invent a key from raw Wix text.
-            const cityKey = this.findCityKeyInText(record.city, cityConfig);
+            const cityKey = this.findCityKeyInText(record.city, cityConfig, { placeName: true });
             if (cityKey) {
                 event.city = cityKey;
                 filled.push('city');
@@ -19742,6 +20427,16 @@ class AiWebParser {
             if (/^(?:resend|refund|refunds|transfer|transfers|order|orders|order-status|receipt|receipts|confirm|confirmation|waitlist|unsubscribe|print|share|embed)$/.test(last)) {
                 return { valid: false, reason: 'ticket-utility-page' };
             }
+            // The sign-up form OF a page ("/event-details/<slug>/form",
+            // "…/rsvp") is that page's plumbing too: it repeats the name and
+            // none of the facts. eaglemanchester.com, run 20261109-053706:
+            // four …/form pages were read as events of their own, dated by a
+            // cadence phrase to a night the parent page does not state, and
+            // each won as its event's link. Only as a CHILD segment — a
+            // site's top-level "/rsvp" is left to the page classifier.
+            if (segments.length >= 2 && /^(?:form|rsvp)$/.test(last)) {
+                return { valid: false, reason: 'ticket-utility-page' };
+            }
         }
         // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages.
         // The braces arrive percent-encoded when the placeholder sat in an
@@ -19802,6 +20497,15 @@ class AiWebParser {
             // WooCommerce account pages and the FR shop segment each got a
             // classify + AI extraction pass for 0 events.
             /\/(?:shop|store|merch|boutique|cart|checkout|contact|about|faq|account|my-account|lost-password|signin|signup)(?:\/|[?#]|$)/i,
+            // The same two sections under their other common spelling, and
+            // the people pages that hang off them (whole segments again). Run
+            // 20261109-053706 opened eight such pages on five sites for
+            // nothing — and one, akbarsilverlake.com/about-us/our-team/
+            // (staff and DJ biographies), gave six "events" dated from the
+            // "every 3rd Monday" / "Sundays" of a biography; two were kept.
+            // (/careers and /legal stay crawlable on a site's own host — see
+            // the cross-host list below.)
+            /\/(?:about-us|contact-us|our-team|team|staff)(?:\/|[?#]|$)/i,
             // Wix internal API endpoints (e.g. chunk-party.com/_api/...)
             '/_api/',
             // Eventbrite's Next.js image proxy (/e/_next/image?url=…) — an image
@@ -20230,7 +20934,9 @@ class AiWebParser {
         for (const source of htmlSources) {
             for (const pattern of patterns) {
                 for (const match of source.matchAll(pattern)) {
-                    const raw = match[1] ? match[1] : this.rejoinSpaceSplitImageUrl(source, match.index, match[0]);
+                    const raw = match[1]
+                        ? match[1]
+                        : this.cutUrlEmbeddedInQuery(source, match.index, this.rejoinSpaceSplitImageUrl(source, match.index, match[0]));
                     const candidate = this.truncateAtEncodedDelimiter(raw);
                     if (candidate && !this.isMarkupNamespaceUrl(candidate)) candidates.add(candidate);
                 }
@@ -20270,6 +20976,41 @@ class AiWebParser {
         if (/[<>\r\n,]|https?:/i.test(tail)) return head;
         const whole = (head + tail).trim().replace(/\s/g, '%20');
         return this.hasSupportedImageFilenameAtEnd(whole) ? whole : head;
+    }
+
+    // A URL written UNENCODED inside another URL's query string ends where
+    // the enclosing query's next parameter begins. Share buttons do this:
+    //   href="fb-messenger://share/?link=https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch&app_id=179821335543821&redirect_uri=https://…"
+    //   href="https://wa.me/?text=OutSavvy%20-%20… at%20The Cavendish Arms.%20https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch&app_absent=1"
+    // The bare-URL scan starts at the inner "https://" and runs to the
+    // closing quote, so the page's own address came back as two more
+    // "pages" ("…-scratch&app_id=…&redirect_uri=https://…" and
+    // "…-scratch&app_absent=1"), each fetched and cached (Two Tons of Fun,
+    // run 20261109-053706). Decided from the markup alone: the match sits
+    // inside a quoted value that had already opened a query ("?") before
+    // it, and the matched URL has no "?" of its own before its first "&" —
+    // so that "&" can only belong to the enclosing URL. A URL with its own
+    // query is ambiguous and is left exactly as the scan cut it.
+    cutUrlEmbeddedInQuery(source, matchIndex, candidate) {
+        const head = String(candidate || '');
+        const index = Number(matchIndex);
+        const ampersand = head.indexOf('&');
+        if (ampersand === -1 || !Number.isFinite(index) || index < 2) return head;
+        const question = head.indexOf('?');
+        if (question !== -1 && question < ampersand) return head;
+        const text = String(source || '');
+        // The value the match sits in: back to the nearest quote or tag edge.
+        const floor = Math.max(0, index - 2000);
+        let start = -1;
+        for (let i = index - 1; i >= floor; i--) {
+            const ch = text[i];
+            if (ch === '"' || ch === "'" || ch === '<' || ch === '>') { start = i + 1; break; }
+        }
+        if (start === -1 || start === index) return head;
+        const enclosing = text.slice(start, index);
+        // The enclosing value's first run (its own address) has opened a query.
+        if (!/^\S*\?/.test(enclosing)) return head;
+        return head.slice(0, ampersand);
     }
 
     // An XML namespace is not a link. Inline SVG icons carry
@@ -20800,6 +21541,53 @@ class AiWebParser {
         return `${section.label}\n${section.lines.join('\n')}`;
     }
 
+    // The scan bound counts CONTENT, not padding. Every scan that takes the
+    // bounded page reads its title, meta tags, JSON-LD and body text — and
+    // nothing else — so what none of them can read is removed BEFORE the
+    // bound is applied: <style> blocks, <script> blocks other than JSON-LD,
+    // comments, and runs of whitespace (a run holding a line break stays one
+    // line break, so the page's lines are the same lines).
+    //
+    // gruntparty.monster/goodbyegrunt, 2026-11-08: an 873,845-character
+    // Squarespace page of which ~670,000 are indentation INSIDE four
+    // template tags (<header … data-current-styles="{ … }"> is 239,502
+    // characters, 234,560 of them whitespace). The raw 500,000-character cut
+    // landed inside the second of those tags, 142,000 characters short of
+    // "NOVEMBER 28 at THE STUD … (1123 FOLSOM STREET, SF, CA)": the prompt
+    // held the page title and 70 lines of the cut tag's attribute JSON, every
+    // pass answered blank and the season closer read as 0 events on every run
+    // (the blank answers are cached under that broken prompt). Of the 177
+    // cached pages over the bound that day, 134 lost body text to it.
+    //
+    // A page at or under the bound is returned untouched, so nothing changes
+    // for a page that was already read whole. A cut that still lands inside
+    // a tag drops that tag's orphaned opener instead of leaving its
+    // attributes behind as page text.
+    boundHtmlForScan(html) {
+        const source = String(html || '');
+        if (source.length <= HTML_SCAN_MAX_CHARS) return source;
+        const memo = this._boundHtmlForScanMemo;
+        if (memo && memo.source === source) return memo.bounded;
+        let bounded = source
+            .replace(/<script\b([^>]*)>[\s\S]*?<\/script[^>]*>/gi, (block, attributes) => (
+                /type=["']application\/ld\+json["']/i.test(attributes) ? block : ' '
+            ))
+            .replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ')
+            .replace(/<!--[\s\S]*?-->/g, ' ')
+            .replace(/\s{2,}/g, (run) => (run.indexOf('\n') >= 0 ? '\n' : ' '));
+        const readable = bounded.length;
+        if (bounded.length > HTML_SCAN_MAX_CHARS) {
+            bounded = bounded.slice(0, HTML_SCAN_MAX_CHARS);
+            const lastOpen = bounded.lastIndexOf('<');
+            if (lastOpen > bounded.lastIndexOf('>') && /^<[a-z\/!]/i.test(bounded.slice(lastOpen, lastOpen + 2))) {
+                bounded = bounded.slice(0, lastOpen);
+            }
+            console.log(`🤖 AI Web: Page scan bound reached — ${readable} readable characters (of ${source.length}), the last ${readable - bounded.length} are not scanned for title, meta, JSON-LD or prompt text`);
+        }
+        this._boundHtmlForScanMemo = { source, bounded };
+        return bounded;
+    }
+
     // The 500,000-char corpus cap can slice through the middle of a <script>,
     // <style> or comment block, orphaning its opening tag. Every corpus
     // stripper matches open→close PAIRS, so an orphaned opener means the
@@ -20845,7 +21633,7 @@ class AiWebParser {
     }
 
     getPromptSectionBundle(html, aiConfig = {}) {
-        const source = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
+        const source = this.sealTruncatedHtmlBlocks(this.boundHtmlForScan(html));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -21711,6 +22499,57 @@ class AiWebParser {
         return title;
     }
 
+    // Leading clock or clock range on an event TITLE. A day programme
+    // prints the hours before every name — bearssitges.org, run
+    // 20261109-053706: "20:30h a 03h Especial NOCHE BLANCA con PRAGUE
+    // BEARS", "1h a 06h BEEFMINCE DISCO Party", "13h Sitges Drag Brunch"
+    // were kept under those titles (and the trim pass then cut one to "30h
+    // a 03h NOCHE ESPECIAL…"). The hours have their own fields; the name
+    // starts after them.
+    //
+    // The line-level reader is activityTextAfterTimePrefix (it cuts a
+    // programme LINE into its activity); a title needs more care, because
+    // names open with numbers too.
+    //
+    // Fail closed, shapes only:
+    // - a clock counts only with an explicit marker — "h", am/pm, or
+    //   ":mm" — and a real hour (0–23): "5 à 7", "9 to 5", "2 Bears 1
+    //   Cave" and "24h Party" are names, never clocks;
+    // - a RANGE needs a marker on at least one side, and a name with a
+    //   real word after it;
+    // - a SINGLE clock needs two words of name after it ("2AM Club" and
+    //   "12h Rave" stay whole);
+    // - a remainder that opens with a range word ("9pm til late") means
+    //   the hours were not fully read — the title stays whole.
+    stripLeadingClockFromTitle(title) {
+        const original = String(title || '');
+        const text = this.normalizeWhitespace(original.replace(/[\u200b\u200e\u200f\ufeff]/g, ' '));
+        // Same opening test the day-programme splitter uses for a timed
+        // line; everything below only makes it safe for a NAME.
+        if (!text || !this.isTimePrefixedActivityLine(text)) return original;
+        const CLOCK = '(\\d{1,2})(?:([:.])(\\d{2}))?\\s?(h|hrs?|am|pm|a\\.m\\.|p\\.m\\.)?(?![\\p{L}\\p{N}])\\.?';
+        const RANGE_WORD = '(?:-|–|—|a|à|al|to|til{1,2}|until|bis)';
+        const match = text.match(new RegExp(`^${CLOCK}(?:\\s*${RANGE_WORD}\\s*${CLOCK})?\\s*[:\\-–—|,]?\\s+(\\S.*)$`, 'iu'));
+        if (!match) return original;
+        const clock = (hour, separator, minutes, marker) => {
+            if (hour === undefined) return null;
+            const valid = Number(hour) <= 23 && (minutes === undefined || Number(minutes) <= 59);
+            return { valid, marked: Boolean(marker) || (separator === ':' && minutes !== undefined) };
+        };
+        const first = clock(match[1], match[2], match[3], match[4]);
+        const second = clock(match[5], match[6], match[7], match[8]);
+        const rest = this.normalizeWhitespace(match[9]).replace(/^[\s:\-–—|,.]+/, '');
+        if (!first.valid || (second && !second.valid)) return original;
+        if (!(second ? (first.marked || second.marked) : first.marked)) return original;
+        if (!/\p{L}{3}/u.test(rest) || this.isTimeOnlyLineText(rest)) return original;
+        // What follows must open like a name: "11PM-5AM @ The Eagle" and
+        // "9pm at the bar" are a time and a place, with no name to keep.
+        if (!/^[\p{L}\p{N}"'«“‘(\[¡¿]/u.test(rest) || /^at\s/i.test(rest)) return original;
+        if (new RegExp(`^${RANGE_WORD}(?![\\p{L}\\p{N}])`, 'iu').test(rest)) return original;
+        if (!second && rest.split(' ').filter(word => /\p{L}/u.test(word)).length < 2) return original;
+        return rest;
+    }
+
     // Leading date phrase on an event TITLE, e.g. the Bear Cave's
     // "Wednesday 9th September – BEEFMINCE MEET MARKET". The day-header gate
     // above correctly KEEPS these (there is a real name after the date), so
@@ -21862,7 +22701,7 @@ class AiWebParser {
         if (!htmlData || typeof htmlData !== 'object') return [];
         if (Array.isArray(htmlData._collectionNames)) return htmlData._collectionNames;
         const names = [];
-        const html = typeof htmlData.html === 'string' ? htmlData.html.slice(0, HTML_SCAN_MAX_CHARS) : '';
+        const html = typeof htmlData.html === 'string' ? this.boundHtmlForScan(htmlData.html) : '';
         const regex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
         const collectionTypes = /^(?:https?:\/\/schema\.org\/)?(?:CollectionPage|ItemList|SearchResultsPage|Collection)$/i;
         const visit = (node, depth) => {
@@ -21928,7 +22767,7 @@ class AiWebParser {
         if (!htmlData || typeof htmlData !== 'object') return false;
         if (typeof htmlData.hasEventTypedJsonLd === 'boolean') return htmlData.hasEventTypedJsonLd;
         const html = typeof htmlData.html === 'string' ? htmlData.html : '';
-        const result = this.extractJsonLdParts(String(html).slice(0, HTML_SCAN_MAX_CHARS))
+        const result = this.extractJsonLdParts(this.boundHtmlForScan(html))
             .some(part => this.containsEventType(part));
         if (Object.isExtensible(htmlData)) {
             htmlData.hasEventTypedJsonLd = result;
@@ -22449,7 +23288,7 @@ class AiWebParser {
     cleanHtml(html, aiConfig = {}) {
         if (!html) return '';
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
-        const source = this.sealTruncatedHtmlBlocks(String(html).slice(0, HTML_SCAN_MAX_CHARS));
+        const source = this.sealTruncatedHtmlBlocks(this.boundHtmlForScan(html));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -26583,6 +27422,17 @@ TEXT:
             aiEvent.summary,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
         );
+        // Invisible marks first — every check below reads letters (see
+        // stripInvisibleTitleMarks). A title that was nothing but marks is
+        // no title, and the missing-title handling below takes it.
+        const unmarkTitle = (value) => {
+            const unmarked = this.stripInvisibleTitleMarks(value);
+            if (unmarked !== value) {
+                console.log(`🏷️ TITLE: "${this.showInvisibleTitleMarks(value)}" → "${unmarked}" — invisible marks (and the separator left dangling beside them) are not part of a name`);
+            }
+            return unmarked;
+        };
+        if (title) title = unmarkTitle(title);
         // A title that is nothing but a time of day is a harvested time node,
         // never an event name (run 20260802-102127: the final event was titled
         // "6:30 PM" while the real name — "SUGAR, WE'RE HOEIN DOWN" — sat in
@@ -26598,6 +27448,14 @@ TEXT:
                 this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
             ].filter(candidate => !(typeof candidate === 'string' && this.isTimeOnlyLineText(candidate)));
             title = this.firstNonEmpty(...nonTimeCandidates, '');
+        }
+        // A title that is nothing but a one- or two-digit number is a day of
+        // the month or a fragment of an ordinal ("25" cut from "CENA OFICIAL
+        // 25º aniBEARSari" — bearssitges.org, run 20261109-053706, kept and
+        // flagged "title contains no letters"). Same treatment as a time.
+        if (title && /^\d{1,2}$/.test(this.normalizeWhitespace(String(title)))) {
+            console.log(`🤖 AI Web: Title "${title}" is only a number — treating the title as missing`);
+            title = '';
         }
         // A title that is nothing but a navigation label ("NEXT", "NEXT (UK):",
         // "UPCOMING EVENTS") is a site's signpost to an event, never the
@@ -26650,6 +27508,9 @@ TEXT:
                 titleStated = true;
             }
         }
+        // …and again once the page's own stated names (its JSON-LD event
+        // name, its heading) may have replaced the model's.
+        if (title) title = unmarkTitle(title);
         // Strip a leading date phrase HERE rather than in the per-pass guard:
         // titles also arrive from segment headings and config metadata, which
         // never pass through that guard — a live BEEFMINCE run showed the
@@ -26661,6 +27522,15 @@ TEXT:
             if (strippedTitle !== title) {
                 console.log(`🤖 AI Web: Stripped leading date from title "${title}" → "${strippedTitle}"`);
                 title = strippedTitle;
+            }
+        }
+        // …and a leading clock or clock range, which a programme prints
+        // before every name (see stripLeadingClockFromTitle).
+        if (title) {
+            const unclockedTitle = this.stripLeadingClockFromTitle(title);
+            if (unclockedTitle !== title) {
+                console.log(`🤖 AI Web: Stripped leading clock from title "${title}" → "${unclockedTitle}"`);
+                title = unclockedTitle;
             }
         }
         const aiDescription = this.firstNonEmpty(aiEvent.description, aiEvent.desc, '');
@@ -26794,7 +27664,7 @@ TEXT:
             this.getTimezoneForCity(parserConfig && parserConfig.city, cityConfig),
             // Fallback: the address often names the city even when the city field was
             // dropped by evidence validation (e.g. flyer only says "NYC").
-            this.getTimezoneForCity(this.findCityKeyInText(address, cityConfig), cityConfig),
+            this.getTimezoneForCity(this.findCityKeyInText(address, cityConfig, { placeName: true }), cityConfig),
             ''
         );
         // URL-field sanity gate (see isPlausibleEventUrlValue): only
@@ -27862,18 +28732,63 @@ TEXT:
     }
 
     // Find a configured city referenced inside free text (e.g. a street address).
-    findCityKeyInText(text, cityConfig) {
+    //
+    // options.placeName: the text is PLACE-SHAPED — an address, a place or
+    // city field — so the words around a token are the rest of a name, and a
+    // short alias that is only a syllable of a longer place name is not the
+    // alias (2026-11-09, whereto.party: the place "Ho Chi Minh City, Vietnam"
+    // carries the whole word "chi", and a Saigon night was given another
+    // city's key and clock). Mirrors LocationNormalizer.matchesCityPattern.
+    findCityKeyInText(text, cityConfig, options = {}) {
         const map = this.getCityConfigMap(cityConfig);
         if (!map || typeof map !== 'object') return '';
         const normalizedText = this.normalizeEvidenceText(text);
         if (!normalizedText) return '';
+        const placeName = Boolean(options && options.placeName);
         for (const [key, cityData] of Object.entries(map)) {
             const matched = this.getCityAliasList(key, cityData).some(alias =>
                 alias.length >= 3 && this.textContainsCityAlias(normalizedText, alias)
+                && !(placeName && this.placeTextHoldsShortAliasOnlyInsideNames(text, alias))
             );
             if (matched) return key;
         }
         return '';
+    }
+
+    // Does this PLACE text spell the short alias only as a syllable of a
+    // longer name? True when every whole-token occurrence has a name word
+    // joined on BOTH sides (space or hyphen, no comma between) — "Ho Chi
+    // Minh City" — and is not written as an abbreviation: capitals inside
+    // mixed-case text ("398 12th St SF CA") are how an abbreviation is
+    // written, a title-cased "Chi" is how a syllable is. Text all in one
+    // case says nothing by its letters, so there the neighbours decide.
+    // False when the alias is not short, is absent, or stands once.
+    placeTextHoldsShortAliasOnlyInsideNames(rawText, foldedAlias) {
+        const alias = String(foldedAlias || '');
+        if (!/^[a-z]{1,3}$/.test(alias)) return false;
+        const cased = String(rawText || '')
+            .replace(/&(amp|nbsp|#39|apos|quot);/gi, ' ')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!cased) return false;
+        const mixedCase = /\p{Ll}/u.test(cased) && /\p{Lu}/u.test(cased);
+        const finder = new RegExp(`(^|[^\\p{L}\\p{N}])(${alias})(?![\\p{L}\\p{N}])`, 'giu');
+        let found = 0;
+        let match = finder.exec(cased);
+        while (match) {
+            const start = match.index + match[1].length;
+            const end = start + match[2].length;
+            const token = match[2];
+            const writtenAsAbbreviation = mixedCase && token === token.toUpperCase();
+            const insideName = /\p{L}[ -]+$/u.test(cased.slice(0, start)) && /^[ -]+\p{L}/u.test(cased.slice(end));
+            if (writtenAsAbbreviation || !insideName) return false;
+            found += 1;
+            finder.lastIndex = end;
+            match = finder.exec(cased);
+        }
+        return found > 0;
     }
 
     hasExplicitTimezoneInfo(dateValue) {
@@ -28159,7 +29074,26 @@ TEXT:
         const weekday = '(sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:s|nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)';
         const month = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
         const dayNum = '\\d{1,2}(?:st|nd|rd|th)?';
-        const dateToken = `(?:${month}\\.?\\s*${dayNum}|${dayNum}\\s*(?:of\\s+)?${month}|\\d{1,2}[\\/.\\-]\\d{1,2})`;
+        // A numeric date ("8/22", "22.8") — never a CLOCK RANGE. Opening
+        // hours put a weekday right before two small numbers too ("TUE-SAT
+        // 4-6PM"), and they state no day of any month: read as a date, the
+        // "Sat" pinned whatever date the model had made up to the nearest
+        // year in which it falls on a Saturday, and a pinned year is held
+        // against the window repair (thelumberyardbar.com home page, run
+        // 20261109-053706: "TUE-SAT 4-6PM • SUN 12-7PM" turned an invented
+        // 2024-01-01 into 2028-01-01). A slash is never a clock. Two numbers
+        // joined by a hyphen and followed by am/pm or "h" are hours ("4-6PM");
+        // joined by a dot they are an hour and its minutes when am/pm
+        // follows them ("9.30pm") or follows the far end of their range
+        // ("4.30-6pm"). Unsure means no pin — the year is then left to the
+        // ordinary repair, as it was before pinning existed.
+        const clockMark = '(?:[ap]\\.?m\\b|h\\b)';
+        const numericDate = '(?:'
+            + '\\d{1,2}\\/\\d{1,2}'
+            + `|\\d{1,2}-\\d{1,2}(?!\\d|:\\d)(?!\\s*${clockMark})`
+            + `|\\d{1,2}\\.\\d{1,2}(?!\\d)(?!\\s*${clockMark}|\\s*[-–—]\\s*\\d{1,2}(?:[:.]\\d{2})?\\s*${clockMark})`
+            + ')';
+        const dateToken = `(?:${month}\\.?\\s*${dayNum}|${dayNum}\\s*(?:of\\s+)?${month}|${numericDate})`;
         const weekdayThenDate = new RegExp(`\\b${weekday}\\b\\.?,?\\s*${dateToken}`, 'i');
         const dateThenWeekday = new RegExp(`${dateToken}\\s*,?\\s*\\(?\\b${weekday}\\b`, 'i');
         const match = raw.match(weekdayThenDate) || raw.match(dateThenWeekday);
@@ -28226,9 +29160,13 @@ TEXT:
     // Search the pass's source content for the extracted month+day token and
     // accept a weekday named in the preceding ~2 lines / ~40 chars, with nothing
     // date-like (digits or another month name) between the weekday and the date.
-    // Conservative by design: pins only when the token match is unambiguous — the
-    // month+day appears exactly once, or every occurrence agrees on the adjacent
-    // weekday. Returns the JS day index (0=Sunday) or null.
+    // Conservative by design: pins only when the page is of one mind — every
+    // occurrence that names a weekday beside the month+day names the same one.
+    // An occurrence with no weekday beside it says nothing and vetoes nothing
+    // (a flyer's "THU\nJUNE 4TH" is not unsaid by the paragraph under it that
+    // repeats "on June 4"); two occurrences naming different weekdays are two
+    // years or two parties, and nothing is pinned. Returns the JS day index
+    // (0=Sunday) or null.
     extractWeekdayNearDateInSource(sourceText, valueText) {
         const source = String(sourceText || '');
         if (!source.trim()) return null;
@@ -28280,10 +29218,9 @@ TEXT:
         }
 
         if (occurrenceCount === 0) return null;
-        if (occurrenceCount === 1) return adjacentWeekdays[0];
-        const first = adjacentWeekdays[0];
-        if (first === null) return null;
-        return adjacentWeekdays.every(weekday => weekday === first) ? first : null;
+        const stated = adjacentWeekdays.filter(weekday => weekday !== null);
+        if (stated.length === 0) return null;
+        return stated.every(weekday => weekday === stated[0]) ? stated[0] : null;
     }
 
     // Deterministic weekday→year pinning. Listing/flyer text often states a
@@ -28569,7 +29506,7 @@ TEXT:
     }
 
     extractPageBrandNames(html) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const names = new Set();
         const addName = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -28638,7 +29575,7 @@ TEXT:
     }
 
     extractPageSiteTaglines(html) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const taglines = new Set();
         const addTagline = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -28755,6 +29692,40 @@ TEXT:
         return text || original;
     }
 
+    // INVISIBLE MARKS ARE NOT LETTERS — identical to SharedCore's
+    // stripInvisibleTitleMarks (parsers are standalone; keep the two in
+    // sync). A zero-width or direction mark prints nothing, so a title that
+    // carries one is the title without it; once the marks are gone, a
+    // spaced separator with nothing on its far side joined the name to
+    // nothing and goes with them. studsf.com, run 20261109-053706: the
+    // site's name is a lone U+200E, so its item-page template's "<event> —
+    // <site name>" (the page <title>, og:title and the JSON-LD Event name
+    // alike) read "Muscle Mommy Pageant  —   \u200e " — 11 records carried
+    // the tail, 3 of them kept, and the brand-suffix strip never saw it
+    // (no brand to read off the page).
+    //
+    // A joiner (U+200C/U+200D) is cut only where it joins nothing — it
+    // builds emoji and letters in several scripts — and the soft hyphen is
+    // never touched. A title with no such mark is returned as it was.
+    stripInvisibleTitleMarks(title) {
+        const original = String(title === null || title === undefined ? '' : title);
+        const marks = /[\u061c\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]|(?:^|(?<=\s))[\u200c\u200d]+|[\u200c\u200d]+(?=\s|$)/gu;
+        const bare = original.replace(marks, '');
+        if (bare === original) return original;
+        const separator = '[|\\u2013\\u2014\\u2015\\u00b7\\u2022\\u00bb-]+';
+        return bare.replace(/\s+/g, ' ').trim()
+            .replace(new RegExp(`\\s+${separator}$`, 'u'), '')
+            .replace(new RegExp(`^${separator}\\s+`, 'u'), '')
+            .trim();
+    }
+
+    // What a log line can show of a title that carries such marks.
+    showInvisibleTitleMarks(title) {
+        return String(title === null || title === undefined ? '' : title)
+            .replace(/[\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/gu,
+                (mark) => `<U+${mark.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}>`);
+    }
+
     // Emoji/pictograph-stripped view of a title — identical to SharedCore's
     // stripEmojiForTitleTwin (parsers are standalone and cannot import shared
     // code, so the regex is deliberately duplicated; keep the two in sync).
@@ -28769,7 +29740,7 @@ TEXT:
     // First og-style meta content for a key (e.g. 'og:title', 'og:site_name'),
     // entity-decoded and whitespace-collapsed. '' when absent.
     extractOgMetaContent(html, keyName) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const metaRegex = /<meta\b[^>]*>/gi;
         let match;
         while ((match = metaRegex.exec(source)) !== null) {
@@ -28790,7 +29761,7 @@ TEXT:
     // above answers only the first, so the rest were invisible. Same decoding, so
     // list[0] always equals extractOgMetaContent's answer.
     extractOgMetaContentAll(html, keyName) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const metaRegex = /<meta\b[^>]*>/gi;
         const values = [];
         let match;
@@ -28814,7 +29785,7 @@ TEXT:
     // skip-empty rule, so filtering the result to one key always equals
     // extractOgMetaContentAll's answer for that key.
     extractOgMetaEntriesAll(html, keyNames) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const wanted = new Set(keyNames);
         const metaRegex = /<meta\b[^>]*>/gi;
         const entries = [];
@@ -31757,7 +32728,7 @@ TEXT:
             const candidate = entry.addresses[consensusKey];
             const consensusAddress = candidate.display;
             console.log(`🤖 AI Web: Venue-site address consensus for ${host}: "${consensusAddress}" (${candidate.pages.size} page(s))`);
-            const cityKey = this.findCityKeyInText(consensusAddress, cityConfig);
+            const cityKey = this.findCityKeyInText(consensusAddress, cityConfig, { placeName: true });
             for (const event of eventList) {
                 if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
                 const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
@@ -31999,6 +32970,85 @@ TEXT:
             }
         }
         return claimants;
+    }
+
+    // A FEED ROW THAT TYPES ITS STREET ADDRESS AFTER ITS NAME states its place
+    // there. Lodge NY's Google Calendar (run 20261109-053706) writes every
+    // party as "<name> 232 W 37th St, 2nd Fl b/w 7th and 8th Avenues"; most
+    // rows repeat the address in LOCATION, but the monthly "Chub Chaser
+    // Party" has no LOCATION at all (dropped at the gate below, every run)
+    // and "The Fuck Stop" says only "Garment District, New York, NY, USA"
+    // (kept, with the address still in its name). Read by shape
+    // (SharedCore.readAddressTailFromTitle — the same tail
+    // stripAddressTailFromTitle cuts when the row DOES state the address):
+    //   - a row that already states a street line is left to that strip;
+    //   - a row that states only a locality keeps it behind the street line
+    //     ("232 W 37th St, 2nd Fl, New York, NY, USA");
+    //   - a row that states no place takes the full address the other rows
+    //     of this same feed state for that same door (the one most of them
+    //     state), and the title's own street line when none does.
+    // The name loses the tail either way. Every read is logged. Returns the
+    // number of rows read.
+    readFeedRowTitleAddresses(feedEvents) {
+        const rows = (Array.isArray(feedEvents) ? feedEvents : []).filter(event => event && typeof event === 'object');
+        const core = this.core;
+        if (rows.length === 0 || !core || typeof core.readAddressTailFromTitle !== 'function') return 0;
+        const text = (value) => (typeof value === 'string' ? value.trim() : '');
+        const statesStreetLine = (address) => address.split(',').some(part => core.looksLikeStreetAddress(part.trim()));
+        // The street addresses this feed's rows state, most-stated first.
+        const stated = new Map();
+        for (const event of rows) {
+            const address = text(event.address);
+            if (address && statesStreetLine(address)) stated.set(address, (stated.get(address) || 0) + 1);
+        }
+        const statedByCount = [...stated.entries()].sort((a, b) => b[1] - a[1]).map(entry => entry[0]);
+        let read = 0;
+        for (const event of rows) {
+            const existing = text(event.address);
+            if (existing && statesStreetLine(existing)) continue;
+            const tail = core.readAddressTailFromTitle(event.title);
+            if (!tail) continue;
+            const sameDoor = !existing && typeof core.areSameStreetLine === 'function'
+                ? statedByCount.find(address => core.areSameStreetLine(tail.address, address))
+                : '';
+            const address = existing
+                ? (tail.locality ? tail.address : `${tail.address}, ${existing}`)
+                : (sameDoor || tail.address);
+            const why = existing
+                ? `the row states only "${[text(event.bar), existing].filter(Boolean).join(', ')}"`
+                : (sameDoor ? 'the row states no place; the full address is the one this feed\'s other rows state for that door' : 'the row states no place');
+            console.log(`📍 TITLE ADDRESS: "${event.title}" → "${tail.title}" — the name ends in a street address and ${why}: address = ${address}${tail.crossStreets ? ` (${tail.crossStreets})` : ''}`);
+            event.title = tail.title;
+            event.address = address;
+            read++;
+        }
+        return read;
+    }
+
+    // THE FEED COMPLETENESS GATE: a structured row is an event only when it
+    // names a place — a bar, an address or a city (a stated city is place
+    // evidence too: an aggregator row with no venue yet, "BEAR POOL PARTY",
+    // Sitges, is a real event somewhere in that city). A row that names none
+    // is not kept, and never silently: one line per party names it, its
+    // nights and the reason (Lodge NY's "Chub Chaser Party" vanished at this
+    // gate on every run with no trace, audit 2026-11-09).
+    keepPlacedFeedRows(feedEvents, sourceUrl) {
+        const rows = Array.isArray(feedEvents) ? feedEvents : [];
+        const kept = [];
+        const unplaced = new Map();
+        for (const event of rows) {
+            if (!event) continue;
+            if (event.bar || event.address || event.city) { kept.push(event); continue; }
+            const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : '(untitled)';
+            const ms = this.core && typeof this.core.toEpochMillis === 'function' ? this.core.toEpochMillis(event.startDate) : null;
+            const day = Number.isFinite(ms) ? new Date(ms).toISOString().slice(0, 10) : 'undated';
+            if (!unplaced.has(title)) unplaced.set(title, []);
+            unplaced.get(title).push(day);
+        }
+        for (const [title, days] of unplaced) {
+            console.log(`🚧 FEED GATE: "${title}" (${days.length} night(s): ${days.slice(0, 6).join(', ')}${days.length > 6 ? ', …' : ''}) names no bar, address or city in ${sourceUrl} — not kept as a structured event`);
+        }
+        return kept;
     }
 
     // A VENUE's own feed that names no place: the place is the venue. The
@@ -32481,7 +33531,7 @@ TEXT:
     }
 
     extractJsonLdSiteSignals(html) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const signals = { venueType: '', venueName: '', organizationTypeFound: false };
         const venueTypePattern = /^(NightClub|BarOrPub|EventVenue|MusicVenue)$/i;
         const organizerTypePattern = /^(Organization|PerformingGroup)$/i;
@@ -32551,7 +33601,7 @@ TEXT:
     // them, but "the venue's address in the site footer" is exactly the
     // signal the single-recurring-address fact needs).
     getPageTextForSiteRole(html) {
-        let text = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
+        let text = this.sealTruncatedHtmlBlocks(this.boundHtmlForScan(html));
         text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
         text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
         text = text.replace(/<!--[\s\S]*?-->/g, ' ');
@@ -33484,7 +34534,7 @@ TEXT:
         if (!pair) return event;
         const extractedEntry = this.findCityConfigEntry(extractedCity, cityConfig);
         const extractedKey = extractedEntry ? extractedEntry.key : extractedCity.toLowerCase();
-        const resolvedKey = this.findCityKeyInText(pair.place, cityConfig);
+        const resolvedKey = this.findCityKeyInText(pair.place, cityConfig, { placeName: true });
         if (resolvedKey) {
             if (resolvedKey === extractedKey) return event; // page agrees — nothing to do
             event.city = resolvedKey;
@@ -33693,6 +34743,15 @@ TEXT:
             .filter(token => token && !this.titleContainsPageBrandName(token, pageBrandNames))
             .join(' ');
         if (!/[a-z0-9]/i.test(withoutBrandTokens)) return '';
+        // Page furniture is never dressed up as the promoter's party: a
+        // prefixed label ("Brand: comprar entradas", "Brand: 2. To apply")
+        // is the shape no furniture rule tests, so the prefix would carry
+        // it past every one of them.
+        const furnitureReason = this.describeFurnitureTitle(text);
+        if (furnitureReason) {
+            console.log(`🪑 FURNITURE: "${text}" is ${furnitureReason} — the page brand is not prefixed to it`);
+            return '';
+        }
         const organizerDisplay = this.normalizeWhitespace(this.getOrganizerDisplayName(pageBrandNames, htmlData));
         if (!/[a-z0-9]/i.test(organizerDisplay)) return '';
         if (organizerDisplay.length > 24 || organizerDisplay.split(/\s+/).length > 3) return '';
