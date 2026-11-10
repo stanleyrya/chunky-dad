@@ -11992,7 +11992,7 @@ class SharedCore {
                         for (const childEvent of parsedEvents) {
                             const matchesParent = enrichContext.parentEvents.some(parentEvent =>
                                 this.getSameEventIdentitySignal(childEvent, parentEvent, { requireCloseStartTimes: false })
-                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url));
+                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url, parsedEvents));
                             (matchesParent ? keptEvents : droppedEvents).push(childEvent);
                         }
                         if (droppedEvents.length > 0) {
@@ -28375,7 +28375,24 @@ class SharedCore {
     // sites). Only the enrich-only crawl asks this — the page WAS reached
     // through that link — so no other dedup pass can fold a row into a
     // listing it merely links.
-    isTicketLinkPageRecord(pageRecord, row, pageUrl = '') {
+    // …and the pointer only names the row when the page it opens is the
+    // row's OWN ticket page. A row's "TICKETS" link may open the venue's
+    // whole what's-on listing instead: Thotyssey's "Bear Belly at C'mon
+    // Everybody" (Dec 5, 6pm–10pm) links cmoneverybody.com/events, whose 28
+    // rows are 28 different parties, and the only other party there that
+    // night — "STANK.BK", doors 10:30pm, $15 — was taken to be the row and
+    // folded into it (run 20261109-053706: a wrong cover and ticket link
+    // headed for a saved event; the same run folded "Out & Abt NYC November"
+    // into "Goldiloxx: Bear Tea at 3 Dollar Bill" off that venue's /rsvp
+    // listing). So when the page gave several records under two or more
+    // different names (pageRecords: everything read off it — parties, not
+    // rows, are counted, so a page of 21 editions of ONE party is still that
+    // party's page), "same night" is not enough: the record must also be the
+    // row by NAME (the big-drift guard's own "same party in other words"
+    // test, a shared curated brand, or the same flyer file). Otherwise it is
+    // a neighbour on a listing: nothing enriched, nothing folded, and the
+    // enrich-only crawl drops and lists it with the page's other siblings.
+    isTicketLinkPageRecord(pageRecord, row, pageUrl = '', pageRecords = null) {
         if (!pageRecord || typeof pageRecord !== 'object' || !row || typeof row !== 'object') return false;
         const rowShape = this.buildIdentityComparisonShape(row);
         if (!rowShape.ticketUrl) return false;
@@ -28384,6 +28401,11 @@ class SharedCore {
         const pageShape = this.buildIdentityComparisonShape(pageRecord);
         if (!this.areIdentityDatesOnSameLocalDay(pageShape, rowShape)) return false;
         if (this.isFanInTicketUrl(pageRecord, row)) return false;
+        const partyCount = this.countDistinctEventNames(pageRecords);
+        if (partyCount >= 2 && !this.ticketLinkPageRecordSharesRowName(pageRecord, row)) {
+            console.log(`🛑 ENRICH: "${pageRecord.title || 'event'}" is on the page "${row.title || 'event'}"'s ticket link opens (${rowShape.ticketUrl}), on the same night, but that page lists ${partyCount} differently named parties and the two names share nothing — a listing's neighbour, not the row's ticket page: nothing enriched, nothing folded`);
+            return false;
+        }
         const contradiction = this.getIdentityContradiction(pageRecord, row, { requireCloseStartTimes: false, softBarNames: true });
         if (contradiction) {
             console.log(`🛑 IDENTITY: "${pageRecord.title || 'event'}" is on the page "${row.title || 'event'}"'s ticket link opens, on the same night, but their ${contradiction} contradict — not folded`);
@@ -28396,6 +28418,28 @@ class SharedCore {
         pageRecord._ticketLinkPageOf = rowShape.ticketUrl;
         console.log(`🎟️ ENRICH: "${pageRecord.title || 'event'}" is the night on the page "${row.title || 'event'}"'s ticket link opens (${rowShape.ticketUrl}) — one event, kept`);
         return true;
+    }
+
+    // How many differently named parties a set of records holds: titles
+    // folded to letters and digits, so 21 editions of one night count once.
+    countDistinctEventNames(records) {
+        if (!Array.isArray(records)) return 0;
+        const names = new Set();
+        for (const record of records) {
+            const key = this.normalizeIdentityText(this.foldDiacritics(this.decodeBasicHtmlEntities(String((record && record.title) || ''))));
+            if (key) names.add(key);
+        }
+        return names.size;
+    }
+
+    // Is the record read off a listing the row that pointed at it, by NAME?
+    // The big-drift guard's test (venue, city and cadence words never count),
+    // one curated brand on both, or one flyer file.
+    ticketLinkPageRecordSharesRowName(pageRecord, row) {
+        const bar = (row && row.bar) || (pageRecord && pageRecord.bar) || '';
+        return this.titlesShareIdentity(String((pageRecord && pageRecord.title) || ''), String((row && row.title) || ''), bar)
+            || this.recordsShareEventBrand(pageRecord, row)
+            || this.recordsShareImageFile(pageRecord, row);
     }
 
     recordsShareSourcePage(eventA, eventB) {

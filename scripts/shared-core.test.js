@@ -30189,3 +30189,151 @@ test('aggregator: a not-bear held because the row names a usually-bear promoter 
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, true, { siteRole: 'aggregator' }), false, 'a trusted promoter is never dropped here');
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, false, { siteRole: 'venue' }), false);
 });
+
+// ---------------------------------------------------------------------------
+// A ticket link that opens a venue's WHOLE listing: the neighbour on the
+// row's night is not the row (Thotyssey, run 20261109-053706).
+// ---------------------------------------------------------------------------
+
+// Real record shapes from that run, trimmed. The aggregator's row carries the
+// venue's listing as its "ticket" link; the listing's 10:30pm party the same
+// evening is somebody else's night.
+function buildListingNeighbourPair() {
+  const row = {
+    title: "Bear Belly at C'mon Everybody",
+    startDate: new Date('2026-12-05T23:00:00.000Z'),
+    endDate: new Date('2026-12-06T03:00:00.000Z'),
+    timezone: 'America/New_York',
+    bar: "C'mon Everybody",
+    address: '325 Franklin Ave, Brooklyn, NY 11238, USA',
+    ticketUrl: 'https://www.cmoneverybody.com/events',
+    source: 'ai-web',
+    city: 'nyc',
+    _sourcePageUrl: 'https://tockify.com/api/ngevent?max=100&calname=thotyssey&tags=bears',
+    _pageOrigin: 'listing'
+  };
+  const neighbour = {
+    title: 'STANK.BK',
+    startDate: new Date('2026-12-06T03:30:00.000Z'),
+    endDate: new Date('2026-12-06T09:00:00.000Z'),
+    timezone: 'America/New_York',
+    bar: "C'mon Everybody",
+    address: '325 Franklin Avenue, New York, 11238',
+    website: 'https://www.cmoneverybody.com/events',
+    ticketUrl: 'https://link.dice.fm/s7740e082534',
+    cover: '$15',
+    source: 'dice',
+    city: 'nyc',
+    _organizer: 'cmon everybody',
+    _pageClassification: 'multi-event-page',
+    _sourcePageUrl: 'https://www.cmoneverybody.com/events',
+    _pageOrigin: 'crawl'
+  };
+  const listing = [
+    neighbour,
+    { ...neighbour, title: 'Funny Moms', startDate: new Date('2026-11-10T01:00:00.000Z'), endDate: null, ticketUrl: 'https://link.dice.fm/a1' },
+    { ...neighbour, title: 'Mall Drag', startDate: new Date('2026-11-13T01:00:00.000Z'), endDate: null, ticketUrl: 'https://link.dice.fm/a2' },
+    { ...neighbour, title: 'DEEPER *Speedo Edition*', startDate: new Date('2026-11-14T03:30:00.000Z'), endDate: null, ticketUrl: 'https://link.dice.fm/a3' }
+  ];
+  return { row, neighbour, listing };
+}
+
+test('ticket-link page: a differently named party on a listing of several parties is the row\'s neighbour, not the row — nothing enriched, nothing folded, and the log says so', () => {
+  const core = createCore();
+  const { row, neighbour, listing } = buildListingNeighbourPair();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    assert.equal(core.getSameEventIdentitySignal(neighbour, row, { requireCloseStartTimes: false }), null, 'no ordinary rung meets them');
+    assert.equal(core.isTicketLinkPageRecord(neighbour, row, 'https://www.cmoneverybody.com/events', listing), false);
+    assert.equal(neighbour._ticketLinkPageOf, undefined, 'no pointer is stamped, so the dedup ladder cannot fold them later');
+    assert.equal(core.getSameEventIdentitySignal(neighbour, row, { requireCloseStartTimes: false }), null);
+    const refusal = logs.find((line) => line.includes('🛑 ENRICH'));
+    assert.ok(refusal, logs.join('\n'));
+    assert.ok(refusal.includes('"STANK.BK"') && refusal.includes('"Bear Belly at C\'mon Everybody"'), refusal);
+    assert.ok(refusal.includes('lists 4 differently named parties'), refusal);
+    assert.ok(refusal.includes('nothing enriched, nothing folded'), refusal);
+  } finally { console.log = quiet; }
+});
+
+test('ticket-link page: on a listing of several parties, the record that carries the row\'s name is still the row', () => {
+  const core = createCore();
+  const { row, neighbour, listing } = buildListingNeighbourPair();
+  const quiet = console.log; console.log = () => {};
+  try {
+    // The venue's own card for the same party, in the venue's shorter words, at the venue's clock.
+    const own = { ...neighbour, title: 'Bear Belly', startDate: new Date('2026-12-06T00:00:00.000Z'), endDate: new Date('2026-12-06T03:00:00.000Z') };
+    assert.equal(core.isTicketLinkPageRecord(own, row, 'https://www.cmoneverybody.com/events', [own, ...listing]), true);
+    assert.equal(own._ticketLinkPageOf, 'cmoneverybody.com/events');
+    // The same flyer file on both is the same party under another name.
+    const flyer = 'https://dice-media.imgix.net/attachments/2026-11-05/c54d563c-5327-4591-bad3-75ecd3a66d55.jpg';
+    const sameFlyer = { ...neighbour, image: flyer };
+    assert.equal(core.isTicketLinkPageRecord(sameFlyer, { ...row, image: flyer }, 'https://www.cmoneverybody.com/events', listing.map((r) => (r === neighbour ? sameFlyer : r))), true);
+  } finally { console.log = quiet; }
+});
+
+test('ticket-link page: a page that lists ONE party (every edition of it) still gives the row its night under another name', () => {
+  const core = createCore();
+  const { row, neighbour } = buildListingNeighbourPair();
+  const quiet = console.log; console.log = () => {};
+  try {
+    // The Two Tons shape: the ticket page marks up every edition under one name.
+    const editions = [
+      neighbour,
+      { ...neighbour, startDate: new Date('2026-11-07T03:30:00.000Z'), endDate: null },
+      { ...neighbour, startDate: new Date('2027-01-03T03:30:00.000Z'), endDate: null }
+    ];
+    assert.equal(core.countDistinctEventNames(editions), 1);
+    assert.equal(core.isTicketLinkPageRecord(neighbour, row, 'https://www.cmoneverybody.com/events', editions), true);
+    // Names are counted as written, minus case, accents and entities.
+    assert.equal(core.countDistinctEventNames([{ title: 'Café &amp; Bears' }, { title: 'CAFE & BEARS' }, { title: '' }, null]), 1);
+    assert.equal(core.countDistinctEventNames(null), 0);
+  } finally { console.log = quiet; }
+});
+
+test('enrich-only crawl: a ticket link that opens a venue\'s whole listing enriches the row with nothing when no party on it carries the row\'s name', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: ENRICH_RULES
+  });
+  const display = createDisplayAdapterStub();
+  const night = new Date(Date.now() + 10 * 86400000);
+  night.setUTCHours(0, 0, 0, 0);
+  const at = (hours, dayOffset = 0) => new Date(night.getTime() + dayOffset * 86400000 + hours * 3600000);
+  const pages = {
+    'https://promoter.example/': {
+      events: [{ title: 'Bear Belly at Venue Club', bar: 'Venue Club', timezone: 'Europe/London', startDate: at(18), endDate: at(22), ticketUrl: 'https://venue.example/events' }]
+    },
+    'https://venue.example/events': {
+      events: [
+        { title: 'STANK.BK', bar: 'Venue Club', address: '12 Old Quebec Street, London', timezone: 'Europe/London', startDate: at(22.5), endDate: at(28), cover: '$15', ticketUrl: 'https://link.tickets.example/s7740' },
+        { title: 'Funny Moms', bar: 'Venue Club', timezone: 'Europe/London', startDate: at(20, 2), ticketUrl: 'https://link.tickets.example/a1' },
+        { title: 'Mall Drag', bar: 'Venue Club', timezone: 'Europe/London', startDate: at(20, 5), ticketUrl: 'https://link.tickets.example/a2' }
+      ]
+    }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let result;
+  try {
+    result = await core.processParser(
+      { name: 'Listing Aggregator', urls: ['https://promoter.example/'], alwaysBear: true, ai: CRAWL_AI },
+      {}, httpAdapter, display, parsers
+    );
+  } finally { console.log = quiet; }
+
+  assert.ok(fetched.includes('https://venue.example/events'), 'the ticket link is still followed');
+  assert.ok(
+    display.logs.includes('SYSTEM: Enrich-only crawl: kept 0 matching event(s), dropped 3 sibling event(s) from venue.example (reached via ticket link from "Bear Belly at Venue Club")'),
+    `expected every listing row dropped as a sibling, got: ${JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))}`
+  );
+  assert.ok(logs.some((line) => line.includes('🛑 ENRICH') && line.includes('"STANK.BK"')), 'the refusal names the record and the reason');
+  assert.equal(result.events.length, 1);
+  const row = result.events[0];
+  assert.equal(row.title, 'Bear Belly at Venue Club');
+  assert.equal(row.startDate.getTime(), at(18).getTime(), 'the row keeps its own clock');
+  assert.equal(row.endDate.getTime(), at(22).getTime());
+  assert.ok(!row.cover, 'the neighbour\'s cover never reaches the row');
+  assert.deepEqual(result.enrichOnlyDrops[0].droppedEvents.map(e => e.title), ['STANK.BK', 'Funny Moms', 'Mall Drag']);
+});
