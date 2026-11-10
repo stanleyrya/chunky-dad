@@ -15750,12 +15750,16 @@ class AiWebParser {
     // timezoneUnresolved is false and the tzid rides along. Bare numbers are
     // NOT accepted: last_update_date / date_id / created_date are epoch
     // numbers too, and the key patterns cannot tell them from a start.
+    // `dateOnly` says the value was a bare calendar day ("2026-12-03"): it
+    // parses to that day's midnight, and only this mark tells the day the
+    // feed named from a midnight it stated.
     jsonApiScalarDateCandidate(value) {
         if (this.jsonApiValueIsIsoDateish(value)) {
             const parsed = this.parseJsonLdDateValue(value);
-            return parsed.date
-                ? { date: parsed.date, timezone: null, timezoneUnresolved: parsed.timezoneUnresolved }
-                : null;
+            if (!parsed.date) return null;
+            const candidate = { date: parsed.date, timezone: null, timezoneUnresolved: parsed.timezoneUnresolved };
+            if (/^\d{4}-\d{2}-\d{2}$/.test(String(value).trim())) candidate.dateOnly = true;
+            return candidate;
         }
         if (value && typeof value === 'object' && !Array.isArray(value)
             && typeof value.millis === 'number' && value.millis > 1e11 && value.millis < 1e13) {
@@ -17384,6 +17388,7 @@ class AiWebParser {
                 start.date = new Date(Date.UTC(startDay.year, startDay.month, startDay.day, startClock.hour, startClock.minute));
                 start.timezoneUnresolved = true;
                 start.timezone = start.timezone || null;
+                start.dateOnly = false;
                 const endClock = clockFor(/(^|_)end_time$/);
                 const endDay = dayFor(/(^|_)ends?(_(date|day))?$/);
                 if (endClock && (!end.date || endDay)) {
@@ -17392,9 +17397,26 @@ class AiWebParser {
                     if (endDate.getTime() <= start.date.getTime()) endDate = new Date(endDate.getTime() + 24 * 60 * 60 * 1000);
                     end.date = endDate;
                     end.timezoneUnresolved = true;
+                    end.dateOnly = false;
                 }
             }
         }
+
+        // A BARE DAY IS A DAY. A row whose start is a calendar date and
+        // nothing else — no clock beside it, and an end that is absent or a
+        // bare date too — states no time: whereto.party's page data, run
+        // 20261109-053706, { start_date: "2026-12-03", end_date:
+        // "2026-12-10", start_time: null, end_time: null } was kept as a
+        // party from midnight on the 3rd to midnight on the 10th (its last
+        // day cut off), and a one-day row would have been written "12:00 AM
+        // – 3:00 AM". It is the rule every other reader already applies (a
+        // date and no time is a day): the row is stamped and
+        // SharedCore.applyAllDayConvention writes the day, or the days
+        // through the end date, once the zone is known. A row the feed
+        // flags all-day is shaped just below and needs no stamp; a row that
+        // states a midnight ("…T00:00:00") stated a clock and is not touched.
+        const namesDayOnly = start.dateOnly === true && (!end.date || end.dateOnly === true)
+            && !this.jsonApiRowStatesAllDay(view);
 
         // AN ALL-DAY ROW STATES A DAY, NOT AN INSTANT. A feed that publishes
         // "2026-10-08T00:00:00+00:00" with all_day: true is naming the 8th —
@@ -17566,6 +17588,8 @@ class AiWebParser {
             image,
             source: this.config.source
         };
+        // The row named a day and no time (see namesDayOnly above).
+        if (namesDayOnly) event._noTimeStated = true;
         // Surviving description chunks, for the feed-level repetition pass in
         // extractEventsFromJsonApiPayload (text every row shares is chrome).
         // Internal field, deleted once the batch has been judged.

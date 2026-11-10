@@ -23843,3 +23843,67 @@ test('feed fidelity: at a once-per-host door the http spelling of the page that 
   other.releaseHostDoor('eventon', 'https://venue.example/', 'feed-a-2026-11');
   assert.equal(other.claimFeedDoor('eventon', 'feed-a-2026-11', 'https://venue.example/shows/', config), '', 'a released question may be asked');
 });
+
+// ---------------------------------------------------------------------------
+// Feed fidelity: a feed row whose start is a bare calendar date names a day.
+// Rows are whereto.party's page data as cached for run 20261109-053706, trimmed.
+// ---------------------------------------------------------------------------
+test('feed fidelity: a feed row dated by a bare day and no clock is stamped date-only — its days are written through the end date, not midnight to midnight', () => {
+  const parser = createParser();
+  const core = parser.core;
+  const sourceUrl = 'https://whereto.example/in/madrid';
+  const build = (row) => {
+    const event = parser.buildEventFromJsonApiObject(row, sourceUrl);
+    if (event && !event.timezone && row.city && row.city.time_zone) event.timezone = row.city.time_zone;
+    return event;
+  };
+  const settle = (event) => { core.resolveWallClockDates(event); core.applyAllDayConvention(event); return event; };
+  const iso = (value) => new Date(value).toISOString();
+
+  // MADBEAR 2026: { start_date, end_date } bare days, both clocks null.
+  const festival = build({ id: 'a9303a95-e6e7-4c1f-bdde-a74ce6811968', slug: 'madbear-2026', name: 'MADBEAR 2026', start_date: '2026-12-03', end_date: '2026-12-10', start_time: null, end_time: null, pricing: null, ticketing_url: null, city: { name: 'Madrid', time_zone: 'Europe/Madrid' }, place: null, tag_slugs: [{ slug: 'gay' }] });
+  assert.equal(festival._noTimeStated, true);
+  settle(festival);
+  assert.equal(iso(festival.startDate), '2026-12-02T23:00:00.000Z', 'the 3rd, from its own midnight in Madrid');
+  assert.equal(iso(festival.endDate), '2026-12-10T22:59:59.000Z', 'through the end of the 10th — the end date names its day too');
+  assert.equal(festival.allDay, true);
+  assert.equal(festival.timeUnknown, undefined);
+
+  // A one-day row at a venue with no clock: a night whose time nobody printed — never "12:00 AM – 3:00 AM".
+  const oneDay = build({ id: 'b', slug: 'froth-and-fury-fest-2027', name: 'Froth & Fury Fest 2027', start_date: '2027-01-30', end_date: null, start_time: null, end_time: null, city: { name: 'Adelaide', time_zone: 'Australia/Adelaide' }, place: { name: 'Adelaide Showground' } });
+  assert.equal(oneDay._noTimeStated, true);
+  settle(oneDay);
+  assert.equal(iso(oneDay.startDate), '2027-01-29T13:30:00.000Z');
+  assert.equal(iso(oneDay.endDate), '2027-01-30T13:29:59.000Z');
+  assert.equal(oneDay.timeUnknown, true);
+
+  // The same row with its clock stated is a timed night, as before (THICK 'N' JUICY Brisbane, run 20260930-150601).
+  const timed = build({ id: 'c', slug: 'thick-n-juicy', name: "THICK 'N' JUICY Brisbane", start_date: '2026-11-13', end_date: null, start_time: '21:00:00', end_time: '03:00:00', city: { name: 'Brisbane', time_zone: 'Australia/Brisbane' } });
+  assert.equal(timed._noTimeStated, undefined);
+  assert.equal(timed.startDate.toISOString(), '2026-11-13T21:00:00.000Z');
+  settle(timed);
+  assert.equal(timed.allDay, undefined);
+  assert.equal(timed.timeUnknown, undefined);
+
+  // A midnight the feed STATES is a clock: an instant at 00:00Z (7pm in New York) and a written "T00:00:00" are left alone.
+  const instant = build({ id: 'd', name: 'Drag Rumble', start_at: '2026-11-12T00:00:00Z', end_at: '2026-11-12T05:00:00Z' });
+  assert.equal(instant._noTimeStated, undefined);
+  const statedMidnight = build({ id: 'e', name: 'Midnight Mass', start_at: '2026-11-12T00:00:00', end_at: '2026-11-12T04:00:00' });
+  assert.equal(statedMidnight._noTimeStated, undefined);
+
+  // A bare start day beside an end that carries a clock is not "no time stated": the row is left as it was read.
+  const mixed = build({ id: 'f', name: 'Pool Party', start_date: '2026-12-05', end_at: '2026-12-05T19:00:00', city: { name: 'Madrid', time_zone: 'Europe/Madrid' } });
+  assert.equal(mixed._noTimeStated, undefined);
+
+  // A row the feed flags all-day already has its own shape (midnight through 23:59:59, wall clock) and takes no stamp.
+  const flagged = build({ id: 'g', title: 'Bear Frolic', start_date: '2026-10-08', end_date: '2026-10-11', all_day: true });
+  assert.equal(flagged._noTimeStated, undefined);
+  assert.equal(flagged.startDate.toISOString(), '2026-10-08T00:00:00.000Z');
+  assert.equal(flagged.endDate.toISOString(), '2026-10-11T23:59:59.000Z');
+
+  // The mark itself: only a bare YYYY-MM-DD carries it.
+  assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03').dateOnly, true);
+  assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03T00:00:00').dateOnly, undefined);
+  assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03T21:00:00+01:00').dateOnly, undefined);
+  assert.equal(parser.jsonApiScalarDateCandidate({ millis: 1796256000000, tzid: 'Europe/Madrid' }).dateOnly, undefined);
+});
