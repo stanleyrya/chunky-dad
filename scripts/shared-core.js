@@ -3266,7 +3266,8 @@ class SharedCore {
         const sameStreet = this.areSameStreetLine(calendar.address, event.address);
         if (savedBarKey && newBarKey) {
             const sameBar = savedBarKey === newBarKey
-                || (savedBarKey.length >= 4 && newBarKey.length >= 4 && (savedBarKey.includes(newBarKey) || newBarKey.includes(savedBarKey)));
+                || (savedBarKey.length >= 4 && newBarKey.length >= 4 && (savedBarKey.includes(newBarKey) || newBarKey.includes(savedBarKey)))
+                || this.areBarNamesOneSpelling(savedBar, newBar);
             if (sameBar) agree.push(`same bar (${newBar})`);
             else if (sameStreet) agree.push(`same street (${text(event.address).split(',')[0]})`);
             else fields.push({ field: 'bar', from: savedBar, to: newBar });
@@ -19666,6 +19667,29 @@ class SharedCore {
             ? this.decideWholeDayKind(calendarObject, SharedCore.allDayDaysInZone(calendarObject.startDate, calendarObject.endDate, timezone))
             : '');
         const scrapedAllDay = !scraperObject._timezoneUnresolved && inZone(scraperObject);
+        // 4. A saved MULTI-DAY span is not replaced by one night inside it.
+        //    A festival's ticket page states a door time, a page about its
+        //    Saturday states Saturday, a home page states the first date and
+        //    no end: each is a PART of the event, and none of them says the
+        //    event got shorter. The scraped side takes the saved days (start
+        //    and end together), so nothing downstream sees a date conflict
+        //    and the merge goes on with every other field. Bear Fuzz Fest,
+        //    replay of run 20261109-053706: without this, the merge the
+        //    match now finds rewrote the saved Dec 10–13 as one evening.
+        //    A scraped span of several days is another statement of the
+        //    whole span (dates moved, a day added) and stays with the
+        //    ordinary rules.
+        if (calendarAllDay) {
+            const savedDays = SharedCore.allDayDaysInZone(calendarObject.startDate, calendarObject.endDate, timezone);
+            const inside = this.getSpanInsideSavedDays(scraperObject, savedDays, timezone);
+            if (inside && inside.oneNight) {
+                console.log(`🗓️ ALL DAY: "${label}" — the saved event runs ${inside.startDay} to ${inside.endDay}; this run read one ${scrapedAllDay ? 'day' : 'night'} inside it (${inside.day}), a part of the event, not its whole span — the saved days are kept`);
+                scraperObject.startDate = calendarObject.startDate;
+                scraperObject.endDate = calendarObject.endDate;
+                SharedCore.setWholeDayFlags(scraperObject, SharedCore.wholeDayKind(calendarObject));
+                return;
+            }
+        }
         if (scrapedAllDay === calendarAllDay) return;
         const clockOf = (side) => {
             const wall = this.getZonedWallParts(side.startDate, timezone);
@@ -27205,6 +27229,26 @@ class SharedCore {
             });
         }
 
+        // Span containment (getSpanContainmentSignal): a night inside a
+        // saved multi-day event of the same name at the same place is that
+        // event. Last of the fold rungs, and before the overlap check below,
+        // whose "different title/venue" exit is exactly where such a record
+        // used to leave as NEW, on top of the festival it belongs to.
+        for (const existing of existingEventsData) {
+            const spanSignal = this.getSpanContainmentSignal(event, existing);
+            if (!spanSignal) continue;
+            const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existing);
+            if (recurringMergeDecision) {
+                return finalize(recurringMergeDecision);
+            }
+            console.log(`🗓️ SPAN: "${event.title || 'event'}" is "${existing.title || existing.name || 'event'}" — ${spanSignal}, same name and place: the saved event, never a second one`);
+            return finalize({
+                action: 'merge',
+                reason: `Inside a saved multi-day event of the same name and place (${spanSignal})`,
+                existingEvent: existing
+            });
+        }
+
         // Check for overlapping events - only merge when time and title/venue are similar
         const timeConflicts = existingEventsData.filter(existing =>
             this.doDatesOverlap(existing.startDate, existing.endDate,
@@ -27744,6 +27788,25 @@ class SharedCore {
         return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
+    // "&" and "and" are ONE word in a place name. "Eisenhower Hotel &
+    // Conference Center" (the organizer's ticket page) and "Eisenhower
+    // Hotel and Conference Center" (the saved event, written from an
+    // aggregator's feed) are one hotel — but with the punctuation simply
+    // stripped the two read "…hotelconferencecenter" and
+    // "…hotelandconferencecenter", neither equal nor one inside the other,
+    // so no rung could say "same place" and the organizer's own record was
+    // proposed as a NEW event beside the saved one (Bear Fuzz Fest, run
+    // 20261109-053706). Asked BESIDE the plain comparison, never instead of
+    // it: it can only find two spellings of one name, it never tells two
+    // names apart that compared equal before.
+    areBarNamesOneSpelling(nameA, nameB) {
+        const spell = (name) => this.normalizeIdentityText(String(name || '').replace(/&amp;/gi, '&').replace(/\s*&\s*/g, ' and '));
+        const a = spell(nameA);
+        const b = spell(nameB);
+        if (!a || !b) return false;
+        return a === b || (a.length >= 4 && b.length >= 4 && (a.includes(b) || b.includes(a)));
+    }
+
     normalizeTicketUrlForIdentity(url) {
         const text = String(this.resolveUrlAlias(url) || '').trim().toLowerCase();
         if (!text) return '';
@@ -27950,6 +28013,8 @@ class SharedCore {
         if (barA && barB) {
             if (barA === barB) return true;
             if (barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA))) return true;
+            // "&" and "and" are one word (areBarNamesOneSpelling).
+            if (this.areBarNamesOneSpelling(shapeA.bar, shapeB.bar)) return true;
         }
 
         // Calendar events often carry the venue inside a free-form location string
@@ -28705,6 +28770,7 @@ class SharedCore {
             });
         const sameBarSpelledTwice = barA === barB
             || (barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA)))
+            || (Boolean(barA && barB) && this.areBarNamesOneSpelling(shapeA.bar, shapeB.bar))
             || leadsTheOther(shapeA.bar, shapeB.bar) || leadsTheOther(shapeB.bar, shapeA.bar)
             || namedInPlaceText(barA, shapeB) || namedInPlaceText(barB, shapeA)
             || namedAsTitle(barA, shapeB) || namedAsTitle(barB, shapeA);
@@ -29913,6 +29979,97 @@ class SharedCore {
             return null;
         }
         return 'place+day+title-subset';
+    }
+
+    // ------------------------------------------------------------------
+    // SPAN CONTAINMENT — a night inside a saved multi-day event of the same
+    // name at the same place is that event, never a second one.
+    // A festival is saved as its whole run of days (all-day, Thursday to
+    // Sunday). Its ticket page states a door time — one evening — and a
+    // page about its Saturday states Saturday. Every rung above demands
+    // the same local START day or starts within the hour, so a reading of
+    // day two, three or four met nothing and was proposed as a NEW event
+    // sitting on top of the festival (the overlap check's "different
+    // title/venue" exit). Bear Fuzz Fest, run 20261109-053706: saved
+    // 2026-12-10 to 12-13 all-day; the organizer's ticket page read
+    // 4pm on the 10th.
+    //
+    // Does this record's own span lie inside these saved days? Fails
+    // closed: the saved days must be a real multi-day span no longer than
+    // the longest festival (SANITY_MAX_EVENT_DURATION_DAYS — a longer
+    // "event" is a series range written as one record, and anchors
+    // nothing); the record must START on one of the days and END no later
+    // than the morning after the last one; an unresolved zone answers
+    // nothing. `oneNight` says the record is a single day or night (no end,
+    // or an end within 24 hours) — a part of the span, as opposed to
+    // another statement of the whole span.
+    // Returns { startDay, endDay, day, oneNight } or null.
+    getSpanInsideSavedDays(record, savedDays, timezone) {
+        if (!record || typeof record !== 'object' || !savedDays || !timezone || record._timezoneUnresolved) return null;
+        if (!savedDays.startDay || !savedDays.endDay || savedDays.startDay === savedDays.endDay) return null;
+        const dayMs = 24 * 60 * 60 * 1000;
+        const dayToMs = (day) => Date.parse(`${day}T00:00:00Z`);
+        const lengthDays = Math.round((dayToMs(savedDays.endDay) - dayToMs(savedDays.startDay)) / dayMs) + 1;
+        if (!Number.isFinite(lengthDays) || lengthDays < 2 || lengthDays > SANITY_MAX_EVENT_DURATION_DAYS) return null;
+        const startMs = this.toEpochMillis(record.startDate);
+        const startWall = this.getZonedWallParts(record.startDate, timezone);
+        if (startMs === null || !startWall) return null;
+        const day = SharedCore.formatDayKey(startWall);
+        if (day < savedDays.startDay || day > savedDays.endDay) return null;
+        const endMs = this.toEpochMillis(record.endDate);
+        let oneNight = true;
+        if (endMs !== null && endMs > startMs) {
+            const endWall = this.getZonedWallParts(record.endDate, timezone);
+            if (!endWall) return null;
+            const endDay = SharedCore.formatDayKey(endWall);
+            const morningAfter = new Date(dayToMs(savedDays.endDay) + dayMs).toISOString().slice(0, 10);
+            if (endDay > morningAfter || (endDay === morningAfter && endWall.hour >= 12)) return null;
+            oneNight = (endMs - startMs) <= dayMs;
+        }
+        return { startDay: savedDays.startDay, endDay: savedDays.endDay, day, oneNight };
+    }
+
+    // The calendar-match rung, LAST of the fold rungs in analyzeEventAction
+    // (a new reader goes last: every stronger signal has already had its
+    // say). All of:
+    //   - the saved record is a multi-day all-day span and the scraped
+    //     record's own span lies inside it (getSpanInsideSavedDays);
+    //   - the SAME NAME — the two titles' significant tokens are the same
+    //     set once the edition year is taken out ("Bear Fuzz Fest 2026" is
+    //     "Bear Fuzz Fest"). Not "similar", not a subset: a festival's
+    //     "… Pool Party" or "… Closing Night" is a session with its own
+    //     name and stays its own event;
+    //   - POSITIVE place identity (areIdentityPlacesSimilar) — a side with
+    //     no place evidence never matches;
+    //   - no hard-fact contradiction (getIdentityContradiction). The stated
+    //     days are not compared: a night on day three "contradicts" the
+    //     span's first day by construction, and containment is the day test;
+    //   - the scraped record is not itself a series definition.
+    // The merge that follows keeps the saved days (alignAllDayMergeSides).
+    getSpanContainmentSignal(newEvent, existingEvent) {
+        if (!newEvent || typeof newEvent !== 'object' || !existingEvent || typeof existingEvent !== 'object') return null;
+        if (SharedCore.isRecurringSeriesEvent(newEvent)) return null;
+        const timezone = this.getEventZone(newEvent) || this.getEventZone(existingEvent);
+        if (!timezone) return null;
+        const savedDays = this.getStoredAllDayDays(existingEvent)
+            || SharedCore.allDayDaysInZone(existingEvent.startDate, existingEvent.endDate, timezone);
+        const inside = this.getSpanInsideSavedDays(newEvent, savedDays, timezone);
+        if (!inside) return null;
+        const incoming = this.buildIdentityComparisonShape(newEvent);
+        const existing = this.buildIdentityComparisonShape(existingEvent);
+        const venueKeys = [this.normalizeBarNameKey(incoming.bar), this.normalizeBarNameKey(existing.bar)].filter(Boolean);
+        const nameTokens = (title) => this.getCrossSourceTitleTokens(title, venueKeys)
+            .filter(token => !/^(?:19|20)\d{2}$/.test(token)).sort().join(' ');
+        const nameA = nameTokens(newEvent.title || newEvent.name);
+        const nameB = nameTokens(existingEvent.title || existingEvent.name);
+        if (!nameA || nameA !== nameB) return null;
+        if (!this.areIdentityPlacesSimilar(incoming, existing)) return null;
+        const contradiction = this.getIdentityContradiction(newEvent, existingEvent, { ignoreStatedDays: true });
+        if (contradiction) {
+            console.log(`🛑 IDENTITY: "${newEvent.title || newEvent.name || 'event'}" (${inside.day}) lies inside the saved "${existingEvent.title || existingEvent.name || 'event'}" (${inside.startDay} to ${inside.endDay}) under the same name, but their ${contradiction} contradict — two events, not folded`);
+            return null;
+        }
+        return `${inside.day} inside the saved ${inside.startDay} to ${inside.endDay}`;
     }
 
     // Primary designation for a cross-source merge: the record with more

@@ -30430,3 +30430,211 @@ test('own-site listing: one event is the row\'s own page, a platform domain is n
   assert.equal(core.isConfiguredSiteUrl('https://www.eventbrite.com/d/ny--new-york/events/', onPlatform), true);
   assert.equal(core.isOwnSiteListingPage('https://www.eventbrite.com/d/ny--new-york/events/', onPlatform, 'multi-event-page', two), false);
 });
+
+// ── A night inside a saved multi-day event is that event (Bear Fuzz Fest, run 20261109-053706) ──
+// The real pair, trimmed: the organizer's ticket page read one evening (4pm
+// on the 10th, a JSON-LD start with no end); the calendar holds the festival
+// as four all-day days, written from an aggregator's feed with the hotel
+// spelled "and" where the ticket page spells "&".
+function buildFuzzFestTicketPageRecord(overrides = {}) {
+  return {
+    title: 'Bear Fuzz Fest',
+    startDate: new Date('2026-12-10T21:00:00.000Z'),
+    endDate: new Date('2026-12-11T10:00:00.000Z'),
+    bar: 'Eisenhower Hotel & Conference Center',
+    address: '2634 Emmitsburg Road, Gettysburg, PA 17325',
+    ticketUrl: 'https://www.sickening.events/e/bear-fuzz-fest-2026/tickets',
+    website: 'https://bearfuzzfest.com/',
+    location: '39.765789, -77.2691996',
+    city: 'gettysburg',
+    timezone: 'America/New_York',
+    source: 'ai-web',
+    key: 'bear-fuzz-fest|2026-12-10|eisenhower hotel & conference center',
+    _sourcePageUrl: 'https://sickening.events/e/bear-fuzz-fest-2026',
+    ...overrides
+  };
+}
+
+function buildFuzzFestSavedEvent(overrides = {}) {
+  return {
+    title: 'Bear Fuzz Fest',
+    startDate: new Date('2026-12-10T05:00:00.000Z'),
+    endDate: new Date('2026-12-14T04:59:59.000Z'),
+    isAllDay: true,
+    allDayStartDay: '2026-12-10',
+    allDayEndDay: '2026-12-13',
+    location: '',
+    url: '',
+    identifier: 'B8B8D8E1-74BB-421A-9635-22292DEC63BC',
+    notes: [
+      'bar: Eisenhower Hotel and Conference Center',
+      'address: Gettysburg, PA',
+      'website: https://bearfuzzfest.com/',
+      'ticketUrl: https://sickening.events/e/bear-fuzz-fest-2026',
+      'timezone: America/New_York',
+      'key: bear-fuzz-fest|2026-12-10|eisenhower hotel and conference center',
+      'allDay: true'
+    ].join('\n'),
+    ...overrides
+  };
+}
+
+function captureConsole(run) {
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let result;
+  try { result = run(); } finally { console.log = original; }
+  return { logs, result };
+}
+
+test('place names: "&" and "and" are one word — two spellings of one hotel are one place, and nothing that compared equal before is told apart', () => {
+  const core = createCore();
+  assert.equal(core.areBarNamesOneSpelling('Eisenhower Hotel & Conference Center', 'Eisenhower Hotel and Conference Center'), true);
+  assert.equal(core.areBarNamesOneSpelling('Eisenhower Hotel &amp; Conference Center', 'Eisenhower Hotel and Conference Center'), true, 'an entity-escaped "&" too');
+  assert.equal(core.areBarNamesOneSpelling('Bears&Beers', 'Bears and Beers'), true, 'with or without spaces');
+  assert.equal(core.areBarNamesOneSpelling('Eisenhower Hotel & Conference Center', 'Wyndham Gettysburg'), false);
+  assert.equal(core.areBarNamesOneSpelling('', 'Eisenhower Hotel and Conference Center'), false, 'a blank side says nothing');
+
+  const ticketPage = core.buildIdentityComparisonShape(buildFuzzFestTicketPageRecord());
+  const saved = core.buildIdentityComparisonShape(buildFuzzFestSavedEvent());
+  assert.equal(core.areIdentityPlacesSimilar(ticketPage, saved), true, 'the saved side has no street line and no pin: the name is all there is');
+  assert.equal(core.haveContradictingPlaceEvidence(ticketPage, saved, buildFuzzFestTicketPageRecord(), buildFuzzFestSavedEvent()), false, 'two spellings are not two bars');
+
+  // The rule is asked BESIDE the plain comparison: a pair that was one
+  // place with the punctuation stripped still is.
+  const plain = (bar) => core.buildIdentityComparisonShape({ title: 'Night', bar, startDate: new Date('2026-12-10T21:00:00.000Z'), timezone: 'America/New_York' });
+  assert.equal(core.areIdentityPlacesSimilar(plain('Tom & Jerry'), plain('Tom Jerry')), true);
+  assert.equal(core.areIdentityPlacesSimilar(plain('Rough & Ready Saloon'), plain('Brass Rail')), false);
+});
+
+test('calendar match: the organizer\'s one-evening record is the saved four-day festival, not a new event beside it', () => {
+  const core = createCore();
+  const { logs, result } = captureConsole(() => core.analyzeEventAction(buildFuzzFestTicketPageRecord(), [buildFuzzFestSavedEvent()]));
+  assert.equal(result.action, 'merge', logs.join('\n'));
+  assert.equal(result.existingEvent.identifier, 'B8B8D8E1-74BB-421A-9635-22292DEC63BC');
+  assert.match(result.reason, /Same-day venue title-subset match/, 'the opening evening shares the span\'s first day: the existing same-day rung meets it once the hotel is one place');
+});
+
+test('span containment: a night on day three of a saved multi-day event, same name and place, is that event — and the log says so', () => {
+  const core = createCore();
+  const saturday = buildFuzzFestTicketPageRecord({
+    title: 'Bear Fuzz Fest 2026',
+    startDate: new Date('2026-12-12T23:00:00.000Z'),
+    endDate: new Date('2026-12-13T04:00:00.000Z'),
+    key: 'bear-fuzz-fest-2026|2026-12-12|eisenhower hotel & conference center'
+  });
+  const { logs, result } = captureConsole(() => core.analyzeEventAction(saturday, [buildFuzzFestSavedEvent()]));
+  assert.equal(result.action, 'merge', logs.join('\n'));
+  assert.match(result.reason, /Inside a saved multi-day event of the same name and place \(2026-12-12 inside the saved 2026-12-10 to 2026-12-13\)/);
+  assert.ok(logs.some(line => line.includes('🗓️ SPAN: "Bear Fuzz Fest 2026" is "Bear Fuzz Fest"') && line.includes('never a second one')), logs.join('\n'));
+  assert.equal(core.getSpanContainmentSignal(saturday, buildFuzzFestSavedEvent()), '2026-12-12 inside the saved 2026-12-10 to 2026-12-13');
+
+  // The last night may end the morning after the last day.
+  const closing = buildFuzzFestTicketPageRecord({ startDate: new Date('2026-12-14T02:00:00.000Z'), endDate: new Date('2026-12-14T08:00:00.000Z') });
+  assert.ok(core.getSpanContainmentSignal(closing, buildFuzzFestSavedEvent()), 'Sunday 9pm to Monday 3am is still Sunday\'s night');
+  // A saved record that carries no all-day stamp is read off its own dates.
+  const unstamped = buildFuzzFestSavedEvent();
+  delete unstamped.isAllDay; delete unstamped.allDayStartDay; delete unstamped.allDayEndDay;
+  assert.ok(core.getSpanContainmentSignal(saturday, unstamped));
+});
+
+test('span containment fails closed: a session with its own name, another place, a night outside the days, a series, a one-day or over-long saved record, a contradicting street', () => {
+  const core = createCore();
+  const saved = buildFuzzFestSavedEvent();
+  const saturday = (overrides = {}) => buildFuzzFestTicketPageRecord({
+    startDate: new Date('2026-12-12T23:00:00.000Z'),
+    endDate: new Date('2026-12-13T04:00:00.000Z'),
+    key: 'x|2026-12-12|x',
+    ticketUrl: '',
+    ...overrides
+  });
+  const analyze = (event, existing = saved) => captureConsole(() => core.analyzeEventAction(event, [existing]));
+
+  // A session carries the festival's name AND its own: it stays its own event.
+  const session = analyze(saturday({ title: 'Bear Fuzz Fest Pool Party' }));
+  assert.equal(session.result.action, 'new', session.logs.join('\n'));
+  assert.equal(core.getSpanContainmentSignal(saturday({ title: 'Bear Fuzz Fest Pool Party' }), saved), null);
+  assert.equal(core.getSpanContainmentSignal(saturday({ title: 'Drag Bingo' }), saved), null);
+
+  // The same name somewhere else.
+  assert.equal(core.getSpanContainmentSignal(saturday({ bar: 'Wyndham Gettysburg', address: '95 Presidential Circle, Gettysburg, PA', location: '39.8455, -77.2042' }), saved), null);
+  // No place evidence on the saved side: nothing positive, no match.
+  assert.equal(core.getSpanContainmentSignal(saturday(), buildFuzzFestSavedEvent({ notes: 'timezone: America/New_York' })), null);
+
+  // The night after the last day, and the night before the first.
+  assert.equal(core.getSpanContainmentSignal(saturday({ startDate: new Date('2026-12-14T23:00:00.000Z'), endDate: new Date('2026-12-15T04:00:00.000Z') }), saved), null);
+  assert.equal(core.getSpanContainmentSignal(saturday({ startDate: new Date('2026-12-09T23:00:00.000Z'), endDate: new Date('2026-12-10T04:00:00.000Z') }), saved), null);
+  // A record that runs past the saved days is not inside them.
+  assert.equal(core.getSpanContainmentSignal(saturday({ endDate: new Date('2026-12-16T04:00:00.000Z') }), saved), null);
+
+  // A series definition is never "inside" a span.
+  assert.equal(core.getSpanContainmentSignal(saturday({ _recurring: true }), saved), null);
+
+  // A saved ONE-day record is the ordinary same-day case, not a span…
+  assert.equal(core.getSpanContainmentSignal(saturday(), buildFuzzFestSavedEvent({
+    startDate: new Date('2026-12-12T05:00:00.000Z'), endDate: new Date('2026-12-13T04:59:59.000Z'), allDayStartDay: '2026-12-12', allDayEndDay: '2026-12-12'
+  })), null);
+  // …and a saved "event" longer than any festival is a series range written as one record: it anchors nothing.
+  assert.equal(core.getSpanContainmentSignal(saturday(), buildFuzzFestSavedEvent({
+    startDate: new Date('2026-11-06T05:00:00.000Z'), endDate: new Date('2027-01-02T04:59:59.000Z'), allDayStartDay: '2026-11-06', allDayEndDay: '2027-01-01'
+  })), null);
+  // A saved TIMED record that merely overlaps is not a span either.
+  assert.equal(core.getSpanContainmentSignal(saturday(), buildFuzzFestSavedEvent({
+    isAllDay: false, allDayStartDay: undefined, allDayEndDay: undefined, startDate: new Date('2026-12-10T21:00:00.000Z'), endDate: new Date('2026-12-13T17:00:00.000Z')
+  })), null);
+
+  // Hard facts still veto, and the log says so: one vendor names its events
+  // by path, so two paths on one vendor are two events. (One hotel name over
+  // two street numbers is NOT such a fact — one venue's two doors, as before.)
+  const otherTicket = saturday({ ticketUrl: 'https://www.sickening.events/e/fuzz-after-dark/tickets', _sourcePageUrl: 'https://sickening.events/e/fuzz-after-dark' });
+  const vetoed = captureConsole(() => core.getSpanContainmentSignal(otherTicket, saved));
+  assert.equal(vetoed.result, null);
+  assert.ok(vetoed.logs.some(line => line.includes('🛑 IDENTITY') && line.includes('(2026-12-12) lies inside the saved "Bear Fuzz Fest" (2026-12-10 to 2026-12-13)') && line.includes('two events, not folded')), vetoed.logs.join('\n'));
+  assert.equal(analyze(otherTicket).result.action, 'new');
+  const otherDoor = saturday({ address: '95 Presidential Circle, Gettysburg, PA', location: '' });
+  const savedWithStreet = buildFuzzFestSavedEvent({ notes: buildFuzzFestSavedEvent().notes.replace('address: Gettysburg, PA', 'address: 2634 Emmitsburg Road, Gettysburg, PA') });
+  assert.ok(core.getSpanContainmentSignal(otherDoor, savedWithStreet));
+});
+
+test('merge into a saved multi-day event: one night inside it never rewrites the saved days, and the log says so; a scraped span of several days is still a statement about the span', async () => {
+  const core = createCore();
+  const { scraped: wiring } = buildArbitrationPair();
+  const scraped = { ...buildFuzzFestTicketPageRecord(), _fieldPriorities: wiring._fieldPriorities, _parserConfig: wiring._parserConfig };
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let merged;
+  try { merged = await core.createFinalEventObject(buildFuzzFestSavedEvent(), scraped, { httpAdapter: buildArbitrationAdapter({}) }); } finally { console.log = original; }
+  assert.equal(new Date(merged.startDate).toISOString(), '2026-12-10T05:00:00.000Z', logs.join('\n'));
+  assert.equal(new Date(merged.endDate).toISOString(), '2026-12-14T04:59:59.000Z', 'the festival keeps its four days');
+  assert.equal(merged.allDay, true);
+  assert.ok(!(merged._changes || []).some(field => field === 'startDate' || field === 'endDate' || field === 'allDay'), `no date change is proposed: ${JSON.stringify(merged._changes)}`);
+  assert.ok(logs.some(line => line.includes('🗓️ ALL DAY: "Bear Fuzz Fest" — the saved event runs 2026-12-10 to 2026-12-13; this run read one night inside it (2026-12-10)') && line.includes('the saved days are kept')), logs.join('\n'));
+  assert.equal(merged.address, '2634 Emmitsburg Road, Gettysburg, PA 17325', 'every other field still merges: the street line the saved event lacked is filled');
+
+  // The sides, directly. A date with no time and no end (the festival's home page read "December 10") is one day inside the span.
+  const saved = buildFuzzFestSavedEvent();
+  const calendarSide = () => ({ title: saved.title, startDate: saved.startDate, endDate: saved.endDate });
+  const oneDay = { title: 'Bear Fuzz Fest', timezone: 'America/New_York', ...core.buildAllDaySpan('2026-12-11', '2026-12-11', 'America/New_York'), timeUnknown: true };
+  const quiet = captureConsole(() => core.alignAllDayMergeSides(oneDay, calendarSide(), saved));
+  assert.deepEqual(core.getAllDayDays(oneDay), { startDay: '2026-12-10', endDay: '2026-12-13' });
+  assert.equal(oneDay.allDay, true);
+  assert.equal('timeUnknown' in oneDay, false);
+  assert.ok(quiet.logs.some(line => line.includes('this run read one day inside it (2026-12-11)')), quiet.logs.join('\n'));
+
+  // Several days inside the span (the dates moved: now Friday to Saturday) is a statement about the whole span — left to the ordinary rules.
+  const shorter = { title: 'Bear Fuzz Fest', timezone: 'America/New_York', ...core.buildAllDaySpan('2026-12-11', '2026-12-12', 'America/New_York'), allDay: true };
+  captureConsole(() => core.alignAllDayMergeSides(shorter, calendarSide(), saved));
+  assert.deepEqual(core.getAllDayDays(shorter), { startDay: '2026-12-11', endDay: '2026-12-12' });
+  // A night outside the saved days is a date conflict, as before.
+  const after = { title: 'Bear Fuzz Fest', timezone: 'America/New_York', startDate: new Date('2026-12-15T23:00:00.000Z'), endDate: null };
+  captureConsole(() => core.alignAllDayMergeSides(after, calendarSide(), saved));
+  assert.equal(after.startDate.toISOString(), '2026-12-15T23:00:00.000Z');
+  // A saved ONE-day all-day record still takes a time found for that day (rule 3 is untouched).
+  const oneDaySaved = { isAllDay: true, allDayStartDay: '2026-12-10', allDayEndDay: '2026-12-10', startDate: new Date('2026-12-10T05:00:00.000Z'), endDate: new Date('2026-12-11T04:59:59.000Z') };
+  const oneDayCalendar = { title: 'Bear Fuzz Fest', startDate: oneDaySaved.startDate, endDate: oneDaySaved.endDate };
+  const timed = { title: 'Bear Fuzz Fest', timezone: 'America/New_York', startDate: new Date('2026-12-10T21:00:00.000Z'), endDate: null };
+  captureConsole(() => core.alignAllDayMergeSides(timed, oneDayCalendar, oneDaySaved));
+  assert.equal(oneDayCalendar.startDate.toISOString(), '2026-12-10T21:00:00.000Z');
+});
