@@ -1509,6 +1509,18 @@ class SharedCore {
         return value === 'bear' || value === 'tagged' || value === 'not_bear';
     }
 
+    // Every value the verdict store may hold: the three firm verdicts above
+    // plus `maybe` — the owner's "not now, show me again later" (2026-11-10:
+    // "allow me to mark some events as maybes to revisit later? And for now
+    // we don't show"). A maybe is NOT a verdict: it never joins the firm
+    // matching, the both-ways conflict check or the learned per-night
+    // markers, and it is read only where no firm verdict speaks
+    // (findStoredMaybeVerdictMatch). The party stays out of the calendar
+    // until he answers it for real.
+    static isStoredBearVerdictValue(value) {
+        return SharedCore.isBearVerdictValue(value) || value === 'maybe';
+    }
+
     // Automatic bearSource for an event kept on its tags: `tagged (keyword:
     // leather)` / `tagged (ai: <reason>)` — ranks with keyword/ai
     // (PROVENANCE_TRUST_TIERS), so an owner verdict still outranks it.
@@ -2017,6 +2029,24 @@ class SharedCore {
         return new Set((Array.isArray(entries) ? entries : []).map(entry => entry && entry.verdict)).size > 1;
     }
 
+    // The owner's stored MAYBE for this event — { entry, matchedBy } or null.
+    // Same identity as a firm verdict (the exact title at this place, else
+    // the party behind it; dates never compared, so one maybe covers every
+    // night). A firm verdict always outranks it: any firm entry that speaks
+    // to this event — even two that disagree — means the maybe says nothing,
+    // because a phone tap after the maybe is the newer word and a both-ways
+    // store is the deck's to settle.
+    findStoredMaybeVerdictMatch(event) {
+        const firm = this.collectStoredBearVerdictHits(event);
+        if (firm && (firm.title.length > 0 || firm.party.length > 0)) return null;
+        const hits = this.collectStoredBearVerdictHits(event, { maybe: true });
+        if (!hits) return null;
+        if (hits.exact.length > 0) return { entry: hits.exact[0], matchedBy: 'title' };
+        if (hits.party.length === 0) return null;
+        const newest = hits.party.reduce((latest, entry) => (String(entry.stampedAt || '') > String(latest.stampedAt || '') ? entry : latest), hits.party[0]);
+        return { entry: newest, matchedBy: 'party' };
+    }
+
     // A title key with its bare year tokens taken out: "underwear night
     // contest 2026" and "underwear night contest" name one party — the year
     // is the edition, not the name. Used ONLY to notice disagreement (store
@@ -2036,7 +2066,12 @@ class SharedCore {
     //   party — the party-key fold (getBearVerdictPartyKey), read only when
     //           there is no exact hit, as before.
     // null when nothing could apply (no store, no title identity).
-    collectStoredBearVerdictHits(event) {
+    // options.maybe reads the store's `maybe` entries instead of its firm
+    // verdicts, through the very same identity (findStoredMaybeVerdictMatch).
+    collectStoredBearVerdictHits(event, options = {}) {
+        const wanted = options && options.maybe === true
+            ? (value) => value === 'maybe'
+            : SharedCore.isBearVerdictValue;
         const store = Array.isArray(this.bearVerdicts) ? this.bearVerdicts : [];
         if (store.length === 0 || !event || typeof event !== 'object') return null;
         const eventKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar]);
@@ -2052,7 +2087,7 @@ class SharedCore {
             return keys;
         };
         const usable = store.filter(entry => entry && typeof entry === 'object'
-            && SharedCore.isBearVerdictValue(entry.verdict));
+            && wanted(entry.verdict));
         const exact = [];
         const siblings = [];
         for (const entry of usable) {
@@ -15436,7 +15471,7 @@ class SharedCore {
         if (mode === 'off') return legacyFilter();
 
         const tag = mode === 'report' ? ' [report]' : '';
-        const counts = { bear: 0, keyword: 0, ai: 0, tagged: 0, flagged: 0, dropped: 0 };
+        const counts = { bear: 0, keyword: 0, ai: 0, tagged: 0, flagged: 0, dropped: 0, maybe: 0 };
         const kept = [];
         // A venue's own standing lines (dress code, shop notice, sponsor
         // credit) are marked on these records before any of them is judged:
@@ -15490,6 +15525,26 @@ class SharedCore {
                     : decision.bearRun ? `tagged (bear-run: ${String(decision.bearRun).slice(0, 60)})`
                         : SharedCore.buildTaggedBearSource(decision.provenance);
                 kept.push({...event, isBearEvent: true, bearSource, ...this.buildEventTagsPatch(decision)});
+            } else if (decision.result === 'maybe') {
+                // The owner's stored maybe: held back from the calendar on
+                // every source, trusted ones too, exactly like his stored
+                // not-bear — and kept on the dropped list so the deck can
+                // show it under Maybes with this run's dates and flyer.
+                counts.maybe++;
+                console.log(`🤔 BEAR CHECK${tag}: "${title}" → HOLD (${decision.provenance}) — waiting on the owner's Maybes list, not written`);
+                pendingDrops.push({
+                    event,
+                    title,
+                    manualStore: true,
+                    entry: {
+                        title,
+                        startDate: event.startDate || event.date || null,
+                        venue: event.bar || event.venue || '',
+                        reason: decision.provenance,
+                        host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
+                        event: { ...event }
+                    }
+                });
             } else if ((decision.result === 'not_bear' && (!trusted || decision.manualStore === true))
                 || this.isAggregatorShrug(decision, trusted, parserConfig)) {
                 // A stored manual not_bear drops even TRUSTED (alwaysBear /
@@ -15589,7 +15644,8 @@ class SharedCore {
 
         const flagLabel = mode === 'report' ? 'would-flag' : 'flagged';
         const dropLabel = mode === 'report' ? 'would-drop' : 'dropped';
-        console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.tagged} tagged (kept, not bear), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}`);
+        const maybeNote = counts.maybe > 0 ? `, ${counts.maybe} held as the owner's maybe` : '';
+        console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.tagged} tagged (kept, not bear), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}${maybeNote}`);
 
         return mode === 'report' ? legacyFilter() : kept;
     }
@@ -15808,6 +15864,20 @@ class SharedCore {
                 provenance: `manual store: ${storedVerdict.verdict}${stamp ? ` (verdict stamped ${stamp})` : ''}${sameParty}`,
                 manualStore: true,
                 storedVerdictEntry: storedVerdict
+            };
+        }
+        // The owner parked this party as a maybe: nothing re-judges it (no
+        // AI call, no tags) and it stays out of the calendar until he
+        // answers it on the deck's Maybes list. See isStoredBearVerdictValue.
+        const maybeMatch = this.findStoredMaybeVerdictMatch(event);
+        if (maybeMatch) {
+            const stamp = String(maybeMatch.entry.stampedAt || '').slice(0, 10);
+            const sameParty = maybeMatch.matchedBy === 'party' ? ` — same party as "${maybeMatch.entry.title}"` : '';
+            return {
+                result: 'maybe',
+                provenance: `manual store: maybe${stamp ? ` (parked ${stamp})` : ''}${sameParty}`,
+                manualStore: true,
+                storedVerdictEntry: maybeMatch.entry
             };
         }
 

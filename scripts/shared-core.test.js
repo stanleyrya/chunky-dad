@@ -20866,6 +20866,75 @@ const JOCKSTRAP_DECORATED = [
   '🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ SAM GEE | $20 CASH COVER'
 ];
 
+// ---------------------------------------------------------------------------
+// MAYBE (owner, 2026-11-10: "allow me to mark some events as maybes to
+// revisit later? And for now we don't show"). A maybe lives in the same
+// store as a verdict and holds the party out of the calendar on every
+// night, without ever counting as a verdict.
+// ---------------------------------------------------------------------------
+
+test('maybe: a parked party is held out on every source, with no AI call, and is not a verdict', async () => {
+  const cubscout = buildMeatRackEvent({ title: 'CUBSCOUT', description: '' });
+  const maybe = buildMeatRackVerdictEntry({ verdict: 'maybe', title: 'CUBSCOUT', stampedAt: '2026-11-10T22:00:00.000Z' });
+
+  const core = createCore();
+  core.bearVerdicts = [maybe];
+  const adapter = buildBearVerdictAdapter({ verdict: 'bear', reason: 'cub' });
+  const drops = [];
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (line) => logs.push(String(line));
+  let kept;
+  try {
+    kept = await core.filterBearEvents(
+      [cubscout, buildMeatRackEvent({ title: 'CUBSCOUT', description: '', startDate: new Date('2026-09-20T03:00:00.000Z') })],
+      bearCheckConfig('enforce', { alwaysBear: true }), adapter, drops);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(adapter.calls.length, 0, 'a parked party is not re-judged');
+  assert.equal(kept.length, 0, 'held out even on a trusted source and past the title keyword');
+  assert.equal(drops.length, 2, 'every night is held, and each is surfaced for the deck');
+  assert.match(drops[0].reason, /^manual store: maybe \(parked 2026-11-10\)$/);
+  assert.ok(logs.some((line) => line.includes('🤔 BEAR CHECK: "CUBSCOUT" → HOLD (manual store: maybe')), logs.join('\n'));
+  assert.ok(logs.some((line) => line.includes("2 held as the owner's maybe")), logs.join('\n'));
+
+  // Not a verdict: the firm readers never see it.
+  assert.equal(core.findStoredBearVerdict(cubscout), null);
+  assert.equal(core.findStoredBearVerdictConflict(cubscout), null);
+  assert.equal(SharedCore.isBearVerdictValue('maybe'), false);
+  assert.equal(SharedCore.isStoredBearVerdictValue('maybe'), true);
+  assert.equal(SharedCore.isStoredBearVerdictValue('perhaps'), false);
+});
+
+test('maybe: a firm verdict on the same party always outranks it, and a maybe never makes a conflict', async () => {
+  const cubscout = buildMeatRackEvent({ title: 'CUBSCOUT', description: '' });
+  const core = createCore();
+  // A phone tap after the maybe: the store holds both, the firm one speaks.
+  core.bearVerdicts = [
+    buildMeatRackVerdictEntry({ verdict: 'maybe', title: 'CUBSCOUT' }),
+    buildMeatRackVerdictEntry({ verdict: 'bear', title: 'CUBSCOUT', stampedAt: '2026-11-11T09:00:00.000Z' })
+  ];
+  assert.equal(core.findStoredMaybeVerdictMatch(cubscout), null);
+  assert.equal(core.findStoredBearVerdictConflict(cubscout), null, 'bear + maybe is not "both ways"');
+  const drops = [];
+  const kept = await core.filterBearEvents([cubscout], bearCheckConfig('enforce'), null, drops);
+  assert.equal(kept.length, 1);
+  assert.equal(kept[0].bearSource, 'manual-bear (verdict store 2026-11-11)');
+  assert.equal(drops.length, 0);
+});
+
+test('maybe: it covers the party behind a decorated title, and never another party or another venue', () => {
+  const core = createCore();
+  core.bearVerdicts = [eagleNycVerdict('🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ MITCH FERRINO | $20 CASH COVER', { verdict: 'maybe' })];
+  const plain = core.findStoredMaybeVerdictMatch(eagleNycEvent('Jockstrap Wednesday'));
+  assert.ok(plain, 'the plain spelling of the same party is covered');
+  assert.equal(plain.matchedBy, 'party');
+  assert.equal(core.findStoredMaybeVerdictMatch(eagleNycEvent('Leather Wednesday')), null);
+  assert.equal(core.findStoredMaybeVerdictMatch({ title: 'Jockstrap Wednesday', bar: 'The Bullet Bar', address: '10522 Burbank Blvd, North Hollywood, CA', city: 'los angeles' }), null);
+});
+
+
 test('bear verdict party fold: a verdict on the decorated title covers the plain one, and the plain one covers the decorated', () => {
   const core = createCore();
   core.bearVerdicts = JOCKSTRAP_DECORATED.map((title) => eagleNycVerdict(title));
