@@ -4954,3 +4954,218 @@ test('site identity fills the venue even when the title already named the city',
   assert.equal(named.bar, 'Some Other Bar');
   assert.ok(!namedLines.some(line => line.includes('site identity') || line.includes('curated venue in')), namedLines.join('\n'));
 });
+
+// ---------------------------------------------------------------------------
+// CITY WORDS INSIDE OTHER WORDS OR NAMES (2026-11-09 audits). A city read from
+// a word of the title or of the venue's name is the weakest reading: the
+// door, the site and the page are asked before it stands, and a short alias
+// that is a syllable of a longer place name is not the alias.
+// ---------------------------------------------------------------------------
+
+const CITY_WORD_CITIES = {
+  nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc', 'queens', 'manhattan'] },
+  seattle: { timezone: 'America/Los_Angeles', patterns: ['seattle'] },
+  sf: { timezone: 'America/Los_Angeles', patterns: ['san francisco', 'sf'] },
+  manchester: { timezone: 'Europe/London', patterns: ['manchester', 'mcr'] },
+  chicago: { timezone: 'America/Chicago', patterns: ['chicago', 'chi'] },
+  'hong-kong': { timezone: 'Asia/Hong_Kong', patterns: ['hong kong', 'hk'] },
+  phoenix: { timezone: 'America/Phoenix', patterns: ['phoenix'] },
+  sitges: { timezone: 'Europe/Madrid', patterns: ['sitges'] },
+  prague: { timezone: 'Europe/Prague', patterns: ['prague', 'praha'] },
+  'palm-springs': { timezone: 'America/Los_Angeles', patterns: ['palm springs'] }
+};
+
+const CITY_WORD_BARS = {
+  seattle: [{ name: 'The Lumber Yard Bar', city: 'seattle', address: '9619 16th Ave SW, Seattle, WA 98106', website: 'https://www.thelumberyardbar.com' }],
+  sf: [{ name: 'SF Eagle', city: 'sf', address: '398 12th St, San Francisco, CA 94103', website: 'https://www.sf-eagle.com' }],
+  manchester: [{ name: 'The Eagle Bar', city: 'manchester', address: '15 Bloom St, Manchester M1 3HZ', website: 'https://www.eaglemanchester.com' }],
+  nyc: [
+    { name: 'FLEX', city: 'nyc', address: '405 W 51st St, New York, NY 10019' },
+    { name: 'Phoenix Bar', city: 'nyc', address: '447 E 13th St, New York, NY 10009' },
+    { name: '3 Dollar Bill', city: 'nyc', address: '260 Meserole St, Brooklyn, NY 11206', website: 'https://www.3dollarbillbk.com' }
+  ]
+};
+
+function createCityWordNormalizer(bars = CITY_WORD_BARS) {
+  const core = new SharedCore(CITY_WORD_CITIES, { eventSchema: EventSchema, bars });
+  return new LocationNormalizer(core);
+}
+
+test('city words: a short alias that is a syllable of a longer place name is not the alias; an abbreviation still is', () => {
+  const normalizer = createCityWordNormalizer();
+  // whereto.party, 2026-11-09: the place line of a Saigon night.
+  assert.equal(normalizer.extractCityFromAddress('Ho Chi Minh City, Vietnam'), null);
+  assert.equal(normalizer.extractCityFromAddress('District 1, Ho Chi Minh'), null);
+  assert.equal(normalizer.extractCityFromAddress('HO CHI MINH CITY'), null);
+  // Written the way an abbreviation is — on its own, after a comma, or in
+  // capitals inside mixed-case text — it is still the city.
+  assert.equal(normalizer.extractCityFromAddress('Chi'), 'chicago');
+  assert.equal(normalizer.extractCityFromAddress('3160 N Clark St, Chi, IL'), 'chicago');
+  assert.equal(normalizer.extractCityFromAddress('398 12th St SF CA'), 'sf');
+  assert.equal(normalizer.extractCityFromAddress('398 12th St, SF'), 'sf');
+  // A full city name is never asked.
+  assert.equal(normalizer.extractCityFromAddress('1 Main St Hong Kong Island'), 'hong-kong');
+  // Free text is not place-shaped: the neighbours of a title word are just words.
+  assert.equal(normalizer.matchCityInText('FURBALL SF PRIDE'), 'sf');
+  assert.equal(normalizer.placeTextHoldsShortAliasOnlyInsideNames('Ho Chi Minh City, Vietnam', 'chi'), true);
+  assert.equal(normalizer.placeTextHoldsShortAliasOnlyInsideNames('Ho Chi Minh City, Vietnam', 'chicago'), false);
+});
+
+test('city words: the reading says which rung gave it, and extractCityFromEvent is unchanged by that', () => {
+  const normalizer = createCityWordNormalizer();
+  assert.deepEqual(normalizer.readCityFromEvent({ title: 'Bear Night', city: 'Seattle' }), { city: 'seattle', source: 'stated' });
+  assert.deepEqual(normalizer.readCityFromEvent({ title: 'Bear Night', bar: 'FLEX HK' }), { city: 'hong-kong', source: 'venue-name' });
+  assert.deepEqual(normalizer.readCityFromEvent({ title: 'Bear Night', bar: 'Cuff', address: '1533 13th Ave, Seattle, WA' }), { city: 'seattle', source: 'address' });
+  assert.deepEqual(normalizer.readCityFromEvent({ title: 'Two Queens Brunch', bar: 'Lumberyard' }), { city: 'nyc', source: 'title' });
+  assert.equal(normalizer.extractCityFromEvent({ title: 'Two Queens Brunch', bar: 'Lumberyard' }), 'nyc');
+  // A probe writes no line.
+  const lines = captureConsoleLog(() => { normalizer.readCityFromEvent({ title: 'Bear Night', bar: 'Cuff' }, { quiet: true }); });
+  assert.deepEqual(lines, []);
+});
+
+test('city words: a title word does not outrank the site the row is listed on — the site decides city and venue', () => {
+  const normalizer = createCityWordNormalizer();
+  // thelumberyardbar.com, run 20261109-053706: filed under the city that has a
+  // borough of that name, and its clock.
+  const event = {
+    title: 'Two Queens Brunch',
+    bar: 'Lumberyard',
+    website: 'https://www.thelumberyardbar.com/events',
+    startDate: '2026-11-15T11:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event.city, 'seattle');
+  assert.equal(event._citySource, 'curated-website');
+  assert.equal(event.timezone, 'America/Los_Angeles');
+  assert.equal(event.startDate, '2026-11-15T19:00:00.000Z', 'the wall clock is anchored in the site\'s city, not the title word\'s');
+  assert.ok(lines.some(line => line.includes('"Two Queens Brunch" names nyc in its title') && line.includes('the site decides')), lines.join('\n'));
+
+  // The same title on a site no curated venue claims keeps its reading.
+  const promoter = { title: 'Two Queens Brunch', website: 'https://promoter.example/brunch' };
+  captureConsoleLog(() => { normalizer.normalize(promoter); });
+  assert.equal(promoter.city, 'nyc');
+  // A title word that agrees with the site is left alone, silently.
+  const agreeing = { title: 'Seattle Bear Brunch', website: 'https://www.thelumberyardbar.com/events' };
+  const agreeingLines = captureConsoleLog(() => { normalizer.normalize(agreeing); });
+  assert.equal(agreeing.city, 'seattle');
+  assert.ok(!agreeingLines.some(line => line.includes('names ')), agreeingLines.join('\n'));
+  // An address still outranks both: a venue site announcing a night out of town.
+  const away = { title: 'Seattle Bears take Manchester', bar: 'Some Hall', address: '1 Canal St, Manchester', website: 'https://www.thelumberyardbar.com/events' };
+  captureConsoleLog(() => { normalizer.normalize(away); });
+  assert.equal(away.city, 'manchester');
+});
+
+test('city words: on a venue\'s own site its family name is not a namesake in another city — the site decides before the name does', () => {
+  const normalizer = createCityWordNormalizer();
+  // sf-eagle.com, run 20261109-053706: bar "Eagle Bar", "398 12th St", no
+  // city — three rows filed under the one curated bar of that exact name.
+  const event = {
+    title: 'Hysteria: Comedy Open Mic for Women and Queers',
+    bar: 'Eagle Bar',
+    address: '398 12th St',
+    website: 'https://www.sf-eagle.com/events/hysteria-comedy-open-mic-for-women-and-queers-4-2-2/',
+    startDate: '2026-11-11T19:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event.city, 'sf');
+  assert.equal(event._citySource, 'curated-website');
+  assert.equal(event.timezone, 'America/Los_Angeles');
+  assert.ok(lines.some(line => line.includes('City backfill skipped for "Hysteria: Comedy Open Mic for Women and Queers"') && line.includes('a namesake; the site decides')), lines.join('\n'));
+
+  // Off the venue's site the full curated name still places the row.
+  const elsewhere = { title: 'Bear Night', bar: 'Eagle Bar', website: 'https://promoter.example/bear-night' };
+  captureConsoleLog(() => { normalizer.normalize(elsewhere); });
+  assert.equal(elsewhere.city, 'manchester');
+  assert.equal(elsewhere._citySource, 'curated-bar');
+  // On the site, the OTHER bar's door (name + street line) is a night out of town.
+  const outOfTown = { title: 'SF Eagle takes Manchester', bar: 'Eagle Bar', address: '15 Bloom St', website: 'https://www.sf-eagle.com/events/road-trip/' };
+  captureConsoleLog(() => { normalizer.normalize(outOfTown); });
+  assert.equal(outOfTown.city, 'manchester');
+  // A name the site's own bar does not share still decides (the 'Guest
+  // Takeover' rule above stays as it was).
+  const guest = { title: 'Guest Takeover', bar: 'FLEX', website: 'https://www.sf-eagle.com/events/guest-takeover/' };
+  captureConsoleLog(() => { normalizer.normalize(guest); });
+  assert.equal(guest.city, 'nyc');
+  assert.equal(guest._citySource, 'curated-bar');
+});
+
+test('city words: a venue-name word yields to the curated door', () => {
+  const normalizer = createCityWordNormalizer();
+  // Thotyssey / Gathr, run 20261109-053706: "Phoenix Bar", an East Village
+  // address — the name rung read another city before the address was asked.
+  const event = { title: 'Hibearnation: Body', bar: 'Phoenix Bar', address: '447 E 13th St, New York, NY 10009, USA' };
+  const lines = captureConsoleLog(() => { normalizer.normalize(event); });
+  assert.equal(event.city, 'nyc');
+  assert.equal(event._citySource, 'curated-door');
+  assert.ok(lines.some(line => line.includes('names phoenix in its venue name "Phoenix Bar"') && line.includes('the door decides')), lines.join('\n'));
+  // No curated door: the venue-name word stands, as before.
+  const other = { title: 'Bear Night', bar: 'Phoenix Rising Saloon', address: '1 Desert Rd' };
+  captureConsoleLog(() => { normalizer.normalize(other); });
+  assert.equal(other.city, 'phoenix');
+});
+
+test('city words: a guest town in the title yields to the page\'s home city when the venue is there on another row', () => {
+  const normalizer = createCityWordNormalizer();
+  // bearssitges.org programme, run 20261109-053706: 17 of the 19 placed rows
+  // read sitges; the two guest-club nights were filed under the guests' towns.
+  const pageCities = { counts: { sitges: 17, prague: 1, 'palm-springs': 1 }, home: { city: 'sitges', count: 17, placed: 19 }, venuesAtHome: ['bearvillage', 'hotelcalipolis'] };
+  const prague = {
+    title: '20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en',
+    bar: 'Bear-Village',
+    startDate: '2026-09-08T20:30:00.000Z',
+    _timezoneUnresolved: true
+  };
+  const lines = captureConsoleLog(() => { normalizer.normalize(prague, { pageCities }); });
+  assert.equal(prague.city, 'sitges');
+  assert.equal(prague._citySource, 'page-home');
+  assert.equal(prague.timezone, 'Europe/Madrid');
+  assert.ok(lines.some(line => line.includes('names prague in its title') && line.includes('its venue "Bear-Village" is in sitges on another row of the same page')), lines.join('\n'));
+  const palmSprings = { title: '30h a 03h NOCHE ESPECIAL «IBC Palm Springs» con DJ Retro', bar: 'Bear-Village' };
+  captureConsoleLog(() => { normalizer.normalize(palmSprings, { pageCities }); });
+  assert.equal(palmSprings.city, 'sitges');
+
+  // A tour date at its OWN venue is left alone: the venue is on no home row.
+  const tour = { title: 'FURBALL Palm Springs PRIDE', bar: 'Chill Bar' };
+  captureConsoleLog(() => { normalizer.normalize(tour, { pageCities }); });
+  assert.equal(tour.city, 'palm-springs');
+  // A second row in the named city means the page really goes there.
+  const twoRows = { title: 'NOCHE BLANCA con PRAGUE BEARS', bar: 'Bear-Village' };
+  captureConsoleLog(() => { normalizer.normalize(twoRows, { pageCities: { ...pageCities, counts: { sitges: 17, prague: 2 } } }); });
+  assert.equal(twoRows.city, 'prague');
+  // No page reading (a single row, an aggregator, no home): unchanged.
+  const alone = { title: 'NOCHE BLANCA con PRAGUE BEARS', bar: 'Bear-Village' };
+  captureConsoleLog(() => { normalizer.normalize(alone); });
+  assert.equal(alone.city, 'prague');
+});
+
+test('city words: a city word in a venue\'s name is part of the name when the rest is a curated bar of the page\'s home city', () => {
+  const normalizer = createCityWordNormalizer();
+  // theurbanbear.com, run 20261109-053706: "FLEX HK" (Hell's Kitchen), "455
+  // WEST 51 ST" — filed under another continent and re-clocked.
+  const pageCities = { counts: { nyc: 6, 'hong-kong': 1 }, home: { city: 'nyc', count: 6, placed: 7 }, venuesAtHome: ['rockbar'] };
+  const event = {
+    title: 'OPENING NIGHT PARTY',
+    bar: 'FLEX HK',
+    address: '455 WEST 51 ST',
+    website: 'https://www.theurbanbear.com',
+    startDate: '2026-09-17T21:00:00.000Z',
+    _timezoneUnresolved: true
+  };
+  const lines = captureConsoleLog(() => { normalizer.normalize(event, { pageCities }); });
+  assert.equal(event.city, 'nyc');
+  assert.equal(event._citySource, 'page-home');
+  assert.equal(event.timezone, 'America/New_York');
+  assert.equal(event.bar, 'FLEX HK', 'only the city is settled; the venue is not renamed');
+  assert.ok(lines.some(line => line.includes('names hong-kong in its venue name "FLEX HK"') && line.includes('the curated "FLEX" in nyc')), lines.join('\n'));
+
+  // The rest of the name is no curated bar of the home city: the word stands.
+  const real = { title: 'Bear Night', bar: 'Boomer HK' };
+  captureConsoleLog(() => { normalizer.normalize(real, { pageCities }); });
+  assert.equal(real.city, 'hong-kong');
+  // No home city for the page: the word stands.
+  const noHome = { title: 'OPENING NIGHT PARTY', bar: 'FLEX HK', address: '455 WEST 51 ST' };
+  captureConsoleLog(() => { normalizer.normalize(noHome); });
+  assert.equal(noHome.city, 'hong-kong');
+});

@@ -24647,3 +24647,567 @@ test('weekday pin: a numeric date beside a weekday still pins, with its clock ti
     assert.equal(pinned.value, '2026-08-22', evidence);
   }
 });
+
+// ---------------------------------------------------------------------------
+// The name the page stated rides beside a trimmed title (2026-11-09)
+//   atlantaeagle.com's listing card (page cache, trimmed): the model answered
+//   title "Lumberjack" for the line "Southern Bears Lumberjack ft. Fer Juz"
+//   and the bear check dropped the party (run 20261109-053706).
+// ---------------------------------------------------------------------------
+
+test('stated name: a model title that is a trim of the card\'s own line keeps the line beside it; the saved title is not changed', async () => {
+  global.EventSchema = EventSchema;
+  const parser = createParser();
+  parser.now = () => new Date(Date.UTC(2026, 10, 9, 12, 0, 0));
+  const cardLines = ['Nov', 'Events', 'Southern Bears Lumberjack ft. Fer Juz', 'November 14, 2026 9:00 pm – November 15, 2026 3:00 am', 'Atlanta Eagle', 'View More →'];
+  const htmlData = {
+    html: cardLines.join('\n'),
+    url: 'https://atlantaeagle.com/events/',
+    // What the run derived for this card: a category label, not the name.
+    segmentListingTitle: 'Events',
+    segmentCardLines: cardLines
+  };
+  // The model's real answer shape for this card (cached extraction 7tihv2):
+  // single-quoted evidence naming the whole line.
+  parser.getAiEvent = async () => ({
+    title: 'Lumberjack',
+    startDate: '2026-11-14T21:00:00',
+    bar: 'Atlanta Eagle',
+    __fieldEvidence: { title: "LUMBERJACK in OCR_IMAGE_TEXT and 'Southern Bears Lumberjack ft. Fer Juz' in page body" }
+  });
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let event;
+  try {
+    event = await parser.extractSingleEvent(htmlData, {}, null, ['title', 'bar', 'startDate']);
+  } finally { console.log = original; }
+  assert.ok(event, logs.join('\n'));
+  assert.equal(event.title, 'Lumberjack');
+  assert.deepEqual(event._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+  assert.ok(logs.some(line => line.includes('🏷️ TITLE: "Lumberjack" is a trim of the name the page stated, "Southern Bears Lumberjack ft. Fer Juz"')), logs.join('\n'));
+
+  // The pointer alone is enough (no card lines: a single page).
+  const pointerOnly = createParser();
+  pointerOnly.now = parser.now;
+  pointerOnly.getAiEvent = parser.getAiEvent;
+  console.log = () => {};
+  let single;
+  try {
+    single = await pointerOnly.extractSingleEvent({ html: htmlData.html, url: htmlData.url }, {}, null, ['title', 'bar', 'startDate']);
+  } finally { console.log = original; }
+  assert.deepEqual(single._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+
+  // A title the page states whole gets no stamp, and neither does one whose
+  // only longer form is the page's own name after a separator.
+  const whole = createParser();
+  whole.now = parser.now;
+  whole.getAiEvent = async () => ({ title: 'Southern Bears Lumberjack ft. Fer Juz', startDate: '2026-11-14T21:00:00', __fieldEvidence: { title: 'Southern Bears Lumberjack ft. Fer Juz' } });
+  console.log = () => {};
+  let full; let branded;
+  try {
+    full = await whole.extractSingleEvent(htmlData, {}, null, ['title', 'startDate']);
+    whole.getAiEvent = async () => ({ title: 'Riptide', startDate: '2026-11-14T21:00:00', __fieldEvidence: { title: '"Riptide | Bear Jamboree"' } });
+    branded = await whole.extractSingleEvent({ html: 'Riptide | Bear Jamboree\nNovember 14, 2026 9:00 pm', url: 'https://www.bearjamboree.com/riptide', segmentCardLines: ['Riptide | Bear Jamboree', 'November 14, 2026 9:00 pm'] }, {}, null, ['title', 'startDate']);
+  } finally { console.log = original; }
+  assert.equal(full._statedTitles, undefined);
+  assert.ok(branded, 'the page is still read');
+  assert.equal(branded._statedTitles, undefined, 'a site name after a separator is not part of the event\'s name');
+});
+
+// ---------------------------------------------------------------------------
+// A SHORT CITY ALIAS INSIDE A LONGER PLACE NAME (whereto.party, run
+// 20261109-053706): the row's place "Ho Chi Minh City" carries the whole word
+// "chi" — an alias of another configured city — and a Saigon night was given
+// that city's key and clock.
+// ---------------------------------------------------------------------------
+
+test('city alias: a short alias that is a syllable of a longer place name names no city in place-shaped text', () => {
+  const parser = createParser();
+  const cityConfig = {
+    chicago: { timezone: 'America/Chicago', patterns: ['chicago', 'chi'] },
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] },
+    'hong-kong': { timezone: 'Asia/Hong_Kong', patterns: ['hong kong', 'hk'] }
+  };
+  const place = { placeName: true };
+  assert.equal(parser.findCityKeyInText('Ho Chi Minh City, Vietnam', cityConfig, place), '');
+  assert.equal(parser.findCityKeyInText('HO CHI MINH CITY', cityConfig, place), '');
+  assert.equal(parser.findCityKeyInText('District 1, Ho Chi Minh', cityConfig, place), '');
+  // The abbreviation written as one is still the city: alone, after a comma,
+  // or in capitals inside mixed-case text.
+  assert.equal(parser.findCityKeyInText('Chi', cityConfig, place), 'chicago');
+  assert.equal(parser.findCityKeyInText('3160 N Clark St, Chi, IL', cityConfig, place), 'chicago');
+  assert.equal(parser.findCityKeyInText('123 Main St NYC NY 10001', cityConfig, place), 'nyc');
+  assert.equal(parser.findCityKeyInText('3160 N Clark St, Chicago, IL', cityConfig, place), 'chicago');
+  // Free text keeps its reading: the mode is only for place-shaped fields.
+  assert.equal(parser.findCityKeyInText('FURBALL NYC PRIDE', cityConfig), 'nyc');
+
+  // The real row, trimmed (in__ho-chi-minh-city flight data).
+  const row = {
+    id: '787461f1-a783-4c74-8e5c-545c5e1ae526',
+    slug: 'on-ao-vol3-presents-skin-on-skin-sai-gon',
+    name: 'Ồn Ào Vol.3 presents Skin On Skin - Sài Gòn',
+    start_date: '2026-11-14', end_date: null, start_time: '20:30:00', end_time: '03:00:00',
+    ticketing_url: 'https://tally.so/r/NpKkBB',
+    city: { name: 'Ho Chi Minh City', time_zone: 'Asia/Ho_Chi_Minh' },
+    place: { name: 'Panorama studio rental & setdesign' }
+  };
+  const event = parser.buildEventFromJsonApiObject(row, 'https://whereto.party/in/ho-chi-minh-city', cityConfig);
+  assert.ok(event, 'the row is still read');
+  assert.notEqual(event.city, 'chicago');
+  assert.notEqual(event.timezone, 'America/Chicago');
+});
+
+// ---------------------------------------------------------------------------
+// Furniture reads the name the PAGE stated (run 20261109-053706,
+// bearjamboree.com): the brand prefixer ran before every furniture test, so
+// a menu label left as "Bear Jamboree: Hotel" — a shape none of them tests.
+// ---------------------------------------------------------------------------
+
+// bearjamboree.com/hotel as cached on 2026-11-08, trimmed: the <title>, the
+// site's <nav> (verbatim structure, attributes removed) and the body lines
+// that carry the word "hotel" and the phrase the date was taken from.
+const HOTEL_MENU_PAGE = '<html><head><title>Hotel | Bear Jamboree</title>'
+  + '<meta property="og:site_name" content="Bear Jamboree"/></head><body>'
+  + '<header><a href="https://www.bearjamboree.com/booking"><span>book hotel</span></a>'
+  + '<nav><ul><li><div><a href="https://www.bearjamboree.com"><div><span>Home</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/about"><div><span>About</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/bear-tea-dance"><div><span>Sunday tea dance</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/hotel"><div><span>Hotel</span></div></a><div><button><svg width="0" height="0"></svg></button></div></div>'
+  + '<div role="group"><div><div><ul><li><div><a href="https://www.bearjamboree.com/booking"><div><span>Booking</span></div></a></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/travel"><div><span>Travel</span></div></a></div></li></ul></div></div></div></li>'
+  + '<li><div><a href="https://www.bearjamboree.com/gallery"><div><span>Gallery</span></div></a></div></li></ul></nav></header>'
+  + '<main><h2>100% BUYOUT OF the OFFICIAL HOST HOTEL</h2>'
+  + '<p>Balance play, and relaxation AT the bj host hotel, FT. plush bedding, a sofa nook, and a spacious workstation.</p>'
+  + '<a href="https://www.bearjamboree.com/booking"><span>book hotel</span></a>'
+  + '<h3>rooms</h3>'
+  + '<p>Rooms right in the action of the daily Bearchella Pool Parties (running 11:00 AM &ndash; 8:00 PM on Friday, and extending until 2:00 AM on Saturday and Sunday nights).</p>'
+  + '<p>Cityview: Rooms facing the exterior of the property for a quieter stay.</p></main></body></html>';
+// The record as run 20261109-053706 kept it (stamps verbatim).
+const hotelMenuRecord = () => ({
+  title: 'Bear Jamboree: Hotel',
+  _titleBeforeBrandPrefix: 'Hotel',
+  startDate: new Date('2026-11-15T00:00:00.000Z'),
+  recurrenceRule: 'FREQ=WEEKLY;BYDAY=SU',
+  _timezoneUnresolved: true,
+  _dateOrigin: { kind: 'rrule-fallback', rrule: 'FREQ=WEEKLY;BYDAY=SU', source: 'day-phrase', derivedDate: '2026-11-15', real: true,
+    vouchedBy: 'sunday nights', vouchKind: 'cadence', matchesRule: true, window: 'page', statedFutureDate: '' },
+  source: 'ai-web'
+});
+
+test('menu label: the only event of a crawled page, named only by a label of the page\'s own menu and dated only by a cadence phrase somewhere on the page, is withheld for the owner with a reason; a page that prints the name as its own line is left alone', () => {
+  const parser = createParser();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const parserConfig = { urls: ['https://www.bearjamboree.com/events'] };
+    const url = 'https://www.bearjamboree.com/hotel';
+    assert.equal(parser.titleIsOnlyAMenuLabel('Hotel', HOTEL_MENU_PAGE), true, 'the menu says Hotel; the body only says "host hotel" and "book hotel"');
+    assert.equal(parser.titleIsOnlyAMenuLabel('Rooms', HOTEL_MENU_PAGE), false, 'a body heading is not a menu label');
+    assert.equal(parser.titleIsOnlyAMenuLabel('Bearchella Pool Parties', HOTEL_MENU_PAGE), false);
+
+    const hotel = hotelMenuRecord();
+    parser.markLoneCrawlEvent([hotel], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.ok(hotel._loneCrawlWithheld, 'withheld');
+    assert.equal(hotel._loneCrawlWithheld.page, url);
+    assert.equal(hotel._loneCrawlWithheld.day, '2026-11-15');
+    assert.match(hotel._loneCrawlWithheld.reason, /label of the page's own menu/);
+    assert.match(hotel._loneCrawlWithheld.reason, /"sunday nights"/);
+    assert.ok(hotel._loneCrawlWithheld.near.some((line) => /Sunday nights/.test(line)), 'the deck is shown the line the date was read from');
+    assert.ok(logs.some((line) => line.includes('🧭 LONE EVENT: "Bear Jamboree: Hotel"') && line.includes('menu')), logs.join('\n'));
+
+    // The same page with the name as a heading of its own: the page names
+    // the night, the stated rule dates it — untouched (a bar's weekly night
+    // with a menu entry and a page of its own).
+    const headed = HOTEL_MENU_PAGE.replace('<main>', '<main><h1>Hotel</h1>');
+    const named = hotelMenuRecord();
+    parser.markLoneCrawlEvent([named], { html: headed, url }, parserConfig, url, 'event-page');
+    assert.equal(named._loneCrawlWithheld, undefined, 'a heading outside the menu names it');
+
+    // Not a menu label: a cadence-dated event of a crawled page keeps the
+    // exemption it had.
+    const pool = { ...hotelMenuRecord(), title: 'Bear Jamboree: Bearchella Pool Parties', _titleBeforeBrandPrefix: 'Bearchella Pool Parties' };
+    parser.markLoneCrawlEvent([pool], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.equal(pool._loneCrawlWithheld, undefined);
+
+    // A rule the row itself vouched for (a card's own window), or a stated
+    // future date, is the page's statement even under a menu label.
+    const rowVouched = hotelMenuRecord();
+    rowVouched._dateOrigin.window = 'card';
+    parser.markLoneCrawlEvent([rowVouched], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.equal(rowVouched._loneCrawlWithheld, undefined);
+
+    // The configured page and a page with two events are never judged.
+    const configured = hotelMenuRecord();
+    parser.markLoneCrawlEvent([configured], { html: HOTEL_MENU_PAGE, url }, { urls: [url] }, url, 'event-page');
+    assert.equal(configured._loneCrawlWithheld, undefined);
+    const first = hotelMenuRecord(); const second = hotelMenuRecord();
+    parser.markLoneCrawlEvent([first, second], { html: HOTEL_MENU_PAGE, url }, parserConfig, url, 'event-page');
+    assert.equal(first._loneCrawlWithheld, undefined);
+  } finally { console.log = quiet; }
+});
+
+test('menu label: the lone-event check looks for the name the page stated, not the brand-prefixed title', () => {
+  const parser = createParser();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const parserConfig = { urls: ['https://www.bearjamboree.com/events'] };
+    const url = 'https://www.bearjamboree.com/bear-tea-dance';
+    // "Bear Jamboree: Sunday tea dance" (run 20261109-053706) was reported
+    // as "its name is not in the page's text"; the page says "Sunday tea
+    // dance" and states the day beside it.
+    const page = '<html><body><h1>Sunday tea dance</h1><p>Sunday, November 15, 2026</p><p>4pm at the pool</p></body></html>';
+    const dated = { title: 'Bear Jamboree: Sunday tea dance', _titleBeforeBrandPrefix: 'Sunday tea dance', startDate: new Date('2026-11-15T21:00:00.000Z'), timezone: 'America/New_York', source: 'ai-web' };
+    parser.markLoneCrawlEvent([dated], { html: page, url }, parserConfig, url, 'multi-event-page');
+    assert.equal(dated._loneCrawlWithheld, undefined, 'the date sits beside the stated name');
+    const undated = { ...dated, _loneCrawlWithheld: undefined };
+    parser.markLoneCrawlEvent([undated], { html: page.replace('<p>Sunday, November 15, 2026</p>', ''), url }, parserConfig, url, 'multi-event-page');
+    assert.ok(undated._loneCrawlWithheld, 'no date beside the name');
+    assert.match(undated._loneCrawlWithheld.reason, /no date is stated within six lines of its name/, 'the name WAS found — the reason is the missing date');
+  } finally { console.log = quiet; }
+});
+
+test('furniture: the brand prefixer never runs on a furniture title, and both furniture drops read the title as it stood before the prefix', () => {
+  const parser = createChunkParser();
+  const brands = parser.getPageBrandNames(CHUNK_PAGE());
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    const prefix = (title) => parser.buildBrandPrefixedTitle(title, brands, CHUNK_PAGE(), CHUNK_CONFIG);
+    // Shapes verbatim from run 20261018-161635 (PR #1907) and the guards
+    // beside them: each stays unprefixed, and says why.
+    for (const title of ['comprar entradas', '2. To apply', 'Events for July 27, 2026', 'Little West 12th St.', 'en-US', 'My Account', 'H2K 1X7']) {
+      logs.length = 0;
+      assert.equal(prefix(title), '', title);
+      assert.ok(logs.some((line) => line.includes('🪑 FURNITURE:') && line.includes(`"${title}"`) && line.includes('not prefixed')), `${title}: ${logs.join(' / ')}`);
+    }
+    // A real name is prefixed as before.
+    assert.equal(prefix('The RETURN'), 'CHUNK: The RETURN');
+    assert.equal(prefix('2 Bears 1 Cave'), 'CHUNK: 2 Bears 1 Cave');
+
+    // A record that was prefixed anyway (an older route, a stamp from a
+    // cached answer) is still read by its stated name.
+    logs.length = 0;
+    const prefixed = [
+      { title: 'CHUNK: comprar entradas', _titleBeforeBrandPrefix: 'comprar entradas' },
+      { title: 'CHUNK: The RETURN', _titleBeforeBrandPrefix: 'The RETURN' }
+    ];
+    assert.deepEqual(parser.dropFurnitureShapedTitles(prefixed, 'https://www.chunk-party.com/x').map((event) => event.title), ['CHUNK: The RETURN']);
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "CHUNK: comprar entradas" is a call to action')), logs.join('\n'));
+
+    logs.length = 0;
+    const html = '<html><body><h1>The RETURN</h1><p>Doors at ten.</p><button>Load More</button></body></html>';
+    const buttoned = [
+      { title: 'CHUNK: Load More', _titleBeforeBrandPrefix: 'Load More' },
+      { title: 'CHUNK: The RETURN', _titleBeforeBrandPrefix: 'The RETURN' }
+    ];
+    assert.deepEqual(parser.dropPageFurnitureTitledEvents(buttoned, html, 'https://www.chunk-party.com/x').map((event) => event.title), ['CHUNK: The RETURN']);
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "CHUNK: Load More" is the label of a button')), logs.join('\n'));
+    assert.equal(parser.pageStatedTitle({ title: 'CHUNK: The RETURN' }), 'CHUNK: The RETURN', 'no stamp: the title itself');
+  } finally { console.log = quiet; }
+});
+
+// ── 2026-11-09 audit, crawl-junk 1c: titles that are hours, numbers or a byline ──
+// bearssitges.org, run 20261109-053706: the day programme prints the hours
+// before every name, and eight records kept them in the title ("1h a 06h
+// BEEFMINCE DISCO Party", "13h Sitges Drag Brunch", "10h a 21h:", "25").
+test('clock titles: a leading clock or clock range is cut from a title, with a log line; a name that opens with a number stays whole', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const strip = (title) => parser.stripLeadingClockFromTitle(title);
+  // The page's own lines.
+  assert.equal(strip('1h a 06h BEEFMINCE DISCO Party'), 'BEEFMINCE DISCO Party');
+  assert.equal(strip('20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village'), 'Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village');
+  assert.equal(strip('21:30h to 03:30h 25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village'), '25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village');
+  assert.equal(strip('20:30h. a 03:00h BEARS on CRUISE Special Night'), 'BEARS on CRUISE Special Night');
+  assert.equal(strip('20:30h a 03h: EARLY-VILLAGE 2026'), 'EARLY-VILLAGE 2026');
+  assert.equal(strip('20 h: CENA OFICIAL 25º aniBEARSari'), 'CENA OFICIAL 25º aniBEARSari');
+  assert.equal(strip('13h Sitges Drag Brunch'), 'Sitges Drag Brunch');
+  assert.equal(strip('10 PM – 4 AM | FURBALL NYC'), 'FURBALL NYC');
+  // Names, not hours: no marker, not an hour, one word of name, or a
+  // remainder that is a place or the rest of the hours.
+  for (const name of ['2AM Club', '12h Rave', '24h Party', '5 à 7 des Ours', '9 to 5 Party', '2 Bears 1 Cave',
+    '10 Years of Bearracuda', '3 Dollar Bill', '21+ Bear Night', '501 Party Night', '6-9 Beer Bust',
+    '8:00 Showtime', '10.30 Brunch Club', '4pm to the Floor party', '9pm til late', '9pm-late Bear Night',
+    '11PM-5AM @ The Eagle', '10pm at the bar', 'BEEFMINCE DISCO Party', '']) {
+    assert.equal(strip(name), name, name);
+  }
+
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const day = (lines) => ({ segmentText: lines.join('\n'), html: lines.join('\n'), segmentCardLines: lines });
+    const disco = parser.normalizeAiEvent({ title: '1h a 06h BEEFMINCE DISCO Party', startDate: '2026-09-10', startTime: '01:00' }, {},
+      day(['JUEVES - 10', '1h a 06h BEEFMINCE DISCO Party en «BEARCAVE» compra tus entradas AQUÍ']), null, null);
+    assert.equal(disco.title, 'BEEFMINCE DISCO Party');
+    assert.ok(logs.some((line) => line.includes('Stripped leading clock from title "1h a 06h BEEFMINCE DISCO Party" → "BEEFMINCE DISCO Party"')), logs.join('\n'));
+    // A real name that opens with a number goes through untouched.
+    const cave = parser.normalizeAiEvent({ title: '2 Bears 1 Cave', startDate: '2026-09-10', startTime: '21:00' }, {},
+      day(['JUEVES - 10', '2 Bears 1 Cave']), null, null);
+    assert.equal(cave.title, '2 Bears 1 Cave');
+  } finally { console.log = quiet; }
+});
+
+test('clock titles: a title that is only a clock range ending in a colon, or only a one- or two-digit number, is no title — the record is not kept under it, and the log says why', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  assert.equal(parser.isTimeOnlyLineText('10h a 21h:'), true);
+  assert.equal(parser.isTimeOnlyLineText('10h a 21h'), true, 'as before');
+  assert.equal(parser.isTimeOnlyLineText('CENA OFICIAL:'), false);
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const day = (lines) => ({ segmentText: lines.join('\n'), html: lines.join('\n'), segmentCardLines: lines });
+    // VIERNES - 11 / 10h a 21h: / 20 h: CENA OFICIAL 25º aniBEARSari …
+    assert.equal(parser.normalizeAiEvent({ title: '10h a 21h:', startDate: '2026-09-11', startTime: '10:00' }, {},
+      day(['VIERNES - 11', '10h a 21h:']), null, null), null);
+    assert.ok(logs.some((line) => line.includes('Title "10h a 21h:" is only a time of day')), logs.join('\n'));
+    logs.length = 0;
+    assert.equal(parser.normalizeAiEvent({ title: '25', startDate: '2026-09-11', startTime: '20:00' }, {},
+      day(['VIERNES - 11', '20 h: CENA OFICIAL 25º aniBEARSari en «HOTEL CALIPOLIS»']), null, null), null);
+    assert.ok(logs.some((line) => line.includes('Title "25" is only a number')), logs.join('\n'));
+    // Three digits, or a number with a word, is still a name.
+    logs.length = 0;
+    const named = parser.normalizeAiEvent({ title: '501 Night', startDate: '2026-09-11', startTime: '20:00' }, {},
+      day(['VIERNES - 11', '501 Night']), null, null);
+    assert.equal(named.title, '501 Night');
+    assert.ok(!logs.some((line) => line.includes('is only a number')));
+  } finally { console.log = quiet; }
+});
+
+// studsf.com/podcast, run 20261109-053706: the coverage audit handed thirteen
+// post bylines to extraction as one-line windows ("April 06, 2021 / Stud
+// SF"); the compact-row reader read each as a party called "/ Stud SF" and
+// the year repair walked 2021 forward to 2026-27.
+test('byline rows: a compact row that prints its year hands it on as the stated year, so a past one is an archived line and is never walked forward; what is left of a byline is furniture', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const byline = { segmentText: 'April 06, 2021 / Stud SF' };
+  assert.deepEqual(parser.readCompactListingRowParts(byline), { title: '/ Stud SF', startDate: '2021-04-06', bar: '', statedYear: 2021 });
+  assert.deepEqual(parser.readCompactListingRow(byline), { title: '/ Stud SF', startDate: '2021-04-06', bar: '' }, 'the row itself reads as before');
+  assert.equal(parser.readCompactListingRowParts({ segmentText: 'September 5, 2026 FURBALL NOLA - Santos Bar' }).statedYear, 2026);
+  assert.equal(parser.readCompactListingRowParts({ segmentText: '10/10 FURBALL Boston - Legacy' }).statedYear, 0, 'no year printed, none stated');
+  assert.equal(parser.readCompactListingRowParts({ segmentText: '1/15/27 FURBALL Boston - Legacy' }).statedYear, 2027);
+
+  const logs = [];
+  const quiet = console.log;
+  const quietWarn = console.warn;
+  console.log = (line) => logs.push(String(line));
+  console.warn = (line) => logs.push(String(line));
+  try {
+    const window = { segmentText: byline.segmentText, html: byline.segmentText };
+    const parts = parser.readCompactListingRowParts(window);
+    const stated = parser.normalizeAiEvent({ title: parts.title, startDate: parts.startDate, bar: parts.bar, __explicitSourceYears: { start: parts.statedYear } }, {}, window, null, null);
+    assert.equal(stated, null, 'a row dated 2021 by its own words is not an upcoming event');
+    assert.ok(logs.some((line) => line.includes('Dropping "/ Stud SF"') && line.includes('explicit 2021 date') && line.includes('archived event')), logs.join('\n'));
+    // A row that states this year's date is read as before.
+    const nola = { segmentText: 'September 5, 2026 FURBALL NOLA - Santos Bar', html: 'September 5, 2026 FURBALL NOLA - Santos Bar' };
+    const kept = parser.normalizeAiEvent({ title: 'FURBALL NOLA', startDate: '2026-09-05', bar: 'Santos Bar', __explicitSourceYears: { start: 2026 } }, {}, nola, null, null);
+    assert.equal(kept.title, 'FURBALL NOLA');
+    assert.equal(new Date(kept.startDate).toISOString().slice(0, 10), '2026-09-05');
+
+    // The shape rule, for any route that still produces the fragment.
+    assert.equal(AiWebParser.furnitureTitleShape('/ Stud SF'), 'a byline fragment');
+    assert.equal(AiWebParser.furnitureTitleShape('AC/DC Night'), '');
+    assert.equal(AiWebParser.furnitureTitleShape('Bears / Cubs'), '');
+    logs.length = 0;
+    const rows = [{ title: '/ Stud SF', startDate: '2027-04-06' }, { title: 'Bear Happy Hour SF', startDate: '2026-11-12' }];
+    assert.deepEqual(parser.dropFurnitureShapedTitles(rows, 'https://www.studsf.com/podcast').map((event) => event.title), ['Bear Happy Hour SF']);
+    assert.ok(logs.some((line) => line.includes('🪑 FURNITURE: "/ Stud SF" is a byline fragment')), logs.join('\n'));
+  } finally { console.log = quiet; console.warn = quietWarn; }
+});
+
+// ── 2026-11-09 audit, crawl-junk 1d: a page's sign-up form and its currency twin are not pages of their own ──
+// eaglemanchester.com, run 20261109-053706: the home page's embedded event
+// data names each event's "registrationUrl" (…/event-details/<slug>/form);
+// the raw scan queued four of them, each was read as an event of its own
+// ("Spank Guys" dated to a night its parent page does not state) and each
+// won as its event's link.
+test('form pages: the sign-up form of a page is ticket plumbing — never crawled; the page itself still is', () => {
+  const parser = createParser();
+  const home = 'https://www.eaglemanchester.com/';
+  const html = `<html><body>
+    <a href="https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00">Spank Guys</a>
+    <script type="application/json">{"events":[{"title":"Spank Guys","scheduleStartTimeFormatted":"13:00","registrationUrl":"https:\\/\\/www.eaglemanchester.com\\/event-details\\/spank-guys-2026-12-19-13-00\\/form","scheduleTbd":false}]}</script>
+  </body></html>`;
+  const quiet = console.log;
+  console.log = () => {};
+  let links;
+  try { links = parser.extractAdditionalUrls(html, home, {}); } finally { console.log = quiet; }
+  assert.ok(links.includes('https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00'), JSON.stringify(links));
+  assert.deepEqual(links.filter((link) => /\/form(?:[/?#]|$)/.test(link)), [], JSON.stringify(links));
+
+  const reason = (url) => parser.validateEventUrl(url, home, { urls: [home] }).reason;
+  assert.equal(reason('https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00/form'), 'ticket-utility-page');
+  assert.equal(reason('https://www.eaglemanchester.com/event-details/collared-manchester-2026-12-05-19-00/form/'), 'ticket-utility-page');
+  assert.equal(reason('https://bears.example/weekend-2027/rsvp'), 'ticket-utility-page');
+  // Only as the last segment of a deeper page: a name that merely contains
+  // the word, or a page under it, is not the form.
+  assert.equal(parser.validateEventUrl('https://www.eaglemanchester.com/event-details/spank-guys-2026-12-19-13-00', home, { urls: [home] }).valid, true);
+  assert.equal(parser.validateEventUrl('https://bears.example/events/free-form-friday', 'https://bears.example/', { urls: ['https://bears.example/'] }).valid, true);
+  assert.notEqual(reason('https://bears.example/form'), 'ticket-utility-page', 'a top-level page is left to the page classifier');
+});
+
+// bearitmtl.com, run 20261109-053706: every page carries
+// <a href="?currency=CAD">Utilisez Dollar canadien à la place.</a>; four
+// pages were crawled a second time under that address (each declaring the
+// plain URL as its canonical) and the listing's events were read twice.
+test('currency twins: a currency selector names how prices are shown, never another page — it is dropped from crawl URLs and link identity like a language selector', () => {
+  const parser = createParser();
+  const plain = 'https://www.bearitmtl.com/events/';
+  assert.equal(parser.stripTrackingParams(`${plain}?currency=CAD`), plain);
+  assert.equal(parser.stripLocaleParams(`${plain}?currency=CAD`), plain);
+  assert.equal(parser.getUrlDedupeKey(`${plain}?currency=CAD`), parser.getUrlDedupeKey(plain));
+  assert.equal(parser.core.getUrlDedupeKey(`${plain}?currency=CAD`), parser.core.getUrlDedupeKey(plain));
+  // A parameter that selects content stays.
+  assert.notEqual(parser.getUrlDedupeKey(`${plain}?paged=2`), parser.getUrlDedupeKey(plain));
+  assert.equal(parser.stripTrackingParams(`${plain}?paged=2&currency=CAD`), `${plain}?paged=2`);
+
+  const html = `<html><head><link rel="canonical" href="${plain}" /></head><body>
+    <a href="?currency=CAD">Utilisez Dollar canadien à la place.</a>
+    <a href="https://www.bearitmtl.com/event/furry-takeover/?currency=CAD">FURRY TAKEOVER</a>
+    <a href="https://www.bearitmtl.com/event/furry-takeover/">FURRY TAKEOVER</a>
+    <a href="https://www.bearitmtl.com/event/apero-ours-novembre/?currency=CAD">APÉRO OURS</a>
+  </body></html>`;
+  const quiet = console.log;
+  console.log = () => {};
+  let links;
+  try { links = parser.extractAdditionalUrls(html, plain, {}); } finally { console.log = quiet; }
+  assert.deepEqual(links.filter((link) => /currency=/i.test(link)), [], JSON.stringify(links));
+  assert.equal(links.filter((link) => /furry-takeover/.test(link)).length, 1, 'one page, not two');
+  assert.ok(links.includes('https://www.bearitmtl.com/event/apero-ours-novembre/'), JSON.stringify(links));
+  assert.ok(!links.some((link) => parser.getUrlDedupeKey(link) === parser.getUrlDedupeKey(plain)), 'the page does not queue itself');
+});
+
+// akbarsilverlake.com, run 20261109-053706: /about-us/our-team/ — staff and DJ
+// biographies — was followed from the menu and gave six "events" dated from
+// the cadence words of a biography ("Experimental Cabaret", "Soundtrack
+// Sundays" were kept). "/about/" and "/contact/" were already never followed;
+// their other spellings and the people-and-hiring sections were.
+test('site sections: about-us / contact-us / team / staff pages are never followed, as whole path segments only', () => {
+  const parser = createParser();
+  const home = 'https://akbarsilverlake.com/';
+  const check = (url, source = home) => parser.validateEventUrl(url, source, { urls: [source] });
+  for (const url of [
+    'https://akbarsilverlake.com/about-us/',
+    'https://akbarsilverlake.com/about-us/our-team/',
+    'https://akbarsilverlake.com/contact-us/',
+    'https://campoutpoconos.com/team/',
+    'https://www.thelumberyardbar.com/about-us',
+    'https://bears.example/staff/',
+    'https://bears.example/team?ref=menu'
+  ]) {
+    const result = check(url, new URL(url).origin + '/');
+    assert.equal(result.valid, false, url);
+    assert.match(String(result.reason), /^blocked-pattern:/, url);
+  }
+  // A slug that merely contains one of the words is an event page.
+  for (const url of [
+    'https://akbarsilverlake.com/event/team-trivia-night/',
+    'https://akbarsilverlake.com/event/staff-picks-dance-party/',
+    'https://akbarsilverlake.com/events/press-play/',
+    'https://akbarsilverlake.com/upcoming-events/'
+  ]) {
+    assert.equal(check(url).valid, true, url);
+  }
+  const html = `<html><body><nav>
+    <a href="https://akbarsilverlake.com/upcoming-events/">Events</a>
+    <a href="https://akbarsilverlake.com/about-us/">About Us</a>
+    <a href="https://akbarsilverlake.com/about-us/our-team/">Our Team</a>
+    <a href="https://akbarsilverlake.com/contact-us/">Contact</a>
+  </nav></body></html>`;
+  const quiet = console.log;
+  console.log = () => {};
+  let links;
+  try { links = parser.extractAdditionalUrls(html, home, {}); } finally { console.log = quiet; }
+  assert.deepEqual(links, ['https://akbarsilverlake.com/upcoming-events/']);
+});
+
+// rockbarnyc.com, run 20261109-053706: the calendar widget row "PRIVATE EVENT"
+// ("Tonight, we will be CLOSED after 10pm for a PRIVATE EVENT") was read as an
+// event and left to the bear check to turn away.
+test('closure notices: a row named only "private event" is a notice, not an event, and the log says so; a named private party is still a name', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  for (const title of ['PRIVATE EVENT', 'Private Party!', 'A private event']) assert.equal(parser.isVenueClosureNoticeTitle(title), true, title);
+  for (const title of ['Private Dancer: 80s Night', 'BEARS NIGHT OUT', 'Private Event Space Open House', 'Private']) assert.equal(parser.isVenueClosureNoticeTitle(title), false, title);
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const row = { segmentText: 'PRIVATE EVENT\nTonight, we will be CLOSED after 10pm for a PRIVATE EVENT. Yes, that one. IYKYK', html: 'PRIVATE EVENT' };
+    assert.equal(parser.normalizeAiEvent({ title: 'PRIVATE EVENT', startDate: '2026-10-10', startTime: '22:00' }, {}, row, null, null), null);
+    assert.ok(logs.some((line) => line.includes('🚪 CLOSED: "PRIVATE EVENT" is a closure notice')), logs.join('\n'));
+  } finally { console.log = quiet; }
+});
+
+// studsf.com, run 20261109-053706: the site's name is a lone left-to-right
+// mark (U+200E), so every item page's "<event> — <site name>" template —
+// <title>, og:title and the JSON-LD Event name — reads "Muscle Mommy Pageant
+//  —   <U+200E> ". Eleven records carried that tail (three kept, e.g. "Bear
+// Happy Hour SF — <U+200E>"), and it replaced the collection's clean title in
+// the fold. A mark that prints nothing is not part of a name, and the
+// separator left dangling beside it goes with it.
+test('invisible marks: a zero-width or direction mark and the separator left dangling beside it are cut from a title; emoji joiners, soft hyphens and unmarked titles stay', () => {
+  const parser = createParser();
+  assert.equal(parser.stripInvisibleTitleMarks('Muscle Mommy Pageant  —   ‎ '), 'Muscle Mommy Pageant');
+  assert.equal(parser.stripInvisibleTitleMarks('Bear Happy Hour SF — ‎'), 'Bear Happy Hour SF');
+  assert.equal(parser.stripInvisibleTitleMarks('‏ | Bear Night'), 'Bear Night');
+  assert.equal(parser.stripInvisibleTitleMarks('﻿Bear​ Night⁠'), 'Bear Night');
+  assert.equal(parser.stripInvisibleTitleMarks('  ‎ '), '');
+  // A joiner that builds an emoji is the emoji; a soft hyphen is a deliberate
+  // break hint; a title with no mark is returned as it came, separator and all.
+  assert.equal(parser.stripInvisibleTitleMarks("THICK 'N' JUICY ❤️‍🔥 Brisbane"), "THICK 'N' JUICY ❤️‍🔥 Brisbane");
+  assert.equal(parser.stripInvisibleTitleMarks('Bear­racuda'), 'Bear­racuda');
+  assert.equal(parser.stripInvisibleTitleMarks('Bear Night —'), 'Bear Night —');
+  assert.equal(parser.stripInvisibleTitleMarks('Bears — Cubs'), 'Bears — Cubs');
+  assert.equal(parser.showInvisibleTitleMarks('SF — ‎'), 'SF — <U+200E>');
+});
+
+test('invisible marks: an item page whose template appends an invisible site name gives the event its printed name, and the log shows the mark that was cut', async () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // Trimmed from the cached page www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant.
+  const html = `<!doctype html><html><head>
+<title>Muscle Mommy Pageant  &mdash;   ‎ </title>
+<meta property="og:site_name" content="  ‎ "/>
+<meta property="og:title" content="Muscle Mommy Pageant  &mdash;   ‎ "/>
+<script type="application/ld+json">{"url":"https://www.studsf.com","name":"  \\u200E ","description":"","@context":"http://schema.org","@type":"WebSite"}</script>
+<script type="application/ld+json">{"legalName":"The Stud","address":"1123 Folsom St\\nSan Francisco, CA, 94103","@context":"http://schema.org","@type":"Organization"}</script>
+<script type="application/ld+json">{"name":"Muscle Mommy Pageant  \\u2014   \\u200E ","startDate":"2026-11-20T21:00:00-0800","endDate":"2026-11-21T02:00:00-0800","image":["http://static1.squarespace.com/static/5899708ee3df288fed2979ab/t/5c5d91ecb208fcb27d09a61b/1549636078416/studlogo_box.jpg?format=1500w"],"location":{"name":"The Stud","address":"SOMA\\nSan Francisco, CA","@context":"http://schema.org","@type":"Place"},"@context":"http://schema.org","@type":"Event"}</script>
+</head><body>
+<article class="eventitem"><h1 class="eventitem-title">Muscle Mommy Pageant </h1>
+<ul class="eventitem-meta event-meta"><li class="eventitem-meta-item eventitem-meta-date"><time class="event-date" datetime="2026-11-20">Friday, November 20, 2026</time></li>
+<li class="eventitem-meta-item eventitem-meta-time"><time class="event-time-12hr-start" datetime="2026-11-20">9:00 PM</time> <time class="event-time-12hr-end" datetime="2026-11-20">2:00 AM</time></li></ul>
+</article></body></html>`;
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  let result;
+  try {
+    result = await parser.parseEvents({ html, url: 'https://www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant' }, {});
+  } finally { console.log = quiet; }
+  assert.equal(result.events.length, 1, logs.join('\n'));
+  assert.equal(result.events[0].title, 'Muscle Mommy Pageant');
+  assert.equal(result.events[0].startDate && new Date(result.events[0].startDate).toISOString().slice(0, 10), '2026-11-21');
+  assert.ok(logs.some((line) => line.includes('🏷️ TITLE: "Muscle Mommy Pageant — <U+200E>" → "Muscle Mommy Pageant" — invisible marks')), logs.filter((line) => /TITLE/.test(line)).join('\n'));
+});
+
+test('invisible marks: a model title that copied the marked page title is cleaned, and a title made only of marks is no title', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const row = { segmentText: 'Bear Happy Hour SF\nThursday, December 10, 2026 5:00 PM 9:00 PM\nThe Stud', html: '<h1>Bear Happy Hour SF</h1>' };
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const event = parser.normalizeAiEvent({ title: 'Bear Happy Hour SF — ‎', startDate: '2026-12-10', startTime: '17:00' }, {}, row, null, null);
+    assert.ok(event, logs.join('\n'));
+    assert.equal(event.title, 'Bear Happy Hour SF');
+    assert.ok(logs.some((line) => line.includes('🏷️ TITLE: "Bear Happy Hour SF — <U+200E>" → "Bear Happy Hour SF"')), logs.join('\n'));
+    assert.equal(parser.normalizeAiEvent({ title: ' ‎ ', startDate: '2026-12-10', startTime: '17:00' }, {}, { segmentText: 'Thursday, December 10, 2026 5:00 PM', html: '' }, null, null), null);
+  } finally { console.log = quiet; }
+});

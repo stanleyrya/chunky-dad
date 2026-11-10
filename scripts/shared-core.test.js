@@ -32569,3 +32569,591 @@ test('merge into a saved multi-day event: one night inside it never rewrites the
   captureConsole(() => core.alignAllDayMergeSides(timed, oneDayCalendar, oneDaySaved));
   assert.equal(oneDayCalendar.startDate.toISOString(), '2026-12-10T21:00:00.000Z');
 });
+
+// ---------------------------------------------------------------------------
+// The bear check reads the name the page stated (2026-11-09)
+//   atlantaeagle.com printed "Southern Bears Lumberjack ft. Fer Juz". The
+//   model answered title "Lumberjack"; the event page's own record carried
+//   the full name and lost the title to the listing; the bear check then
+//   judged "Lumberjack" and dropped a bear party (run 20261109-053706).
+// ---------------------------------------------------------------------------
+
+test('stated name: a title is a trim of a longer page name only when its words are one run of it, it is a name line, and the extra words are not a site-name tail', () => {
+  const core = createCore();
+  const stated = (title, candidate) => core.statedNameBehindTitle(title, candidate);
+  assert.equal(stated('Lumberjack', 'Southern Bears Lumberjack ft. Fer Juz'), 'Southern Bears Lumberjack ft. Fer Juz');
+  assert.equal(stated('Marché Des Ours', 'LE MARCHÉ DES OURS THE BEAR MARKET'), 'LE MARCHÉ DES OURS THE BEAR MARKET', 'case and accents as the page prints them');
+  assert.equal(stated('Lumberjack Edition', 'Bear Night - Lumberjack Edition'), 'Bear Night - Lumberjack Edition', 'what leads the name is part of it');
+  // What follows a separator after the name is where a page puts its own name.
+  assert.equal(stated('RED', 'RED | Bear Jamboree'), '');
+  assert.equal(stated('Beer Bust @ SF Eagle', 'Beer Bust @ SF Eagle — Bears of San Francisco'), '');
+  assert.equal(stated('Noche de Reyes', 'Noche de Reyes 2027 – Bears Naturistas'), 'Noche de Reyes 2027');
+  // Metadata lines and prose are not name lines.
+  assert.equal(stated('RED', 'og:title: RED | Bear Jamboree'), '');
+  assert.equal(stated('Jugoso', 'Join the bears next month in Zipolite, Mexico for Jugoso!'), '', 'nine more words is a sentence');
+  assert.equal(stated('Jugoso', 'Jugoso is a four-day bear party in Zipolite, a beach town on the Pacific coast of Oaxaca, Mexico.'), '');
+  // Not a trim: the same name, a different name, half a word.
+  assert.equal(stated('Lumberjack', 'LUMBERJACK'), '');
+  assert.equal(stated('Bear Night', 'Southern Lumberjack'), '');
+  assert.equal(stated('Lumber', 'Southern Bears Lumberjack'), '');
+  assert.equal(stated('', 'Southern Bears Lumberjack'), '');
+});
+
+test('stated name: the fold keeps the name it did not save, both directions, and carries it through later folds', async () => {
+  const core = createCore();
+  const priorities = core.getResolvedFieldPriorities({});
+  const adapter = buildArbitrationAdapter({});
+  const start = new Date('2026-11-15T02:00:00.000Z');
+  const listing = () => ({
+    title: 'Lumberjack', bar: 'Atlanta Eagle', city: 'atlanta', startDate: start, endDate: new Date('2026-11-15T08:00:00.000Z'),
+    source: 'ai-web', _extractionSource: 'ai', _pageOrigin: 'listing', _sourcePageUrl: 'https://atlantaeagle.com/events/', _fieldPriorities: priorities
+  });
+  const eventPage = () => ({
+    title: 'Southern Bears Lumberjack ft. Fer Juz', bar: 'Atlanta Eagle', city: 'atlanta', startDate: start, endDate: new Date('2026-11-15T08:00:00.000Z'),
+    source: 'ai-web', _extractionSource: 'jsonld', _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://atlantaeagle.com/event/southern-bears-lumberjack-ft-fer-juz/', _parserConfig: TEST_AI_PARSER_CONFIG, _fieldPriorities: priorities
+  });
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let merged; let flipped; let later;
+  try {
+    merged = await core.mergeParsedEvents(listing(), eventPage(), { httpAdapter: adapter });
+    flipped = await core.mergeParsedEvents(eventPage(), listing(), { httpAdapter: adapter });
+    later = await core.mergeParsedEvents(merged, { ...listing(), _pageOrigin: 'crawl', cover: '$10' }, { httpAdapter: adapter });
+  } finally { console.log = quiet; }
+  assert.equal(merged.title, 'Lumberjack', 'the saved title is not changed');
+  assert.deepEqual(merged._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+  assert.equal(flipped.title, 'Lumberjack');
+  assert.deepEqual(flipped._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz']);
+  assert.deepEqual(later._statedTitles, ['Southern Bears Lumberjack ft. Fer Juz'], 'an existing-only stamp survives the next fold');
+  assert.ok(logs.some(line => line.includes('🏷️ TITLE: "Lumberjack" is the saved title — the name the page stated, "Southern Bears Lumberjack ft. Fer Juz"')), logs.join('\n'));
+  assert.ok(!String(merged.notes || '').includes('Southern Bears'), 'the stamp is not written into notes');
+
+  // A brand the pipeline put in front is not something the page stated.
+  const prefixed = await core.mergeParsedEvents(
+    { ...listing(), title: 'Hotel' },
+    { ...eventPage(), title: 'Bear Jamboree: Hotel', _titleBeforeBrandPrefix: 'Hotel' },
+    { httpAdapter: adapter });
+  assert.equal(prefixed._statedTitles, undefined);
+  // Two different names: nothing is stamped.
+  const different = await core.mergeParsedEvents(listing(), { ...eventPage(), title: 'Bear Bust' }, { httpAdapter: adapter });
+  assert.equal(different._statedTitles, undefined);
+});
+
+test('stated name: the keyword tier and the tag keyword match read the saved title and the stated name', async () => {
+  const notBear = { verdict: 'not_bear', reason: 'a lumberjack theme night, no bear wording' };
+  const event = () => ({ title: 'Lumberjack', description: 'ft. Fer Juz', bar: 'Atlanta Eagle', city: 'atlanta' });
+
+  // Before: the model judged the trim and dropped it.
+  const before = buildBearVerdictAdapter(notBear);
+  const dropped = await createCore().computeBearCheckVerdict(event(), bearCheckConfig('enforce'), before);
+  assert.equal(dropped.result, 'not_bear');
+  assert.equal(before.calls.length, 1);
+
+  // With the stated name beside the title the keyword decides, no AI call.
+  const after = buildBearVerdictAdapter(notBear);
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let kept;
+  try {
+    kept = await createCore().computeBearCheckVerdict({ ...event(), _statedTitles: ['Southern Bears Lumberjack ft. Fer Juz'] }, bearCheckConfig('enforce'), after);
+  } finally { console.log = quiet; }
+  assert.equal(kept.result, 'bear');
+  assert.match(kept.provenance, /^keyword: .*\(the page's own name: "Southern Bears Lumberjack ft\. Fer Juz"\)$/);
+  assert.equal(after.calls.length, 0);
+  assert.ok(logs.some(line => line.includes('is in the name the page stated')), logs.join('\n'));
+
+  // A keyword in the saved title reads exactly as before.
+  const plain = await createCore().computeBearCheckVerdict({ title: 'Bear Night', bar: 'Club Nine' }, bearCheckConfig('enforce'), buildBearVerdictAdapter(notBear));
+  assert.match(plain.provenance, /^keyword: [a-z, ]+$/);
+
+  // Tags: the title family words are read in the stated name too.
+  const core = createCore();
+  assert.deepEqual(core.collectMachineEventTags({ title: 'Onyx' }).candidates, []);
+  const tagged = core.collectMachineEventTags({ title: 'Onyx', _statedTitles: ['Onyx Leather Night'] });
+  assert.deepEqual(tagged.fromTitle, ['leather']);
+  assert.ok(tagged.hits.leather.title.includes('leather'));
+});
+
+// ---------------------------------------------------------------------------
+// A title's "at <venue>" tail names the bar only by the bar's NAME (2026-11-09)
+//   massbearsandcubs.org, run 20261109-053706: "Bears At The Beach" at "DCR
+//   Nantasket Beach" was saved as "Bears" — one shared word, the place TYPE.
+// ---------------------------------------------------------------------------
+
+test('title tail: one word shared with the bar is not the bar — the tail must be the bar\'s name from its first word', () => {
+  const core = new SharedCore({ toronto: { timezone: 'America/Toronto', patterns: ['toronto'] }, nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] } }, { eventSchema: EventSchema });
+  // The motivating rows (real titles and bars from the run).
+  assert.equal(core.stripVenueSuffixFromTitle('Bears At The Beach', 'DCR Nantasket Beach'), 'Bears At The Beach');
+  assert.equal(core.stripVenueSuffixFromTitle('Jocks at Jacques', "JACQUE'S Cabaret"), 'Jocks at Jacques', 'not the bar as the bar spells itself');
+  assert.equal(core.stripVenueSuffixFromTitle('Game Night 2.0 at the Masonic Lodge', 'King Hiram Masonic Lodge'), 'Game Night 2.0 at the Masonic Lodge', 'the end of a name is not the name');
+  assert.equal(core.titleTailNamesBar('the Beach', 'DCR Nantasket Beach'), false);
+  assert.equal(core.titleTailNamesBar('Cabaret', "Jacque's Cabaret"), false);
+  assert.equal(core.titleTailNamesBar('Anchor', 'Crown & Anchor'), false);
+  // Every tail the run stripped for the right reason still goes.
+  assert.equal(core.stripVenueSuffixFromTitle('Bear Cave Friday at The 244 Spot', 'The 244 Spot'), 'Bear Cave Friday');
+  assert.equal(core.stripVenueSuffixFromTitle("Fursdays at Ty's", "Ty's Bar NYC"), 'Fursdays');
+  assert.equal(core.stripVenueSuffixFromTitle('Bears 4 Bareburger at Bareburger HK', 'Bareburger'), 'Bears 4 Bareburger');
+  assert.equal(core.stripVenueSuffixFromTitle('Fetish in the Mix 2026 @ Woof Berlin', 'Woof Berlin'), 'Fetish in the Mix 2026');
+  assert.equal(core.stripVenueSuffixFromTitle('World AIDS Day 2026 at Eagle', 'The Eagle Bar'), 'World AIDS Day 2026');
+  assert.equal(core.stripVenueSuffixFromTitle('Early Sundays at Stonewall', 'The Stonewall Inn'), 'Early Sundays');
+  assert.equal(core.stripVenueSuffixFromTitle('JXL at KYŌ', 'Kyō Kuala Lumpur'), 'JXL');
+  assert.equal(core.stripVenueSuffixFromTitle('Butterball at Rockbar', 'Rockbar NYC'), 'Butterball');
+  assert.equal(core.stripVenueSuffixFromTitle('Full Moon Festival at Paradise Beach Phuket', 'Paradise Beach'), 'Full Moon Festival', 'the whole name with a place word after it');
+  // City words set aside, the same name.
+  assert.equal(core.titleTailNamesBar('the Black Eagle', 'Black Eagle Toronto'), true);
+  // An "at" inside an open bracket is an aside, not the title's venue tail.
+  assert.equal(core.stripVenueSuffixFromTitle('BEAST (A Pre-Halloween at the Black Eagle)', 'Black Eagle Toronto'), 'BEAST (A Pre-Halloween at the Black Eagle)');
+  assert.equal(core.stripVenueSuffixFromTitle('BEAST (Pre-Halloween) at the Black Eagle', 'Black Eagle Toronto'), 'BEAST (Pre-Halloween)');
+});
+
+// ---------------------------------------------------------------------------
+// WHERE ONE PAGE'S ROWS ARE (2026-11-09): the page's home city is read before
+// any row is placed, so a city read from a word of a title or of a venue's
+// name can be weighed against the rest of the page (bearssitges.org's two
+// guest-club nights; theurbanbear.com's "FLEX HK").
+// ---------------------------------------------------------------------------
+
+function createPageCitiesCore() {
+  const { NormalizerPipeline: Pipeline } = require('./normalizers');
+  const cities = {
+    nyc: { timezone: 'America/New_York', patterns: ['new york', 'nyc'] },
+    sitges: { timezone: 'Europe/Madrid', patterns: ['sitges'] },
+    prague: { timezone: 'Europe/Prague', patterns: ['prague'] },
+    'palm-springs': { timezone: 'America/Los_Angeles', patterns: ['palm springs'] }
+  };
+  const core = new SharedCore(cities, { eventSchema: EventSchema });
+  const pipeline = new Pipeline(core);
+  if (typeof pipeline.setCore === 'function') pipeline.setCore(core);
+  return { core, pipeline };
+}
+
+// Rows of the real programme page, trimmed to title / venue / address.
+const SITGES_PROGRAMME_ROWS = () => [
+  { title: 'Bears Sitges Week 2026 Opening (cava & aperitif)', bar: 'Hotel Calipolis', address: 'Av. Sofia 2-6, 08870 Sitges' },
+  { title: 'BBQ & Music – POP-Air', bar: 'Le Patio', address: 'c/ JOAN TARRIDA 23, SITGES' },
+  { title: 'Bears Sitges MARKET', bar: 'Hotel Calipolis' },
+  { title: 'Mr. BEAR SITGES 2026', bar: 'Bear-Village' },
+  { title: '25th anniBEARsary Bears Sitges', bar: 'BEARS DISCO' },
+  { title: '1h a 06h BEEFMINCE DISCO Party', bar: 'The Bear Cave', address: 'Carrer de Bonaire 12, 08870 Sitges' },
+  { title: 'OPENING «EARLY-VILLAGE» 2026', bar: 'Bear-Village' },
+  { title: '20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en', bar: 'Bear-Village' },
+  { title: '30h a 03h NOCHE ESPECIAL «IBC Palm Springs» con DJ Retro', bar: 'Bear-Village' }
+];
+
+test('page cities: the home city of a page is read off its own rows, with the venues the page puts there; an aggregator has none', () => {
+  const { core, pipeline } = createPageCitiesCore();
+  const restore = silenceConsole();
+  try {
+    const page = core.readPageCities(SITGES_PROGRAMME_ROWS(), { name: 'Bears Sitges Week' }, pipeline);
+    assert.deepEqual(page.counts, { sitges: 6, prague: 1, 'palm-springs': 1 });
+    assert.equal(page.home, null, 'six of eight is under the source-home share');
+    // One more home row (the real page has seventeen) and the page has a home.
+    const rows = [...SITGES_PROGRAMME_ROWS(), { title: 'Sitges Drag Brunch', bar: 'Le Patio' }, { title: 'Bears Sitges PACKS', bar: 'Hotel Calipolis' }];
+    const full = core.readPageCities(rows, { name: 'Bears Sitges Week' }, pipeline);
+    assert.deepEqual(full.home, { city: 'sitges', count: 8, placed: 10 });
+    assert.deepEqual(full.venuesAtHome, ['hotelcalipolis', 'lepatio', 'bearvillage', 'bearsdisco', 'bearcave']);
+    // Nothing is written on the rows by the probe.
+    assert.ok(rows.every(row => row.city === undefined && row._citySource === undefined));
+    // An aggregator lists everybody's events: never asked.
+    assert.equal(core.readPageCities(rows, { name: 'Listings', siteRole: 'aggregator' }, pipeline), null);
+    assert.equal(core.readPageCities(rows.map(row => ({ ...row, _pageSiteRole: 'aggregator' })), {}, pipeline), null);
+    // No location reader in the pipeline: nothing can be said.
+    assert.equal(core.readPageCities(rows, {}, { normalizers: [] }), null);
+  } finally { restore(); }
+});
+
+test('page cities: prepareParsedEvents weighs a title-word city against the page — guest-club nights at the page\'s own venue stay home, a tour date does not move', async () => {
+  const { core, pipeline } = createPageCitiesCore();
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (message) => { lines.push(String(message)); };
+  let prepared;
+  try {
+    const rows = [
+      ...SITGES_PROGRAMME_ROWS(),
+      { title: 'Sitges Drag Brunch', bar: 'Le Patio' },
+      { title: 'Bears Sitges PACKS', bar: 'Hotel Calipolis' }
+    ];
+    prepared = await core.prepareParsedEvents(rows, { name: 'Bears Sitges Week' }, {}, 'multi-event-page', pipeline, null, 'https://bearssitges.org/bears-sitges-week/');
+  } finally { console.log = originalLog; }
+  const byTitle = title => prepared.find(event => event.title.includes(title));
+  assert.equal(byTitle('PRAGUE BEARS').city, 'sitges');
+  assert.equal(byTitle('PRAGUE BEARS')._citySource, 'page-home');
+  assert.equal(byTitle('IBC Palm Springs').city, 'sitges');
+  assert.equal(byTitle('Mr. BEAR SITGES').city, 'sitges');
+  assert.ok(lines.some(line => line.includes('names prague in its title') && line.includes('filed under sitges')), 'the move leaves a line');
+  assert.ok(lines.some(line => line.includes('names palm-springs in its title') && line.includes('filed under sitges')));
+});
+
+// ── A lone crawl event never takes over a record whose page stated its date ──
+// bearitmtl.com, run 20261109-053706: the hotel-discount page was read as
+// one event wearing the neighbouring party's night and door, stamped lone
+// (its date is stated nowhere on that page), then matched "SPOOKY
+// PLAYGROUND" by place and night. The merge arbitration gave the discount
+// page the title, the description and the website, and the lone stamp died
+// in the fold — the real party left the run as "Rabais Hotel - Festival
+// Sugar Bear 2026". Record shapes are the run's own, trimmed.
+function loneCrawlFoldFixtures() {
+  const party = {
+    title: 'SPOOKY PLAYGROUND',
+    description: 'Le party d\'Halloween des ours au Diamant Rouge.',
+    startDate: new Date('2026-10-31T02:00:00.000Z'), endDate: new Date('2026-10-31T07:00:00.000Z'),
+    bar: 'Diamant Rouge', address: '1681 SAINT-CATHERINE EST', city: 'montreal', timezone: 'America/Toronto',
+    website: 'https://www.bearitmtl.com/spooky-playground/',
+    image: 'https://www.bearitmtl.com/wp-content/uploads/2026/10/SPOOKY-Playground-Vignette_WEB-2.jpg',
+    source: 'ai-web', _extractionSource: 'ai', _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://www.bearitmtl.com/spooky-playground/', _parserConfig: { name: 'Bear it MTL' },
+    shortName: 'BEAR IT', _promoter: 'Bear it MTL', _organizer: 'Bear-IT - Ours et Fier'
+  };
+  const discountPage = {
+    title: 'Rabais Hotel - Festival Sugar Bear 2026',
+    description: 'Rabais Hotel - Festival Sugar Bear 2026 - Bear-IT - Ours et Fier',
+    startDate: new Date('2026-10-31T02:00:00.000Z'), endDate: new Date('2026-10-31T07:00:00.000Z'),
+    bar: 'Diamant Rouge', address: '1681 SAINT-CATHERINE EST', city: 'montreal', timezone: 'America/Toronto',
+    website: 'https://www.bearitmtl.com/rabais-hotel-festival-sugar-bear-2026/',
+    image: 'https://www.bearitmtl.com/wp-content/uploads/2026/03/rabais-hotel.jpg',
+    cover: '30$+1 FREE DRINK',
+    source: 'ai-web', _extractionSource: 'ai', _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://www.bearitmtl.com/rabais-hotel-festival-sugar-bear-2026/', _parserConfig: { name: 'Bear it MTL' },
+    shortName: 'BEAR IT', _promoter: 'Bear it MTL', _organizer: 'Bear-IT - Ours et Fier',
+    _loneCrawlWithheld: { page: 'https://www.bearitmtl.com/rabais-hotel-festival-sugar-bear-2026/', day: '2026-10-30', reason: 'the only event read from a page the crawl reached, and its date is stated nowhere on that page', near: [] }
+  };
+  return { party, discountPage };
+}
+
+test('lone crawl fold: a lone crawl event with a guessed date folds into the record whose page stated its date as blanks only — it never wins a field, never fills a link or an image, in either order, and says so', async () => {
+  const core = createCore();
+  for (const order of ['party-first', 'lone-first']) {
+    const { party, discountPage } = loneCrawlFoldFixtures();
+    const { result: merged, logs } = await withLogsAsync(() => order === 'party-first'
+      ? core.mergeParsedEvents(party, discountPage)
+      : core.mergeParsedEvents(discountPage, party));
+    assert.equal(merged.title, 'SPOOKY PLAYGROUND', order);
+    assert.equal(merged.description, 'Le party d\'Halloween des ours au Diamant Rouge.', order);
+    assert.equal(merged.website, 'https://www.bearitmtl.com/spooky-playground/', order);
+    assert.equal(merged.image, party.image, order);
+    assert.equal(merged.address, '1681 SAINT-CATHERINE EST', order);
+    assert.equal(merged.cover, '30$+1 FREE DRINK', 'a blank is filled');
+    assert.equal(merged._loneCrawlWithheld, undefined, 'the stated record is not withheld');
+    assert.equal(SharedCore.isLoneCrawlWithheld(merged), false);
+    assert.equal(merged._sourcePageUrl, 'https://www.bearitmtl.com/spooky-playground/', 'provenance stays the stated record\'s');
+    const line = logs.find(l => l.startsWith('🧭 LONE EVENT:'));
+    assert.ok(line && line.includes('"Rabais Hotel - Festival Sugar Bear 2026"') && line.includes('folded into "SPOOKY PLAYGROUND"') && line.includes('blanks filled: cover'), line);
+    assert.ok(!logs.some(l => l.includes('AI MERGE')), 'no arbitration ran');
+  }
+  // A link or an image is never a blank the lone page may fill.
+  const { party, discountPage } = loneCrawlFoldFixtures();
+  delete party.website; delete party.image;
+  discountPage.ticketUrl = 'https://www.bearitmtl.com/festival-sugar-bear-2026-passes/';
+  const { result: bare } = await withLogsAsync(() => core.mergeParsedEvents(party, discountPage));
+  assert.equal(bare.website, undefined);
+  assert.equal(bare.image, undefined);
+  assert.equal(bare.ticketUrl, undefined);
+  // …unless the stated record itself points at the lone page: a listing row
+  // and the detail page its own link opens (woofsatlanta.com "FAFO Fridays",
+  // same run — the calendar row links /events/fafo-fridays/, whose page
+  // states no date beside the name). The page's flyer fills the row's blank;
+  // the row's date is still the row's.
+  const row = { title: 'FAFO Fridays', startDate: new Date('2026-11-14T03:00:00.000Z'), bar: 'Woofs Atlanta', city: 'atlanta',
+    website: 'https://woofsatlanta.com/events/fafo-fridays/', source: 'ai-web', _sourcePageUrl: 'https://woofsatlanta.com/calendar/' };
+  const detail = { title: 'FAFO Fridays', startDate: new Date('2026-11-13T23:00:00.000Z'), bar: 'Woofs Atlanta', city: 'atlanta',
+    website: 'https://woofsatlanta.com/events/fafo-fridays/?occurrence=2', image: 'https://woofsatlanta.com/wp-content/uploads/fafo.jpg', source: 'ai-web',
+    _sourcePageUrl: 'https://woofsatlanta.com/events/fafo-fridays/',
+    _loneCrawlWithheld: { page: 'https://woofsatlanta.com/events/fafo-fridays/', day: '2026-11-13', reason: 'the only event read from a page the crawl reached, and no date is stated within six lines of its name', near: [] } };
+  const { result: own } = await withLogsAsync(() => core.mergeParsedEvents(detail, row));
+  assert.equal(own.image, 'https://woofsatlanta.com/wp-content/uploads/fafo.jpg', 'its own page\'s flyer fills the blank');
+  assert.equal(own.website, 'https://woofsatlanta.com/events/fafo-fridays/', 'a stated link is never restated');
+  assert.equal(new Date(own.startDate).toISOString(), '2026-11-14T03:00:00.000Z', 'the guessed date never wins');
+});
+
+test('lone crawl fold: the dedup pass folds the lone page into the real party and the party leaves under its own name; an owner-approved lone record and two lone records fold as before', async () => {
+  const core = createCore();
+  const { party, discountPage } = loneCrawlFoldFixtures();
+  const { result: folded, logs } = await withLogsAsync(() => core.deduplicateEvents([discountPage, party], null));
+  assert.equal(folded.length, 1, logs.join('\n'));
+  assert.equal(folded[0].title, 'SPOOKY PLAYGROUND');
+  assert.equal(folded[0].website, 'https://www.bearitmtl.com/spooky-playground/');
+  assert.equal(SharedCore.isLoneCrawlWithheld(folded[0]), false);
+
+  // Two lone records: neither page stated a date, the rule has no side to take.
+  const a = loneCrawlFoldFixtures().discountPage;
+  const b = { ...loneCrawlFoldFixtures().discountPage, description: '' };
+  const { result: both, logs: bothLogs } = await withLogsAsync(() => core.mergeParsedEvents(a, b));
+  assert.ok(!bothLogs.some(l => l.includes('folded into')), 'not this rule');
+  assert.equal(both.title, 'Rabais Hotel - Festival Sugar Bear 2026');
+  assert.ok(SharedCore.isLoneCrawlWithheld(both), 'two guesses stay withheld');
+
+  // The owner approved the lone record on the deck: it is an ordinary record again.
+  const approved = { ...loneCrawlFoldFixtures().discountPage, _ownerReviewApproved: true };
+  const { logs: approvedLogs } = await withLogsAsync(() => core.mergeParsedEvents(loneCrawlFoldFixtures().party, approved));
+  assert.ok(!approvedLogs.some(l => l.includes('folded into')), 'an approved record is not a guess any more');
+});
+
+// 2026-11-09 audit, crawl-junk 1d. bearitmtl.com, run 20261109-053706: every
+// page links itself as "?currency=CAD" and four pages were read twice.
+test('currency twins: a currency selector is not part of a link\'s identity, like a language selector; a parameter that selects content is', () => {
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const plain = 'https://www.bearitmtl.com/event/furry-takeover/';
+  assert.equal(core.getUrlDedupeKey(`${plain}?currency=CAD`), core.getUrlDedupeKey(plain));
+  assert.equal(core.isSameLinkTarget(`${plain}?currency=CAD`, plain), true);
+  assert.notEqual(core.getUrlDedupeKey(`${plain}?paged=2`), core.getUrlDedupeKey(plain));
+});
+
+// A VENUE'S STANDING LINE IS NOT ONE EVENT'S THEME (2026-11-09). Fixtures are
+// the thedallaseagle.com records of run 20261109-053706, descriptions trimmed.
+function buildStandingLineRecords() {
+  const page = 'https://www.thedallaseagle.com/events/';
+  const row = (title, description, startDate) => ({ title, description, bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago', _sourcePageUrl: page, startDate: new Date(startDate) });
+  return {
+    rewind: row('Sunday Funday: Rewind', 'Turn back time and turn up the dance floor at Rewind! 😎🦅 🦅 No dress code, take off your shirt and have fun. Lockers available for $5. 🍻 Get here early for Happy Hour 🧢 Our Leather Shop is Now Open! ⭐ No…', '2026-11-15T23:00:00.000Z'),
+    dragShow: row('UCLSE Drag Show', 'The Dallas Eagle welcomes back the United Court of the Lone Star Empire for their Drag Show! 👑 🍻 Enjoy low Happy Hour prices until 8pm 🧢 Our Leather Shop is Now Open! ⭐ No cover! Free Parking. Uber and Lyft ride shares are recommended. 🚗 #dallaseagle , ...', '2026-12-06T01:00:00.000Z'),
+    dirtyPop: row('Dirty Pop with DJ Drew G', 'Harder. Longer. Dirtier. 🦅 No dress code, just take off your shirt and have fun. Lockers available for $5 🍻 Get here early for Happy Hour 4pm 🧢 Our Leather Shop is Now Open! ⭐ No cover! Free Parking. Uber and Lyft ride shares are recommended.…', '2026-11-08T23:00:00.000Z'),
+    gearNight: row('Gear Night with DJ Tristan Jaxx', 'Grab your gear, it\'s time for GEAR NIGHT! Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🧢 Our Leather Shop is Now Open! ⭐…', '2026-11-22T03:00:00.000Z'),
+    thanksgiving: row('Dirty Bird Thanksgiving', 'Gobble Gobble! Celebrate Turkey Day at the Dirty Bird! 🦃🦅 🦅 Leather and fetish gear encouraged, but not required. Lockers available for clothes check for $5 🧢 Our Leather Shop is Now Open! ⭐ No cover! Free Parking. Uber and Lyft ride shares are recommended. 🚗 #dallaseagle , ...', '2026-11-27T03:00:00.000Z')
+  };
+}
+
+test('standing lines: a sentence one venue prints word for word under three different parties is never a tag candidate, the log names the record and the line, and the party\'s own sentence still is', async () => {
+  const core = createCore();
+  const records = buildStandingLineRecords();
+  const events = Object.values(records);
+
+  // Before the stamp the shop notice reads as a leather word on every row.
+  assert.ok(core.collectMachineEventTags(records.rewind).candidates.includes('leather'));
+  assert.deepEqual(core.splitDescriptionSentences('🧢 Our Leather Shop is Now Open! ⭐ No cover! Free Parking.').map(sentence => sentence.text),
+    ['Our Leather Shop is Now Open!', 'No cover!', 'Free Parking.'], 'an emoji bullet and closing punctuation both end a sentence');
+
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => lines.push(args.join(' '));
+  let kept;
+  let adapter;
+  try {
+    // The model confirms leather whenever it is asked, quoting the shop
+    // notice — what it did for the Thanksgiving opening in the real run.
+    adapter = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'no bear wording' }, { leather: { applies: true, eventEvidence: ['Our Leather Shop is Now Open!'], reason: 'leather shop' } });
+    kept = await core.filterBearEvents(events, bearCheckConfig('enforce'), adapter);
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.deepEqual(records.rewind._descriptionChromeSentences, ['lockers available for 5', 'our leather shop is now open'], 'only the lines three different parties carry are the venue\'s');
+  assert.ok(records.thanksgiving._descriptionChromeSentences.includes('our leather shop is now open'));
+  assert.ok(!records.thanksgiving._descriptionChromeSentences.includes('leather and fetish gear encouraged but not required'), 'a sentence only this event carries is its own');
+
+  // The shop notice alone seeds nothing: no tag question is asked, and the log says why.
+  for (const name of ['rewind', 'dragShow', 'dirtyPop']) {
+    const machine = core.collectMachineEventTags(records[name]);
+    assert.ok(!machine.candidates.includes('leather'), `${records[name].title}: the shop notice is not a leather candidate`);
+    assert.deepEqual(machine.siteLineHits.leather, { keywords: ['leather'], line: 'Our Leather Shop is Now Open!' });
+    assert.ok(lines.some(line => line.includes('🏷️ TAGS:') && line.includes(`"${records[name].title}"`) && line.includes('"Our Leather Shop is Now Open!"') && line.includes('not a candidate')), `${records[name].title}: the set-aside line is logged`);
+  }
+  const asked = adapter.calls.map(call => String(call.prompt || '')).filter(prompt => /^Tag: leather$/m.test(prompt));
+  assert.ok(!asked.some(prompt => prompt.includes('Sunday Funday: Rewind') || prompt.includes('Dirty Pop')), 'the model is not asked about a venue line');
+  assert.ok(!kept.some(event => event.title === 'Sunday Funday: Rewind' || event.title === 'Dirty Pop with DJ Drew G'), 'a not-bear night is no longer kept on the shop notice');
+  assert.ok(lines.some(line => line.includes('🧱 SITE LINES: thedallaseagle.com') && line.includes('at one venue')));
+
+  // The party's own words still count: the gear night is named in its title
+  // and its own sentences, and the Thanksgiving row's dress-code sentence is
+  // its own wording (no other party prints it word for word).
+  const gear = core.collectMachineEventTags(records.gearNight);
+  assert.ok(gear.candidates.includes('leather'));
+  assert.ok(gear.hits.leather.description.includes('leather'), 'its own sentences are still read');
+  assert.equal(gear.siteLineHits, undefined, 'nothing was set aside that its own words do not also say');
+  assert.ok(core.collectMachineEventTags(records.thanksgiving).candidates.includes('leather'), 'a reworded dress code is not caught by this rule');
+  assert.ok(kept.some(event => event.title === 'Gear Night with DJ Tristan Jaxx'));
+
+  // Nothing is cut from the description itself.
+  assert.ok(records.rewind.description.includes('Our Leather Shop is Now Open!'));
+});
+
+test('standing lines: nights of one party, parties that share a title word, and parties at different venues are not a venue\'s standing line', () => {
+  const core = createCore();
+  const page = 'https://venue.example/events/';
+  const line = 'Leather and gear welcome all night.';
+  const row = (title, bar = 'The Venue', extra = '') => ({ title, description: `${extra} ${line}`.trim(), bar, _sourcePageUrl: page, startDate: new Date('2026-11-20T03:00:00.000Z') });
+  const silence = (run) => { const original = console.log; console.log = () => {}; try { return run(); } finally { console.log = original; } };
+
+  // Rows, not parties: twelve nights of one weekly party are one title — and
+  // the night's DJ does not make it another one.
+  const nights = [row('Filth'), row('Filth'), row('FILTH with DJ Gamma'), row('Filth w/ DJ Delta')];
+  silence(() => core.applyDescriptionChromeFlags(nights));
+  assert.ok(nights.every(event => event._descriptionChromeSentences === undefined), 'one party repeating its own line');
+
+  // A family: every carrier shares a title word, so the line is the family's.
+  const family = [row('Sunday Funday: Rewind'), row('Sunday Funday: Disco'), row('Sunday Funday: Latin')];
+  silence(() => core.applyDescriptionChromeFlags(family));
+  assert.ok(family.every(event => event._descriptionChromeSentences === undefined), 'a family of parties');
+
+  // Three venues: what a festival's parties have in common, not a venue line.
+  const venues = [row('Opening Party', 'Bar One'), row('Tea Dance', 'Bar Two'), row('Closing Ball', 'Bar Three')];
+  silence(() => core.applyDescriptionChromeFlags(venues));
+  assert.ok(venues.every(event => event._descriptionChromeSentences === undefined), 'three venues');
+
+  // Two parties are not many.
+  const two = [row('Opening Party'), row('Tea Dance')];
+  silence(() => core.applyDescriptionChromeFlags(two));
+  assert.ok(two.every(event => event._descriptionChromeSentences === undefined));
+
+  // Three different parties at one venue: the venue's line. A re-run on a
+  // smaller set clears an old stamp.
+  const three = [row('Opening Party'), row('Tea Dance', 'The Venue', 'Disco classics until late.'), row('Closing Ball')];
+  silence(() => core.applyDescriptionChromeFlags(three));
+  assert.ok(three.every(event => Array.isArray(event._descriptionChromeSentences) && event._descriptionChromeSentences.length === 1));
+  assert.deepEqual(core.getDescriptionWithoutSiteLines(three[1]), { text: 'Disco classics until late.', siteLines: [line] });
+  silence(() => core.applyDescriptionChromeFlags(three.slice(0, 2)));
+  assert.equal(three[0]._descriptionChromeSentences, undefined);
+  assert.deepEqual(core.getDescriptionWithoutSiteLines(three[0]), { text: line, siteLines: [] }, 'no stamp: the description is read whole');
+});
+
+test('standing lines: a generic bear word only in a venue\'s standing line is not keyword evidence when no model can be asked; a registry brand named in one still decides', async () => {
+  const registry = [{ name: 'Bearracuda', bearAffinity: 'always' }];
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, promoters: registry });
+  const page = 'https://venue.example/events/';
+  const row = (title, description) => ({ title, description, bar: 'The Venue', _sourcePageUrl: page, startDate: new Date('2026-11-20T03:00:00.000Z') });
+  const down = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'x' }, {}, { fail: true });
+  const config = bearCheckConfig('enforce');
+  const run = async (events, target) => {
+    const lines = [];
+    const original = console.log;
+    console.log = (...args) => lines.push(args.join(' '));
+    try {
+      core.applyDescriptionChromeFlags(events);
+      return { decision: await core.computeBearCheckVerdict(target, config, down), lines };
+    } finally {
+      console.log = original;
+    }
+  };
+
+  // The same sentence under ONE party is that party's own description.
+  const own = row('Trivia Tuesday', 'Bears and cubs drink free.');
+  const alone = await run([own], own);
+  assert.equal(alone.decision.result, 'bear', 'unchanged: with no model, a description keyword keeps its legacy verdict');
+  assert.match(alone.decision.provenance, /keyword: .*\(ai unavailable\)/);
+
+  // Under three different parties it is the venue's line.
+  const generic = ['Trivia Tuesday', 'Karaoke', 'Drag Bingo'].map(title => row(title, `${title} starts at eight. Bears and cubs drink free.`));
+  const standing = await run(generic, generic[0]);
+  assert.equal(standing.decision.result, 'unsure', 'flagged for review, not kept on the venue\'s line and not dropped');
+  assert.ok(standing.lines.some(line => line.includes('🐻 BEAR CHECK: "Trivia Tuesday"') && line.includes('"Bears and cubs drink free."') && line.includes('not keyword evidence')), 'the log names the record and the line');
+
+  // A registry brand is curated identity wherever the page prints it.
+  const branded = ['Opening Party', 'Tea Dance', 'Closing Ball'].map(title => row(title, `${title}. Presented by Bearracuda.`));
+  const brand = await run(branded, branded[0]);
+  assert.deepEqual(branded[0]._descriptionChromeSentences, ['presented by bearracuda']);
+  assert.equal(brand.decision.result, 'bear');
+  assert.match(brand.decision.provenance, /^keyword: /);
+});
+
+// ── 2026-11-09 audit, crawl-junk 6: invisible marks in a title ──
+// studsf.com, run 20261109-053706: the site's name is a lone U+200E, so its
+// item pages state "<event> — <site name>" as "Bear Happy Hour SF — ‎".
+// The item-page record folded into the clean collection record by event-page
+// URL and source priority kept the marked title without a word; 3 kept
+// records carried it (two already saved that way, chip "SF — ‎").
+test('invisible marks: a zero-width or direction mark and the separator left dangling beside it are not part of a title; emoji joiners and soft hyphens stay', () => {
+  const strip = (title) => SharedCore.stripInvisibleTitleMarks(title);
+  // The page's own strings (JSON-LD Event.name, og:title).
+  assert.equal(strip('Muscle Mommy Pageant  —   ‎ '), 'Muscle Mommy Pageant');
+  assert.equal(strip('Bear Happy Hour SF — ‎'), 'Bear Happy Hour SF');
+  assert.equal(strip('‎ — Tea Dance'), 'Tea Dance', 'the same join at the front');
+  assert.equal(strip('﻿Bears ​| ‎'), 'Bears');
+  assert.equal(strip('Bear​racuda'), 'Bearracuda', 'a mark inside a word prints nothing');
+  assert.equal(strip('‎'), '', 'a title of marks alone is no title');
+  // Left exactly as they were: no mark, a joiner that builds an emoji, a
+  // soft hyphen, and a dangling separator on a title that carries no mark.
+  for (const title of ['Muscle Mommy Pageant', "THICK 'N' JUICY ❤️‍🔥 Brisbane", 'BEEF­MINCE', 'Bear Night —', 'Alley Bears - Gear Night!', '']) {
+    assert.equal(strip(title), title, title);
+  }
+  assert.equal(strip('Woof ‍'), 'Woof', 'a joiner that joins nothing');
+  assert.equal(SharedCore.showInvisibleTitleMarks('Gemini — ‎'), 'Gemini — <U+200E>');
+
+  const pick = (a, b) => SharedCore.pickTitleWithoutInvisibleMarks(a, b);
+  assert.equal(pick('Gemini', 'Gemini — ‎'), 'a');
+  assert.equal(pick('Gemini — ‎', 'Gemini'), 'b');
+  assert.equal(pick('Gemini', 'Gemini'), null);
+  assert.equal(pick('Gemini', 'GEMINI — ‎'), null, 'another case is another spelling — the ladder decides');
+  assert.equal(pick('Gemini', 'Gemini Rising — ‎'), null, 'real words differ');
+  assert.equal(pick('Gemini‎', 'Gemini — ‎'), null, 'no clean side to pick');
+  assert.equal(pick('Gemini —', 'Gemini — ‎'), null);
+});
+
+test('invisible marks: in a fold the title without them stands, in either order and against source priority, and the log names both', async () => {
+  const core = createCore();
+  const adapter = buildArbitrationAdapter({});
+  const start = new Date('2026-11-21T05:00:00.000Z');
+  // The real pair: the Squarespace collection row and its own item page.
+  const collection = () => ({
+    title: 'Muscle Mommy Pageant', bar: 'The Stud', city: 'sf', startDate: start, endDate: new Date('2026-11-21T10:00:00.000Z'),
+    source: 'squarespace', _titleFromListing: true, _pageOrigin: 'crawl', _sourcePageUrl: 'https://www.studsf.com/calendar',
+    website: 'https://www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant'
+  });
+  const itemPage = () => ({
+    title: 'Muscle Mommy Pageant — ‎', bar: 'The Stud', city: 'sf', startDate: start, endDate: new Date('2026-11-21T10:00:00.000Z'),
+    source: 'ai-web', _extractionSource: 'jsonld', _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant',
+    website: 'https://www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant',
+    // What the run's records carried: only the item page's source is listed.
+    _fieldPriorities: { title: { priority: ['ai-web'], merge: 'ai' } }, _parserConfig: TEST_AI_PARSER_CONFIG
+  });
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let merged; let flipped; let other;
+  try {
+    merged = await core.mergeParsedEvents(collection(), itemPage(), { httpAdapter: adapter });
+    flipped = await core.mergeParsedEvents(itemPage(), { ...collection(), _fieldPriorities: itemPage()._fieldPriorities }, { httpAdapter: adapter });
+    // A title that differs in real words is not this rule's to decide.
+    other = await core.mergeParsedEvents(collection(), { ...itemPage(), title: 'Mommy Issues — ‎' }, { httpAdapter: adapter });
+  } finally { console.log = quiet; }
+  assert.equal(merged.title, 'Muscle Mommy Pageant');
+  assert.equal(flipped.title, 'Muscle Mommy Pageant');
+  assert.ok(logs.some(line => line.includes('🏷️ MERGE: "Muscle Mommy Pageant" field=title — the other copy ("Muscle Mommy Pageant — <U+200E>") only adds invisible marks; the title without them stands')), logs.join('\n'));
+  assert.equal(other.title, 'Mommy Issues — ‎', 'source priority decides as before');
+});
+
+test('invisible marks: a saved title that carries them yields to the clean name the source states — a spelling fix, not a rename; a saved spelling in another case still stays', async () => {
+  const core = createReviewCore();
+  const resolve = (a, b, labels) => core.resolveConflictDeterministically('title', a, b,
+    { records: { a: { title: a, bar: 'The Stud' }, b: { title: b, bar: 'The Stud' } }, sideLabels: labels });
+  const marked = 'Bear Happy Hour SF — ‎';
+  const saved = resolve(marked, 'Bear Happy Hour SF', { a: 'calendar', b: 'scraped' });
+  assert.equal(saved.winner, 'b');
+  assert.match(saved.reason, /only adds invisible marks/);
+  assert.equal(resolve('Bear Happy Hour SF', marked, { a: 'calendar', b: 'scraped' }).winner, 'a', 'whichever side carries them');
+  assert.equal(resolve(marked, 'Bear Happy Hour SF', { a: 'existing', b: 'incoming' }).winner, 'b', 'between two parser records too');
+  // The folds beside it are untouched.
+  assert.match(resolve('FUZZY', 'Fuzzy', { a: 'calendar', b: 'scraped' }).reason, /saved spelling stays/);
+  assert.match(resolve('BEAR HAPPY HOUR SF', marked, { a: 'calendar', b: 'scraped' }).reason, /saved spelling stays/, 'case is still the owner\'s call');
+  assert.deepEqual(core.resolveConflictDeterministically('title', 'Juicy ❤️‍🔥', 'Juicy'),
+    { winner: 'a', reason: 'emoji title variant beats its emoji-stripped twin' });
+
+  // End to end: the saved Nov 12 night of run 20261109-053706.
+  const start = new Date('2026-11-13T01:00:00.000Z');
+  const end = new Date('2026-11-13T04:00:00.000Z');
+  const scraped = {
+    title: 'Bear Happy Hour SF', startDate: new Date(start), endDate: new Date(end), bar: 'The Stud', address: 'SOMA San Francisco, CA',
+    city: 'sf', timezone: 'America/Los_Angeles', website: 'https://linktr.ee/bearhappyhour', bearSource: 'keyword',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { name: 'The Stud', dryRun: false, ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } },
+    _sourcePageUrl: 'https://www.studsf.com/calendar'
+  };
+  const existing = {
+    title: marked, startDate: new Date(start), endDate: new Date(end), location: '', url: '',
+    notes: 'bar: The Stud\naddress: SOMA San Francisco, CA\nwebsite: https://linktr.ee/bearhappyhour'
+  };
+  const asked = [];
+  const adapter = {
+    getExistingEvents: async () => [existing],
+    postJson: async (endpoint, payload) => { asked.push(String(payload.prompt || '')); return { ok: true, status: 200, text: JSON.stringify({ response: '' }) }; }
+  };
+  const logs = [];
+  const quiet = console.log; console.log = (...args) => logs.push(args.join(' '));
+  let prepared;
+  try { prepared = await core.prepareEventsForCalendar([scraped], adapter, {}); } finally { console.log = quiet; }
+  assert.equal(prepared[0]._action, 'merge');
+  assert.equal(prepared[0].title, 'Bear Happy Hour SF', 'the calendar gets the clean name');
+  assert.equal(prepared[0]._bigDriftWithheld, undefined, 'not a rename: nothing is withheld');
+  assert.ok(!asked.some(prompt => prompt.includes('\u200e')), 'no model is asked to pick between the two');
+  assert.ok(logs.some(line => line.includes('field=title resolved deterministically') && line.includes('only adds invisible marks')), logs.filter(line => /MERGE/.test(line)).join('\n'));
+});

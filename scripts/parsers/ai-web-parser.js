@@ -1003,7 +1003,13 @@ class AiWebParser {
         // eaglemanchester.com/event-details/hellbent-12?lang=de beside the
         // plain page and the model then picked the "more canonical" ?lang=de
         // as the event's url. Mirrors SharedCore.localeParamPattern.
-        this.localeParamPattern = /^(lang|locale|hl|language)$/i;
+        //
+        // A currency selector is the same kind of parameter: it names the
+        // money the prices are shown in, never a different page. Run
+        // 20261109-053706 crawled four bearitmtl.com pages a second time as
+        // "?currency=CAD" (each declaring the plain URL as its canonical) and
+        // read the listing's events twice.
+        this.localeParamPattern = /^(lang|locale|hl|language|currency)$/i;
         // Detects lines that are primarily CSS content (e.g. leaked from unclosed or inline <style> blocks).
         // Matches 3+ occurrences of a CSS property name immediately followed by ":" with no space before the colon.
         this.cssContentLineRegex = /\b(cursor|color|background-color|background-image|background-size|font-size|font-weight|font-family|font-style|border-radius|border-color|border-width|border-style|margin|margin-top|margin-bottom|margin-left|margin-right|padding|padding-top|padding-bottom|padding-left|padding-right|display|position|overflow|z-index|box-sizing|box-shadow|flex|flex-shrink|flex-grow|flex-basis|align-items|justify-content|line-height|text-decoration|text-align|text-transform|opacity|min-width|max-width|min-height|max-height|width|height|top|left|right|bottom|transform|transition|animation|white-space|word-break|word-wrap|outline|visibility|pointer-events|vertical-align|letter-spacing|gap):/gi;
@@ -1567,10 +1573,22 @@ class AiWebParser {
                 // normalizeAiEvent never saw them.
                 structuredEvents.forEach(event => {
                     if (!event || typeof event.title !== 'string' || !event.title.trim()) return;
+                    // First of the cleanups: every one below reads letters.
+                    const unmarkedTitle = this.stripInvisibleTitleMarks(event.title);
+                    if (unmarkedTitle !== event.title) {
+                        console.log(`🏷️ TITLE: "${this.showInvisibleTitleMarks(event.title)}" → "${unmarkedTitle}" — invisible marks (and the separator left dangling beside them) are not part of a name`);
+                        event.title = unmarkedTitle;
+                        if (!event.title) return;
+                    }
                     const strippedTitle = this.stripLeadingDatePhraseFromTitle(event.title);
                     if (strippedTitle !== event.title) {
                         console.log(`🤖 AI Web: Stripped leading date from title "${event.title}" → "${strippedTitle}"`);
                         event.title = strippedTitle;
+                    }
+                    const unclockedTitle = this.stripLeadingClockFromTitle(event.title);
+                    if (unclockedTitle !== event.title) {
+                        console.log(`🤖 AI Web: Stripped leading clock from title "${event.title}" → "${unclockedTitle}"`);
+                        event.title = unclockedTitle;
                     }
                     // …and the redundant-date strip, for the same reason. Only
                     // the leading-phrase strip was copied here originally, so
@@ -3158,9 +3176,16 @@ class AiWebParser {
             // over; when the model returns nothing for it, the row itself is
             // the extraction. furball.nyc's ticker lost Boston this way
             // (title returned, startdate null on both passes).
-            const compactRow = this.readCompactListingRow(promptHtmlData);
+            const compactRowParts = this.readCompactListingRowParts(promptHtmlData);
+            const compactRow = compactRowParts
+                ? { title: compactRowParts.title, startDate: compactRowParts.startDate, bar: compactRowParts.bar }
+                : null;
             const rowEvent = compactRow
-                ? this.normalizeAiEvent({ ...compactRow }, parserConfig, promptHtmlData, cityConfig, promptFields)
+                ? this.normalizeAiEvent({
+                    ...compactRow,
+                    // The year the row printed is the page's statement.
+                    ...(compactRowParts.statedYear ? { __explicitSourceYears: { start: compactRowParts.statedYear } } : {})
+                }, parserConfig, promptHtmlData, cityConfig, promptFields)
                 : null;
             if (rowEvent && rowEvent.title && rowEvent.startDate) {
                 console.log(`🤖 AI Web: Compact listing row read as the event: "${compactRow.title}" on ${compactRow.startDate}${compactRow.bar ? ` at ${compactRow.bar}` : ''}`);
@@ -3177,7 +3202,12 @@ class AiWebParser {
         // schedule notice is not an event; reject it here at the single
         // normalization choke point so every extraction path (segments,
         // single pages, detail crawls) is covered.
-        if (this.isVenueHoursNoticeTitle(event.title)) {
+        // Every title-shape guard below reads the name the PAGE stated: the
+        // brand prefixer runs inside normalizeAiEvent, before them, and a
+        // prefixed label ("Bear Jamboree: Hotel", run 20261109-053706) is
+        // no longer the shape any of them tests (see pageStatedTitle).
+        const statedTitle = this.pageStatedTitle(event);
+        if (this.isVenueHoursNoticeTitle(statedTitle)) {
             console.log(`🤖 AI Web: Skipped venue-hours notice "${event.title}" — not an event`);
             return null;
         }
@@ -3187,7 +3217,7 @@ class AiWebParser {
         // through to preview). Same linguistic-generic contract as the
         // venue-hours gate above: shape classes only, no site rules, and only
         // a title that is NOTHING but a postal code is rejected.
-        if (this.isPostalCodeOnlyTitle(event.title)) {
+        if (this.isPostalCodeOnlyTitle(statedTitle)) {
             console.log(`🤖 AI Web: Skipped degenerate event "${event.title}" — title is a postal code, not an event`);
             return null;
         }
@@ -3195,14 +3225,14 @@ class AiWebParser {
         // rejectDayHeaderEchoPassFields gate): if every pass still left a
         // weekday heading as the title, the segment named no real activity —
         // a schedule heading is not an event.
-        if (this.isDayHeaderEchoTitle(event.title)) {
+        if (this.isDayHeaderEchoTitle(statedTitle)) {
             console.log(`🤖 AI Web: Skipped day-header echo "${event.title}" — weekday heading, not an event name`);
             return null;
         }
         // Collection-name backstop (same class as the pass-level gate in
         // rejectPageTitleEchoPassFields): a title that is the page's own
         // JSON-LD CollectionPage/ItemList name is the listing, not a night.
-        if (this.titleIsPageCollectionName(event.title, htmlData)) {
+        if (this.titleIsPageCollectionName(statedTitle, htmlData)) {
             console.log(`🤖 AI Web: Skipped collection-page name "${event.title}" — the page's own name (JSON-LD CollectionPage/ItemList), not an event`);
             return null;
         }
@@ -3216,7 +3246,7 @@ class AiWebParser {
         // Night" — anything with a non-chrome word — never qualifies, and a
         // chrome-named listing that really does state a time or a cover is
         // kept and left for a human.
-        if (this.isSiteChromeTitle(event.title)) {
+        if (this.isSiteChromeTitle(statedTitle)) {
             if (this.hasScheduleOrPriceSignal(event)) {
                 console.log(`🤖 AI Web: Site-chrome title "${event.title}" carries a time/price signal — kept, verify manually`);
             } else {
@@ -3285,6 +3315,7 @@ class AiWebParser {
             }
             event._aiValidation = report;
         }
+        this.stampStatedTitles(event, aiEvent, promptHtmlData, evidenceContext);
         // Evidence-pointer rescue candidates (LOG-ONLY observation phase):
         // stash on the event as an underscore field (never serialized into
         // notes — same systematic exclusion as _geoPoi*) so the results-UI
@@ -3307,6 +3338,52 @@ class AiWebParser {
             }
         }
         return event;
+    }
+
+    // THE NAME THE PAGE STATED, stamped where the first trim happens: the
+    // model's answer. The model returns the short reusable name and quotes
+    // the page's line as its evidence — atlantaeagle.com's card line
+    // "Southern Bears Lumberjack ft. Fer Juz" came back as title
+    // "Lumberjack", and the bear check then never saw the word "Bears" (run
+    // 20261109-053706). The saved title is left alone; the longer name goes
+    // on event._statedTitles, which the bear keyword tier and the tag
+    // keyword match read beside the title (SharedCore.statedNameBehindTitle
+    // holds the one test for what counts). Candidates, all the page's own
+    // words: the listing title of the card, the card's own lines, and the
+    // span the model's title evidence points at. A brand the pipeline
+    // prefixed is not part of the name being compared.
+    stampStatedTitles(event, aiEvent, htmlData, evidenceContext) {
+        const core = this.core;
+        if (!event || !core || typeof core.noteStatedTitle !== 'function') return;
+        const title = typeof event._titleBeforeBrandPrefix === 'string' && event._titleBeforeBrandPrefix.trim()
+            ? event._titleBeforeBrandPrefix
+            : event.title;
+        if (typeof title !== 'string' || !title.trim()) return;
+        const candidates = [];
+        if (htmlData && typeof htmlData.segmentListingTitle === 'string') candidates.push(htmlData.segmentListingTitle);
+        for (const line of (htmlData && Array.isArray(htmlData.segmentCardLines) ? htmlData.segmentCardLines : [])) {
+            if (typeof line === 'string') candidates.push(line);
+        }
+        const evidence = aiEvent && aiEvent.__fieldEvidence && typeof aiEvent.__fieldEvidence === 'object'
+            && typeof aiEvent.__fieldEvidence.title === 'string'
+            ? aiEvent.__fieldEvidence.title
+            : '';
+        const raw = evidenceContext && typeof evidenceContext.raw === 'string' ? evidenceContext.raw : '';
+        if (evidence && raw) {
+            // Models quote with single quotes as often as double.
+            const fragments = this.extractEvidenceQuoteFragments(evidence)
+                .concat((evidence.match(/'[^']{4,140}'/g) || []).map(quoted => quoted.slice(1, -1)));
+            for (const fragment of fragments) {
+                const span = this.locateEvidenceFragmentSpan(fragment, raw);
+                if (span) candidates.push(span);
+            }
+        }
+        for (const candidate of candidates) {
+            const added = core.noteStatedTitle(event, candidate, title);
+            if (added) {
+                console.log(`🏷️ TITLE: "${event.title}" is a trim of the name the page stated, "${added}" — the saved title stays; the bear check and the tags read both`);
+            }
+        }
     }
 
     // Deterministic venue-hours notice detector: true when a title consists of
@@ -3406,6 +3483,11 @@ class AiWebParser {
         if (/^(?:bar\s+|venue\s+|we\s+are\s+|we're\s+)?closed(?:\s*[!.]*$|\s+(?:for|due|until|till|today|tonight|tomorrow|on|this|thru|through|thanksgiving|christmas|x-?mas|new\s+year|labou?r|memorial|easter|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)/i.test(text)) return true;
         if (/^(?:no\s+events?|dark)\s*(?:tonight|today|this\s+\w+)?\s*[!.]*$/i.test(text)) return true;
         if (/^we\s+(?:will\s+)?re-?open\b/i.test(text)) return true;
+        // A row named only "PRIVATE EVENT" is the same notice without the
+        // word "closed" (rockbarnyc.com, run 20261109-053706: "PRIVATE
+        // EVENT" — "Tonight, we will be CLOSED after 10pm for a PRIVATE
+        // EVENT"). A private party with a name is still a name.
+        if (/^(?:a\s+)?private\s+(?:event|party|function|hire|booking)\s*[!.]*$/i.test(text)) return true;
         return false;
     }
 
@@ -3445,18 +3527,58 @@ class AiWebParser {
             .some(url => this.getUrlDedupeKey(this.normalizeUrl(url, url)) === this.getUrlDedupeKey(sourceUrl));
         if (configured) return;
         if (!(event.startDate instanceof Date) || Number.isNaN(event.startDate.getTime())) return;
+        // The name is looked for as the page stated it — the brand
+        // prefixer's "Brand: <name>" is on no page ("Bear Jamboree: Sunday
+        // tea dance" was reported as "its name is not in the page's text").
+        const statedTitle = this.pageStatedTitle(event);
         // A date the page's own structured data or a stated rule produced
         // is not the model's guess.
-        if (event._barFromJsonLd || event._startDateRawText || event._dateOrigin || event._extractionSource === 'jsonld') return;
+        if (event._barFromJsonLd || event._startDateRawText || event._extractionSource === 'jsonld') return;
+        if (event._dateOrigin) {
+            // …with one exception. The rule may rest on nothing but a
+            // cadence phrase read off the WHOLE page (an unsplit page has
+            // no row to look in), and the name may be nothing but a label
+            // of the page's own menu: bearjamboree.com/hotel on run
+            // 20261109-053706 — the menu says "Hotel", the <title> says
+            // "Hotel | Bear Jamboree", a sentence about the pool's opening
+            // hours says "Sunday nights", and "Bear Jamboree: Hotel" became
+            // a weekly Sunday party. The page named no event and stated no
+            // date; the same shape can also be a real weekly night with a
+            // menu entry of its own, so it is shown to the owner, not
+            // dropped. A page that prints the name as a line of its own
+            // outside the menu (a heading) is untouched.
+            const origin = event._dateOrigin;
+            const cadenceOffWholePage = origin && origin.kind === 'rrule-fallback' && origin.vouchKind === 'cadence'
+                && origin.window === 'page' && !origin.statedFutureDate;
+            const pageHtml = htmlData && typeof htmlData.html === 'string' ? htmlData.html : '';
+            if (!cadenceOffWholePage || !this.titleIsOnlyAMenuLabel(statedTitle, pageHtml)) return;
+            const menuDayParts = this.localDateParts(event.startDate, event._timezoneUnresolved ? 'UTC' : (event.timezone || null));
+            const phrase = String(origin.vouchedBy || '').trim();
+            const menuReason = `the only event read from a page the crawl reached, named only by a label of the page's own menu, and dated only by ${phrase ? `the words "${phrase}"` : 'a cadence phrase'} somewhere on the page`;
+            const foldLine = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+            const pageLines = this.decodeBasicEntities(this.stripTags(pageHtml
+                .replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+                .replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt)>/gi, '$&\n')))
+                .split('\n').map(line => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+            const phraseAt = phrase ? pageLines.findIndex(line => foldLine(line).includes(foldLine(phrase))) : -1;
+            event._loneCrawlWithheld = {
+                page: sourceUrl,
+                day: menuDayParts ? `${menuDayParts.year}-${String(menuDayParts.month).padStart(2, '0')}-${String(menuDayParts.day).padStart(2, '0')}` : '',
+                reason: menuReason,
+                near: (phraseAt >= 0 ? pageLines.slice(Math.max(0, phraseAt - 3), phraseAt + 4) : []).map(line => line.slice(0, 160))
+            };
+            console.log(`🧭 LONE EVENT: "${event.title}" on ${sourceUrl} — ${menuReason}; withheld for the owner`);
+            return;
+        }
         // Block boundaries are line breaks: "beside the name" is measured in
         // the page's own lines, not in whatever whitespace the markup had.
         const lined = htmlData && typeof htmlData.html === 'string'
             ? { ...htmlData, html: htmlData.html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt)>/gi, '$&\n') }
             : htmlData;
-        const windowInfo = this.undatedRowWindow(lined, event.title);
+        const windowInfo = this.undatedRowWindow(lined, statedTitle);
         if (!windowInfo) return;
         const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim();
-        const title = fold(event.title);
+        const title = fold(statedTitle);
         const lines = windowInfo.lines.slice(1); // the first entry is the title itself (undatedRowWindow prepends it)
         let at = -1;
         for (let i = 0; i < lines.length; i++) { if (title && fold(lines[i]).includes(title)) { at = i; break; } }
@@ -3564,7 +3686,7 @@ class AiWebParser {
         const prose = ` ${fold(furniture.prose)} `;
         const kept = [];
         for (const event of list) {
-            const title = fold(event.title);
+            const title = fold(this.pageStatedTitle(event));
             if (!title || prose.includes(` ${title} `)) { kept.push(event); continue; }
             let reason = '';
             if (furniture.buttons.has(title)) reason = 'the label of a button';
@@ -3619,14 +3741,53 @@ class AiWebParser {
                 || new RegExp(`^${STREET_FIRST}\\.?\\s+(?:[\\p{L}.'-]+\\s){1,4}\\d{1,4}[a-z]?$`, 'iu').test(line))) return 'a street line';
         // A locale tag or a bare language name from a feed.
         if (/^[a-z]{2}(?:[-_][A-Z]{2})?$/.test(line)) return 'a locale tag';
+        // What is left of a post's byline once its date is read off the
+        // front: "June 25, 2021 / Stud SF" → "/ Stud SF" (studsf.com/podcast,
+        // run 20261109-053706, thirteen "events"). No name opens with a slash.
+        if (/^[\/\\]\s*\S/.test(line)) return 'a byline fragment';
         return '';
+    }
+
+    // The name the page stated for this record: the title as it stood
+    // before the brand prefixer rewrote it, else the title. Every
+    // furniture test reads this — "Bear Jamboree: Hotel" is no shape at
+    // all, "Hotel" is the page's menu label (run 20261109-053706).
+    pageStatedTitle(event) {
+        const stated = event && typeof event._titleBeforeBrandPrefix === 'string' ? event._titleBeforeBrandPrefix.trim() : '';
+        return stated || (event && typeof event.title === 'string' ? event.title : '');
+    }
+
+    // Is this title page furniture by its shape alone — and which kind?
+    // One answer for the brand prefixer (which never dresses furniture up
+    // as "Brand: <label>") from the same shape rules the drops use.
+    describeFurnitureTitle(title) {
+        const shape = AiWebParser.furnitureTitleShape(title);
+        if (shape) return shape;
+        if (this.isVenueHoursNoticeTitle(title)) return 'an opening-hours notice';
+        if (this.isPostalCodeOnlyTitle(title)) return 'a postal code';
+        if (this.isDayHeaderEchoTitle(title)) return 'a weekday heading';
+        if (this.isSiteChromeTitle(title)) return 'a navigation or account link';
+        return '';
+    }
+
+    // The title is the label of a link in the page's own menu (<nav>, or
+    // role=navigation) and stands as a line of its own nowhere outside
+    // that menu: the page never names an event by it — the model took the
+    // name from the menu, or from the <title> tag the menu label repeats.
+    titleIsOnlyAMenuLabel(title, html) {
+        const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\p{L}\p{N}]+/gu, ' ').replace(/\s+/g, ' ').trim();
+        const key = fold(title);
+        if (!key) return false;
+        const furniture = this.collectPageFurnitureTexts(html);
+        return furniture.menuLabels.has(key) && !furniture.linesOutsideMenu.has(key);
     }
 
     dropFurnitureShapedTitles(events, sourceUrl = '') {
         const list = Array.isArray(events) ? events.filter(Boolean) : [];
         const kept = [];
         for (const event of list) {
-            const reason = AiWebParser.furnitureTitleShape(event.title);
+            const reason = AiWebParser.furnitureTitleShape(this.pageStatedTitle(event));
             if (!reason) { kept.push(event); continue; }
             console.log(`🪑 FURNITURE: "${event.title}" is ${reason} on ${sourceUrl || 'this page'} — not an event`);
         }
@@ -3649,8 +3810,36 @@ class AiWebParser {
         };
         const buttons = new Set();
         const captions = [];
+        // The page's own menu: the label of every link inside <nav> or a
+        // role=navigation element, and the page's lines with those menus
+        // (and the <head>) removed — so "named only by the menu" can be
+        // asked (see titleIsOnlyAMenuLabel).
+        const menuLabels = new Set();
+        const linesOutsideMenu = new Set();
+        if (source && /<nav\b|role\s*=\s*["']navigation["']/i.test(source)) {
+            let outside = source.replace(/<head\b[\s\S]*?<\/head>/gi, ' ')
+                .replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ');
+            const takeMenu = (inner) => {
+                String(inner || '').replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, (whole, label) => {
+                    const text = textOf(label);
+                    if (text) menuLabels.add(text);
+                    return ' ';
+                });
+                return '\n';
+            };
+            outside = outside.replace(/<nav\b[^>]*>([\s\S]*?)<\/nav>/gi, (whole, inner) => takeMenu(inner));
+            outside = outside.replace(/<([a-z][a-z0-9]*)\b[^>]*\brole\s*=\s*["']navigation["'][^>]*>([\s\S]*?)<\/\1>/gi, (whole, name, inner) => takeMenu(inner));
+            if (menuLabels.size > 0) {
+                outside.replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/<\/(?:p|h[1-6]|li|div|td|th|tr|section|article|header|footer|figcaption|dd|dt|a|span|button)>/gi, '$&\n')
+                    .split('\n').forEach(line => {
+                        const text = textOf(line);
+                        if (text) linesOutsideMenu.add(text);
+                    });
+            }
+        }
         if (!source || !/<(?:button|figcaption|input)\b|role\s*=\s*["']button["']/i.test(source)) {
-            return { buttons, captions, prose: '' };
+            return { buttons, captions, prose: '', menuLabels, linesOutsideMenu };
         }
         let prose = source.replace(/<script\b[\s\S]*?<\/script>/gi, ' ').replace(/<style\b[\s\S]*?<\/style>/gi, ' ');
         prose = prose.replace(/<button\b([^>]*)>([\s\S]*?)<\/button>/gi, (whole, tag, inner) => {
@@ -3677,7 +3866,7 @@ class AiWebParser {
             if (caption) captions.push(caption);
             return ' ';
         });
-        return { buttons, captions, prose: this.decodeBasicEntities(this.stripTags(prose)) };
+        return { buttons, captions, prose: this.decodeBasicEntities(this.stripTags(prose)), menuLabels, linesOutsideMenu };
     }
 
     foldSubheadingEvents(events, sourceUrl = '') {
@@ -3863,7 +4052,10 @@ class AiWebParser {
         if (tokens.length === 0) return false;
         let hasTimeMarker = false;
         for (const rawToken of tokens) {
-            const token = rawToken.replace(/[.,;]+$/, '');
+            // A programme line ends its clock range with a colon before the
+            // name it introduces ("10h a 21h:" on its own line —
+            // bearssitges.org, run 20261109-053706, kept as an event title).
+            const token = rawToken.replace(/[.,;:]+$/, '');
             if (!token) continue;
             if (/^(?:am|pm|h|hrs?)$/i.test(token)) {
                 hasTimeMarker = true;
@@ -4582,6 +4774,17 @@ class AiWebParser {
     // leading date token, then the name, then an optional " - VENUE" /
     // " @ VENUE" tail. Returns {title, startDate, bar} or null.
     readCompactListingRow(htmlData) {
+        const row = this.readCompactListingRowParts(htmlData);
+        return row ? { title: row.title, startDate: row.startDate, bar: row.bar } : null;
+    }
+
+    // The row, plus the year its own date token printed (0 when it printed
+    // none). A printed year is a STATED year: the caller hands it to
+    // normalizeAiEvent as an explicit source year, so a past one is an
+    // archived line and is never walked forward. studsf.com/podcast, run
+    // 20261109-053706: "April 06, 2021 / Stud SF" — a blog post's byline —
+    // was read as a row and its 2021 date shipped as 2027-04-06.
+    readCompactListingRowParts(htmlData) {
         const source = htmlData && typeof htmlData.segmentText === 'string' && htmlData.segmentText.trim()
             ? htmlData.segmentText
             : (htmlData && typeof htmlData.html === 'string' ? htmlData.html.replace(/<[^>]+>/g, '\n') : '');
@@ -4602,7 +4805,9 @@ class AiWebParser {
         if (!/[a-z]{3}/i.test(title) || this.isTimeOnlyLineText(title)) return null;
         const startDate = this.compactListingDateToIso(dateToken[1]);
         if (!startDate) return null;
-        return { title, startDate, bar };
+        const printsYear = /(?:[\/.-]\d{2}|[\/.-]\d{4}|,?\s\d{4})$/.test(this.normalizeWhitespace(dateToken[1]))
+            && !/^\d{1,2}[\/.-]\d{1,2}$/.test(this.normalizeWhitespace(dateToken[1]));
+        return { title, startDate, bar, statedYear: printsYear ? Number(startDate.slice(0, 4)) : 0 };
     }
 
     // "10/10", "Oct 3", "September 5, 2026" → YYYY-MM-DD, the form the
@@ -12109,7 +12314,7 @@ class AiWebParser {
             // The heading IS the place: "DC" names dc outright even though a
             // two-letter alias is too short to be found inside running text.
             const exact = cityConfig && cityText ? this.findCityConfigEntry(cityText, cityConfig) : null;
-            const cityKey = exact ? exact.key : (cityConfig && cityText ? this.findCityKeyInText(cityText, cityConfig) : '');
+            const cityKey = exact ? exact.key : (cityConfig && cityText ? this.findCityKeyInText(cityText, cityConfig, { placeName: true }) : '');
             const timezone = zoneFor(cityKey, cityText);
             const make = (startParsed, endParsed) => {
                 const event = {
@@ -14583,7 +14788,7 @@ class AiWebParser {
         // and timezone from it directly so nothing downstream has to guess. Address only:
         // bar names produce false city matches ("Brooklyn Bowl" in Vegas).
         if (address && cityConfig) {
-            const cityKey = this.findCityKeyInText(address, cityConfig);
+            const cityKey = this.findCityKeyInText(address, cityConfig, { placeName: true });
             if (cityKey) {
                 event.city = cityKey;
                 const timezone = this.getTimezoneForCity(cityKey, cityConfig);
@@ -17369,7 +17574,7 @@ class AiWebParser {
                 event.address = hit.address;
                 console.log(`🚪 SPA DOOR: "${event.title}" address ← the app's own venue directory ("${hit.name}"): ${hit.address}`);
                 if (!event.city && cityConfig) {
-                    const cityKey = this.findCityKeyInText(hit.address, cityConfig);
+                    const cityKey = this.findCityKeyInText(hit.address, cityConfig, { placeName: true });
                     if (cityKey) {
                         event.city = cityKey;
                         if (!event.timezone) {
@@ -17938,8 +18143,8 @@ class AiWebParser {
             // "Folsom Street Fair"), and that label names a place either in
             // its own words or as a curated festival that has one.
             const groupLabel = clean(firstValue(/^(region|group|category|section)_(label|name|title)$/, isNonEmptyString));
-            const cityKey = (address ? this.findCityKeyInText(address, cityConfig) : '')
-                || (placeText ? this.findCityKeyInText(placeText, cityConfig) : '')
+            const cityKey = (address ? this.findCityKeyInText(address, cityConfig, { placeName: true }) : '')
+                || (placeText ? this.findCityKeyInText(placeText, cityConfig, { placeName: true }) : '')
                 || (groupLabel ? (this.findCityKeyInText(groupLabel, cityConfig) || this.findCityKeyForFestivalLabel(groupLabel, cityConfig)) : '');
             if (cityKey) {
                 event.city = cityKey;
@@ -18242,7 +18447,7 @@ class AiWebParser {
         if (record.city && isEmpty(event.city)) {
             // Only configured city keys, resolved through the same alias matching
             // the rest of the parser uses — never invent a key from raw Wix text.
-            const cityKey = this.findCityKeyInText(record.city, cityConfig);
+            const cityKey = this.findCityKeyInText(record.city, cityConfig, { placeName: true });
             if (cityKey) {
                 event.city = cityKey;
                 filled.push('city');
@@ -20222,6 +20427,16 @@ class AiWebParser {
             if (/^(?:resend|refund|refunds|transfer|transfers|order|orders|order-status|receipt|receipts|confirm|confirmation|waitlist|unsubscribe|print|share|embed)$/.test(last)) {
                 return { valid: false, reason: 'ticket-utility-page' };
             }
+            // The sign-up form OF a page ("/event-details/<slug>/form",
+            // "…/rsvp") is that page's plumbing too: it repeats the name and
+            // none of the facts. eaglemanchester.com, run 20261109-053706:
+            // four …/form pages were read as events of their own, dated by a
+            // cadence phrase to a night the parent page does not state, and
+            // each won as its event's link. Only as a CHILD segment — a
+            // site's top-level "/rsvp" is left to the page classifier.
+            if (segments.length >= 2 && /^(?:form|rsvp)$/.test(last)) {
+                return { valid: false, reason: 'ticket-utility-page' };
+            }
         }
         // Template/placeholder URLs (e.g. ?s={search_term_string}) — not real pages.
         // The braces arrive percent-encoded when the placeholder sat in an
@@ -20282,6 +20497,15 @@ class AiWebParser {
             // WooCommerce account pages and the FR shop segment each got a
             // classify + AI extraction pass for 0 events.
             /\/(?:shop|store|merch|boutique|cart|checkout|contact|about|faq|account|my-account|lost-password|signin|signup)(?:\/|[?#]|$)/i,
+            // The same two sections under their other common spelling, and
+            // the people pages that hang off them (whole segments again). Run
+            // 20261109-053706 opened eight such pages on five sites for
+            // nothing — and one, akbarsilverlake.com/about-us/our-team/
+            // (staff and DJ biographies), gave six "events" dated from the
+            // "every 3rd Monday" / "Sundays" of a biography; two were kept.
+            // (/careers and /legal stay crawlable on a site's own host — see
+            // the cross-host list below.)
+            /\/(?:about-us|contact-us|our-team|team|staff)(?:\/|[?#]|$)/i,
             // Wix internal API endpoints (e.g. chunk-party.com/_api/...)
             '/_api/',
             // Eventbrite's Next.js image proxy (/e/_next/image?url=…) — an image
@@ -22273,6 +22497,57 @@ class AiWebParser {
         const expectedIso = `${expectedDate.year}-${String(expectedDate.month).padStart(2, '0')}-${String(expectedDate.day).padStart(2, '0')}`;
         console.log(`🤖 AI Web: Title contains a date that does not match startDate ("${title}" vs ${expectedIso}) — kept, verify manually`);
         return title;
+    }
+
+    // Leading clock or clock range on an event TITLE. A day programme
+    // prints the hours before every name — bearssitges.org, run
+    // 20261109-053706: "20:30h a 03h Especial NOCHE BLANCA con PRAGUE
+    // BEARS", "1h a 06h BEEFMINCE DISCO Party", "13h Sitges Drag Brunch"
+    // were kept under those titles (and the trim pass then cut one to "30h
+    // a 03h NOCHE ESPECIAL…"). The hours have their own fields; the name
+    // starts after them.
+    //
+    // The line-level reader is activityTextAfterTimePrefix (it cuts a
+    // programme LINE into its activity); a title needs more care, because
+    // names open with numbers too.
+    //
+    // Fail closed, shapes only:
+    // - a clock counts only with an explicit marker — "h", am/pm, or
+    //   ":mm" — and a real hour (0–23): "5 à 7", "9 to 5", "2 Bears 1
+    //   Cave" and "24h Party" are names, never clocks;
+    // - a RANGE needs a marker on at least one side, and a name with a
+    //   real word after it;
+    // - a SINGLE clock needs two words of name after it ("2AM Club" and
+    //   "12h Rave" stay whole);
+    // - a remainder that opens with a range word ("9pm til late") means
+    //   the hours were not fully read — the title stays whole.
+    stripLeadingClockFromTitle(title) {
+        const original = String(title || '');
+        const text = this.normalizeWhitespace(original.replace(/[\u200b\u200e\u200f\ufeff]/g, ' '));
+        // Same opening test the day-programme splitter uses for a timed
+        // line; everything below only makes it safe for a NAME.
+        if (!text || !this.isTimePrefixedActivityLine(text)) return original;
+        const CLOCK = '(\\d{1,2})(?:([:.])(\\d{2}))?\\s?(h|hrs?|am|pm|a\\.m\\.|p\\.m\\.)?(?![\\p{L}\\p{N}])\\.?';
+        const RANGE_WORD = '(?:-|–|—|a|à|al|to|til{1,2}|until|bis)';
+        const match = text.match(new RegExp(`^${CLOCK}(?:\\s*${RANGE_WORD}\\s*${CLOCK})?\\s*[:\\-–—|,]?\\s+(\\S.*)$`, 'iu'));
+        if (!match) return original;
+        const clock = (hour, separator, minutes, marker) => {
+            if (hour === undefined) return null;
+            const valid = Number(hour) <= 23 && (minutes === undefined || Number(minutes) <= 59);
+            return { valid, marked: Boolean(marker) || (separator === ':' && minutes !== undefined) };
+        };
+        const first = clock(match[1], match[2], match[3], match[4]);
+        const second = clock(match[5], match[6], match[7], match[8]);
+        const rest = this.normalizeWhitespace(match[9]).replace(/^[\s:\-–—|,.]+/, '');
+        if (!first.valid || (second && !second.valid)) return original;
+        if (!(second ? (first.marked || second.marked) : first.marked)) return original;
+        if (!/\p{L}{3}/u.test(rest) || this.isTimeOnlyLineText(rest)) return original;
+        // What follows must open like a name: "11PM-5AM @ The Eagle" and
+        // "9pm at the bar" are a time and a place, with no name to keep.
+        if (!/^[\p{L}\p{N}"'«“‘(\[¡¿]/u.test(rest) || /^at\s/i.test(rest)) return original;
+        if (new RegExp(`^${RANGE_WORD}(?![\\p{L}\\p{N}])`, 'iu').test(rest)) return original;
+        if (!second && rest.split(' ').filter(word => /\p{L}/u.test(word)).length < 2) return original;
+        return rest;
     }
 
     // Leading date phrase on an event TITLE, e.g. the Bear Cave's
@@ -27147,6 +27422,17 @@ TEXT:
             aiEvent.summary,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
         );
+        // Invisible marks first — every check below reads letters (see
+        // stripInvisibleTitleMarks). A title that was nothing but marks is
+        // no title, and the missing-title handling below takes it.
+        const unmarkTitle = (value) => {
+            const unmarked = this.stripInvisibleTitleMarks(value);
+            if (unmarked !== value) {
+                console.log(`🏷️ TITLE: "${this.showInvisibleTitleMarks(value)}" → "${unmarked}" — invisible marks (and the separator left dangling beside them) are not part of a name`);
+            }
+            return unmarked;
+        };
+        if (title) title = unmarkTitle(title);
         // A title that is nothing but a time of day is a harvested time node,
         // never an event name (run 20260802-102127: the final event was titled
         // "6:30 PM" while the real name — "SUGAR, WE'RE HOEIN DOWN" — sat in
@@ -27162,6 +27448,14 @@ TEXT:
                 this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
             ].filter(candidate => !(typeof candidate === 'string' && this.isTimeOnlyLineText(candidate)));
             title = this.firstNonEmpty(...nonTimeCandidates, '');
+        }
+        // A title that is nothing but a one- or two-digit number is a day of
+        // the month or a fragment of an ordinal ("25" cut from "CENA OFICIAL
+        // 25º aniBEARSari" — bearssitges.org, run 20261109-053706, kept and
+        // flagged "title contains no letters"). Same treatment as a time.
+        if (title && /^\d{1,2}$/.test(this.normalizeWhitespace(String(title)))) {
+            console.log(`🤖 AI Web: Title "${title}" is only a number — treating the title as missing`);
+            title = '';
         }
         // A title that is nothing but a navigation label ("NEXT", "NEXT (UK):",
         // "UPCOMING EVENTS") is a site's signpost to an event, never the
@@ -27214,6 +27508,9 @@ TEXT:
                 titleStated = true;
             }
         }
+        // …and again once the page's own stated names (its JSON-LD event
+        // name, its heading) may have replaced the model's.
+        if (title) title = unmarkTitle(title);
         // Strip a leading date phrase HERE rather than in the per-pass guard:
         // titles also arrive from segment headings and config metadata, which
         // never pass through that guard — a live BEEFMINCE run showed the
@@ -27225,6 +27522,15 @@ TEXT:
             if (strippedTitle !== title) {
                 console.log(`🤖 AI Web: Stripped leading date from title "${title}" → "${strippedTitle}"`);
                 title = strippedTitle;
+            }
+        }
+        // …and a leading clock or clock range, which a programme prints
+        // before every name (see stripLeadingClockFromTitle).
+        if (title) {
+            const unclockedTitle = this.stripLeadingClockFromTitle(title);
+            if (unclockedTitle !== title) {
+                console.log(`🤖 AI Web: Stripped leading clock from title "${title}" → "${unclockedTitle}"`);
+                title = unclockedTitle;
             }
         }
         const aiDescription = this.firstNonEmpty(aiEvent.description, aiEvent.desc, '');
@@ -27358,7 +27664,7 @@ TEXT:
             this.getTimezoneForCity(parserConfig && parserConfig.city, cityConfig),
             // Fallback: the address often names the city even when the city field was
             // dropped by evidence validation (e.g. flyer only says "NYC").
-            this.getTimezoneForCity(this.findCityKeyInText(address, cityConfig), cityConfig),
+            this.getTimezoneForCity(this.findCityKeyInText(address, cityConfig, { placeName: true }), cityConfig),
             ''
         );
         // URL-field sanity gate (see isPlausibleEventUrlValue): only
@@ -28426,18 +28732,63 @@ TEXT:
     }
 
     // Find a configured city referenced inside free text (e.g. a street address).
-    findCityKeyInText(text, cityConfig) {
+    //
+    // options.placeName: the text is PLACE-SHAPED — an address, a place or
+    // city field — so the words around a token are the rest of a name, and a
+    // short alias that is only a syllable of a longer place name is not the
+    // alias (2026-11-09, whereto.party: the place "Ho Chi Minh City, Vietnam"
+    // carries the whole word "chi", and a Saigon night was given another
+    // city's key and clock). Mirrors LocationNormalizer.matchesCityPattern.
+    findCityKeyInText(text, cityConfig, options = {}) {
         const map = this.getCityConfigMap(cityConfig);
         if (!map || typeof map !== 'object') return '';
         const normalizedText = this.normalizeEvidenceText(text);
         if (!normalizedText) return '';
+        const placeName = Boolean(options && options.placeName);
         for (const [key, cityData] of Object.entries(map)) {
             const matched = this.getCityAliasList(key, cityData).some(alias =>
                 alias.length >= 3 && this.textContainsCityAlias(normalizedText, alias)
+                && !(placeName && this.placeTextHoldsShortAliasOnlyInsideNames(text, alias))
             );
             if (matched) return key;
         }
         return '';
+    }
+
+    // Does this PLACE text spell the short alias only as a syllable of a
+    // longer name? True when every whole-token occurrence has a name word
+    // joined on BOTH sides (space or hyphen, no comma between) — "Ho Chi
+    // Minh City" — and is not written as an abbreviation: capitals inside
+    // mixed-case text ("398 12th St SF CA") are how an abbreviation is
+    // written, a title-cased "Chi" is how a syllable is. Text all in one
+    // case says nothing by its letters, so there the neighbours decide.
+    // False when the alias is not short, is absent, or stands once.
+    placeTextHoldsShortAliasOnlyInsideNames(rawText, foldedAlias) {
+        const alias = String(foldedAlias || '');
+        if (!/^[a-z]{1,3}$/.test(alias)) return false;
+        const cased = String(rawText || '')
+            .replace(/&(amp|nbsp|#39|apos|quot);/gi, ' ')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!cased) return false;
+        const mixedCase = /\p{Ll}/u.test(cased) && /\p{Lu}/u.test(cased);
+        const finder = new RegExp(`(^|[^\\p{L}\\p{N}])(${alias})(?![\\p{L}\\p{N}])`, 'giu');
+        let found = 0;
+        let match = finder.exec(cased);
+        while (match) {
+            const start = match.index + match[1].length;
+            const end = start + match[2].length;
+            const token = match[2];
+            const writtenAsAbbreviation = mixedCase && token === token.toUpperCase();
+            const insideName = /\p{L}[ -]+$/u.test(cased.slice(0, start)) && /^[ -]+\p{L}/u.test(cased.slice(end));
+            if (writtenAsAbbreviation || !insideName) return false;
+            found += 1;
+            finder.lastIndex = end;
+            match = finder.exec(cased);
+        }
+        return found > 0;
     }
 
     hasExplicitTimezoneInfo(dateValue) {
@@ -29336,6 +29687,40 @@ TEXT:
             text = match[1].trim();
         }
         return text || original;
+    }
+
+    // INVISIBLE MARKS ARE NOT LETTERS — identical to SharedCore's
+    // stripInvisibleTitleMarks (parsers are standalone; keep the two in
+    // sync). A zero-width or direction mark prints nothing, so a title that
+    // carries one is the title without it; once the marks are gone, a
+    // spaced separator with nothing on its far side joined the name to
+    // nothing and goes with them. studsf.com, run 20261109-053706: the
+    // site's name is a lone U+200E, so its item-page template's "<event> —
+    // <site name>" (the page <title>, og:title and the JSON-LD Event name
+    // alike) read "Muscle Mommy Pageant  —   \u200e " — 11 records carried
+    // the tail, 3 of them kept, and the brand-suffix strip never saw it
+    // (no brand to read off the page).
+    //
+    // A joiner (U+200C/U+200D) is cut only where it joins nothing — it
+    // builds emoji and letters in several scripts — and the soft hyphen is
+    // never touched. A title with no such mark is returned as it was.
+    stripInvisibleTitleMarks(title) {
+        const original = String(title === null || title === undefined ? '' : title);
+        const marks = /[\u061c\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]|(?:^|(?<=\s))[\u200c\u200d]+|[\u200c\u200d]+(?=\s|$)/gu;
+        const bare = original.replace(marks, '');
+        if (bare === original) return original;
+        const separator = '[|\\u2013\\u2014\\u2015\\u00b7\\u2022\\u00bb-]+';
+        return bare.replace(/\s+/g, ' ').trim()
+            .replace(new RegExp(`\\s+${separator}$`, 'u'), '')
+            .replace(new RegExp(`^${separator}\\s+`, 'u'), '')
+            .trim();
+    }
+
+    // What a log line can show of a title that carries such marks.
+    showInvisibleTitleMarks(title) {
+        return String(title === null || title === undefined ? '' : title)
+            .replace(/[\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/gu,
+                (mark) => `<U+${mark.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}>`);
     }
 
     // Emoji/pictograph-stripped view of a title — identical to SharedCore's
@@ -32340,7 +32725,7 @@ TEXT:
             const candidate = entry.addresses[consensusKey];
             const consensusAddress = candidate.display;
             console.log(`🤖 AI Web: Venue-site address consensus for ${host}: "${consensusAddress}" (${candidate.pages.size} page(s))`);
-            const cityKey = this.findCityKeyInText(consensusAddress, cityConfig);
+            const cityKey = this.findCityKeyInText(consensusAddress, cityConfig, { placeName: true });
             for (const event of eventList) {
                 if (!event || typeof event !== 'object' || event._venueSitePageHost !== host) continue;
                 const title = typeof event.title === 'string' && event.title.trim() ? event.title.trim() : 'unknown';
@@ -34146,7 +34531,7 @@ TEXT:
         if (!pair) return event;
         const extractedEntry = this.findCityConfigEntry(extractedCity, cityConfig);
         const extractedKey = extractedEntry ? extractedEntry.key : extractedCity.toLowerCase();
-        const resolvedKey = this.findCityKeyInText(pair.place, cityConfig);
+        const resolvedKey = this.findCityKeyInText(pair.place, cityConfig, { placeName: true });
         if (resolvedKey) {
             if (resolvedKey === extractedKey) return event; // page agrees — nothing to do
             event.city = resolvedKey;
@@ -34355,6 +34740,15 @@ TEXT:
             .filter(token => token && !this.titleContainsPageBrandName(token, pageBrandNames))
             .join(' ');
         if (!/[a-z0-9]/i.test(withoutBrandTokens)) return '';
+        // Page furniture is never dressed up as the promoter's party: a
+        // prefixed label ("Brand: comprar entradas", "Brand: 2. To apply")
+        // is the shape no furniture rule tests, so the prefix would carry
+        // it past every one of them.
+        const furnitureReason = this.describeFurnitureTitle(text);
+        if (furnitureReason) {
+            console.log(`🪑 FURNITURE: "${text}" is ${furnitureReason} — the page brand is not prefixed to it`);
+            return '';
+        }
         const organizerDisplay = this.normalizeWhitespace(this.getOrganizerDisplayName(pageBrandNames, htmlData));
         if (!/[a-z0-9]/i.test(organizerDisplay)) return '';
         if (organizerDisplay.length > 24 || organizerDisplay.split(/\s+/).length > 3) return '';

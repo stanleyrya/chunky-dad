@@ -710,8 +710,9 @@ class SharedCore {
         // target as the plain URL. Run 20260924-055217: the model was handed
         // eaglemanchester.com/event-details/hellbent-12 and its ?lang=de twin
         // as two candidates and picked the "more canonical" ?lang=de one.
-        // Mirrors AiWebParser.localeParamPattern.
-        this.localeParamPattern = /^(lang|locale|hl|language)$/i;
+        // Mirrors AiWebParser.localeParamPattern (language AND currency
+        // selectors: neither names a different page).
+        this.localeParamPattern = /^(lang|locale|hl|language|currency)$/i;
         
         // URL-to-parser mapping for automatic parser detection (parser: "auto").
         // Only scheme URLs resolve to a specific parser; every http(s) URL falls
@@ -1531,22 +1532,29 @@ class SharedCore {
     // stripped) joined into one comparable string. "MEAT RACK" == "Meat Rack"
     // but != "MEAT RACK INFERNO" — equality, never subset, so a different
     // party at the same venue can never inherit a verdict.
-    // Does a title's "at <venue>" tail name THIS bar? The bar's key, the
-    // same name with descriptors either way ("Ty's" / "Ty's Bar NYC",
-    // "Bareburger HK" / "Bareburger"), or a leading article dropped.
+    // Does a title's "at <venue>" tail name THIS bar? Only when it is the
+    // bar's NAME: the bar's key, the same words once city words are set
+    // aside ("the Black Eagle" / "Black Eagle Toronto"), the name with
+    // descriptors AFTER it either way ("Ty's" / "Ty's Bar NYC", "Bareburger
+    // HK" / "Bareburger"), or a leading article dropped.
+    // One shared word is not the bar. This used to accept any tail whose
+    // letters sat somewhere inside the bar's key, so "Bears At The Beach" at
+    // "DCR Nantasket Beach" was saved as "Bears" — the word a place type
+    // shares with the party's name, not the place's name (massbearsandcubs.org,
+    // run 20261109-053706). A name starts at its first word: a tail that
+    // matches only the END or the middle of the bar's name ("the Beach",
+    // "the Masonic Lodge" at "King Hiram Masonic Lodge") is the party's own
+    // wording and stays in the title.
     titleTailNamesBar(tail, bar) {
         const tailKey = this.normalizeBarNameKey(String(tail || '').replace(/^(the|le|la|el)\s+/i, ''));
         const barKey = this.normalizeBarNameKey(String(bar || '').replace(/^(the|le|la|el)\s+/i, ''));
         if (!tailKey || !barKey) return false;
         if (tailKey === barKey) return true;
-        if (tailKey.length >= 4 && barKey.length >= 4 && (tailKey.includes(barKey) || barKey.includes(tailKey))) return true;
-        const leads = (shortName, longName) => {
-            const shortTokens = this.getCrossSourceTitleTokens(String(shortName || ''));
-            const longTokens = this.getCrossSourceTitleTokens(String(longName || ''));
-            return shortTokens.length >= 1 && shortTokens.length < longTokens.length
-                && shortTokens.every((token, index) => longTokens[index] === token);
-        };
-        return leads(tail, bar) || leads(bar, tail);
+        const tailTokens = this.getCrossSourceTitleTokens(String(tail || ''));
+        const barTokens = this.getCrossSourceTitleTokens(String(bar || ''));
+        if (tailTokens.length === 0 || barTokens.length === 0) return false;
+        const [shortTokens, longTokens] = tailTokens.length <= barTokens.length ? [tailTokens, barTokens] : [barTokens, tailTokens];
+        return shortTokens.every((token, index) => longTokens[index] === token);
     }
 
     // "Fuzzy at Nowhere" with bar Nowhere is "Fuzzy": the venue is already
@@ -1560,6 +1568,11 @@ class SharedCore {
         if (!match) return text;
         const head = match[1].replace(/[\s:\-–—/|]+$/, '').trim();
         if (!head || !/[a-z]/i.test(head)) return text;
+        // An "at" inside a bracket the title has not closed yet belongs to
+        // the aside, not to the title: "BEAST (A Pre-Halloween at the Black
+        // Eagle)" would be cut to "BEAST (A Pre-Halloween".
+        const depth = (value, open, close) => value.split(open).length - value.split(close).length;
+        if (depth(head, '(', ')') > 0 || depth(head, '[', ']') > 0) return text;
         // A head that only says WHEN ("Tonight", "This week") names no
         // party — the venue was the whole title (umbrella rows).
         const timeWords = new Set(['week', 'weekend', 'tonight', 'today', 'tomorrow', 'month', 'night', 'nights', 'day', 'days', 'evening', 'daily', 'weekly', 'monthly']);
@@ -4906,6 +4919,60 @@ class SharedCore {
             .trim();
     }
 
+    // INVISIBLE MARKS ARE NOT SPELLING. A zero-width or direction mark
+    // (U+200B, U+200E/F, the embedding and isolate controls, the word
+    // joiner, the BOM) prints nothing: a title that carries one names the
+    // same event as the title without it. The Stud's site name is a lone
+    // U+200E, so its page template's "<event> — <site name>" came out as
+    // "Bear Happy Hour SF — \u200e" and was saved that way (run
+    // 20261109-053706: 3 kept records, chip "SF — \u200e"). Once the marks
+    // are gone, a spaced separator with nothing on its far side joined the
+    // name to nothing and goes with them.
+    //
+    // Deliberately narrow: a joiner (U+200C/U+200D) is cut only where it
+    // joins nothing — at an edge or beside a space — because it builds
+    // emoji ("\u2764\ufe0f\u200d\ud83d\udd25") and letters in several
+    // scripts; the soft hyphen is a display hint the registry writes on
+    // purpose and is never touched. A title with no such mark is returned
+    // as it was, dangling separator and all — that is another shape.
+    // Mirrored in the web parser (stripInvisibleTitleMarks) — parsers are
+    // standalone; keep the two in sync.
+    static stripInvisibleTitleMarks(value) {
+        const original = String(value === null || value === undefined ? '' : value);
+        const marks = /[\u061c\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]|(?:^|(?<=\s))[\u200c\u200d]+|[\u200c\u200d]+(?=\s|$)/gu;
+        const bare = original.replace(marks, '');
+        if (bare === original) return original;
+        const separator = '[|\\u2013\\u2014\\u2015\\u00b7\\u2022\\u00bb-]+';
+        return bare.replace(/\s+/g, ' ').trim()
+            .replace(new RegExp(`\\s+${separator}$`, 'u'), '')
+            .replace(new RegExp(`^${separator}\\s+`, 'u'), '')
+            .trim();
+    }
+
+    // A log line cannot show what prints nothing: marks are written as
+    // their code point ("Gemini — <U+200E>").
+    static showInvisibleTitleMarks(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/[\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/gu,
+                (mark) => `<U+${mark.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}>`);
+    }
+
+    // Two titles that differ only by invisible marks (and the separator
+    // left dangling beside them): the side that carries none is the title.
+    // null when the titles are equal, differ in real text, or both carry
+    // marks (nothing clean to pick — the caller's own ladder decides).
+    static pickTitleWithoutInvisibleMarks(valueA, valueB) {
+        if (typeof valueA !== 'string' || typeof valueB !== 'string' || valueA === valueB) return null;
+        const bareA = SharedCore.stripInvisibleTitleMarks(valueA);
+        const bareB = SharedCore.stripInvisibleTitleMarks(valueB);
+        const fold = (text) => text.replace(/\s+/g, ' ').trim();
+        if (!fold(bareA) || fold(bareA) !== fold(bareB)) return null;
+        const cleanA = bareA === valueA;
+        const cleanB = bareB === valueB;
+        if (cleanA === cleanB) return null;
+        return cleanA ? 'a' : 'b';
+    }
+
     // Emoji/pictograph-stripped view of a title: pictograph blocks, variation
     // selectors, the keycap combiner and ZWJ removed, whitespace collapsed.
     // Conservative on purpose: ASCII and real punctuation are never stripped.
@@ -6186,6 +6253,50 @@ class SharedCore {
         if (placed < SOURCE_HOME_MIN_PLACED) return null;
         const [city, count] = Object.entries(counts).sort((left, right) => right[1] - left[1])[0];
         return count / placed >= SOURCE_HOME_MIN_SHARE ? { city, count, placed } : null;
+    }
+
+    // WHERE ONE PAGE'S ROWS ARE, read before any of them is placed
+    // (2026-11-09): the cities the rows state for themselves — a quiet probe
+    // of the location normalizer's own reading, nothing is written — and,
+    // when most placed rows are in one city (the getSourceHomeCity
+    // thresholds), that home and the venues the page itself puts there.
+    // LocationNormalizer.settleNameWordCity asks it before a city read from a
+    // TITLE WORD stands. An aggregator's page lists everybody's events and
+    // has no home; null when nothing can be said.
+    readPageCities(events, parserConfig, normalizerPipeline) {
+        if (!Array.isArray(events) || events.length === 0) return null;
+        if (parserConfig && String(parserConfig.siteRole || '').trim().toLowerCase() === 'aggregator') return null;
+        const normalizers = normalizerPipeline && Array.isArray(normalizerPipeline.normalizers) ? normalizerPipeline.normalizers : [];
+        const reader = normalizers.find(normalizer => normalizer && typeof normalizer.readCityFromEvent === 'function');
+        if (!reader) return null;
+        const reads = [];
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            if (String(event._pageSiteRole || '').trim().toLowerCase() === 'aggregator') return null;
+            let read = null;
+            try {
+                read = reader.readCityFromEvent(event, { quiet: true });
+            } catch (error) {
+                read = null;
+            }
+            const city = read && typeof read.city === 'string' ? read.city.trim().toLowerCase() : '';
+            reads.push({ event, city });
+        }
+        const counts = {};
+        for (const { city } of reads) {
+            if (!city || city === 'unknown' || !this.cities || !this.cities[city]) continue;
+            counts[city] = (counts[city] || 0) + 1;
+        }
+        const home = this.getSourceHomeCity(reads.map(({ city }) => ({ city })));
+        const venuesAtHome = [];
+        if (home) {
+            for (const { event, city } of reads) {
+                if (city !== home.city || typeof event.bar !== 'string' || !event.bar.trim()) continue;
+                const key = this.normalizeBarNameKey(event.bar);
+                if (key && !venuesAtHome.includes(key)) venuesAtHome.push(key);
+            }
+        }
+        return { counts, home, venuesAtHome };
     }
 
     placeVirtualEventsAtSourceHome(events, parserConfig) {
@@ -7499,6 +7610,18 @@ class SharedCore {
                 && SharedCore.normalizeOwnerReviewValue(approved.to) === SharedCore.normalizeOwnerReviewValue(valueB)
                 && SharedCore.normalizeOwnerReviewValue(approved.from) === SharedCore.normalizeOwnerReviewValue(valueA)) {
                 return { winner: 'b', reason: 'the owner approved this value on the review deck' };
+            }
+        }
+
+        // Invisible marks are not a spelling (stripInvisibleTitleMarks): the
+        // copy without them is the title, whichever side carries it. Runs
+        // BEFORE the saved-spelling fold below — that fold reads letters and
+        // digits only, so it would keep a saved "Bear Happy Hour SF — \u200e"
+        // against the clean name on every run.
+        if (fieldName === 'title') {
+            const unmarked = SharedCore.pickTitleWithoutInvisibleMarks(valueA, valueB);
+            if (unmarked) {
+                return { winner: unmarked, reason: 'same title — the other copy only adds invisible marks (and the separator left dangling beside them)' };
             }
         }
 
@@ -14549,8 +14672,13 @@ class SharedCore {
         // normalizer's city backfill (an event whose page named neither a
         // venue nor a city still belongs to the city its parser declares).
         const parserCity = parserConfig && typeof parserConfig.city === 'string' ? parserConfig.city : '';
+        // pageCities: where this page's other rows are — asked before a city
+        // read from a title word stands (readPageCities).
+        const pageCities = pipelineToUse ? this.readPageCities(filteredEvents, parserConfig, pipelineToUse) : null;
+        const pipelineOptions = { geocodeVerification: globalConfig.geocodeVerification, parserCity };
+        if (pageCities) pipelineOptions.pageCities = pageCities;
         const enrichedEvents = pipelineToUse
-            ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter, { geocodeVerification: globalConfig.geocodeVerification, parserCity })
+            ? await pipelineToUse.normalizeEventsAsync(filteredEvents, httpAdapter, pipelineOptions)
             : filteredEvents.map(event => this.normalizeEventTextFields(event));
 
         enrichedEvents.forEach((event, index) => {
@@ -15263,6 +15391,11 @@ class SharedCore {
         const tag = mode === 'report' ? ' [report]' : '';
         const counts = { bear: 0, keyword: 0, ai: 0, tagged: 0, flagged: 0, dropped: 0 };
         const kept = [];
+        // A venue's own standing lines (dress code, shop notice, sponsor
+        // credit) are marked on these records before any of them is judged:
+        // "how many different parties carry this sentence" needs them all in
+        // view. See applyDescriptionChromeFlags.
+        this.applyDescriptionChromeFlags(events);
         // Drops are decided per record here but FINALISED after the loop, once
         // every record's verdict exists — see the twin sweep below.
         const pendingDrops = [];
@@ -15526,6 +15659,15 @@ class SharedCore {
             }
         }
         const machine = this.collectMachineEventTags(event);
+        // Flag, don't drop silently: a tag word that sits only in a line the
+        // venue prints under many different parties is named here, with the
+        // line, and is not a candidate.
+        const siteLineHits = machine.siteLineHits || {};
+        for (const siteTag of Object.keys(siteLineHits)) {
+            if (machine.candidates.includes(siteTag)) continue;
+            const hit = siteLineHits[siteTag];
+            console.log(`🏷️ TAGS: "${title}" — ${siteTag} (${hit.keywords.join(', ')}) is named only in "${hit.line.slice(0, 120)}", a line this venue prints under ${TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES}+ different parties — the venue's line, not this event's; not a candidate`);
+        }
         let tags = [];
         if (machine.candidates.length > 0) {
             const describe = tag => {
@@ -15622,7 +15764,17 @@ class SharedCore {
             };
         }
 
-        const searchText = `${event.title || ''} ${event.description || ''} ${event.bar || ''}`;
+        // The name the page stated is read beside the saved title: the saved
+        // title may be a trim of it (see statedNameBehindTitle).
+        const statedTitles = this.getStatedTitles(event);
+        const searchText = `${event.title || ''}${statedTitles.length > 0 ? ` ${statedTitles.join(' ')}` : ''} ${event.description || ''} ${event.bar || ''}`;
+        // A generic keyword is read in the description without the lines the
+        // venue prints under many different parties (applyDescriptionChromeFlags).
+        // The allowlist gate below keeps the whole text, as it always had.
+        const ownDescription = this.getDescriptionWithoutSiteLines(event);
+        const keywordText = ownDescription.siteLines.length === 0
+            ? searchText
+            : `${event.title || ''}${statedTitles.length > 0 ? ` ${statedTitles.join(' ')}` : ''} ${ownDescription.text} ${event.bar || ''}`;
 
         // Per-event trust: a registry-matched promoter's bearAffinity
         // overrides parserConfig.alwaysBear (see getEventBearTrust);
@@ -15653,9 +15805,26 @@ class SharedCore {
         // venue-name hits are identity and still short-circuit; a hit found
         // ONLY in the free-text description short-circuits only when that
         // description NAMES a registry brand.
-        const matched = this.matchBearKeywords(searchText);
-        const keywordTier = this.classifyBearKeywordMatch(event, matched);
+        // Identity hits (title, stated name, venue, a registry brand named
+        // anywhere in the description) are judged on the whole text, as
+        // before. A GENERIC word is evidence only outside the venue's
+        // standing lines.
+        const matchedAnywhere = this.matchBearKeywords(searchText);
+        const keywordTier = this.classifyBearKeywordMatch(event, matchedAnywhere);
+        let matched = matchedAnywhere;
+        if (!keywordTier.shortCircuit && ownDescription.siteLines.length > 0) {
+            matched = this.matchBearKeywords(keywordText);
+            const onlyInSiteLines = matchedAnywhere.filter(keyword => !matched.includes(keyword));
+            if (onlyInSiteLines.length > 0) {
+                const line = ownDescription.siteLines.find(siteLine => this.matchBearKeywords(siteLine).length > 0) || '';
+                console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — keyword ${onlyInSiteLines.join(', ')} is only in "${line.slice(0, 120)}", a line this venue prints under ${TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES}+ different parties — the venue's line, not keyword evidence for this event`);
+            }
+        }
         if (matched.length > 0 && keywordTier.shortCircuit) {
+            if (keywordTier.source === 'stated-title') {
+                console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — keyword ${matched.join(', ')} is in the name the page stated, "${keywordTier.stated}"`);
+                return { result: 'bear', provenance: `keyword: ${matched.join(', ')} (the page's own name: "${keywordTier.stated}")` };
+            }
             return { result: 'bear', provenance: `keyword: ${matched.join(', ')}` };
         }
         if (matched.length > 0) {
@@ -15733,6 +15902,77 @@ class SharedCore {
         return this.matchBearKeywords(searchText).length > 0;
     }
 
+    // THE NAME THE PAGE STATED (2026-11-09). The saved title is often a TRIM
+    // of the line the page printed: the model returns the short reusable
+    // name, and the merge keeps a listing's short name over the event page's
+    // full one. Every later reader then sees only the trim. atlantaeagle.com
+    // printed "Southern Bears Lumberjack ft. Fer Juz"; the model answered
+    // "Lumberjack" (quoting the full line as its evidence), the event page's
+    // own record carried the full name and lost the title to the listing,
+    // and the bear check dropped a bear party it never saw named (run
+    // 20261109-053706). The saved title is NOT changed here. The longer name
+    // is kept beside it (event._statedTitles) and the bear keyword tier and
+    // the tag keyword match read both.
+    //
+    // A candidate is the stated name of a title only when ALL hold:
+    //   - the title's words are one unbroken run of the candidate's words
+    //     (the title is a trim of it, not a different name)
+    //   - the candidate says more than the title
+    //   - what follows a separator AFTER the run is cut off first: that is
+    //     where a page puts its own name ("RED | Bear Jamboree", "Beer Bust
+    //     @ SF Eagle — Bears of San Francisco"), and a word that is only the
+    //     site's brand is not the event's name
+    //   - it is a name line, not a sentence: at most six more words than the
+    //     title and 100 characters ("Jugoso is a four-day bear party in
+    //     Zipolite, a beach town…" is prose; the AI tier reads prose)
+    //   - it is not a metadata line ("og:title: …", "description: …")
+    // Returns the stated name, or '' when the candidate is not one.
+    statedNameBehindTitle(title, candidate) {
+        const clean = text => String(text || '').replace(/\s+/g, ' ').trim();
+        const kept = clean(title);
+        let stated = clean(candidate);
+        if (!kept || !stated || stated.length > 400) return '';
+        if (/^(?:og|twitter|article|meta)[:_.][\w:.-]*\s*:|^(?:description|title|keywords)\s*:/i.test(stated)) return '';
+        const words = text => text.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+        const keptWords = words(kept);
+        if (keptWords.length === 0) return '';
+        let match;
+        try {
+            const run = keptWords.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[^\\p{L}\\p{N}]+');
+            match = new RegExp(`(^|[^\\p{L}\\p{N}])${run}(?=$|[^\\p{L}\\p{N}])`, 'iu').exec(stated);
+        } catch (_) {
+            return '';
+        }
+        if (!match) return '';
+        const runEnd = match.index + match[0].length;
+        const separator = /\s*(?:[|\u00b7\u2013\u2014]|\s-)\s+\S/.exec(stated.slice(runEnd));
+        if (separator) stated = stated.slice(0, runEnd + separator.index).trim();
+        const statedWords = words(stated);
+        if (statedWords.length <= keptWords.length) return '';
+        if (statedWords.length > keptWords.length + 6 || stated.length > 100) return '';
+        return stated;
+    }
+
+    // The stated names stamped on a record (see statedNameBehindTitle).
+    getStatedTitles(event) {
+        const list = event && Array.isArray(event._statedTitles) ? event._statedTitles : [];
+        return list.filter(entry => typeof entry === 'string' && entry.trim()).map(entry => entry.trim());
+    }
+
+    // Stamp `candidate` as a stated name of `event` when it is one for
+    // `title` (default: the event's own title). At most three are kept.
+    // Returns the stated name that was added, or ''.
+    noteStatedTitle(event, candidate, title = null) {
+        if (!event || typeof event !== 'object') return '';
+        const stated = this.statedNameBehindTitle(title === null ? event.title : title, candidate);
+        if (!stated) return '';
+        const known = this.getStatedTitles(event);
+        if (known.some(entry => entry.toLowerCase() === stated.toLowerCase())) return '';
+        if (known.length >= 3) return '';
+        event._statedTitles = known.concat(stated);
+        return stated;
+    }
+
     // Returns the list of bear keywords the text hits (empty array = no match).
     matchBearKeywords(text) {
         const source = String(text || '').toLowerCase();
@@ -15784,8 +16024,29 @@ class SharedCore {
         const result = { candidates: [], fromTitle: [], hits: {} };
         if (!event || typeof event !== 'object') return result;
         for (const tag of SharedCore.getAiConfirmableTags()) {
+            // The title is the saved title AND the name the page stated for
+            // it (see statedNameBehindTitle): a trim must not hide the word.
             const title = this.matchTagKeywords(event.title, tag, { title: true });
-            const description = this.matchTagKeywords(event.description, tag);
+            for (const stated of this.getStatedTitles(event)) {
+                for (const keyword of this.matchTagKeywords(stated, tag, { title: true })) {
+                    if (!title.includes(keyword)) title.push(keyword);
+                }
+            }
+            // The description is read without the lines the venue prints
+            // under many different parties (applyDescriptionChromeFlags): a
+            // standing dress code is not this event's theme.
+            const own = this.getDescriptionWithoutSiteLines(event);
+            const description = this.matchTagKeywords(own.text, tag);
+            if (own.siteLines.length > 0) {
+                const inSiteLines = this.matchTagKeywords(own.siteLines.join(' '), tag)
+                    .filter(keyword => !description.includes(keyword) && !title.includes(keyword));
+                if (inSiteLines.length > 0) {
+                    const line = own.siteLines.find(siteLine => this.matchTagKeywords(siteLine, tag).length > 0) || '';
+                    // Only present when a venue line was set aside.
+                    if (!result.siteLineHits) result.siteLineHits = {};
+                    result.siteLineHits[tag] = { keywords: inSiteLines, line };
+                }
+            }
             if (title.length === 0 && description.length === 0) continue;
             result.candidates.push(tag);
             if (title.length > 0) result.fromTitle.push(tag);
@@ -16076,6 +16337,8 @@ class SharedCore {
     //   description + a registry brand → yes. Bearracuda's Portland NYE / SF
     //             FLSM / Treasure Trail family puts the BRAND in the
     //             description and not the title; that is still identity.
+    //   the name the PAGE stated → yes, the same as the title (the saved
+    //             title is a trim of it; see statedNameBehindTitle).
     //   description, generic vocabulary only → NO. "unleash your inner pup",
     //             "wear your regular leather or gear" is prose about a
     //             dress code, and the AI tier gets these right when it is
@@ -16086,6 +16349,11 @@ class SharedCore {
         }
         if (this.matchBearKeywords(event && event.title).length > 0) {
             return { shortCircuit: true, source: 'title', brand: '' };
+        }
+        // The name the page stated is the title too (see statedNameBehindTitle).
+        const statedHit = this.getStatedTitles(event).find(stated => this.matchBearKeywords(stated).length > 0);
+        if (statedHit) {
+            return { shortCircuit: true, source: 'stated-title', brand: '', stated: statedHit };
         }
         if (this.matchBearKeywords(event && event.bar).length > 0) {
             return { shortCircuit: true, source: 'venue', brand: '' };
@@ -18968,6 +19236,49 @@ class SharedCore {
         return Boolean(event && typeof event === 'object' && event._loneCrawlWithheld && !event._ownerReviewApproved);
     }
 
+    // The fold of a lone crawl event (isLoneCrawlWithheld: the only event of
+    // a page the crawl reached, its date stated nowhere beside its name)
+    // into a record whose page DID state its date. The lone record's date is
+    // the model's guess, so everything that matched the two records rests
+    // on a guess: the stated record is the base and keeps every field it
+    // states; the lone record fills blanks only. A link or an image is a
+    // blank it may fill only when the stated record itself points at the
+    // lone record's page (a listing row and the detail page its own link
+    // opens — woofsatlanta.com/events/fafo-fridays/); any other lone page
+    // may be about something else entirely. No arbitration, no priorities
+    // — the same shape as the aggregator fold.
+    //
+    // bearitmtl.com run 20261109-053706: the hotel-discount page "Rabais
+    // Hotel - Festival Sugar Bear 2026" was read with a neighbouring
+    // party's night (Oct 31, Diamant Rouge), stamped lone, then matched
+    // "SPOOKY PLAYGROUND" by place and night; the merge arbitration gave
+    // the discount page the title, the description and the website, the
+    // stamp was lost in the fold, and the real party left the run under a
+    // hotel page's name. The festival-pass page did the same to "APÉRO
+    // OURS".
+    mergeLoneCrawlRecordIntoStatedRecord(statedRecord, loneRecord) {
+        const merged = { ...statedRecord };
+        const isEmpty = (value) => value === null || value === undefined
+            || (typeof value === 'string' && value.trim() === '')
+            || (Array.isArray(value) && value.length === 0);
+        const stamp = loneRecord && loneRecord._loneCrawlWithheld && typeof loneRecord._loneCrawlWithheld === 'object' ? loneRecord._loneCrawlWithheld : {};
+        const reason = String(stamp.reason || '').trim() || 'its date is stated nowhere beside its name';
+        const page = String(stamp.page || loneRecord._sourcePageUrl || loneRecord.url || '').trim();
+        const pageKey = page ? this.getUrlDedupeKey(page) : '';
+        const statedPointsAtLonePage = Boolean(pageKey) && ['url', 'website', 'ticketUrl']
+            .some(field => typeof statedRecord[field] === 'string' && statedRecord[field].trim() && this.getUrlDedupeKey(statedRecord[field]) === pageKey);
+        const linkOrImage = new Set(['url', 'website', 'ticketUrl', 'image', 'imageHorizontal', 'imageVertical', 'facebook', 'instagram']);
+        const filled = [];
+        for (const [field, value] of Object.entries(loneRecord || {})) {
+            if (field.startsWith('_') || field === 'key' || isEmpty(value) || !isEmpty(merged[field])) continue;
+            if (linkOrImage.has(field) && !statedPointsAtLonePage) continue;
+            merged[field] = value;
+            filled.push(field);
+        }
+        console.log(`🧭 LONE EVENT: "${loneRecord.title || 'event'}"${page ? ` (${page})` : ''} folded into "${statedRecord.title || 'event'}" — ${reason}, so its date is a guess: the record whose page states its date keeps every field it states${filled.length > 0 ? `, blanks filled: ${filled.join(', ')}` : ''}`);
+        return merged;
+    }
+
     async mergeParsedEvents(existingEvent, newEvent, options = {}) {
         // Exactly one side from an aggregator: no arbitration, no priorities —
         // the event's own source wins (see "Aggregators are for DISCOVERY").
@@ -18977,6 +19288,16 @@ class SharedCore {
             return existingIsAggregator
                 ? this.mergeAggregatorCopyIntoOwnRecord(newEvent, existingEvent)
                 : this.mergeAggregatorCopyIntoOwnRecord(existingEvent, newEvent);
+        }
+        // Exactly one side a lone crawl event with a guessed date: the record
+        // whose page stated its date wins every field it states. (Two lone
+        // records fold as before — the merged record stays withheld.)
+        const existingIsLone = SharedCore.isLoneCrawlWithheld(existingEvent);
+        const newIsLone = SharedCore.isLoneCrawlWithheld(newEvent);
+        if (existingIsLone !== newIsLone) {
+            return existingIsLone
+                ? this.mergeLoneCrawlRecordIntoStatedRecord(newEvent, existingEvent)
+                : this.mergeLoneCrawlRecordIntoStatedRecord(existingEvent, newEvent);
         }
         const fieldPriorities = newEvent._fieldPriorities || existingEvent._fieldPriorities || {};
         // A page shared by 3+ records over 2+ nights (the batch's pass-page
@@ -19368,6 +19689,29 @@ class SharedCore {
                 }
             }
 
+            // Invisible marks are not a spelling: when the two titles differ
+            // only by them, the copy without them stands — decided here,
+            // before source priority, which picks a side without a word (run
+            // 20261109-053706: the item page's "Muscle Mommy Pageant — \u200e"
+            // replaced the collection's "Muscle Mommy Pageant" because only
+            // the item page's source was in the priority list).
+            if (fieldName === 'title') {
+                const unmarked = SharedCore.pickTitleWithoutInvisibleMarks(existingValue, newValue);
+                if (unmarked) {
+                    const chosenValue = unmarked === 'a' ? existingValue : newValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    console.log(`🏷️ MERGE: "${chosenValue}" field=title — the other copy ("${SharedCore.showInvisibleTitleMarks(unmarked === 'a' ? newValue : existingValue)}") only adds invisible marks; the title without them stands`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: 'same title — the other copy only adds invisible marks'
+                    });
+                    return;
+                }
+            }
+
             // LISTING AUTHORITY. An enrich/crawl page — a ticket page an event
             // linked, a detail page discovery found — fills BLANKS on the
             // listing record (the empty-loses rule below does that, and this
@@ -19716,6 +20060,32 @@ class SharedCore {
                 const existingTitle = existingEvent.title || 'event';
                 const newTitle = newEvent.title || 'event';
                 console.log(`🔄 PARSER MERGE: "${existingTitle}" (${existingEvent.source}) + "${newTitle}" (${newEvent.source}) → ${changedFields.length} field${changedFields.length === 1 ? '' : 's'} updated (${previewText})`);
+            }
+        }
+
+        // THE NAME THE PAGE STATED SURVIVES THE FOLD (see
+        // statedNameBehindTitle). Both sides' stamps are carried — the base
+        // spread keeps only the new side's — and a title this fold did not
+        // keep is stamped when the kept title is a trim of it. A brand the
+        // pipeline prefixed is not something the page stated: such a record
+        // offers the name it had before the prefix.
+        {
+            const pageTitleOf = record => (record && typeof record._titleBeforeBrandPrefix === 'string' && record._titleBeforeBrandPrefix.trim())
+                ? record._titleBeforeBrandPrefix
+                : (record && typeof record.title === 'string' ? record.title : '');
+            const carried = this.getStatedTitles(existingEvent).concat(this.getStatedTitles(newEvent));
+            const unique = [];
+            for (const stated of carried) {
+                if (!unique.some(entry => entry.toLowerCase() === stated.toLowerCase())) unique.push(stated);
+            }
+            if (unique.length > 0) mergedEvent._statedTitles = unique.slice(0, 3);
+            else delete mergedEvent._statedTitles;
+            const keptTitle = pageTitleOf(mergedEvent);
+            for (const side of [existingEvent, newEvent]) {
+                const added = this.noteStatedTitle(mergedEvent, pageTitleOf(side), keptTitle);
+                if (added) {
+                    console.log(`🏷️ TITLE: "${mergedEvent.title}" is the saved title — the name the page stated, "${added}", stays readable to the bear check and the tags`);
+                }
             }
         }
 
@@ -31177,20 +31547,8 @@ class SharedCore {
     // answered from a pair of records.
     applyTitleTokenCorpusFlags(events) {
         if (!Array.isArray(events) || events.length === 0) return;
-        const hostOf = (event) => {
-            const source = (event && (event._sourcePageUrl || event._venueSitePageHost || event.url || event.website)) || '';
-            const host = String(source).includes('/')
-                ? this.getHostFromUrl(String(source))
-                : String(source);
-            return String(host || '').trim().toLowerCase().replace(/^www\./, '');
-        };
-        const tokensOf = (event) => {
-            const venueKeys = [
-                this.normalizeBarNameKey(event && event.bar),
-                String((event && event._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-            ].filter(Boolean);
-            return this.getCrossSourceTitleTokens((event && (event.title || event.name)) || '', venueKeys);
-        };
+        const hostOf = (event) => this.getSourceCorpusHost(event);
+        const tokensOf = (event) => this.getSourceCorpusTitleTokens(event);
         // host → token → Set of distinct token-sequences carrying it
         const corpora = new Map();
         const tokenCache = new Map();
@@ -31220,6 +31578,148 @@ class SharedCore {
             }
             event._titleTokenDocFreq = freq;
         }
+    }
+
+    // The two readers every "how often does this SOURCE say this" pass shares:
+    // whose corpus a record belongs to (the page it was read from), and the
+    // token sequence that makes its title one party (venue, city, cadence and
+    // performer words removed — three nights of one party are one title).
+    getSourceCorpusHost(event) {
+        const source = (event && (event._sourcePageUrl || event._venueSitePageHost || event.url || event.website)) || '';
+        const host = String(source).includes('/')
+            ? this.getHostFromUrl(String(source))
+            : String(source);
+        return String(host || '').trim().toLowerCase().replace(/^www\./, '');
+    }
+
+    getSourceCorpusTitleTokens(event) {
+        const venueKeys = [
+            this.normalizeBarNameKey(event && event.bar),
+            String((event && event._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        ].filter(Boolean);
+        return this.getCrossSourceTitleTokens((event && (event.title || event.name)) || '', venueKeys);
+    }
+
+    // A description as its sentences, in order: [{ text, key }]. A sentence
+    // ends at a line break, at an emoji (venues bullet their standing lines
+    // with them: "🧢 Our Leather Shop is Now Open! ⭐ No cover!"), at a spaced
+    // bullet, or at closing punctuation before a new capital. `key` is the
+    // wording alone — case, accents and punctuation folded — so the same
+    // line reads the same on every page that prints it.
+    splitDescriptionSentences(text) {
+        const source = String(text || '');
+        if (!source.trim()) return [];
+        const pictographRun = /(?:[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}]|\uFE0F|\u200D)+/gu;
+        const sentences = [];
+        for (const part of source.replace(pictographRun, '\n').split(/\n+|\s+[|•·]\s+|(?<=[.!?…])\s+(?=[\p{Lu}\p{N}"'“‘(#@$])/u)) {
+            const sentence = part.replace(/\s+/g, ' ').trim();
+            if (!sentence) continue;
+            const key = this.foldDiacritics(sentence).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+            if (key.replace(/[^a-z]/g, '').length < 4) continue;
+            sentences.push({ text: sentence, key });
+        }
+        return sentences;
+    }
+
+    // A LINE THE SOURCE PRINTS ON MANY OF ITS OWN PARTIES DESCRIBES THE
+    // SOURCE, NOT THE EVENT (2026-11-09). The same corpus question as
+    // applyTitleTokenCorpusFlags, asked of description sentences: a sentence
+    // that TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES or more DIFFERENT parties of
+    // one site carry word for word is the site's standing line — a dress
+    // code, a shop notice, a sponsor credit, the door price. Run
+    // 20261109-053706, thedallaseagle.com: "Our Leather Shop is Now Open!"
+    // and "Leather and fetish gear encouraged, but not required" sat under a
+    // Thanksgiving opening, a drag show, a trivia night and a retro tea
+    // dance, seeded a leather candidate on each, and the model confirmed it
+    // on some and declined it on others — the Thanksgiving opening was kept
+    // as a leather event on the shop notice alone.
+    //
+    // Parties, not rows: the count is of distinct titles (the same token
+    // sequence the title corpus uses), so twelve nights of one weekly party
+    // repeating their own description are ONE. And a sentence whose carriers
+    // all share a title word ("Sunday Funday: Rewind", "Sunday Funday:
+    // Disco", "Sunday Funday: Latin") belongs to that family of parties, not
+    // to the site — it stays evidence.
+    //
+    // One venue: the parties must be at the same bar. A standing line is a
+    // venue's line; the same sentence under three parties at three venues
+    // of a festival or a listing site is what those parties have in common
+    // ("Part of … Spooky Bear" under seven events of one bear weekend,
+    // ursamen.org, same run) and stays evidence.
+    //
+    // Stamps `_descriptionChromeSentences` (the keys of the event's own
+    // sentences that are the site's line). Underscore field, in-run only. It
+    // is stamped by the bear check on the very records it is about to judge,
+    // so no fold sits between the stamp and its readers. Nothing is removed
+    // from the description: the line is still shown, it is only never read
+    // as a tag candidate or as bear-keyword evidence
+    // (getDescriptionWithoutSiteLines).
+    applyDescriptionChromeFlags(events) {
+        if (!Array.isArray(events) || events.length === 0) return;
+        // "host venue" → sentence key → { titles: Map(titleKey → token list), text }
+        const corpusOf = (event) => {
+            const host = this.getSourceCorpusHost(event);
+            return host ? `${host} ${this.normalizeBarNameKey(event && event.bar) || ''}` : '';
+        };
+        const corpora = new Map();
+        const sentenceCache = new Map();
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            delete event._descriptionChromeSentences;
+            const sentences = this.splitDescriptionSentences(event.description);
+            if (sentences.length === 0) continue;
+            const tokens = this.getSourceCorpusTitleTokens(event);
+            if (tokens.length === 0) continue;
+            const host = corpusOf(event);
+            if (!host) continue;
+            sentenceCache.set(event, sentences);
+            if (!corpora.has(host)) corpora.set(host, new Map());
+            const corpus = corpora.get(host);
+            const titleKey = tokens.join(' ');
+            for (const sentence of sentences) {
+                if (!corpus.has(sentence.key)) corpus.set(sentence.key, { titles: new Map(), text: sentence.text });
+                corpus.get(sentence.key).titles.set(titleKey, tokens);
+            }
+        }
+        const siteLines = new Map();
+        for (const [host, corpus] of corpora) {
+            for (const [key, entry] of corpus) {
+                if (entry.titles.size < TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES) continue;
+                const tokenLists = [...entry.titles.values()];
+                const sharedByAll = tokenLists[0].some(token => tokenLists.every(list => list.includes(token)));
+                if (sharedByAll) continue;
+                if (!siteLines.has(host)) siteLines.set(host, new Map());
+                siteLines.get(host).set(key, entry);
+            }
+        }
+        for (const [host, lines] of siteLines) {
+            const widest = [...lines.values()].sort((a, b) => b.titles.size - a.titles.size)[0];
+            console.log(`🧱 SITE LINES: ${host.split(' ')[0]} prints ${lines.size} line(s) word for word under ${TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES}+ different parties at one venue (e.g. "${widest.text.slice(0, 90)}" under ${widest.titles.size}) — the venue's standing lines, never a tag candidate or generic bear-keyword evidence for one event`);
+        }
+        for (const [event, sentences] of sentenceCache) {
+            const lines = siteLines.get(corpusOf(event));
+            if (!lines) continue;
+            const keys = sentences.map(sentence => sentence.key).filter(key => lines.has(key));
+            if (keys.length > 0) event._descriptionChromeSentences = [...new Set(keys)];
+        }
+    }
+
+    // The event's description with the site's standing lines left out (see
+    // applyDescriptionChromeFlags), and the lines that were left out. With no
+    // stamp the description is returned exactly as it is.
+    getDescriptionWithoutSiteLines(event) {
+        const description = String((event && event.description) || '');
+        const stamped = event && Array.isArray(event._descriptionChromeSentences) ? event._descriptionChromeSentences : [];
+        if (!description || stamped.length === 0) return { text: description, siteLines: [] };
+        const chrome = new Set(stamped);
+        const kept = [];
+        const siteLines = [];
+        for (const sentence of this.splitDescriptionSentences(description)) {
+            if (chrome.has(sentence.key)) siteLines.push(sentence.text);
+            else kept.push(sentence.text);
+        }
+        if (siteLines.length === 0) return { text: description, siteLines: [] };
+        return { text: kept.join(' '), siteLines };
     }
 
     // Does the pair share at least one title token that is DISTINCTIVE in the
