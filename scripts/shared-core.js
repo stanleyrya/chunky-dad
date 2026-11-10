@@ -6568,6 +6568,70 @@ class SharedCore {
         return null;
     }
 
+    // The page that says where a record sits in THIS source's crawl: the page
+    // of the row that led to it when an enrich-only hop kept it (a ticket
+    // page reached from an event's own link — _enrichParentPageUrl, stamped
+    // by the enrich filter in crawlUrlsForEvents), else the page it was read
+    // on. Empty when the record carries no page at all (a record built
+    // outside the crawl).
+    getPromoterInheritancePageUrl(event) {
+        if (!event || typeof event !== 'object') return '';
+        for (const value of [event._enrichParentPageUrl, event._sourcePageUrl]) {
+            if (typeof value === 'string' && value.trim()) return value.trim();
+        }
+        return '';
+    }
+
+    // TRUE when `pageUrl` is on a site other than the ones the parser is
+    // configured to read. Same test as isBearCheckCrossHost, for any page:
+    // no page, or a config that names no urls, is never "off site" (nothing
+    // to scope by — fail open to the legacy behaviour).
+    isPageOffParserSite(pageUrl, parserConfig) {
+        const pageHost = this.getHostFromUrl(typeof pageUrl === 'string' ? pageUrl : '');
+        const configuredUrls = parserConfig && Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
+        const configuredHosts = configuredUrls.map(configuredUrl => this.getHostFromUrl(configuredUrl)).filter(Boolean);
+        return Boolean(pageHost) && configuredHosts.length > 0 &&
+            !configuredHosts.some(configuredHost => this.areUrlHostsSameSite(pageHost, configuredHost));
+    }
+
+    // HOW a record got its promoter stamp, as the registry pass recorded it:
+    // 'organizer' | 'title' (the event's OWN content names the promoter),
+    // 'url' (an address on the record — its page's or its links' — carries
+    // the promoter's curated token: that says whose LISTING the row sat on),
+    // 'parser-site' (nothing on the record named anyone; it inherited the
+    // promoter whose site the parser reads). '' when the stamp carries no
+    // evidence kind (a record stamped before this field existed, a test
+    // fixture) — every reader treats '' as it treated every stamp before:
+    // as the event's own.
+    getEventPromoterEvidence(event) {
+        const kind = event && typeof event._promoterEvidence === 'string' ? event._promoterEvidence.trim() : '';
+        return kind === 'organizer' || kind === 'title' || kind === 'url' || kind === 'parser-site' ? kind : '';
+    }
+
+    // TRUE when the record's promoter stamp says the EVENT is that promoter's
+    // by its own words (title / organizer), or says nothing about how it was
+    // earned (legacy). FALSE for the two listing-level kinds.
+    isPromoterStampEventLevel(event) {
+        const kind = this.getEventPromoterEvidence(event);
+        return kind !== 'url' && kind !== 'parser-site';
+    }
+
+    // An INHERITED stamp sitting on a record of another site. The parser-site
+    // rung is trust in a SITE ("this parser reads this promoter's own site"),
+    // so it holds only where it was earned: on that site's pages and on the
+    // pages its rows pointed at. The pass records that page next to the stamp
+    // (_promoterEvidencePageUrl, '' when the record had no page) because the
+    // record's _sourcePageUrl does not survive a merge unchanged — it follows
+    // whichever side carried structured data. Only when the stamp carries no
+    // page of its own is the record's source page asked instead.
+    isInheritedPromoterStampOffSite(event, parserConfig) {
+        if (this.getEventPromoterEvidence(event) !== 'parser-site') return false;
+        const page = typeof event._promoterEvidencePageUrl === 'string'
+            ? event._promoterEvidencePageUrl
+            : (typeof event._sourcePageUrl === 'string' ? event._sourcePageUrl : '');
+        return this.isPageOffParserSite(page, parserConfig);
+    }
+
     applyPromoterRegistryMatches(events, parserConfig, mainConfig) {
         const mode = this.getPromoterRegistryMode(mainConfig);
         if (mode === 'off') return;
@@ -6578,6 +6642,9 @@ class SharedCore {
         // Last resort only — computed once, applied per event below when the
         // event's OWN fields matched nothing.
         const parserEntry = this.resolveParserPromoterEntry(parserConfig);
+        // Records the parser rung REFUSED, by the page they were read on —
+        // one log line per page below (flag, don't drop silently).
+        const refusedByPage = new Map();
         for (const event of events) {
             const ownMatch = this.matchEventToPromoter(event);
             // A sub-brand the title named (BOATMINCE, SPOOKMINCE) must keep
@@ -6586,6 +6653,30 @@ class SharedCore {
             // closed: `ownMatch.ambiguous` is a decision not to guess, and the
             // parser must not overrule it.
             const fromParser = !ownMatch && Boolean(parserEntry);
+            // …and only where the parser's site speaks. "This parser reads
+            // this promoter's own site" is a statement about THAT SITE's
+            // pages; a crawl also reads pages of other sites, and a record
+            // read there with nobody named on it is not the promoter's by
+            // default. Run 20261109-053706, Two Tons of Fun: the site's
+            // footer credits its ticket vendor, the crawl followed the credit
+            // to the vendor's home page and on into its listings, and 265
+            // records of strangers' events (craft clubs, pilates, game
+            // nights) "inherited Two Tons of Fun" — bearAffinity=always, so
+            // every one was a curated bear event. 2026-11-06, Furball: 19
+            // events of a venue's box office, same rung. The rung therefore
+            // asks where the record sits in the crawl
+            // (getPromoterInheritancePageUrl): on one of the parser's
+            // configured sites, or on a page a row of such a site pointed at
+            // and the enrich-only match kept (the TURKEYMINCE ticket page
+            // this rung was written for). A record with no page at all keeps
+            // the old behaviour — there is nothing to scope it by.
+            const inheritancePage = fromParser ? this.getPromoterInheritancePageUrl(event) : '';
+            if (fromParser && inheritancePage && this.isPageOffParserSite(inheritancePage, parserConfig)) {
+                const readOn = (typeof event._sourcePageUrl === 'string' && event._sourcePageUrl.trim()) || inheritancePage;
+                if (!refusedByPage.has(readOn)) refusedByPage.set(readOn, []);
+                refusedByPage.get(readOn).push(event.title || 'Unknown');
+                continue;
+            }
             const match = fromParser ? { entry: parserEntry, evidence: 'parser-site' } : ownMatch;
             if (!match) continue;
             const title = event.title || 'Unknown';
@@ -6616,6 +6707,19 @@ class SharedCore {
             if (identityWebsite) stampKeys.push('website');
             if (mode === 'enforce') {
                 event._promoter = match.entry.name;
+                // HOW it matched travels with the stamp (see
+                // getEventPromoterEvidence): the bear check and the identity
+                // ladder must tell "the event names this promoter" from "the
+                // row sat on this promoter's listing". For an inherited stamp
+                // the page that earned it rides along too.
+                event._promoterEvidence = fromParser
+                    ? 'parser-site'
+                    : (String(match.evidence || '').startsWith('url:') ? 'url' : match.evidence);
+                if (fromParser) {
+                    event._promoterEvidencePageUrl = inheritancePage;
+                } else {
+                    delete event._promoterEvidencePageUrl;
+                }
                 if (!event._organizer && match.evidence !== 'organizer') {
                     event._organizer = match.entry.name;
                 }
@@ -6631,6 +6735,9 @@ class SharedCore {
         }
         if (counts.parser > 0) {
             console.log(`🪪 PROMOTER REGISTRY${tag}: ${counts.parser} more event(s) inherited ${parserEntry.name} from the parser's own site (${this.getHostFromUrl(parserEntry.website)}) — nothing in the event itself named a promoter`);
+        }
+        for (const [page, titles] of refusedByPage) {
+            console.log(`🪪 PROMOTER REGISTRY${tag}: ${titles.length} event(s) read on ${page} did NOT inherit ${parserEntry.name} — that page is not on the parser's own site and no row of that site led to it, and nothing in the events names a promoter: ${titles.map(title => `"${title}"`).join(', ')}`);
         }
     }
 
@@ -11990,10 +12097,32 @@ class SharedCore {
                         const keptEvents = [];
                         const droppedEvents = [];
                         for (const childEvent of parsedEvents) {
-                            const matchesParent = enrichContext.parentEvents.some(parentEvent =>
+                            const keptByParent = enrichContext.parentEvents.find(parentEvent =>
                                 this.getSameEventIdentitySignal(childEvent, parentEvent, { requireCloseStartTimes: false })
-                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url));
-                            (matchesParent ? keptEvents : droppedEvents).push(childEvent);
+                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url)) || null;
+                            if (keptByParent) {
+                                // WHO VOUCHES FOR THIS RECORD? It was read on
+                                // someone else's page (a ticket page, a venue
+                                // page) and is here only because a row of
+                                // another page pointed at it and matched it.
+                                // That row's page is the record's place in
+                                // the source — through a chain of such hops,
+                                // the FIRST page of the chain. The parser-site
+                                // promoter rung reads it (see
+                                // getPromoterInheritancePageUrl): a ticket page
+                                // a row of the promoter's own site led to is
+                                // the promoter's event; a ticket page a row of
+                                // a wandered-onto listing led to is not.
+                                // Underscore field — never serialized.
+                                const vouchingPage = [keptByParent._enrichParentPageUrl, keptByParent._sourcePageUrl, enrichContext.parentUrl]
+                                    .find(value => typeof value === 'string' && value.trim());
+                                if (vouchingPage && !childEvent._enrichParentPageUrl) {
+                                    childEvent._enrichParentPageUrl = vouchingPage.trim();
+                                }
+                                keptEvents.push(childEvent);
+                            } else {
+                                droppedEvents.push(childEvent);
+                            }
                         }
                         if (droppedEvents.length > 0) {
                             const childHost = this.getHostFromUrl(url) || url;

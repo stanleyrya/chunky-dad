@@ -30189,3 +30189,195 @@ test('aggregator: a not-bear held because the row names a usually-bear promoter 
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, true, { siteRole: 'aggregator' }), false, 'a trusted promoter is never dropped here');
   assert.equal(core.isAggregatorShrug({ result: 'unsure', aiAnswer: 'unsure', provenance: 'ai: x' }, false, { siteRole: 'venue' }), false);
 });
+
+// ---------------------------------------------------------------------------
+// THE PARSER'S SITE SPEAKS FOR ITS OWN PAGES ONLY (run 20261109-053706).
+//
+// The parser-site rung ("this parser reads this promoter's own site, so a
+// record that names nobody is that promoter's") was written for a page of the
+// promoter's site whose rows link out to a ticket vendor. It fired for every
+// record of the whole crawl. Two Tons of Fun: twotonsoffun.co.uk credits its
+// ticket vendor in the footer (<a href="https://www.outsavvy.com">), the crawl
+// followed the credit to the vendor's home page and on into its listings, and
+// "265 more event(s) inherited Two Tons of Fun from the parser's own site" —
+// craft clubs, pilates, a burlesque school, each then a bearAffinity=always
+// event ("115 bear (0 keyword, 115 ai) … 0 dropped"). 2026-11-06, Furball: 19
+// events of a venue's box office, same rung.
+//
+// Rule: the rung asks where the record sits in the crawl — a page of the
+// parser's configured site(s), or a page a row of such a site pointed at and
+// the enrich-only match kept. Anything else is refused, one log line per
+// page. A record with no page at all keeps the old behaviour.
+// ---------------------------------------------------------------------------
+const TWO_TONS_REGISTRY = [{
+  name: 'Two Tons of Fun',
+  aliases: ['TTOF', 'Two Tons of HalloKWEEN', 'Two Tons of Christmas'],
+  shortName: 'TWO TONS',
+  instagram: 'https://www.instagram.com/two_tons_of_fun',
+  website: 'https://twotonsoffun.co.uk',
+  bearAffinity: 'always'
+}];
+const TWO_TONS_PARSER = { name: 'Two Tons of Fun', urls: ['https://twotonsoffun.co.uk/'] };
+
+function captureRegistryLogs(run) {
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (line) => lines.push(String(line));
+  try { run(); } finally { console.log = originalLog; }
+  return lines.filter(line => line.includes('PROMOTER REGISTRY'));
+}
+
+test('parser promoter: a record read on another site\'s page does not inherit the parser\'s promoter; the promoter\'s own pages and the ticket page its row led to still do', () => {
+  const core = createRegistryCore(TWO_TONS_REGISTRY);
+  const night = new Date('2026-12-11T21:00:00.000Z');
+  // The promoter's own row that names nobody (the page's install-app prompt
+  // was read as a row: "Add Two Tons of Fun" names it, this one does not).
+  const ownRow = { title: 'Christmas tickets on sale', startDate: new Date('2026-11-01T12:00:00.000Z'), _sourcePageUrl: 'https://twotonsoffun.co.uk/' };
+  // The vendor page the promoter's own row linked to, kept by the enrich-only match.
+  const ticketPage = { title: 'The BIGGEST Pop Night in London!', bar: 'City of Quebec', startDate: night,
+    ticketUrl: 'https://www.outsavvy.com/event/12116/the-biggest-pop-night',
+    _sourcePageUrl: 'https://link.outsavvy.com/thebiggestpopnight', _enrichParentPageUrl: 'https://twotonsoffun.co.uk/' };
+  // Strangers on the vendor's own listing, reached through the footer credit.
+  const macrame = { title: 'Macramé Workshop', bar: 'QueerSwap Studio', startDate: new Date('2026-11-14T11:00:00.000Z'),
+    ticketUrl: 'https://www.outsavvy.com/event/40021/macrame-workshop', _sourcePageUrl: 'https://www.outsavvy.com/' };
+  const pilates = { title: 'Queer Reformer Pilates', bar: 'Studio Fix', startDate: new Date('2026-11-10T18:00:00.000Z'),
+    ticketUrl: 'https://www.outsavvy.com/event/38214/queer-reformer-pilates', _sourcePageUrl: 'https://www.outsavvy.com/' };
+  // A stranger's own ticket page: vouched for by a row of the VENDOR's listing, not of the promoter's site.
+  const burlesque = { title: 'Soho School of Burlesque Scratch Show', bar: 'The Cavendish Arms', startDate: new Date('2026-11-08T18:30:00.000Z'),
+    ticketUrl: 'https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch',
+    _sourcePageUrl: 'https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch', _enrichParentPageUrl: 'https://www.outsavvy.com/' };
+  // A record built outside the crawl carries no page: nothing to scope it by.
+  const pageless = { title: 'Pop Night', startDate: night, ticketUrl: 'https://www.outsavvy.com/event/12116/the-biggest-pop-night' };
+
+  const events = [ownRow, ticketPage, macrame, pilates, burlesque, pageless];
+  const lines = captureRegistryLogs(() => core.applyPromoterRegistryMatches(events, TWO_TONS_PARSER, ENFORCE_REGISTRY_CONFIG));
+
+  // The own row carries the promoter's address (its page): that is URL evidence, not inheritance.
+  assert.equal(ownRow._promoter, 'Two Tons of Fun');
+  assert.equal(ownRow._promoterEvidence, 'url');
+  assert.equal(ownRow._promoterEvidencePageUrl, undefined);
+
+  assert.equal(ticketPage._promoter, 'Two Tons of Fun', 'the ticket page a row of the promoter\'s own site led to is the promoter\'s event');
+  assert.equal(ticketPage._promoterEvidence, 'parser-site');
+  assert.equal(ticketPage._promoterEvidencePageUrl, 'https://twotonsoffun.co.uk/', 'the page that earned the stamp rides along');
+  assert.equal(ticketPage.shortName, 'TWO TONS');
+
+  for (const stranger of [macrame, pilates, burlesque]) {
+    assert.equal(stranger._promoter, undefined, `"${stranger.title}" was read on the vendor's site and names nobody`);
+    assert.equal(stranger._promoterEvidence, undefined);
+    assert.equal(stranger.shortName, undefined, 'no promoter, no promoter fields');
+    assert.equal(stranger.website, undefined);
+  }
+
+  assert.equal(pageless._promoter, 'Two Tons of Fun', 'a record with no page keeps the legacy inheritance');
+  assert.equal(pageless._promoterEvidence, 'parser-site');
+  assert.equal(pageless._promoterEvidencePageUrl, '');
+
+  // One line per page, naming the records and the reason.
+  const refusals = lines.filter(line => line.includes('did NOT inherit'));
+  assert.deepEqual(refusals, [
+    '🪪 PROMOTER REGISTRY: 2 event(s) read on https://www.outsavvy.com/ did NOT inherit Two Tons of Fun — that page is not on the parser\'s own site and no row of that site led to it, and nothing in the events names a promoter: "Macramé Workshop", "Queer Reformer Pilates"',
+    '🪪 PROMOTER REGISTRY: 1 event(s) read on https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch did NOT inherit Two Tons of Fun — that page is not on the parser\'s own site and no row of that site led to it, and nothing in the events names a promoter: "Soho School of Burlesque Scratch Show"'
+  ]);
+  assert.ok(lines.some(line => line.includes('2 more event(s) inherited Two Tons of Fun from the parser\'s own site')),
+    `the inherit count no longer includes the refused records: ${JSON.stringify(lines.filter(l => l.includes('inherited')))}`);
+});
+
+test('parser promoter: an event on another site that NAMES the promoter is still the promoter\'s, by its own words', () => {
+  const core = createRegistryCore(TWO_TONS_REGISTRY);
+  // The vendor's listing does carry the promoter's own night, under its own name.
+  const named = { title: 'Two Tons of Christmas', bar: 'City of Quebec (Officers Club)', startDate: new Date('2026-12-11T21:00:00.000Z'),
+    ticketUrl: 'https://www.outsavvy.com/event/12116/two-tons-of-fun', _sourcePageUrl: 'https://www.outsavvy.com/' };
+  const lines = captureRegistryLogs(() => core.applyPromoterRegistryMatches([named], TWO_TONS_PARSER, ENFORCE_REGISTRY_CONFIG));
+  assert.equal(named._promoter, 'Two Tons of Fun');
+  assert.equal(named._promoterEvidence, 'title');
+  assert.equal(lines.filter(line => line.includes('did NOT inherit')).length, 0);
+});
+
+test('parser promoter: report mode refuses the same records out loud and stamps nothing', () => {
+  const core = createRegistryCore(TWO_TONS_REGISTRY);
+  const stranger = { title: 'Macramé Workshop', startDate: new Date('2026-11-14T11:00:00.000Z'), _sourcePageUrl: 'https://www.outsavvy.com/' };
+  const ownRow = { title: 'Christmas tickets on sale', startDate: new Date('2026-11-01T12:00:00.000Z'), _sourcePageUrl: 'https://twotonsoffun.co.uk/' };
+  const before = JSON.stringify([stranger, ownRow]);
+  const lines = captureRegistryLogs(() => core.applyPromoterRegistryMatches([stranger, ownRow], TWO_TONS_PARSER, REPORT_REGISTRY_CONFIG));
+  assert.equal(JSON.stringify([stranger, ownRow]), before, 'report mode changes no record');
+  assert.equal(lines.filter(line => line.includes('did NOT inherit') && line.includes('"Macramé Workshop"')).length, 1);
+});
+
+test('parser promoter: a second configured site of the same parser is the parser\'s own site too', () => {
+  const core = createRegistryCore(TWO_TONS_REGISTRY);
+  // South Seattle Bear Social shape (47 inherits today, all on a configured host): the parser reads the
+  // promoter's site AND its calendar host; a row of either is in scope.
+  const parserConfig = { name: 'Two Tons of Fun', urls: ['https://twotonsoffun.co.uk/', 'https://calendar.example/embed?src=twotons'] };
+  const calendarRow = { title: 'Game Night', startDate: new Date('2026-11-15T16:00:00.000Z'), _sourcePageUrl: 'https://calendar.example/embed?src=twotons' };
+  const lines = captureRegistryLogs(() => core.applyPromoterRegistryMatches([calendarRow], parserConfig, ENFORCE_REGISTRY_CONFIG));
+  assert.equal(calendarRow._promoter, 'Two Tons of Fun');
+  assert.equal(calendarRow._promoterEvidence, 'parser-site');
+  assert.equal(calendarRow._promoterEvidencePageUrl, 'https://calendar.example/embed?src=twotons');
+  assert.equal(lines.filter(line => line.includes('did NOT inherit')).length, 0);
+});
+
+test('parser promoter, through the crawl: the promoter\'s row and its ticket page inherit; strangers reached through a footer link to the ticket vendor do not', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    promoters: TWO_TONS_REGISTRY,
+    pageClassificationRules: [
+      { pattern: /^https:\/\/twotonsoffun\.co\.uk\/$/i, classification: 'multi-event-page' },
+      { pattern: /^https:\/\/www\.outsavvy\.com\/$/i, classification: 'multi-event-page' },
+      { pattern: /outsavvy\.com\/event\//i, classification: 'event-page' }
+    ]
+  });
+  const display = createDisplayAdapterStub();
+  const soon = (days, hour = 21) => { const d = new Date(Date.now() + days * 86400000); d.setUTCHours(hour, 0, 0, 0); return d; };
+  const pages = {
+    'https://twotonsoffun.co.uk/': {
+      events: [{ title: 'Pop Night for Chubs and Chasers', bar: 'City of Quebec', timezone: 'Europe/London', startDate: soon(20),
+        ticketUrl: 'https://www.outsavvy.com/event/12116/the-biggest-pop-night' }],
+      // "Tickets handled by <a href="https://www.outsavvy.com">OutSavvy</a>"
+      additionalLinks: ['https://www.outsavvy.com/']
+    },
+    'https://www.outsavvy.com/event/12116/the-biggest-pop-night': {
+      events: [{ title: 'The BIGGEST Pop Night in London!', bar: 'City of Quebec', address: '12 Old Quebec Street, London', timezone: 'Europe/London', startDate: soon(20),
+        ticketUrl: 'https://www.outsavvy.com/event/12116/the-biggest-pop-night' }]
+    },
+    'https://www.outsavvy.com/': {
+      events: [
+        { title: 'Macramé Workshop', bar: 'QueerSwap Studio', timezone: 'Europe/London', startDate: soon(5, 11), ticketUrl: 'https://www.outsavvy.com/event/40021/macrame-workshop' },
+        { title: 'Queer Reformer Pilates', bar: 'Studio Fix', timezone: 'Europe/London', startDate: soon(6, 18) }
+      ]
+    },
+    'https://www.outsavvy.com/event/40021/macrame-workshop': {
+      events: [{ title: 'Macramé Workshop', bar: 'QueerSwap Studio', address: '4 Garden Walk, London', timezone: 'Europe/London', startDate: soon(5, 11),
+        ticketUrl: 'https://www.outsavvy.com/event/40021/macrame-workshop' }]
+    }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (line) => lines.push(String(line));
+  let result;
+  try {
+    result = await core.processParser({ ...TWO_TONS_PARSER, ai: CRAWL_AI }, ENFORCE_REGISTRY_CONFIG, httpAdapter, display, parsers);
+  } finally { console.log = originalLog; }
+
+  for (const url of Object.keys(pages)) {
+    assert.ok(fetched.includes(url), `the crawl still reads ${url} (crawl scope is not this rule's business)`);
+  }
+  const byTitle = (title) => result.events.filter(event => event.title === title);
+  const popNight = result.events.filter(event => /Pop Night/.test(event.title));
+  assert.equal(popNight.length, 1, 'the row and its ticket page are one event');
+  assert.equal(popNight[0]._promoter, 'Two Tons of Fun');
+  assert.equal(popNight[0].shortName, 'TWO TONS');
+  // With no AI judge configured the bear check is keywords plus trust: before this rule the two strangers
+  // were KEPT here as the always-bear promoter's own (trust alone); now nothing vouches for them.
+  assert.equal(result.totalEvents, 5, 'all five records were read');
+  for (const title of ['Macramé Workshop', 'Queer Reformer Pilates']) {
+    assert.equal(byTitle(title).length, 0, `${title} is not kept as the promoter's event`);
+  }
+  assert.equal(result.events.length, 1);
+  const refusals = lines.filter(line => line.includes('did NOT inherit'));
+  assert.equal(refusals.length, 2, `one line per page: ${JSON.stringify(refusals)}`);
+  assert.ok(refusals.some(line => line.includes('read on https://www.outsavvy.com/ did NOT inherit') && line.includes('"Macramé Workshop", "Queer Reformer Pilates"')));
+  assert.ok(refusals.some(line => line.includes('read on https://www.outsavvy.com/event/40021/macrame-workshop did NOT inherit')),
+    'a ticket page vouched for by a row of the vendor\'s listing is the vendor\'s, not the promoter\'s');
+});
