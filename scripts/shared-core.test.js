@@ -31406,3 +31406,18 @@ test('feed fidelity: in a run, the nights a parser returns leave with their part
   assert.deepEqual(texts, [PARTY_TEXT_FULL, PARTY_TEXT_FULL, PARTY_TEXT_THEMED, PARTY_TEXT_FULL]);
   assert.equal(lines.filter(line => line.includes('📝 DESCRIPTION') && line.includes('cut-off opening')).length, 2);
 });
+
+test('feed fidelity: a text two different parties of one source carry word for word is the page\'s — a blank night never borrows it', () => {
+  const core = createCore();
+  const footer = 'Sponsored by Lagunitas. Leather, gear or denim encouraged. No cover before 9pm.';
+  const nights = [
+    partyNight('2026-11-13T04:00:00.000Z', footer, { title: 'Frolic' }),
+    partyNight('2026-11-20T04:00:00.000Z', footer, { title: 'Frolic' }),
+    partyNight('2026-11-27T04:00:00.000Z', '', { title: 'Frolic' }),
+    partyNight('2026-11-14T04:00:00.000Z', footer, { title: 'Karaoke Night' })
+  ];
+  const run = capturePartyLogs(() => core.borrowPartyDescriptions(nights));
+  assert.equal(run.result, 0);
+  assert.equal(nights[2].description, '');
+  assert.match(run.lines[0], /"Frolic" has no text on 2026-11-26; the text its other nights carry is carried word for word by 1 other party of this source, so it is the page's, not this party's — not borrowed; left blank/);
+});

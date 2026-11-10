@@ -14629,6 +14629,19 @@ class SharedCore {
         }
         const textOf = (event) => (typeof event.description === 'string' ? event.description.trim() : '');
         const nightOf = (event) => this.getEventLocalDayKey(event) || 'an undated night';
+        // Which parties say each text. A text two DIFFERENT parties of one
+        // source carry word for word is the page's furniture (a sponsor
+        // footer, "Nothing in that category right now") — count parties, not
+        // rows: a weekly night repeating its own words is not furniture.
+        const partiesSaying = new Map();
+        for (const [key, nights] of parties) {
+            for (const night of nights) {
+                const text = this.normalizeDescriptionForContainment(textOf(night));
+                if (!text) continue;
+                if (!partiesSaying.has(text)) partiesSaying.set(text, new Set());
+                partiesSaying.get(text).add(key);
+            }
+        }
         let borrowed = 0;
         for (const nights of parties.values()) {
             if (nights.length < 2) continue;
@@ -14673,6 +14686,11 @@ class SharedCore {
             const donor = agreeing[0];
             if (agreeing.length < 2) {
                 console.log(`📝 DESCRIPTION: "${title}" has no text on ${blankNights}; only the ${nightOf(donor)} night has one, and one night's words may be that night's alone — not borrowed; left blank`);
+                continue;
+            }
+            const alsoSaidBy = (partiesSaying.get(this.normalizeDescriptionForContainment(textOf(donor))) || new Set()).size - 1;
+            if (alsoSaidBy > 0) {
+                console.log(`📝 DESCRIPTION: "${title}" has no text on ${blankNights}; the text its other nights carry is carried word for word by ${alsoSaidBy} other part${alsoSaidBy === 1 ? 'y' : 'ies'} of this source, so it is the page's, not this party's — not borrowed; left blank`);
                 continue;
             }
             if (this.descriptionNamesCalendarDate(textOf(donor))) {
