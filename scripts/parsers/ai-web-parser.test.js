@@ -24041,3 +24041,100 @@ test('feed fidelity: a feed row dated by a bare day and no clock is stamped date
   assert.equal(parser.jsonApiScalarDateCandidate('2026-12-03T21:00:00+01:00').dateOnly, undefined);
   assert.equal(parser.jsonApiScalarDateCandidate({ millis: 1796256000000, tzid: 'Europe/Madrid' }).dateOnly, undefined);
 });
+
+// ── Crawl scope (2026-11-09) ─────────────────────────────────────────────────
+// tickettailor.com (page cache, run 20261106) writes its canonical, og:url and
+// hrefs with every structural character as a numeric entity. Trimmed markup.
+const ENTITY_ENCODED_BOX_OFFICE_HTML = `<!DOCTYPE html><html lang="en-GB"><head>
+<link rel="canonical" href="https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;toucanstikilounge" />
+<meta property="og:url" content="https&#x3A;&#x2F;&#x2F;www.tickettailor.com&#x2F;events&#x2F;toucanstikilounge" />
+</head><body>
+<a href="&#x2F;events&#x2F;toucanstikilounge" class="header__logo" notranslate>Toucan's</a>
+<a notranslate href="&#x2F;events&#x2F;toucanstikilounge&#x2F;2424070" class="event__link">Luau</a>
+</body></html>`;
+
+test('a declared address written with numeric entities is decoded, and is never an alias when it is not absolute', () => {
+  // Wired as in production (bear-event-scraper-unified.js): the parser resolves URLs with the core's normalizeUrl.
+  const core = new SharedCore({}, { eventSchema: EventSchema });
+  const parser = new AiWebParser({ normalizeUrl: core.normalizeUrl.bind(core) });
+  parser.core = core;
+  const lines = [];
+  const original = console.log;
+  console.log = (line) => { lines.push(String(line)); };
+  try {
+    // The page as fetched, and the same markup reached under its event URL (run 20261109, log line 2257).
+    parser.noteSelfDeclaredAliases(ENTITY_ENCODED_BOX_OFFICE_HTML, 'https://www.tickettailor.com/events/toucanstikilounge');
+    parser.noteSelfDeclaredAliases(
+      ENTITY_ENCODED_BOX_OFFICE_HTML.replace(/toucanstikilounge/g, 'asociacionmadbear&#x2F;2409132'),
+      'https://www.tickettailor.com/events/asociacionmadbear/2409132');
+    // A relative canonical is our resolution, not the page's declaration.
+    parser.noteSelfDeclaredAliases('<link rel="canonical" href="/event/v3x3n7-spookmince-tickets">', 'https://dice.fm/event/6a5e399f126db80001fe9c5c');
+    parser.noteSelfDeclaredAliases('<link rel="canonical" href="v3x3n7-spookmince-tickets">', 'https://dice.fm/event/6a5e399f126db80001fe9c5c');
+  } finally { console.log = original; }
+  assert.deepEqual(lines.filter(line => line.includes('ALIAS')), [], 'no alias was recorded');
+  // Even a resolver that does not decode (the stub this suite uses elsewhere) cannot get the mis-resolved value past the core.
+  const undecoding = createParser();
+  undecoding.core = core;
+  undecoding.noteSelfDeclaredAliases(ENTITY_ENCODED_BOX_OFFICE_HTML, 'https://www.tickettailor.com/events/toucanstikilounge');
+  assert.deepEqual(lines.filter(line => line.includes('ALIAS')), [], 'the core refuses an address with entity text in it');
+  assert.equal(core.resolveUrlAlias('https://www.tickettailor.com/events/toucanstikilounge'), 'https://www.tickettailor.com/events/toucanstikilounge');
+  assert.equal(core.resolveUrlAlias('https://dice.fm/event/6a5e399f126db80001fe9c5c'), 'https://dice.fm/event/6a5e399f126db80001fe9c5c');
+
+  // The entity-encoded canonical IS the page: it reads as a self-reference, not as a new link.
+  assert.equal(
+    parser.normalizeUrl(parser.extractSelfDeclaredCanonicalUrls(ENTITY_ENCODED_BOX_OFFICE_HTML)[0], 'https://www.tickettailor.com/events/toucanstikilounge'),
+    'https://www.tickettailor.com/events/toucanstikilounge');
+  // …and the page's entity-encoded hrefs resolve to the addresses they name.
+  const hrefs = parser.extractHrefCandidates(ENTITY_ENCODED_BOX_OFFICE_HTML)
+    .map(candidate => parser.normalizeUrl(candidate.url, 'https://www.tickettailor.com/events/toucanstikilounge'));
+  assert.ok(hrefs.includes('https://www.tickettailor.com/events/toucanstikilounge/2424070'), hrefs.join(' | '));
+  assert.ok(hrefs.every(href => !/&#|%26%23/i.test(href)), hrefs.join(' | '));
+
+  // An absolute, entity-encoded declaration of ANOTHER spelling still folds.
+  const idUrl = 'https://dice.fm/event/6a5e399f126db80001fe9c5c';
+  const slugUrl = 'https://dice.fm/event/v3x3n7-spookmince-31st-oct-unlocked-shoreditch-london-tickets';
+  console.log = () => {};
+  try {
+    parser.noteSelfDeclaredAliases(`<link rel="canonical" href="${slugUrl.replace(/:/g, '&#x3A;').replace(/\//g, '&#x2F;')}">`, idUrl);
+  } finally { console.log = original; }
+  assert.equal(core.resolveUrlAlias(idUrl), slugUrl);
+});
+
+// outsavvy.com/event/20231/soho-school-of-burlesque-scratch (page cache, run
+// 20261109-053706): the share buttons carry the page's own address unencoded
+// inside another URL's query. Markup verbatim, trimmed to the two anchors.
+const SHARE_BUTTON_HTML = `<div class="jssocials-shares">
+<a target="_blank" href="fb-messenger://share/?link=https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch&app_id=179821335543821&redirect_uri=https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch" class="jssocials-share-link" title="Share on Messenger" name="Share on Messenger">
+<a target="_blank" href="https://wa.me/?text=OutSavvy%20-%20Soho School of Burlesque Scratch Show%20-%20Sunday 8th November 2026 (+ 1 other date)%20at%20The Cavendish Arms.%20https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch&app_absent=1" class="jssocials-share-link" title="Share on Whats App" name="Share on Whats App">
+</div>`;
+
+test('URL discovery: a URL embedded in another URL\'s query string ends at the enclosing "&"', () => {
+  const parser = createParser();
+  const page = 'https://www.outsavvy.com/event/20231/soho-school-of-burlesque-scratch';
+  const found = parser.extractUrlCandidatesFromRawHtml(SHARE_BUTTON_HTML);
+  assert.ok(found.includes(page), found.join(' | '));
+  assert.deepEqual(found.filter(url => /app_id=|app_absent=|redirect_uri=/.test(url) && url.startsWith('https://www.outsavvy.com/')), [],
+    'the enclosing URL\'s parameters are not part of the embedded address');
+  // The same markup with &amp; (how a serializer writes it) and inside JSON.
+  const encoded = parser.extractUrlCandidatesFromRawHtml(SHARE_BUTTON_HTML.replace(/&/g, '&amp;'));
+  assert.ok(encoded.includes(page), encoded.join(' | '));
+  assert.ok(!encoded.some(url => url.startsWith(`${page}&`)), encoded.join(' | '));
+  const json = parser.extractUrlCandidatesFromRawHtml(`<script>var share = {"messenger":"fb-messenger://share/?link=${page}&app_id=1"};</script>`);
+  assert.deepEqual(json, [page]);
+
+  // Left exactly as scanned:
+  // a URL's own query,
+  assert.deepEqual(parser.extractUrlCandidatesFromRawHtml('<a href="https://x.example/list?page=2&sort=date">next</a>'), ['https://x.example/list?page=2&sort=date']);
+  // an embedded URL that has a query of its own (whose "&" it is cannot be told),
+  assert.ok(parser.extractUrlCandidatesFromRawHtml('<a href="app://open/?link=https://x.example/e?id=7&ref=share">x</a>').includes('https://x.example/e?id=7&ref=share'));
+  // a URL that follows prose or sits alone in its attribute,
+  assert.deepEqual(parser.extractUrlCandidatesFromRawHtml('<p title="Tickets and more: https://x.example/a&b">x</p>'), ['https://x.example/a&b']);
+  assert.deepEqual(parser.extractUrlCandidatesFromRawHtml('<a href="https://x.example/a&b">x</a>'), ['https://x.example/a&b']);
+  // and a whole URL that carries another one in its query stays one URL.
+  assert.deepEqual(
+    parser.extractUrlCandidatesFromRawHtml('<a href="https://share.example/sharer.php?u=https://x.example/e/1&t=Title">x</a>'),
+    ['https://share.example/sharer.php?u=https://x.example/e/1&t=Title']);
+  // Direct helper edges.
+  assert.equal(parser.cutUrlEmbeddedInQuery('', 0, 'https://x.example/a&b'), 'https://x.example/a&b');
+  assert.equal(parser.cutUrlEmbeddedInQuery('"app://s/?l=https://x.example/a&b"', 12, 'https://x.example/a&b'), 'https://x.example/a');
+});
