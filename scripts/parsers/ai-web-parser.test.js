@@ -9343,7 +9343,11 @@ test('multilingual signals stay conservative: no mid-sentence weekdays, bare mon
 
 test('Sitges-shaped multi-event page splits into per-day segments with September anchoring', () => {
   const parser = createParser();
-  const programmeYear = new Date().getFullYear();
+  // Pinned to the year these headings are true of (3 September 2026 is a
+  // Thursday): the day headings vote on the page's year, so a fixture that
+  // moved with the clock would state a programme its own weekdays contradict.
+  parser.now = FROZEN_NOW;
+  const programmeYear = 2026;
   const lines = [
     'PROGRAMA oficial',
     `BEARS SITGES WEEK ${programmeYear}`,
@@ -23585,4 +23589,201 @@ test('confidence retry: a retry that answers blank never erases what the first p
   assert.equal(merged.address, '1123 FOLSOM STREET, SF, CA');
   assert.equal(merged.startDate, '2026-11-28');
   assert.equal(merged.city, 'san francisco', 'a retry may still ADD a field');
+});
+
+// ---------------------------------------------------------------------------
+// The programme's own day headings state its year.
+//
+// bearssitges.org/bears-sitges-week (page cached 2026-11-08, run 2026-11-09):
+// the organiser put next year's banner on top and left the finished 2026
+// programme underneath it. The header's "2027" anchored every "JUEVES- 03"
+// section to September 2027 — where the 3rd is a Friday — and 34 parties that
+// were over came back as new events ten months out.
+// ---------------------------------------------------------------------------
+
+// The cached page's own lines, trimmed (rows shortened, eleven headings kept).
+const STALE_PROGRAMME_LINES = [
+  'PROGRAMA oficial 2027',
+  'PRóXIMAMENTE',
+  'BEARS SITGES WEEK 2027',
+  'Del 3 al 12 de SEPTIEMBRE',
+  '(Bear-Village abierto del 6 al 12)',
+  'JUEVES- 03',
+  '19h. INAUGURACIÓN BEARS SITGES WEEK 2025 Brindaremos con Cava y Aperitivo. Hotel Calipolis. Entrada Libre',
+  'VIERNES - 04',
+  '20:30h a 03:30h: OPENING «EARLY-VILLAGE» 2026 Con motivo del 25º aniversario de Bears Sitges abrimos el Bear-Village',
+  'SÁBADO - 05',
+  '14:00h: BBQ & Music – POP-Air en Restaurant LE PATIO. **Tickets a la venta en Clica AQUÍ',
+  'DOMINGO - 06',
+  '20:30h a 03h: EARLY-VILLAGE 2026 Para celebrar el 25 aniversario de Bears Sitges',
+  'LUNES - 07',
+  '16h a 21h: Inauguración BEARS SITGES MARKET en Hotel Calipolis',
+  'MARTES - 08',
+  '20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village con DJ PAW.L',
+  'MIÉRCOLES - 09',
+  '16h a 20:30h BEAR TEA-DANCE : En el RoofTop del Hotel MiM **Plazas Limitadas**',
+  'JUEVES - 10',
+  '01h a 06h CAPITÁN Party en «BEARS DISCO» by Scandal',
+  'VIERNES - 11',
+  '21:30h to 03:30h 25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village with DJ PERFECTO.',
+  'SABADO -12',
+  '21h a 04h Noche Especial Mr. BEAR SITGES 2026: en Bear-Village con DJ Radio Chi.',
+  'DOMINGO - 13',
+  '12h BEARS SITGES MARKET en Hotel Calipolis'
+];
+const wrapProgrammeLines = (lines) => `<html><body>${lines.map(l => `<p>${l}</p>`).join('\n')}</body></html>`;
+// The day of the run that found it: 2026-11-09.
+const STALE_PROGRAMME_NOW = () => new Date(Date.UTC(2026, 10, 9, 12, 0, 0));
+const capturePageYearLogs = (run) => {
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+  try {
+    return { result: run(), logs: logs.filter(line => line.includes('PAGE YEAR')) };
+  } finally {
+    console.log = originalLog;
+  }
+};
+
+test('page year: a programme whose day headings fall on last year\'s weekdays is last year\'s programme, whatever the banner above it says — and the log names the headings', () => {
+  const parser = createParser();
+  parser.now = STALE_PROGRAMME_NOW;
+  const { result: ctx, logs } = capturePageYearLogs(() => parser.derivePageDateContext(wrapProgrammeLines(STALE_PROGRAMME_LINES)));
+
+  assert.equal(ctx.month, 9);
+  assert.equal(ctx.year, 2026, 'eleven headings, every one true of September 2026 and none of September 2027');
+  assert.equal(ctx.headerYear, 2027, 'what the banner said is kept beside it');
+  assert.equal(ctx.yearSource, 'day-headings');
+  assert.equal(logs.length, 1, 'one line, and only one, says the page year was not the banner\'s');
+  assert.match(logs[0], /says 2027/);
+  assert.match(logs[0], /11 of 11 day headings/);
+  assert.match(logs[0], /"JUEVES- 03"/);
+  assert.match(logs[0], /anchored to 2026, not 2027/);
+
+  // What the model is told for each day section follows the page's year.
+  const friday = { lines: ['VIERNES - 04', '20:30h a 03:30h: OPENING «EARLY-VILLAGE» 2026 Con motivo del 25º aniversario'] };
+  assert.ok(parser.buildSegmentDateContextLine(friday, ctx).startsWith('SEGMENT_DATE_CONTEXT: September 4, 2026 ('),
+    `got: ${parser.buildSegmentDateContextLine(friday, ctx)}`);
+});
+
+test('page year: the banner stands when the headings agree with it, when there are too few of them, when the page states no year, and when no single year fits', () => {
+  const parser = createParser();
+  parser.now = STALE_PROGRAMME_NOW;
+  const header = ['PROGRAMA oficial 2027', 'BEARS SITGES WEEK 2027', 'Del 3 al 12 de SEPTIEMBRE'];
+  const derive = (lines) => capturePageYearLogs(() => parser.derivePageDateContext(wrapProgrammeLines(lines)));
+
+  // Next year's programme really is up: 3 September 2027 is a Friday.
+  const published = derive([...header, 'VIERNES - 03', '19h. INAUGURACIÓN', 'SÁBADO - 04', '21h Fiesta', 'DOMINGO - 05', '12h Market']);
+  assert.equal(published.result.year, 2027);
+  assert.equal(published.result.headerYear, undefined, 'nothing was changed, nothing is stamped');
+  assert.deepEqual(published.logs, []);
+
+  // Two day headings are not a programme.
+  const two = derive([...header, 'JUEVES- 03', '19h. INAUGURACIÓN', 'VIERNES - 04', '21h Fiesta']);
+  assert.equal(two.result.year, 2027);
+  assert.deepEqual(two.logs, []);
+
+  // No year on the page: the vote checks a stated year, it never supplies one.
+  const yearless = derive(['PROGRAMA oficial', 'Del 3 al 12 de SEPTIEMBRE', 'JUEVES- 03', 'x', 'VIERNES - 04', 'y', 'SÁBADO - 05', 'z']);
+  assert.equal(yearless.result.year, null);
+  assert.deepEqual(yearless.logs, []);
+
+  // Headings no year can make true (three consecutive days all "Monday"):
+  // the banner's year is left alone, and the log says it was doubted.
+  const impossible = derive([...header, 'LUNES - 03', 'a', 'LUNES - 04', 'b', 'LUNES - 05', 'c']);
+  assert.equal(impossible.result.year, 2027);
+  assert.equal(impossible.logs.length, 1);
+  assert.match(impossible.logs[0], /no single nearby year fits them/);
+  assert.match(impossible.logs[0], /report-only/);
+
+  // A programme older than last year fits no year in reach either (3
+  // September 2024 was a Tuesday): never guessed at.
+  const older = derive([...header, 'MARTES - 03', 'a', 'MIÉRCOLES - 04', 'b', 'JUEVES - 05', 'c']);
+  assert.equal(older.result.year, 2027);
+  assert.match(older.logs[0], /report-only/);
+
+  // One day headed by two different weekdays votes for nothing — and takes
+  // the count under three here.
+  const twice = derive([...header, 'JUEVES- 03', 'a', 'VIERNES - 03', 'b', 'VIERNES - 04', 'c', 'SÁBADO - 05', 'd']);
+  assert.equal(twice.result.year, 2027);
+  assert.deepEqual(twice.logs, []);
+});
+
+test('page year: one mistyped heading does not outvote the rest, short weekday forms vote too, and a short form that could be two days names none', () => {
+  const parser = createParser();
+  parser.now = STALE_PROGRAMME_NOW;
+  const header = ['BEARS SITGES WEEK 2027', 'Del 3 al 12 de SEPTIEMBRE'];
+  const quiet = (lines) => capturePageYearLogs(() => parser.derivePageDateContext(wrapProgrammeLines(lines))).result;
+
+  // "LUNES - 06" is a slip (the 6th was a Sunday); four other headings agree.
+  const typo = quiet([...header, 'JUEVES- 03', 'a', 'VIERNES - 04', 'b', 'SÁBADO - 05', 'c', 'LUNES - 06', 'd', 'LUNES - 07', 'e']);
+  assert.equal(typo.year, 2026);
+
+  const shortForms = quiet([...header, 'JUE 03', 'a', 'VIE 04', 'b', 'SAB 05', 'c']);
+  assert.equal(shortForms.year, 2026, 'abbreviated day headings are the same statement');
+
+  // The weekday a word names comes from the position the locale tables list
+  // it at, Monday first — never from a hand-kept table.
+  const { weekdayIndexByName } = parser.getMultilingualDateVocabulary();
+  assert.equal(weekdayIndexByName.jueves, 3);
+  assert.equal(weekdayIndexByName.sabado, 5);
+  assert.equal(weekdayIndexByName.donnerstag, 3);
+  assert.equal(weekdayIndexByName.dimanche, 6);
+  assert.equal(weekdayIndexByName['sexta-feira'], 4);
+  assert.equal(weekdayIndexByName.sexta, 4, 'a short form names the day whose full names it begins');
+  assert.equal(weekdayIndexByName.mar, 1);
+  assert.equal(weekdayIndexByName.dim, undefined, '"dim" begins fr "dimanche" and ca "dimarts"/"dimecres" — it names none');
+  assert.equal(weekdayIndexByName.sonnabend, undefined, 'a curated synonym has no position, so it does not vote');
+});
+
+test('page year: with the day sections anchored to the year their weekdays state, a finished programme is dropped as an archive instead of coming back as next year\'s events', async () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema
+  const read = async (contextYear, answeredYear) => {
+    const parser = createParser();
+    parser.now = STALE_PROGRAMME_NOW;
+    const html = [
+      'SEGMENT_INDEX: 3/37',
+      `SEGMENT_DATE_CONTEXT: September 4, ${contextYear} (day-of-month heading anchored to this page's date context "Del 3 al 12 de SEPTIEMBRE")`,
+      'VIERNES - 04',
+      '20:30h a 03:30h: OPENING «EARLY-VILLAGE» Con motivo del 25º aniversario de Bears Sitges abrimos el Bear-Village'
+    ].join('\n');
+    // The model quotes the heading, not the context line — the shape of the
+    // real answers for this page.
+    parser.core.callAiGenerate = async () => JSON.stringify({
+      title: { value: 'OPENING «EARLY-VILLAGE»', evidence: 'OPENING «EARLY-VILLAGE»', confidence: 95 },
+      startDate: { value: `${answeredYear}-09-04`, evidence: 'VIERNES - 04', confidence: 85 },
+      startTime: { value: '20:30', evidence: '20:30h a 03:30h', confidence: 95 }
+    });
+    const htmlData = { html, url: 'https://bearssitges.example/bears-sitges-week/' };
+    const logs = [];
+    const original = { log: console.log, warn: console.warn };
+    console.log = (...args) => logs.push(args.join(' '));
+    console.warn = (...args) => logs.push(args.join(' '));
+    try {
+      const extracted = await parser.extractEventWithTwoPassAi(htmlData, {}, null, {}, ['title', 'startDate', 'startTime'], html, 'test', { dataFlags: { segment: true } });
+      return { extracted, event: parser.normalizeAiEvent({ ...extracted }, htmlData, null, null, null), logs };
+    } finally {
+      console.log = original.log;
+      console.warn = original.warn;
+    }
+  };
+
+  // The defect, reproduced: anchored to the banner's year, the 2027 date is
+  // "stated by the source" and ships.
+  const before = await read(2027, 2027);
+  assert.deepEqual(before.extracted.__explicitSourceYears, { start: 2027 });
+  assert.equal(before.event.startDate.toISOString().slice(0, 10), '2027-09-04');
+
+  // Anchored to the programme's own year: a stated, finished date. Dropped,
+  // and the log names the record and the reason.
+  const after = await read(2026, 2026);
+  assert.deepEqual(after.extracted.__explicitSourceYears, { start: 2026 });
+  assert.equal(after.event, null);
+  assert.ok(after.logs.some(line => /Dropping "OPENING «EARLY-VILLAGE»" — source states an explicit 2026 date/.test(line)));
+
+  // …and a model that answers next year anyway has nothing on the page to
+  // stand on: the date is not held as stated, and never ships as 2027.
+  const stubborn = await read(2026, 2027);
+  assert.equal(stubborn.extracted.__explicitSourceYears, undefined);
+  assert.notEqual(stubborn.event && stubborn.event.startDate.getUTCFullYear(), 2027);
 });

@@ -8744,6 +8744,39 @@ class AiWebParser {
         }
         const weekdaysAbbrev = CURATED_DATE_VOCABULARY.weekdayAbbreviations;
 
+        // Which day of the week a heading word names (0 = Monday … 6 =
+        // Sunday): the position the name was generated at, exactly like the
+        // month numbers above — the Intl-derived and static arrays are both
+        // Monday-first. English is included here (the map names a day; it
+        // adds nothing to the heading patterns). An abbreviation names the
+        // day whose full names it begins, and only when every full name it
+        // begins is the same day ("dim" starts fr "dimanche" AND ca
+        // "dimarts"/"dimecres", so it names none); a curated synonym with no
+        // position names none either. No hand-kept weekday table.
+        const weekdayIndexByName = {};
+        const weekdayIndexConflicts = new Set();
+        const addWeekdayIndexes = (weekdays) => weekdays.forEach((name, index) => {
+            if (!name || weekdayIndexConflicts.has(name)) return;
+            if (name in weekdayIndexByName && weekdayIndexByName[name] !== index) {
+                delete weekdayIndexByName[name];
+                weekdayIndexConflicts.add(name);
+                return;
+            }
+            weekdayIndexByName[name] = index;
+        });
+        for (const locale of DATE_VOCABULARY_LOCALES) {
+            addWeekdayIndexes(derived[locale].weekdays);
+            addWeekdayIndexes((STATIC_DATE_VOCABULARY_FALLBACK[locale] || { weekdays: [] }).weekdays);
+        }
+        const fullWeekdayNames = Object.keys(weekdayIndexByName);
+        for (const abbreviation of weekdaysAbbrev) {
+            if (abbreviation in weekdayIndexByName || weekdayIndexConflicts.has(abbreviation)) continue;
+            const named = new Set(fullWeekdayNames
+                .filter(name => name.startsWith(abbreviation))
+                .map(name => weekdayIndexByName[name]));
+            if (named.size === 1) weekdayIndexByName[abbreviation] = Array.from(named)[0];
+        }
+
         const alternation = (names) => names
             .slice()
             .sort((a, b) => b.length - a.length)
@@ -8770,6 +8803,7 @@ class AiWebParser {
             monthAdjacentPattern,
             weekdayHeaderPattern,
             weekdayAbbrevHeaderPattern,
+            weekdayIndexByName,
             monthNamePattern: new RegExp(`\\b(?:${monthAlternation})\\b`),
             weekdayNamePattern: new RegExp(`\\b(?:${alternation(weekdaysFull)}|${alternation(weekdaysAbbrev)})\\b\\.?`, 'gi')
         };
@@ -8874,7 +8908,79 @@ class AiWebParser {
             };
         };
 
-        return resolve(rangeMatches, false) || resolve(fullDateMatches, true);
+        return this.applyDayHeadingYearVote(lines, resolve(rangeMatches, false) || resolve(fullDateMatches, true));
+    }
+
+    // The programme's own day headings state which year it is. A heading
+    // "JUEVES- 03" under a September context says: the 3rd of September is a
+    // Thursday — true of one year in any four. The header's year is what
+    // every one of those headings is about to be anchored to (see
+    // buildSegmentDateContextLine), so the two must agree.
+    //
+    // bearssitges.org/bears-sitges-week (run 2026-11-09): the organiser put
+    // next year's banner on top — "PROGRAMA oficial 2027 / PRÓXIMAMENTE /
+    // BEARS SITGES WEEK 2027 / Del 3 al 12 de SEPTIEMBRE" — and left the
+    // finished 2026 programme underneath, "JUEVES- 03 … DOMINGO - 13". The
+    // header year anchored all eleven day sections to September 2027, where
+    // the 3rd is a Friday, and 34 parties that were over came back as new
+    // events ten months out.
+    //
+    // The rule, page shape only:
+    //   • it counts the headings the context would anchor — whole-line
+    //     weekday + day-of-month, no month of their own — one vote per day
+    //     number (a day headed by two different weekdays votes for nothing);
+    //   • fewer than three such headings is no programme, nothing changes;
+    //   • a header year that at least half the headings agree with stands;
+    //   • otherwise the ONE year from last year to two years out that most
+    //     of the headings (at least three) fall on is the programme's year,
+    //     and the log says which headings said so;
+    //   • no such year, or the header states none → the context is returned
+    //     exactly as it was (and a contradicted header says so in the log).
+    // Within those four years no two can fit the same headings: the weekday
+    // of a date moves one or two days a year.
+    applyDayHeadingYearVote(lines, context) {
+        if (!context || !Number.isFinite(context.month) || !Number.isFinite(context.year)) return context;
+        const vocab = this.getMultilingualDateVocabulary();
+        const byDay = new Map();
+        for (const rawLine of Array.isArray(lines) ? lines : []) {
+            const folded = this.foldDiacritics(this.normalizeWhitespace(rawLine));
+            if (!folded || folded.length > 40) continue;
+            const headerMatch = folded.match(vocab.weekdayHeaderPattern) || folded.match(vocab.weekdayAbbrevHeaderPattern);
+            if (!headerMatch) continue;
+            const dayText = headerMatch.slice(1).find(g => g && /^\d{1,2}$/.test(g));
+            const day = dayText ? parseInt(dayText, 10) : NaN;
+            if (!Number.isFinite(day) || day < 1 || day > 31) continue;
+            const nameMatch = folded.match(/[a-z]+(?:-[a-z]+)?/);
+            const weekdayIndex = nameMatch ? vocab.weekdayIndexByName[nameMatch[0]] : undefined;
+            if (!Number.isInteger(weekdayIndex)) continue;
+            const seen = byDay.get(day);
+            if (!seen) byDay.set(day, { day, weekdayIndex, heading: this.normalizeWhitespace(rawLine) });
+            else if (seen.weekdayIndex !== weekdayIndex) seen.weekdayIndex = null;
+        }
+        const headings = Array.from(byDay.values()).filter(entry => entry.weekdayIndex !== null);
+        if (headings.length < 3) return context;
+
+        const fits = (year) => headings.filter((entry) => {
+            const date = new Date(Date.UTC(year, context.month - 1, entry.day));
+            if (date.getUTCMonth() !== context.month - 1) return false;
+            return (date.getUTCDay() + 6) % 7 === entry.weekdayIndex;
+        }).length;
+        const headerFits = fits(context.year);
+        if (headerFits * 2 >= headings.length) return context;
+
+        const currentYear = this.now().getFullYear();
+        const fitting = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2]
+            .filter(year => year !== context.year)
+            .map(year => ({ year, count: fits(year) }))
+            .filter(candidate => candidate.count >= 3 && candidate.count * 2 > headings.length);
+        const sample = headings.slice(0, 3).map(entry => `"${entry.heading}"`).join(', ') + (headings.length > 3 ? ' …' : '');
+        if (fitting.length !== 1) {
+            console.log(`📅 PAGE YEAR: the header beside "${context.phrase}" says ${context.year}, but only ${headerFits} of ${headings.length} day headings (${sample}) fall on their weekday that year, and no single nearby year fits them — the page's year is left as stated (report-only)`);
+            return context;
+        }
+        const programmeYear = fitting[0].year;
+        console.log(`📅 PAGE YEAR: the header beside "${context.phrase}" says ${context.year}, but ${fitting[0].count} of ${headings.length} day headings (${sample}) fall on their weekday only in ${programmeYear} (${headerFits} in ${context.year}) — the programme under that header is ${programmeYear}'s; its days are anchored to ${programmeYear}, not ${context.year}`);
+        return { ...context, year: programmeYear, headerYear: context.year, yearSource: 'day-headings' };
     }
 
     // The programme's own header block states the year on the line ABOVE its
@@ -8894,7 +9000,7 @@ class AiWebParser {
     // the neighbours disagree, the page stays year-less as before.
     resolveAdjacentHeaderYear(lines, winners) {
         const vocab = this.getMultilingualDateVocabulary();
-        const currentYear = new Date().getFullYear();
+        const currentYear = this.now().getFullYear();
         const found = new Set();
         for (const winner of Array.isArray(winners) ? winners : []) {
             if (!Number.isFinite(winner.lineIndex)) continue;
