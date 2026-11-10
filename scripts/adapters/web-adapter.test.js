@@ -1850,3 +1850,25 @@ test('published calendar: a city with no file yet is "missing", nothing answerin
     console.warn = originalWarn;
   }
 });
+
+// A saved run keeps the source's role on every record (2026-11-09): the
+// phone re-analyzes the saved records before it writes, and the aggregator
+// rules (discovery only; a finished night never proposed as new) read the
+// role from the record's own _parserConfig. Run 20261109-053706 saved
+// Gathr's 174 records with `{ name: 'Gathr' }` and nothing else.
+test('run save: the slimmed parser config keeps the source\'s siteRole and nothing else new', () => {
+  const adapter = new WebAdapter({ cities: CITIES });
+  const saved = adapter.sanitizeEventForRunSave({
+    title: 'Bears Night Out', startDate: '2026-04-05T02:00:00.000Z', _action: 'new',
+    _parserConfig: { name: 'Gathr', parser: 'ai-web', siteRole: 'aggregator', urls: ['https://gathrparty.com/'], ai: { model: 'x' } }
+  });
+  assert.equal(saved._parserConfig.siteRole, 'aggregator');
+  assert.equal(saved._parserConfig.urls, undefined);
+  assert.equal(saved._parserConfig.ai, undefined);
+  const { SharedCore } = require('../shared-core');
+  const roundTripped = JSON.parse(JSON.stringify(saved));
+  assert.equal(SharedCore.prototype.isAggregatorRecord.call({}, roundTripped), true, 'the saved record still reads as an aggregator copy');
+  // A source with no role saves no key at all.
+  const plain = JSON.parse(JSON.stringify(adapter.sanitizeEventForRunSave({ title: 'x', _parserConfig: { name: 'Rockbar', parser: 'ai-web' } })));
+  assert.equal('siteRole' in plain._parserConfig, false);
+});

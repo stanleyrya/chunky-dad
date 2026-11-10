@@ -10206,7 +10206,7 @@ class AiWebParser {
         }
         const upcoming = Array.isArray(payload.upcoming) ? payload.upcoming.length : 0;
         const past = Array.isArray(payload.past) ? payload.past.length : 0;
-        console.log(`🟦 SQUARESPACE: ${twinUrl} published ${rows.length} dated item(s)${upcoming || past ? ` (${upcoming} upcoming, ${past} past on this page)` : ''}`);
+        console.log(`🟦 SQUARESPACE: ${twinUrl} published ${rows.length} dated item(s)${upcoming || past ? ` (${upcoming} upcoming, ${past} past on this page)` : ''}${past ? ' — a past-list row may update a saved event, it is never proposed as a new one' : ''}`);
         return rows;
     }
 
@@ -10227,6 +10227,14 @@ class AiWebParser {
     // Dated items from an events-collection payload: upcoming[] and past[]
     // (the split listing), else items[] (a plain collection). An item counts
     // when it has a title and an epoch-millisecond startDate.
+    // THE FEED'S OWN "PAST" LIST IS REMEMBERED. A row the feed files under
+    // past[] (and not also under upcoming[]) is noted per row object
+    // (_feedPastRows — the rows themselves are returned untouched), and
+    // buildEventFromSquarespaceItem stamps the event it builds from one
+    // with `_feedPastList`: evidence for a saved event, never a NEW one
+    // (SharedCore.assessPastCreateWithhold). Run 20261109-053706: one
+    // promoter's twin answered "0 upcoming, 30 past" and all 30 rows were
+    // analyzed as new events.
     collectSquarespaceCollectionItems(payload) {
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return [];
         const collection = payload.collection && typeof payload.collection === 'object' ? payload.collection : {};
@@ -10240,6 +10248,7 @@ class AiWebParser {
         const buckets = [payload.upcoming, payload.past, payload.items].filter(Array.isArray);
         const seen = new Set();
         const rows = [];
+        if (!this._feedPastRows) this._feedPastRows = new WeakSet();
         for (const bucket of buckets) {
             for (const item of bucket) {
                 if (!isDatedItem(item)) continue;
@@ -10248,6 +10257,7 @@ class AiWebParser {
                 if (seen.has(key)) continue;
                 seen.add(key);
                 rows.push(item);
+                if (bucket === payload.past) this._feedPastRows.add(item);
             }
         }
         return rows;
@@ -10370,6 +10380,10 @@ class AiWebParser {
         }
         const ticketUrl = this.pickTicketLinkFromBodyHtml(bodyHtml, origin);
         if (ticketUrl) event.ticketUrl = ticketUrl;
+        // A row from the feed's own past[] list (collectSquarespaceCollectionItems).
+        if (this._feedPastRows && this._feedPastRows.has(item)) {
+            event._feedPastList = { feed: String(sourceUrl || ''), page: eventPageUrl };
+        }
         return event;
     }
 

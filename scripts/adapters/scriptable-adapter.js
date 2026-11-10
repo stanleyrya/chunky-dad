@@ -896,6 +896,11 @@ class ScriptableAdapter {
               dryRun: value.dryRun,
               city: value.city,
               calendarSearchRangeDays: value.calendarSearchRangeDays,
+              // The source's role travels with the record: the execute
+              // path re-analyzes a saved run, and every aggregator rule
+              // (SharedCore.isAggregatorRecord — discovery only, a finished
+              // night never proposed as new) reads it from here.
+              siteRole: value.siteRole,
             };
           }
           if (key === "_existingEvent" && value) {

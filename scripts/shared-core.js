@@ -558,6 +558,11 @@ const SANITY_MAX_EVENT_DURATION_DAYS = 10;
 // late). Owner-tunable via config.sanity.pastSpanWithholdDays (0 restores
 // the flag-everything-past behavior).
 const SANITY_PAST_SPAN_WITHHOLD_DAYS = 30;
+// A record whose clock the run could not place (wall-clock dates with no
+// zone, a date with no time and no zone) may sit most of a day off its
+// real instant either way: the "over, never new" rule
+// (assessPastCreateWithhold) gives it two days before calling it over.
+const PAST_CREATE_UNPLACED_CLOCK_GRACE_MS = 48 * 60 * 60 * 1000;
 
 // THE ONE DEFAULT END. A source that states a start and no closing time is
 // the normal case for nightlife (Eagle LA: "BAR OPENS 2PM"; Eagle London:
@@ -3117,6 +3122,9 @@ class SharedCore {
         // festival's window never reaches the deck (prepareEventsForCalendar
         // stamps noCard); it stays in results as a withheld record.
         if (event._loneCrawlWithheld && typeof event._loneCrawlWithheld === 'object' && event._loneCrawlWithheld.noCard) return false;
+        // An aggregator's pointer at a night that is already over
+        // (buildAnalyzedCalendarEvent stamps noCard): withheld, no card.
+        if (event._aggregatorUnbackedWithheld && typeof event._aggregatorUnbackedWithheld === 'object' && event._aggregatorUnbackedWithheld.noCard && !event._ownerReviewApproved) return false;
         if (event._action === 'new') return true;
         // A big-drift merge is ALWAYS a card — it is withheld from every
         // automatic write precisely so the owner sees its data.
@@ -5460,6 +5468,74 @@ class SharedCore {
         const endMs = this.toEpochMillis(event.endDate);
         const spanEndMs = endMs === null ? startMs : endMs;
         return (nowMs - spanEndMs) > withholdDays * 24 * 60 * 60 * 1000;
+    }
+
+    // ── OVER BEFORE IT WAS FOUND: evidence for a merge, never a NEW event ──
+    // Audit of run 20261109-053706: 318 of the 730 records analyzed as NEW
+    // were already over. Three kinds of record are never worth a NEW
+    // calendar event once their whole span is behind the run:
+    //   aggregator     — a record of a `siteRole: "aggregator"` source.
+    //                    Discovery of a night that already happened
+    //                    discovers nothing (Gathr: 104 of its 140 NEW
+    //                    records were past).
+    //   feed-past-list — a row its own feed files under "past"
+    //                    (_feedPastList, stamped by the reader of a feed
+    //                    that separates upcoming from past: Bears of San
+    //                    Francisco's 30 rows that run, 0 upcoming).
+    //   tagged         — a record the bear check kept only for its tags
+    //                    (bearSource starts "tagged" — the automatic
+    //                    verdict, not the owner's `manual-tagged`: Folsom
+    //                    Europe's 35 finished programme rows).
+    // Such a record still matches and folds into a saved event exactly as
+    // before — the rule reads only action `new`. It is withheld from every
+    // write, offered on no deck card, and stays in results with its reason.
+    // NOT covered, on purpose: a first-party source's own finished night
+    // that is none of the three (back-filling those is an open owner
+    // question), a stated series, and a single night written over a saved
+    // series. Fails closed like isEventSpanFullyPast; a clock the run could
+    // not place gets PAST_CREATE_UNPLACED_CLOCK_GRACE_MS before it is over.
+    // Returns null or { rule, source, reason }.
+    assessPastCreateWithhold(event, nowMs = Date.now()) {
+        if (!event || typeof event !== 'object' || event._action !== 'new') return null;
+        if (SharedCore.isRecurringSeriesEvent(event) || SharedCore.isOverrideCreate(event)) return null;
+        if (event._analysis && typeof event._analysis === 'object' && event._analysis.sourceEvent) return null;
+        const clockUnplaced = Boolean(event._timezoneUnresolved) || (event._noTimeStated === true && !this.getEventZone(event));
+        if (!this.isEventSpanFullyPast(event, nowMs - (clockUnplaced ? PAST_CREATE_UNPLACED_CLOCK_GRACE_MS : 0))) return null;
+        const source = String((event._parserConfig && event._parserConfig.name) || '').trim();
+        if (this.isAggregatorRecord(event)) {
+            return { rule: 'aggregator', source, reason: `${source || 'its source'} is an aggregator and this night is already over — an aggregator's finished event is never proposed as new` };
+        }
+        const pastList = event._feedPastList && typeof event._feedPastList === 'object' ? event._feedPastList : null;
+        if (pastList) {
+            return { rule: 'feed-past-list', source, reason: `the feed it was read from${pastList.feed ? ` (${pastList.feed})` : ''} files it under past — a past-list row is evidence for a saved event, never a new one` };
+        }
+        if (String(event.bearSource || '').trim().toLowerCase().startsWith('tagged')) {
+            return { rule: 'tagged', source, reason: 'kept only for its tags (not a bear verdict) and already over — never proposed as new' };
+        }
+        return null;
+    }
+
+    // One summary line per source for the records assessPastCreateWithhold
+    // withheld in this pass: the count and the first few titles.
+    logPastCreateWithholdSummary(analyzedEvents) {
+        const bySource = new Map();
+        for (const event of Array.isArray(analyzedEvents) ? analyzedEvents : []) {
+            const stamp = event && event._pastCreateWithheld && typeof event._pastCreateWithheld === 'object' ? event._pastCreateWithheld : null;
+            if (!stamp) continue;
+            const source = String(stamp.source || '').trim() || 'unknown source';
+            if (!bySource.has(source)) bySource.set(source, { total: 0, rules: new Map(), titles: [] });
+            const entry = bySource.get(source);
+            entry.total += 1;
+            entry.rules.set(stamp.rule, (entry.rules.get(stamp.rule) || 0) + 1);
+            if (entry.titles.length < 4) entry.titles.push(`"${String(event.title || 'Unknown').slice(0, 60)}"`);
+        }
+        const labels = { 'aggregator': 'aggregator copy', 'feed-past-list': "on the feed's past list", 'tagged': 'kept only as tagged' };
+        for (const [source, entry] of bySource) {
+            const rules = [...entry.rules].map(([rule, count]) => `${count} ${labels[rule] || rule}`).join(', ');
+            const more = entry.total - entry.titles.length;
+            console.log(`⏳ OVER, NOT NEW: ${source} — ${entry.total} finished record${entry.total === 1 ? '' : 's'} not proposed as new (${rules}): ${entry.titles.join(', ')}${more > 0 ? ` and ${more} more` : ''}`);
+        }
+        return bySource.size;
     }
 
     // A value shaped like a street address is NEVER a venue name. Anchored on
@@ -17768,6 +17844,36 @@ class SharedCore {
         if (!mergedEvent._promoter && existingEvent && typeof existingEvent._promoter === 'string' && existingEvent._promoter) {
             mergedEvent._promoter = existingEvent._promoter;
         }
+        // Same carry for the feed's own "past" filing (_feedPastList, see
+        // assessPastCreateWithhold): the feed row and the reading of its own
+        // event page are one record after this merge, and whichever side is
+        // the base the feed still files the night under past. Run
+        // 20261109-053706: 3 of one promoter's 30 past-list rows merged with
+        // the AI reading of their event page and came out of the base spread
+        // with no listing stamp at all.
+        // The filing is the SITE's statement, so it survives only readings
+        // of that same site. A reading from another site is independent
+        // evidence for the night (whether a first-party source's finished
+        // night is back-filled is the owner's open call), so the stamp is
+        // dropped there — out loud.
+        {
+            const stampOf = (record) => (record && record._feedPastList && typeof record._feedPastList === 'object' ? record._feedPastList : null);
+            const existingStamp = stampOf(existingEvent);
+            const newStamp = stampOf(newEvent);
+            const stamp = newStamp || existingStamp;
+            if (stamp && !(existingStamp && newStamp)) {
+                const other = newStamp ? existingEvent : newEvent;
+                const feedHost = this.getWebsiteHostKey(stamp.feed) || this.getWebsiteHostKey(stamp.page);
+                const otherPage = other && typeof other._sourcePageUrl === 'string' ? other._sourcePageUrl.trim() : '';
+                const otherHost = this.getWebsiteHostKey(otherPage);
+                if (feedHost && otherHost && feedHost === otherHost) {
+                    mergedEvent._feedPastList = stamp;
+                } else {
+                    delete mergedEvent._feedPastList;
+                    console.log(`⏳ PAST LIST: "${String(mergedEvent.title || newEvent.title || '').trim()}" — ${stamp.feed || 'its feed'} files it under past, but it merged with a reading from ${otherPage || 'a page this run could not name'}; the past-list filing is not carried onto the merged record`);
+                }
+            }
+        }
         // Same carry for page-derived ticket-role labels: the two records may
         // have learned the label on different pages, and the identity ladder
         // that reads it runs after this merge.
@@ -23220,6 +23326,12 @@ class SharedCore {
             // stamps _pastSpanWithheld + the span-fully-past review flag)
             // and gated here, exactly like the recurring-series withhold.
             event?._pastSpanWithheld !== true &&
+            // Over, and only an aggregator / a feed's past list / a tag
+            // knows it (assessPastCreateWithhold): never a NEW event — the
+            // deck is not offered it either. Only a yes the owner already
+            // gave on the deck (a card raised while the night was still
+            // to come) lets it through.
+            (!event?._pastCreateWithheld || Boolean(event?._ownerReviewApproved)) &&
             // No resolvable city → no calendar (stamp site: the same place).
             event?._unresolvedCityWithheld !== true &&
             // A city that names no CONFIGURED city calendar: the only calendars
@@ -23334,6 +23446,7 @@ class SharedCore {
             '_festivalMatch',
             '_festivalContext',
             '_pastSpanWithheld',
+            '_pastCreateWithheld',
             '_unresolvedCityWithheld',
             '_noCityCalendarWithheld',
             '_announcementOnlyWithheld',
@@ -23375,6 +23488,10 @@ class SharedCore {
         if (!event || typeof event !== 'object') return 'UNKNOWN';
         if (event._parserConfig && event._parserConfig.dryRun === true) return 'WITHHELD (dry-run parser)';
         if (event._pastSpanWithheld === true) return 'WITHHELD (span fully past)';
+        if (event._pastCreateWithheld && !event._ownerReviewApproved) {
+            const reason = String(event._pastCreateWithheld.reason || '').trim();
+            return `WITHHELD (already over, not proposed as new${reason ? ` — ${reason}` : ''})`;
+        }
         if (event._unresolvedCityWithheld === true) return 'WITHHELD (no resolvable city — no calendar)';
         if (event._noCityCalendarWithheld) {
             const city = String(event._noCityCalendarWithheld.city || '').trim();
@@ -23398,7 +23515,8 @@ class SharedCore {
         }
         if (SharedCore.isAggregatorUnbackedWithheld(event)) {
             const reason = String(event._aggregatorUnbackedWithheld.reason || '').trim();
-            return `WITHHELD (aggregator's copy — ${reason || 'the site it points at does not list this night'}; decide on the deck)`;
+            const noCard = String(event._aggregatorUnbackedWithheld.noCard || '').trim();
+            return `WITHHELD (aggregator's copy — ${reason || 'the site it points at does not list this night'}; ${noCard ? `${noCard} — no deck card` : 'decide on the deck'})`;
         }
         if (SharedCore.isBigDriftWithheld(event)) {
             const reason = String(event._bigDriftWithheld.reason || '').trim();
@@ -25344,6 +25462,7 @@ class SharedCore {
                 proposalsByTarget.set(targetKey, entry);
             }
         }
+        this.logPastCreateWithholdSummary(foldedAnalyzed);
         return foldedAnalyzed;
     }
 
@@ -26442,6 +26561,31 @@ class SharedCore {
             if (this.isEventSpanPastBeyondWithholdWindow(analyzedEvent, Date.now(), this.resolvePastSpanWithholdDays(config))) {
                 analyzedEvent._pastSpanWithheld = true;
                 console.log(`⏳ PAST SPAN: "${analyzedEvent.title || 'Unknown'}" withheld from calendar write — entire span (start and end) is already past at analysis time; card kept in results`);
+            }
+
+            // OVER, NOT NEW (assessPastCreateWithhold): an aggregator's
+            // copy, a row from its feed's own "past" list or a record kept
+            // only as tagged, already over and matched to nothing saved, is
+            // never proposed as a NEW event — whatever the window above
+            // says about a first-party source's last-weekend night.
+            {
+                const pastCreate = this.assessPastCreateWithhold(analyzedEvent, Date.now());
+                // A FINISHED NIGHT RAISES NO POINTER CARD. An aggregator's
+                // copy the site it points at does not back
+                // (reconcileAggregatorPointers) stays withheld from every
+                // automatic write exactly as before — matched to a saved
+                // event or not — but a claim about a night that is already
+                // over is nothing the owner can act on.
+                const pointer = analyzedEvent._aggregatorUnbackedWithheld && typeof analyzedEvent._aggregatorUnbackedWithheld === 'object'
+                    ? analyzedEvent._aggregatorUnbackedWithheld : null;
+                if (pointer && !pointer.noCard && this.isEventSpanFullyPast(analyzedEvent, Date.now())) {
+                    pointer.noCard = 'the night is already over';
+                    console.log(`🧭 AGGREGATOR: "${analyzedEvent.title || 'Unknown'}" (${pointer.aggregator || 'an aggregator'}, ${pointer.day || 'undated'}) points at ${pointer.site || 'a site'} for a night that is already over — still withheld, no deck card`);
+                }
+                if (pastCreate) {
+                    analyzedEvent._pastCreateWithheld = pastCreate;
+                    console.log(`⏳ OVER, NOT NEW: "${analyzedEvent.title || 'Unknown'}" (${pastCreate.source || 'unknown source'}, ${this.normalizeEventDateLocal(analyzedEvent.startDate, analyzedEvent.timezone || this.getCityTimezone(analyzedEvent.city) || null) || 'undated'}) — ${pastCreate.reason}; write withheld, no deck card, kept in results`);
+                }
             }
 
             // ANNOUNCEMENT-ONLY WITHHOLD — a one-line listing row ("10/3

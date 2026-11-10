@@ -23558,3 +23558,63 @@ test('ended repeats: the widget reader leaves the ended repeat out, names it in 
   assert.ok(logs.some(line => line.includes('"STUDIO 457 •  RETRO DANCE PARTY" (from 2026-07-05) is a repeat the widget itself ended by 2026-07-19')), logs.join('\n'));
   assert.ok(logs.some(line => line.includes('published 5 event(s) — 3 ended more than 30 days ago')), logs.join('\n'));
 });
+
+// ---------------------------------------------------------------------------
+// The feed's own "past" list (2026-11-09). bosf.org/events?format=json
+// answered "0 upcoming, 30 past" in run 20261109-053706 and all 30 rows were
+// analyzed as new events. Rows below are that cached twin's, trimmed.
+// ---------------------------------------------------------------------------
+
+const SQUARESPACE_PAST_ONLY_TWIN = {
+  collection: { typeName: 'events', title: 'Events', fullUrl: '/events' },
+  upcoming: [],
+  past: [
+    { id: '6a5bdf420a13915c9c50a578', title: 'Barbells, Bears, and Butts Deadlift Competition 2026', startDate: 1792267200730, endDate: 1792278000730,
+      fullUrl: '/events/barbells-bears-and-butts-deadlift-competition-2026', urlId: 'barbells-bears-and-butts-deadlift-competition-2026', excerpt: '',
+      location: { mapZoom: 12, addressTitle: '', addressLine1: '', addressLine2: '', addressCountry: '' } },
+    { id: '6ab59f5cac137d2ea8f17f61', title: 'BOSF Brunch', startDate: 1791662400478, endDate: 1791673200478,
+      fullUrl: '/events/july-dinner-night-pte22', urlId: 'july-dinner-night-pte22', excerpt: '',
+      location: { mapZoom: 12, addressTitle: '', addressLine1: '', addressLine2: '', addressCountry: '' } }
+  ]
+};
+
+test('Squarespace collection: a row the feed files under past is stamped with that filing; an upcoming row, and a row the feed lists in both, is not', async () => {
+  const parser = createParser();
+
+  // A feed with nothing upcoming: every row it publishes is a past-list row.
+  const pastOnly = squarespaceStubAdapter(SQUARESPACE_PAST_ONLY_TWIN);
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let pastRows;
+  try {
+    pastRows = await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.bosf.example/events' }, { urls: ['https://www.bosf.example/events'] }, pastOnly.httpAdapter);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(pastRows.length, 2);
+  assert.ok(logs.some(line => line.includes('published 2 dated item(s) (0 upcoming, 2 past on this page) — a past-list row may update a saved event, it is never proposed as a new one')), logs.join('\n'));
+  const pastEvents = pastRows.map(row => parser.buildEventFromSquarespaceItem(row, 'https://www.bosf.example/events'));
+  assert.deepEqual(pastEvents.map(event => event._feedPastList), [
+    { feed: 'https://www.bosf.example/events', page: 'https://www.bosf.example/events/barbells-bears-and-butts-deadlift-competition-2026' },
+    { feed: 'https://www.bosf.example/events', page: 'https://www.bosf.example/events/july-dinner-night-pte22' }
+  ]);
+  assert.equal(pastEvents[1].title, 'BOSF Brunch', 'the row is still read in full — it is evidence for a saved event');
+  assert.equal(pastEvents[1].startDate.toISOString(), '2026-10-10T20:00:00.000Z');
+  // The rows themselves are returned untouched.
+  assert.deepEqual(Object.keys(pastRows[0]).filter(key => key.startsWith('_')), []);
+
+  // A split listing: upcoming rows carry no stamp; "Bear Tea" is in both
+  // lists and the upcoming filing is the one that counts.
+  const split = squarespaceStubAdapter();
+  const rows = await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, { urls: ['https://www.3dollarbillbk.example/rsvp'] }, split.httpAdapter);
+  const events = rows.map(row => parser.buildEventFromSquarespaceItem(row, 'https://www.3dollarbillbk.example/rsvp'));
+  assert.deepEqual(events.map(event => [event.title, Boolean(event._feedPastList)]), [['Bear Tea', false], ['WANTED', false], ['GraveSTONED', true]]);
+  assert.deepEqual(events[2]._feedPastList, { feed: 'https://www.3dollarbillbk.example/rsvp', page: 'https://www.3dollarbillbk.example/rsvp/2026/8/11/gravestoned' });
+
+  // A plain collection (items[] only) says nothing about past or upcoming.
+  const plain = parser.collectSquarespaceCollectionItems({ items: SQUARESPACE_PAST_ONLY_TWIN.past.map(item => ({ ...item })) });
+  assert.deepEqual(plain.map(row => Boolean(parser.buildEventFromSquarespaceItem(row, 'https://www.bosf.example/events')._feedPastList)), [false, false]);
+  // An item built with no read behind it (another parser instance) is unstamped.
+  assert.equal(createParser().buildEventFromSquarespaceItem(SQUARESPACE_PAST_ONLY_TWIN.past[0], 'https://www.bosf.example/events')._feedPastList, undefined);
+});
