@@ -31366,6 +31366,40 @@ TEXT:
     // sides and fails open. Wired into SharedCore by the orchestrator via
     // setOcrImageTextLookup; global-default ocrConfig on purpose (a
     // per-parser prompt override changes the cache signature → miss → null).
+    // The flyer look's reader (SharedCore.lookAtDroppedFlyers): the vision
+    // model's raw answer to FLYER_LOOK_PROMPT for one image, from the AI
+    // response cache when this picture was looked at before. Image requests
+    // bypass that cache inside callAiGenerate (the prompt alone does not
+    // identify them), so the entry is keyed here by prompt + image address.
+    // null = no look (OCR off, no adapter, a dead download, an empty answer).
+    async getFlyerLookResponse(imageUrl, httpAdapter = null) {
+        const ocrConfig = this.getOcrConfig({});
+        if (!ocrConfig || !ocrConfig.enabled || !this.core) return null;
+        const rawUrl = this.upgradeCdnThumbnailUrl(String(imageUrl || '').trim());
+        const url = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
+        if (!url) return null;
+        const prompt = this.core.constructor.FLYER_LOOK_PROMPT;
+        const lookConfig = { ...ocrConfig, prompt, temperature: 0, numPredict: 400 };
+        const cacheKey = `${prompt}\n\nIMAGE: ${this.canonicalizeImageUrlForComparison(url) || url}`;
+        const cached = await this.readCachedAiResponseInternal(lookConfig, cacheKey, 'flyer-look', false);
+        if (cached) return { text: cached, cached: true };
+        if (!httpAdapter || typeof httpAdapter.fetchImageAsBase64 !== 'function') return null;
+        // A picture whose download already failed this run is not asked again.
+        if (this.failedImageDownloadUrls && this.failedImageDownloadUrls.has(url)) return null;
+        let base64Image;
+        try {
+            base64Image = await httpAdapter.fetchImageAsBase64(url, ocrConfig.timeoutSeconds);
+        } catch (error) {
+            if (!this.failedImageDownloadUrls) this.failedImageDownloadUrls = new Map();
+            this.failedImageDownloadUrls.set(url, error && error.message ? error.message : 'image download failed');
+            return null;
+        }
+        const text = await this.core.callAiGenerate(lookConfig, prompt, 'flyer-look', httpAdapter, this.recordAiPrompt.bind(this), base64Image);
+        if (!text) return null;
+        await this.writeCachedAiResponse(lookConfig, cacheKey, 'flyer-look', text);
+        return { text, cached: false };
+    }
+
     async getCachedOcrTextForImage(imageUrl, httpAdapter = null) {
         const verdict = this.getOcrImageVerdict(imageUrl);
         if (verdict && typeof verdict.text === 'string' && verdict.text.trim()) {
