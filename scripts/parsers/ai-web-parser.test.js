@@ -23940,3 +23940,56 @@ test('series shape: pages really read on two of those dates still make separate 
   assert.ok(plainLogs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is occurrence-expanded') && line.includes('distinct per-date website artifacts')),
     JSON.stringify(plainLogs));
 });
+
+// ---------------------------------------------------------------------------
+// Weekday pin: opening hours are not a date (run 20261109-053706,
+// thelumberyardbar.com home page). The model answered an invented
+// startDate "2024-01-01" for the bar's happy hour with the evidence
+// "TUE-SAT 4-6PM • SUN 12-7PM (recurring weekly)". The weekday reader took
+// "SAT 4-6" for a weekday beside a numeric date, so the pin moved the made-up
+// day to the nearest year in which January 1st is a Saturday — 2028 — and
+// held it there against the window repair.
+// ---------------------------------------------------------------------------
+
+test('weekday pin: a weekday beside opening hours states no day of any month — a made-up date is not pinned to it', () => {
+  const parser = createParser();
+  parser.now = () => new Date(Date.UTC(2026, 10, 9, 13, 0, 0));
+  const hours = 'TUE-SAT 4-6PM • SUN 12-7PM (recurring weekly)';
+  assert.equal(parser.extractStatedWeekdayAdjacentToDate(hours), null);
+  const { result, logs } = (() => {
+    const lines = [];
+    const original = console.log;
+    console.log = (...args) => { lines.push(args.join(' ')); };
+    try {
+      return { result: parser.resolveWeekdayPinnedYear('2024-01-01', hours, 'Happy Hour Menu\nTUE-SAT 4-6PM • SUN 12-7PM'), logs: lines };
+    } finally {
+      console.log = original;
+    }
+  })();
+  assert.equal(result, null, 'the invented date is left to the ordinary year repair');
+  assert.ok(!logs.some(line => line.includes('Weekday-pinned year')), logs.join('\n'));
+
+  // Every clock shape a weekday can sit in front of.
+  for (const clock of [
+    'SAT 4-6PM', 'Sat 4-6 pm', 'SUN 12-7PM', 'Sat 10-2AM', 'Sat 10-12PM', 'Fri 9-10:30pm', 'Fri 9.30pm',
+    'Sat 4.30-6pm', 'Sat 4.30 – 6 p.m.', 'Sa 16-19h', '4-6pm Saturday', '9.30pm, Friday'
+  ]) {
+    assert.equal(parser.extractStatedWeekdayAdjacentToDate(clock), null, clock);
+    assert.equal(parser.resolveWeekdayPinnedYear('2024-01-01', clock), null, clock);
+  }
+});
+
+test('weekday pin: a numeric date beside a weekday still pins, with its clock time after it', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // 2026-08-22 is a Saturday (the 2026-07-12 run's own example).
+  for (const evidence of [
+    'Sat 8/22', 'Sat 8/22 9PM', 'Sat 8/22 - 9pm', 'Sat 8/22: doors 9pm', 'Sat, 8/22 • 4-6PM', 'Sat 8-22', 'Sat 8-22 9PM',
+    'Sat 8-22: doors 9pm', 'Sat 22.8', 'Sat 22.8. 21h', '8/22 (Sat) 4-6pm', 'Sat, Aug 22 • 4-6PM', 'Saturday 22 August, 4.30-6pm'
+  ]) {
+    assert.equal(parser.extractStatedWeekdayAdjacentToDate(evidence), 6, evidence);
+    const pinned = parser.resolveWeekdayPinnedYear('2024-08-22', evidence);
+    assert.ok(pinned, evidence);
+    assert.equal(pinned.value, '2026-08-22', evidence);
+  }
+});

@@ -28392,7 +28392,26 @@ TEXT:
         const weekday = '(sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:s|nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)';
         const month = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
         const dayNum = '\\d{1,2}(?:st|nd|rd|th)?';
-        const dateToken = `(?:${month}\\.?\\s*${dayNum}|${dayNum}\\s*(?:of\\s+)?${month}|\\d{1,2}[\\/.\\-]\\d{1,2})`;
+        // A numeric date ("8/22", "22.8") — never a CLOCK RANGE. Opening
+        // hours put a weekday right before two small numbers too ("TUE-SAT
+        // 4-6PM"), and they state no day of any month: read as a date, the
+        // "Sat" pinned whatever date the model had made up to the nearest
+        // year in which it falls on a Saturday, and a pinned year is held
+        // against the window repair (thelumberyardbar.com home page, run
+        // 20261109-053706: "TUE-SAT 4-6PM • SUN 12-7PM" turned an invented
+        // 2024-01-01 into 2028-01-01). A slash is never a clock. Two numbers
+        // joined by a hyphen and followed by am/pm or "h" are hours ("4-6PM");
+        // joined by a dot they are an hour and its minutes when am/pm
+        // follows them ("9.30pm") or follows the far end of their range
+        // ("4.30-6pm"). Unsure means no pin — the year is then left to the
+        // ordinary repair, as it was before pinning existed.
+        const clockMark = '(?:[ap]\\.?m\\b|h\\b)';
+        const numericDate = '(?:'
+            + '\\d{1,2}\\/\\d{1,2}'
+            + `|\\d{1,2}-\\d{1,2}(?!\\d|:\\d)(?!\\s*${clockMark})`
+            + `|\\d{1,2}\\.\\d{1,2}(?!\\d)(?!\\s*${clockMark}|\\s*[-–—]\\s*\\d{1,2}(?:[:.]\\d{2})?\\s*${clockMark})`
+            + ')';
+        const dateToken = `(?:${month}\\.?\\s*${dayNum}|${dayNum}\\s*(?:of\\s+)?${month}|${numericDate})`;
         const weekdayThenDate = new RegExp(`\\b${weekday}\\b\\.?,?\\s*${dateToken}`, 'i');
         const dateThenWeekday = new RegExp(`${dateToken}\\s*,?\\s*\\(?\\b${weekday}\\b`, 'i');
         const match = raw.match(weekdayThenDate) || raw.match(dateThenWeekday);
