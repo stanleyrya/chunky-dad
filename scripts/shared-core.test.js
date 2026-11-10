@@ -30337,3 +30337,96 @@ test('enrich-only crawl: a ticket link that opens a venue\'s whole listing enric
   assert.ok(!row.cover, 'the neighbour\'s cover never reaches the row');
   assert.deepEqual(result.enrichOnlyDrops[0].droppedEvents.map(e => e.title), ['STANK.BK', 'Funny Moms', 'Mall Drag']);
 });
+
+// ---------------------------------------------------------------------------
+// A listing on the source's OWN site is never an enrich-only page (Camp Out
+// Poconos, run 20261109-053706: six calendar weekends dropped as "siblings").
+// ---------------------------------------------------------------------------
+
+const OWN_LISTING_RULES = [
+  { pattern: /camp\.example\/calendar/i, classification: 'multi-event-page' },
+  { pattern: /camp\.example\/stay/i, classification: 'event-page' },
+  { pattern: /venue\.example/i, classification: 'multi-event-page' }
+];
+
+function buildOwnListingPages(listingUrl) {
+  const day = new Date(Date.now() + 20 * 86400000);
+  day.setUTCHours(16, 0, 0, 0);
+  const weekend = (title, weeks) => ({ title, bar: 'Camp Out', startDate: new Date(day.getTime() + weeks * 7 * 86400000), endDate: new Date(day.getTime() + (weeks * 7 + 3) * 86400000) });
+  return {
+    // The home page's one "row" is a banner; its link is the site's own calendar.
+    'https://camp.example/': {
+      events: [{ title: '2027 reservations open', bar: 'Camp Out', startDate: new Date(day.getTime() + 90 * 86400000), ticketUrl: listingUrl }]
+    },
+    [listingUrl]: {
+      events: [
+        weekend('LEATHER BEARS', 0),
+        weekend('CAMPCON: GEEKS & GAYMERS', 1),
+        weekend('HALLOWEEN WEEKEND', 2),
+        weekend('Friendsgiving', 5),
+        weekend("NEW YEAR'S EVE AT CAMP", 9),
+        weekend('Drag Fest in Stroudsburg', 14)
+      ],
+      additionalLinks: ['https://camp.example/stay/leather-bears']
+    },
+    'https://camp.example/stay/leather-bears': {}
+  };
+}
+
+test('enrich-only crawl: a listing on the source\'s own site, reached through a row\'s ticket link, is read as a listing — every event kept, and the log says why', async () => {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, pageClassificationRules: OWN_LISTING_RULES });
+  const display = createDisplayAdapterStub();
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(buildOwnListingPages('https://camp.example/calendar/'));
+  const result = await core.processParser(
+    { name: 'Campground', urls: ['https://camp.example/'], alwaysBear: true, siteRole: 'venue', ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.ok(fetched.includes('https://camp.example/calendar/'));
+  assert.ok(
+    display.logs.includes('SYSTEM: Enrich-only crawl: https://camp.example/calendar/ is a listing on this source\'s own site (6 events) — read as a listing of its own, not as the ticket page of "2027 reservations open": no event dropped as a sibling'),
+    `expected the own-site listing line, got: ${JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))}`
+  );
+  assert.ok(!display.logs.some(l => l.includes('dropped') && l.includes('sibling event(s) from camp.example')), 'nothing dropped as a sibling');
+  assert.equal((result.enrichOnlyDrops || []).length, 0);
+  const titles = result.events.map(e => e.title);
+  for (const title of ['LEATHER BEARS', 'CAMPCON: GEEKS & GAYMERS', 'HALLOWEEN WEEKEND', 'Friendsgiving', "NEW YEAR'S EVE AT CAMP", 'Drag Fest in Stroudsburg']) {
+    assert.ok(titles.includes(title), `${title} is kept (got ${JSON.stringify(titles)})`);
+  }
+  // Read as a listing in full: its own links are followed like any crawled listing's.
+  assert.ok(fetched.includes('https://camp.example/stay/leather-bears'), 'the listing\'s event link is followed');
+  assert.ok(!display.logs.some(l => l.includes('Enrich-only crawl: not following')), 'no enrich-only fan-out block');
+});
+
+test('enrich-only crawl: the same listing on SOMEBODY ELSE\'S site stays enrich-only — the venue\'s calendar never joins this source', async () => {
+  // Another site's listing: the venue's calendar never joins this source.
+  {
+    const core = new SharedCore(CITIES, { eventSchema: EventSchema, pageClassificationRules: OWN_LISTING_RULES });
+    const display = createDisplayAdapterStub();
+    const { httpAdapter, parsers } = createCrawlHarness(buildOwnListingPages('https://venue.example/calendar/'));
+    const result = await core.processParser(
+      { name: 'Campground', urls: ['https://camp.example/'], alwaysBear: true, siteRole: 'venue', ai: CRAWL_AI },
+      {}, httpAdapter, display, parsers
+    );
+    assert.ok(
+      display.logs.includes('SYSTEM: Enrich-only crawl: kept 0 matching event(s), dropped 6 sibling event(s) from venue.example (reached via ticket link from "2027 reservations open")'),
+      JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))
+    );
+    assert.deepEqual(result.events.map(e => e.title), ['2027 reservations open']);
+  }
+});
+
+test('own-site listing: one event is the row\'s own page, a platform domain is nobody\'s own site, and only a page classified as a listing counts', () => {
+  const core = createCore();
+  const own = { name: 'Campground', urls: ['https://camp.example/'], siteRole: 'venue' };
+  const two = [{ title: 'LEATHER BEARS' }, { title: 'HALLOWEEN WEEKEND' }];
+  assert.equal(core.isOwnSiteListingPage('https://camp.example/calendar/', own, 'multi-event-page', two), true);
+  assert.equal(core.isOwnSiteListingPage('https://www.camp.example/calendar/', own, 'multi-event-page', two), true, 'same registrable domain');
+  assert.equal(core.isOwnSiteListingPage('https://camp.example/calendar/', own, 'multi-event-page', two.slice(0, 1)), false, 'one event: the row\'s own page');
+  assert.equal(core.isOwnSiteListingPage('https://camp.example/calendar/', own, 'event-page', two), false, 'not classified as a listing');
+  assert.equal(core.isOwnSiteListingPage('https://venue.example/calendar/', own, 'multi-event-page', two), false, 'another site');
+  assert.equal(core.isOwnSiteListingPage('https://camp.example/calendar/', { ...own, siteRole: 'aggregator' }, 'multi-event-page', two), false, 'aggregator');
+  // A source configured at a ticketing platform's organiser page shares that domain with every organiser.
+  const onPlatform = { name: 'Promoter', urls: ['https://www.eventbrite.com/o/some-promoter-123'], siteRole: 'promoter' };
+  assert.equal(core.isConfiguredSiteUrl('https://www.eventbrite.com/d/ny--new-york/events/', onPlatform), true);
+  assert.equal(core.isOwnSiteListingPage('https://www.eventbrite.com/d/ny--new-york/events/', onPlatform, 'multi-event-page', two), false);
+});

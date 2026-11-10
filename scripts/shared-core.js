@@ -11890,6 +11890,9 @@ class SharedCore {
 
                 let pageEventsForEnrich = [];
                 let foreignOrgPage = false;
+                // An enrich-only page that turned out to be the source's own
+                // listing is read as a listing (see isOwnSiteListingPage).
+                let ownSiteListingPage = false;
                 if (!discoveryOnly) {
                     let parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter, url);
                     // Each event remembers the page it was actually extracted from
@@ -11982,7 +11985,11 @@ class SharedCore {
                         }
                         parsedEvents = [];
                     }
-                    if (enrichContext && parsedEvents.length > 0) {
+                    if (enrichContext && this.isOwnSiteListingPage(url, parserConfig, pageClassification, parsedEvents)) {
+                        ownSiteListingPage = true;
+                        await displayAdapter.logInfo(`SYSTEM: Enrich-only crawl: ${url} is a listing on this source's own site (${parsedEvents.length} events) — read as a listing of its own, not as the ticket page of "${enrichContext.parentTitle}": no event dropped as a sibling`);
+                    }
+                    if (enrichContext && !ownSiteListingPage && parsedEvents.length > 0) {
                         // Enrich-only page: keep ONLY events that are the same event
                         // as the originating (parent) event — same identity predicate
                         // the parser-level dedup uses — and drop the venue's sibling
@@ -12083,7 +12090,7 @@ class SharedCore {
                             await displayAdapter.logInfo(`SYSTEM: 🧭 ROOT: following ${listingLinks.length} listing link(s) from ${pageClassification === 'unknown' ? 'an unknown' : `a${/^[aeiou]/i.test(pageClassification) ? 'n' : ''} ${pageClassification}`} home page: ${listingLinks.join(', ')} — the site's own menu names its listing page in the site's words, whatever the home page reads as`);
                         }
                     }
-                    if (enrichContext) {
+                    if (enrichContext && !ownSiteListingPage) {
                         // No fan-out from enrich-only pages: a venue calendar reached
                         // through a ticket link must never seed further crawling.
                         if (linksToConsider.length > 0) {
@@ -12164,7 +12171,7 @@ class SharedCore {
                 // event-page path already follows ticket links.
                 const eventPageFollowsTickets = pageClassification === 'event-page'
                     && (adaptiveCrawl || (shouldFollowLinks && !adaptiveEnrichOnlyEventPage));
-                if (!discoveryOnly && !enrichContext && !eventPageFollowsTickets && pageEventsForEnrich.length > 0) {
+                if (!discoveryOnly && (!enrichContext || ownSiteListingPage) && !eventPageFollowsTickets && pageEventsForEnrich.length > 0) {
                     const ticketLinks = [];
                     const seenTicketLinks = new Set();
                     for (const event of pageEventsForEnrich) {
@@ -12644,6 +12651,46 @@ class SharedCore {
         if (!pageDomain) return false;
         const configured = parserConfig && Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
         return configured.some(root => this.getRegistrableDomainFromUrl(root) === pageDomain);
+    }
+
+    // Is this crawled page a LISTING ON THE SOURCE'S OWN SITE — and so never
+    // an enrich-only page, however the crawl reached it?
+    //
+    // Camp Out Poconos, run 20261109-053706: the home page's one row ("2027
+    // reservations open") carried a link to the campground's own
+    // /calendar/, the crawl queued that page as the row's TICKET page, and
+    // an enrich-only page keeps nothing but the event that linked it — so
+    // the six real weekends the calendar widget listed were dropped as
+    // "siblings" ("kept 0 matching event(s), dropped 6 sibling event(s) from
+    // campoutpoconos.com"), and because the page had now been read it was
+    // never read again as the listing it is. The Heretic's own /tickets
+    // page lost a party the same way in the same run (kept 3, dropped 1).
+    //
+    // "Enrich-only" exists to keep a VENUE'S calendar out of a promoter's
+    // source: a ticket link that lands on somebody else's listing may
+    // confirm the one event that linked it and nothing more. That reason
+    // does not hold on the source's own site — its listing is the thing
+    // the owner pointed the parser at, by whichever link the crawl found
+    // it. Three things must all be true, all read off the page and the
+    // config:
+    //   - the page is on the registrable domain of a configured URL, and
+    //     that domain is not a shared ticketing platform (a source
+    //     configured at a platform organiser page shares its domain with
+    //     every other organiser there);
+    //   - the source is not an aggregator (its deeper pages are other
+    //     people's events — the same line the first-party window draws);
+    //   - the page classified as a listing AND produced two or more events
+    //     (one event on an own-site page is that row's own page, which
+    //     enrich-only handles correctly).
+    isOwnSiteListingPage(url, parserConfig, pageClassification, pageEvents) {
+        if (pageClassification !== 'multi-event-page') return false;
+        if (!Array.isArray(pageEvents) || pageEvents.length < 2) return false;
+        const siteRole = String((parserConfig && parserConfig.siteRole) || '').toLowerCase();
+        if (siteRole === 'aggregator') return false;
+        if (!this.isConfiguredSiteUrl(url, parserConfig)) return false;
+        const host = this.getHostFromUrl(url);
+        if (!host || this.isKnownTicketingPlatformHost(host)) return false;
+        return true;
     }
 
     // Does a crawled page get the machine-door probe a configured root gets?
