@@ -30211,6 +30211,8 @@ test('tags: a stored bear verdict given without tags is described by the machine
   assert.equal(result[1].tags, 'bear-crowd', 'the owner gave tags: exactly those');
   assert.equal(drops.length, 1, 'a stored not-bear is the owner\'s word; a tag does not overrule it');
   assert.match(drops[0].reason, /^manual store: not_bear/);
+});
+
 // ---------------------------------------------------------------------------
 // Over before it was found: evidence for a merge, never a NEW event (2026-11-09)
 // Run 20261109-053706 analyzed 730 records as NEW; 318 of them were already
