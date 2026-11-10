@@ -6632,16 +6632,6 @@ class SharedCore {
         return this.isPageOffParserSite(page, parserConfig);
     }
 
-    // Every name the registry knows a promoter by: its name, aliases, title
-    // keywords and the short brand forms. [] for no entry.
-    getPromoterBrandNames(entry) {
-        if (!entry || typeof entry !== 'object') return [];
-        return [entry.name, entry.shortName, entry.shorterName,
-            ...(Array.isArray(entry.aliases) ? entry.aliases : []),
-            ...(Array.isArray(entry.keywords) ? entry.keywords : [])]
-            .filter(value => typeof value === 'string' && value.trim());
-    }
-
     // Strength of a promoter stamp as a statement about the EVENT: its own
     // words (or a stamp with no recorded kind) > an address on the record >
     // inheritance from the parser's site. 0 = no stamp.
