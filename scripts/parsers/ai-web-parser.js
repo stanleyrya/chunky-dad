@@ -1567,6 +1567,13 @@ class AiWebParser {
                 // normalizeAiEvent never saw them.
                 structuredEvents.forEach(event => {
                     if (!event || typeof event.title !== 'string' || !event.title.trim()) return;
+                    // First of the cleanups: every one below reads letters.
+                    const unmarkedTitle = this.stripInvisibleTitleMarks(event.title);
+                    if (unmarkedTitle !== event.title) {
+                        console.log(`🏷️ TITLE: "${this.showInvisibleTitleMarks(event.title)}" → "${unmarkedTitle}" — invisible marks (and the separator left dangling beside them) are not part of a name`);
+                        event.title = unmarkedTitle;
+                        if (!event.title) return;
+                    }
                     const strippedTitle = this.stripLeadingDatePhraseFromTitle(event.title);
                     if (strippedTitle !== event.title) {
                         console.log(`🤖 AI Web: Stripped leading date from title "${event.title}" → "${strippedTitle}"`);
@@ -26872,6 +26879,17 @@ TEXT:
             aiEvent.summary,
             this.getResolvedParserMetadataFieldValue(parserConfig, ['title', 'name', 'summary'], aiEvent)
         );
+        // Invisible marks first — every check below reads letters (see
+        // stripInvisibleTitleMarks). A title that was nothing but marks is
+        // no title, and the missing-title handling below takes it.
+        const unmarkTitle = (value) => {
+            const unmarked = this.stripInvisibleTitleMarks(value);
+            if (unmarked !== value) {
+                console.log(`🏷️ TITLE: "${this.showInvisibleTitleMarks(value)}" → "${unmarked}" — invisible marks (and the separator left dangling beside them) are not part of a name`);
+            }
+            return unmarked;
+        };
+        if (title) title = unmarkTitle(title);
         // A title that is nothing but a time of day is a harvested time node,
         // never an event name (run 20260802-102127: the final event was titled
         // "6:30 PM" while the real name — "SUGAR, WE'RE HOEIN DOWN" — sat in
@@ -26947,6 +26965,9 @@ TEXT:
                 titleStated = true;
             }
         }
+        // …and again once the page's own stated names (its JSON-LD event
+        // name, its heading) may have replaced the model's.
+        if (title) title = unmarkTitle(title);
         // Strip a leading date phrase HERE rather than in the per-pass guard:
         // titles also arrive from segment headings and config metadata, which
         // never pass through that guard — a live BEEFMINCE run showed the
@@ -29104,6 +29125,40 @@ TEXT:
             text = match[1].trim();
         }
         return text || original;
+    }
+
+    // INVISIBLE MARKS ARE NOT LETTERS — identical to SharedCore's
+    // stripInvisibleTitleMarks (parsers are standalone; keep the two in
+    // sync). A zero-width or direction mark prints nothing, so a title that
+    // carries one is the title without it; once the marks are gone, a
+    // spaced separator with nothing on its far side joined the name to
+    // nothing and goes with them. studsf.com, run 20261109-053706: the
+    // site's name is a lone U+200E, so its item-page template's "<event> —
+    // <site name>" (the page <title>, og:title and the JSON-LD Event name
+    // alike) read "Muscle Mommy Pageant  —   \u200e " — 11 records carried
+    // the tail, 3 of them kept, and the brand-suffix strip never saw it
+    // (no brand to read off the page).
+    //
+    // A joiner (U+200C/U+200D) is cut only where it joins nothing — it
+    // builds emoji and letters in several scripts — and the soft hyphen is
+    // never touched. A title with no such mark is returned as it was.
+    stripInvisibleTitleMarks(title) {
+        const original = String(title === null || title === undefined ? '' : title);
+        const marks = /[\u061c\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]|(?:^|(?<=\s))[\u200c\u200d]+|[\u200c\u200d]+(?=\s|$)/gu;
+        const bare = original.replace(marks, '');
+        if (bare === original) return original;
+        const separator = '[|\\u2013\\u2014\\u2015\\u00b7\\u2022\\u00bb-]+';
+        return bare.replace(/\s+/g, ' ').trim()
+            .replace(new RegExp(`\\s+${separator}$`, 'u'), '')
+            .replace(new RegExp(`^${separator}\\s+`, 'u'), '')
+            .trim();
+    }
+
+    // What a log line can show of a title that carries such marks.
+    showInvisibleTitleMarks(title) {
+        return String(title === null || title === undefined ? '' : title)
+            .replace(/[\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/gu,
+                (mark) => `<U+${mark.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}>`);
     }
 
     // Emoji/pictograph-stripped view of a title — identical to SharedCore's

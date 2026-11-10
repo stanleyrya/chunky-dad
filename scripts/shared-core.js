@@ -4705,6 +4705,60 @@ class SharedCore {
             .trim();
     }
 
+    // INVISIBLE MARKS ARE NOT SPELLING. A zero-width or direction mark
+    // (U+200B, U+200E/F, the embedding and isolate controls, the word
+    // joiner, the BOM) prints nothing: a title that carries one names the
+    // same event as the title without it. The Stud's site name is a lone
+    // U+200E, so its page template's "<event> — <site name>" came out as
+    // "Bear Happy Hour SF — \u200e" and was saved that way (run
+    // 20261109-053706: 3 kept records, chip "SF — \u200e"). Once the marks
+    // are gone, a spaced separator with nothing on its far side joined the
+    // name to nothing and goes with them.
+    //
+    // Deliberately narrow: a joiner (U+200C/U+200D) is cut only where it
+    // joins nothing — at an edge or beside a space — because it builds
+    // emoji ("\u2764\ufe0f\u200d\ud83d\udd25") and letters in several
+    // scripts; the soft hyphen is a display hint the registry writes on
+    // purpose and is never touched. A title with no such mark is returned
+    // as it was, dangling separator and all — that is another shape.
+    // Mirrored in the web parser (stripInvisibleTitleMarks) — parsers are
+    // standalone; keep the two in sync.
+    static stripInvisibleTitleMarks(value) {
+        const original = String(value === null || value === undefined ? '' : value);
+        const marks = /[\u061c\u200b\u200e\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]|(?:^|(?<=\s))[\u200c\u200d]+|[\u200c\u200d]+(?=\s|$)/gu;
+        const bare = original.replace(marks, '');
+        if (bare === original) return original;
+        const separator = '[|\\u2013\\u2014\\u2015\\u00b7\\u2022\\u00bb-]+';
+        return bare.replace(/\s+/g, ' ').trim()
+            .replace(new RegExp(`\\s+${separator}$`, 'u'), '')
+            .replace(new RegExp(`^${separator}\\s+`, 'u'), '')
+            .trim();
+    }
+
+    // A log line cannot show what prints nothing: marks are written as
+    // their code point ("Gemini — <U+200E>").
+    static showInvisibleTitleMarks(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/[\u061c\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/gu,
+                (mark) => `<U+${mark.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}>`);
+    }
+
+    // Two titles that differ only by invisible marks (and the separator
+    // left dangling beside them): the side that carries none is the title.
+    // null when the titles are equal, differ in real text, or both carry
+    // marks (nothing clean to pick — the caller's own ladder decides).
+    static pickTitleWithoutInvisibleMarks(valueA, valueB) {
+        if (typeof valueA !== 'string' || typeof valueB !== 'string' || valueA === valueB) return null;
+        const bareA = SharedCore.stripInvisibleTitleMarks(valueA);
+        const bareB = SharedCore.stripInvisibleTitleMarks(valueB);
+        const fold = (text) => text.replace(/\s+/g, ' ').trim();
+        if (!fold(bareA) || fold(bareA) !== fold(bareB)) return null;
+        const cleanA = bareA === valueA;
+        const cleanB = bareB === valueB;
+        if (cleanA === cleanB) return null;
+        return cleanA ? 'a' : 'b';
+    }
+
     // Emoji/pictograph-stripped view of a title: pictograph blocks, variation
     // selectors, the keycap combiner and ZWJ removed, whitespace collapsed.
     // Conservative on purpose: ASCII and real punctuation are never stripped.
@@ -7146,6 +7200,18 @@ class SharedCore {
                 && SharedCore.normalizeOwnerReviewValue(approved.to) === SharedCore.normalizeOwnerReviewValue(valueB)
                 && SharedCore.normalizeOwnerReviewValue(approved.from) === SharedCore.normalizeOwnerReviewValue(valueA)) {
                 return { winner: 'b', reason: 'the owner approved this value on the review deck' };
+            }
+        }
+
+        // Invisible marks are not a spelling (stripInvisibleTitleMarks): the
+        // copy without them is the title, whichever side carries it. Runs
+        // BEFORE the saved-spelling fold below — that fold reads letters and
+        // digits only, so it would keep a saved "Bear Happy Hour SF — \u200e"
+        // against the clean name on every run.
+        if (fieldName === 'title') {
+            const unmarked = SharedCore.pickTitleWithoutInvisibleMarks(valueA, valueB);
+            if (unmarked) {
+                return { winner: unmarked, reason: 'same title — the other copy only adds invisible marks (and the separator left dangling beside them)' };
             }
         }
 
@@ -18335,6 +18401,29 @@ class SharedCore {
                         newValue: newValue,
                         chosenValue: chosenValue,
                         reason: 'timezone-anchored date wins over wall-clock (_timezoneUnresolved) date'
+                    });
+                    return;
+                }
+            }
+
+            // Invisible marks are not a spelling: when the two titles differ
+            // only by them, the copy without them stands — decided here,
+            // before source priority, which picks a side without a word (run
+            // 20261109-053706: the item page's "Muscle Mommy Pageant — \u200e"
+            // replaced the collection's "Muscle Mommy Pageant" because only
+            // the item page's source was in the priority list).
+            if (fieldName === 'title') {
+                const unmarked = SharedCore.pickTitleWithoutInvisibleMarks(existingValue, newValue);
+                if (unmarked) {
+                    const chosenValue = unmarked === 'a' ? existingValue : newValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    console.log(`🏷️ MERGE: "${chosenValue}" field=title — the other copy ("${SharedCore.showInvisibleTitleMarks(unmarked === 'a' ? newValue : existingValue)}") only adds invisible marks; the title without them stands`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: 'same title — the other copy only adds invisible marks'
                     });
                     return;
                 }

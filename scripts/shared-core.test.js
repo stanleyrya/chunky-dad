@@ -30665,3 +30665,115 @@ test('standing lines: a generic bear word only in a venue\'s standing line is no
   assert.equal(brand.decision.result, 'bear');
   assert.match(brand.decision.provenance, /^keyword: /);
 });
+
+// ── 2026-11-09 audit, crawl-junk 6: invisible marks in a title ──
+// studsf.com, run 20261109-053706: the site's name is a lone U+200E, so its
+// item pages state "<event> — <site name>" as "Bear Happy Hour SF — ‎".
+// The item-page record folded into the clean collection record by event-page
+// URL and source priority kept the marked title without a word; 3 kept
+// records carried it (two already saved that way, chip "SF — ‎").
+test('invisible marks: a zero-width or direction mark and the separator left dangling beside it are not part of a title; emoji joiners and soft hyphens stay', () => {
+  const strip = (title) => SharedCore.stripInvisibleTitleMarks(title);
+  // The page's own strings (JSON-LD Event.name, og:title).
+  assert.equal(strip('Muscle Mommy Pageant  —   ‎ '), 'Muscle Mommy Pageant');
+  assert.equal(strip('Bear Happy Hour SF — ‎'), 'Bear Happy Hour SF');
+  assert.equal(strip('‎ — Tea Dance'), 'Tea Dance', 'the same join at the front');
+  assert.equal(strip('﻿Bears ​| ‎'), 'Bears');
+  assert.equal(strip('Bear​racuda'), 'Bearracuda', 'a mark inside a word prints nothing');
+  assert.equal(strip('‎'), '', 'a title of marks alone is no title');
+  // Left exactly as they were: no mark, a joiner that builds an emoji, a
+  // soft hyphen, and a dangling separator on a title that carries no mark.
+  for (const title of ['Muscle Mommy Pageant', "THICK 'N' JUICY ❤️‍🔥 Brisbane", 'BEEF­MINCE', 'Bear Night —', 'Alley Bears - Gear Night!', '']) {
+    assert.equal(strip(title), title, title);
+  }
+  assert.equal(strip('Woof ‍'), 'Woof', 'a joiner that joins nothing');
+  assert.equal(SharedCore.showInvisibleTitleMarks('Gemini — ‎'), 'Gemini — <U+200E>');
+
+  const pick = (a, b) => SharedCore.pickTitleWithoutInvisibleMarks(a, b);
+  assert.equal(pick('Gemini', 'Gemini — ‎'), 'a');
+  assert.equal(pick('Gemini — ‎', 'Gemini'), 'b');
+  assert.equal(pick('Gemini', 'Gemini'), null);
+  assert.equal(pick('Gemini', 'GEMINI — ‎'), null, 'another case is another spelling — the ladder decides');
+  assert.equal(pick('Gemini', 'Gemini Rising — ‎'), null, 'real words differ');
+  assert.equal(pick('Gemini‎', 'Gemini — ‎'), null, 'no clean side to pick');
+  assert.equal(pick('Gemini —', 'Gemini — ‎'), null);
+});
+
+test('invisible marks: in a fold the title without them stands, in either order and against source priority, and the log names both', async () => {
+  const core = createCore();
+  const adapter = buildArbitrationAdapter({});
+  const start = new Date('2026-11-21T05:00:00.000Z');
+  // The real pair: the Squarespace collection row and its own item page.
+  const collection = () => ({
+    title: 'Muscle Mommy Pageant', bar: 'The Stud', city: 'sf', startDate: start, endDate: new Date('2026-11-21T10:00:00.000Z'),
+    source: 'squarespace', _titleFromListing: true, _pageOrigin: 'crawl', _sourcePageUrl: 'https://www.studsf.com/calendar',
+    website: 'https://www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant'
+  });
+  const itemPage = () => ({
+    title: 'Muscle Mommy Pageant — ‎', bar: 'The Stud', city: 'sf', startDate: start, endDate: new Date('2026-11-21T10:00:00.000Z'),
+    source: 'ai-web', _extractionSource: 'jsonld', _pageOrigin: 'crawl',
+    _sourcePageUrl: 'https://www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant',
+    website: 'https://www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant',
+    // What the run's records carried: only the item page's source is listed.
+    _fieldPriorities: { title: { priority: ['ai-web'], merge: 'ai' } }, _parserConfig: TEST_AI_PARSER_CONFIG
+  });
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let merged; let flipped; let other;
+  try {
+    merged = await core.mergeParsedEvents(collection(), itemPage(), { httpAdapter: adapter });
+    flipped = await core.mergeParsedEvents(itemPage(), { ...collection(), _fieldPriorities: itemPage()._fieldPriorities }, { httpAdapter: adapter });
+    // A title that differs in real words is not this rule's to decide.
+    other = await core.mergeParsedEvents(collection(), { ...itemPage(), title: 'Mommy Issues — ‎' }, { httpAdapter: adapter });
+  } finally { console.log = quiet; }
+  assert.equal(merged.title, 'Muscle Mommy Pageant');
+  assert.equal(flipped.title, 'Muscle Mommy Pageant');
+  assert.ok(logs.some(line => line.includes('🏷️ MERGE: "Muscle Mommy Pageant" field=title — the other copy ("Muscle Mommy Pageant — <U+200E>") only adds invisible marks; the title without them stands')), logs.join('\n'));
+  assert.equal(other.title, 'Mommy Issues — ‎', 'source priority decides as before');
+});
+
+test('invisible marks: a saved title that carries them yields to the clean name the source states — a spelling fix, not a rename; a saved spelling in another case still stays', async () => {
+  const core = createReviewCore();
+  const resolve = (a, b, labels) => core.resolveConflictDeterministically('title', a, b,
+    { records: { a: { title: a, bar: 'The Stud' }, b: { title: b, bar: 'The Stud' } }, sideLabels: labels });
+  const marked = 'Bear Happy Hour SF — ‎';
+  const saved = resolve(marked, 'Bear Happy Hour SF', { a: 'calendar', b: 'scraped' });
+  assert.equal(saved.winner, 'b');
+  assert.match(saved.reason, /only adds invisible marks/);
+  assert.equal(resolve('Bear Happy Hour SF', marked, { a: 'calendar', b: 'scraped' }).winner, 'a', 'whichever side carries them');
+  assert.equal(resolve(marked, 'Bear Happy Hour SF', { a: 'existing', b: 'incoming' }).winner, 'b', 'between two parser records too');
+  // The folds beside it are untouched.
+  assert.match(resolve('FUZZY', 'Fuzzy', { a: 'calendar', b: 'scraped' }).reason, /saved spelling stays/);
+  assert.match(resolve('BEAR HAPPY HOUR SF', marked, { a: 'calendar', b: 'scraped' }).reason, /saved spelling stays/, 'case is still the owner\'s call');
+  assert.deepEqual(core.resolveConflictDeterministically('title', 'Juicy ❤️‍🔥', 'Juicy'),
+    { winner: 'a', reason: 'emoji title variant beats its emoji-stripped twin' });
+
+  // End to end: the saved Nov 12 night of run 20261109-053706.
+  const start = new Date('2026-11-13T01:00:00.000Z');
+  const end = new Date('2026-11-13T04:00:00.000Z');
+  const scraped = {
+    title: 'Bear Happy Hour SF', startDate: new Date(start), endDate: new Date(end), bar: 'The Stud', address: 'SOMA San Francisco, CA',
+    city: 'sf', timezone: 'America/Los_Angeles', website: 'https://linktr.ee/bearhappyhour', bearSource: 'keyword',
+    _fieldPriorities: core.getResolvedFieldPriorities({}),
+    _parserConfig: { name: 'The Stud', dryRun: false, ai: { provider: 'ollama', endpoint: 'http://ai.example/api/generate', model: 'test-model' } },
+    _sourcePageUrl: 'https://www.studsf.com/calendar'
+  };
+  const existing = {
+    title: marked, startDate: new Date(start), endDate: new Date(end), location: '', url: '',
+    notes: 'bar: The Stud\naddress: SOMA San Francisco, CA\nwebsite: https://linktr.ee/bearhappyhour'
+  };
+  const asked = [];
+  const adapter = {
+    getExistingEvents: async () => [existing],
+    postJson: async (endpoint, payload) => { asked.push(String(payload.prompt || '')); return { ok: true, status: 200, text: JSON.stringify({ response: '' }) }; }
+  };
+  const logs = [];
+  const quiet = console.log; console.log = (...args) => logs.push(args.join(' '));
+  let prepared;
+  try { prepared = await core.prepareEventsForCalendar([scraped], adapter, {}); } finally { console.log = quiet; }
+  assert.equal(prepared[0]._action, 'merge');
+  assert.equal(prepared[0].title, 'Bear Happy Hour SF', 'the calendar gets the clean name');
+  assert.equal(prepared[0]._bigDriftWithheld, undefined, 'not a rename: nothing is withheld');
+  assert.ok(!asked.some(prompt => prompt.includes('\u200e')), 'no model is asked to pick between the two');
+  assert.ok(logs.some(line => line.includes('field=title resolved deterministically') && line.includes('only adds invisible marks')), logs.filter(line => /MERGE/.test(line)).join('\n'));
+});

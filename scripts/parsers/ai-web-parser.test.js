@@ -23980,3 +23980,71 @@ test('closure notices: a row named only "private event" is a notice, not an even
     assert.ok(logs.some((line) => line.includes('🚪 CLOSED: "PRIVATE EVENT" is a closure notice')), logs.join('\n'));
   } finally { console.log = quiet; }
 });
+
+// studsf.com, run 20261109-053706: the site's name is a lone left-to-right
+// mark (U+200E), so every item page's "<event> — <site name>" template —
+// <title>, og:title and the JSON-LD Event name — reads "Muscle Mommy Pageant
+//  —   <U+200E> ". Eleven records carried that tail (three kept, e.g. "Bear
+// Happy Hour SF — <U+200E>"), and it replaced the collection's clean title in
+// the fold. A mark that prints nothing is not part of a name, and the
+// separator left dangling beside it goes with it.
+test('invisible marks: a zero-width or direction mark and the separator left dangling beside it are cut from a title; emoji joiners, soft hyphens and unmarked titles stay', () => {
+  const parser = createParser();
+  assert.equal(parser.stripInvisibleTitleMarks('Muscle Mommy Pageant  —   ‎ '), 'Muscle Mommy Pageant');
+  assert.equal(parser.stripInvisibleTitleMarks('Bear Happy Hour SF — ‎'), 'Bear Happy Hour SF');
+  assert.equal(parser.stripInvisibleTitleMarks('‏ | Bear Night'), 'Bear Night');
+  assert.equal(parser.stripInvisibleTitleMarks('﻿Bear​ Night⁠'), 'Bear Night');
+  assert.equal(parser.stripInvisibleTitleMarks('  ‎ '), '');
+  // A joiner that builds an emoji is the emoji; a soft hyphen is a deliberate
+  // break hint; a title with no mark is returned as it came, separator and all.
+  assert.equal(parser.stripInvisibleTitleMarks("THICK 'N' JUICY ❤️‍🔥 Brisbane"), "THICK 'N' JUICY ❤️‍🔥 Brisbane");
+  assert.equal(parser.stripInvisibleTitleMarks('Bear­racuda'), 'Bear­racuda');
+  assert.equal(parser.stripInvisibleTitleMarks('Bear Night —'), 'Bear Night —');
+  assert.equal(parser.stripInvisibleTitleMarks('Bears — Cubs'), 'Bears — Cubs');
+  assert.equal(parser.showInvisibleTitleMarks('SF — ‎'), 'SF — <U+200E>');
+});
+
+test('invisible marks: an item page whose template appends an invisible site name gives the event its printed name, and the log shows the mark that was cut', async () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // Trimmed from the cached page www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant.
+  const html = `<!doctype html><html><head>
+<title>Muscle Mommy Pageant  &mdash;   ‎ </title>
+<meta property="og:site_name" content="  ‎ "/>
+<meta property="og:title" content="Muscle Mommy Pageant  &mdash;   ‎ "/>
+<script type="application/ld+json">{"url":"https://www.studsf.com","name":"  \\u200E ","description":"","@context":"http://schema.org","@type":"WebSite"}</script>
+<script type="application/ld+json">{"legalName":"The Stud","address":"1123 Folsom St\\nSan Francisco, CA, 94103","@context":"http://schema.org","@type":"Organization"}</script>
+<script type="application/ld+json">{"name":"Muscle Mommy Pageant  \\u2014   \\u200E ","startDate":"2026-11-20T21:00:00-0800","endDate":"2026-11-21T02:00:00-0800","image":["http://static1.squarespace.com/static/5899708ee3df288fed2979ab/t/5c5d91ecb208fcb27d09a61b/1549636078416/studlogo_box.jpg?format=1500w"],"location":{"name":"The Stud","address":"SOMA\\nSan Francisco, CA","@context":"http://schema.org","@type":"Place"},"@context":"http://schema.org","@type":"Event"}</script>
+</head><body>
+<article class="eventitem"><h1 class="eventitem-title">Muscle Mommy Pageant </h1>
+<ul class="eventitem-meta event-meta"><li class="eventitem-meta-item eventitem-meta-date"><time class="event-date" datetime="2026-11-20">Friday, November 20, 2026</time></li>
+<li class="eventitem-meta-item eventitem-meta-time"><time class="event-time-12hr-start" datetime="2026-11-20">9:00 PM</time> <time class="event-time-12hr-end" datetime="2026-11-20">2:00 AM</time></li></ul>
+</article></body></html>`;
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  let result;
+  try {
+    result = await parser.parseEvents({ html, url: 'https://www.studsf.com/calendar/2026/11/20/muscle-mommy-pageant' }, {});
+  } finally { console.log = quiet; }
+  assert.equal(result.events.length, 1, logs.join('\n'));
+  assert.equal(result.events[0].title, 'Muscle Mommy Pageant');
+  assert.equal(result.events[0].startDate && new Date(result.events[0].startDate).toISOString().slice(0, 10), '2026-11-21');
+  assert.ok(logs.some((line) => line.includes('🏷️ TITLE: "Muscle Mommy Pageant — <U+200E>" → "Muscle Mommy Pageant" — invisible marks')), logs.filter((line) => /TITLE/.test(line)).join('\n'));
+});
+
+test('invisible marks: a model title that copied the marked page title is cleaned, and a title made only of marks is no title', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  const row = { segmentText: 'Bear Happy Hour SF\nThursday, December 10, 2026 5:00 PM 9:00 PM\nThe Stud', html: '<h1>Bear Happy Hour SF</h1>' };
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const event = parser.normalizeAiEvent({ title: 'Bear Happy Hour SF — ‎', startDate: '2026-12-10', startTime: '17:00' }, {}, row, null, null);
+    assert.ok(event, logs.join('\n'));
+    assert.equal(event.title, 'Bear Happy Hour SF');
+    assert.ok(logs.some((line) => line.includes('🏷️ TITLE: "Bear Happy Hour SF — <U+200E>" → "Bear Happy Hour SF"')), logs.join('\n'));
+    assert.equal(parser.normalizeAiEvent({ title: ' ‎ ', startDate: '2026-12-10', startTime: '17:00' }, {}, { segmentText: 'Thursday, December 10, 2026 5:00 PM', html: '' }, null, null), null);
+  } finally { console.log = quiet; }
+});
