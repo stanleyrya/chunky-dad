@@ -12305,10 +12305,39 @@ class AiWebParser {
      * cross-date differences classify. Fail closed per the doctrine: when
      * the artifacts say per-date, the family stays individual occurrences —
      * unsure never converts to a series.
+     *
+     * DATES WE MADE OURSELVES are not the site's expansion. A feed row that
+     * states a rule is fanned by expandJsonApiSeriesRow into dated copies
+     * (stamped _seriesRowExpansion); when EVERY date of the family is a copy
+     * of that one row, the site published one row and one rule, and the
+     * copies — identical by construction — prove nothing either way. Only
+     * the records actually READ somewhere else can then show per-date
+     * publication, and it takes two of them on two dates with different
+     * artifacts: the single record read by following the link every copy
+     * shares is the series' own page, dated to its next night. That one
+     * record's url and poster are the series', not that night's
+     * (thebearcalendar.com "Furry Friday", run 20261109-053706: 13 copies of
+     * one FREQ=WEEKLY;BYDAY=FR row plus the record read from their shared
+     * ticket link — the family was called occurrence-expanded on `website`
+     * and stood as 13 separate new events, while every other rule row of
+     * the same feed stayed one series).
      */
     classifyCadenceSourceShape(group, hasOccurrenceLinkObservations) {
         if (hasOccurrenceLinkObservations) {
             return { shape: 'occurrence-expanded', reason: 'the site publishes per-date ?occurrence= links' };
+        }
+        const ownExpansion = this.getOwnSeriesRowExpansion(group);
+        if (ownExpansion) {
+            const readElsewhere = group.members.filter(member => !ownExpansion.copies.has(member));
+            const verdict = this.classifyCadenceSourceShape({ members: readElsewhere }, false);
+            if (verdict.shape === 'occurrence-expanded') return verdict;
+            const readDates = new Set(readElsewhere.map(member => member.nightKey));
+            return {
+                shape: 'stated-series',
+                reason: `every one of its ${ownExpansion.dates} dates is our own copy of one feed row that states ${ownExpansion.rrule}; ${readElsewhere.length === 0
+                    ? 'nothing else was read'
+                    : `the ${readElsewhere.length} other record(s) read, on ${readDates.size} date(s), show no page published per date`}`
+            };
         }
         // `_sourceRowId` is the feed's OWN per-row identity (Tockify eid.uid,
         // an aggregator slug, a VEVENT UID — see getJsonApiRowIdentity). A
@@ -12352,6 +12381,29 @@ class AiWebParser {
             }
         }
         return { shape: 'stated-series', reason: 'no per-date identity artifacts observed' };
+    }
+
+    // The family's dates are OURS when every one of them carries a copy of
+    // the same rule-stating feed row (see classifyCadenceSourceShape). One
+    // row only: two rows, or a date no copy covers, is a shape the feed
+    // itself published and is judged by its artifacts as before.
+    getOwnSeriesRowExpansion(group) {
+        const members = group && Array.isArray(group.members) ? group.members : [];
+        const copies = new Set();
+        const rows = new Set();
+        const copyDates = new Set();
+        const allDates = new Set();
+        for (const member of members) {
+            allDates.add(member.nightKey);
+            const stamp = member.event && typeof member.event._seriesRowExpansion === 'string' ? member.event._seriesRowExpansion : '';
+            if (!stamp) continue;
+            copies.add(member);
+            rows.add(stamp);
+            copyDates.add(member.nightKey);
+        }
+        if (rows.size !== 1 || copyDates.size < 2 || copyDates.size !== allDates.size) return null;
+        const stamp = Array.from(rows)[0];
+        return { copies, dates: copyDates.size, rrule: stamp.slice(0, stamp.indexOf('@')) };
     }
 
     /**
@@ -16527,10 +16579,15 @@ class AiWebParser {
             ? event.endDate.getTime() - event.startDate.getTime()
             : 0;
         console.log(`🔁 SERIES: "${event.title}" (${rrule}) → ${starts.length} dated occurrence(s) from ${starts[0].toISOString().slice(0, 10)}; the series row itself (${event.startDate.toISOString().slice(0, 10)}) is not an event`);
+        const seriesRowStamp = `${rrule}@${event.startDate.toISOString()}#${typeof event._sourceRowId === 'string' ? event._sourceRowId : ''}#${event.title || ''}`;
         return starts.map(start => {
             const copy = { ...event, startDate: start };
             copy.endDate = durationMs > 0 ? new Date(start.getTime() + durationMs) : null;
             delete copy._jsonApiRrule;
+            // This date is OURS, not the feed's: the rule, the row's own
+            // start and the row's id name the one row every copy came from
+            // (read by classifyCadenceSourceShape).
+            copy._seriesRowExpansion = seriesRowStamp;
             return copy;
         });
     }

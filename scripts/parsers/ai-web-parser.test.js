@@ -23787,3 +23787,156 @@ test('page year: with the day sections anchored to the year their weekdays state
   assert.equal(stubborn.extracted.__explicitSourceYears, undefined);
   assert.notEqual(stubborn.event && stubborn.event.startDate.getUTCFullYear(), 2027);
 });
+
+// ---------------------------------------------------------------------------
+// Series shape: the dates WE made from a feed row's rule are not the site's
+// expansion (run 20261109-053706, thebearcalendar.com "Furry Friday").
+// The row below is that feed row, trimmed. The feed states ONE row and one
+// rule; expandJsonApiSeriesRow fans it into 13 Fridays, all wearing the same
+// event page and the same ticket link. The enrich crawl follows that ticket
+// link once and reads one record, dated to the next Friday, whose own page
+// is the ticket page and whose poster is that page's. One date wearing a
+// page and a poster the other twelve do not read as "the site publishes a
+// page per night": the stated rule was demoted and 13 separate new events
+// were proposed, while every other rule row of the feed stayed one series.
+// ---------------------------------------------------------------------------
+const OWN_EXPANSION_FEED_ROW = {
+  slug: 'furry-friday-2026',
+  title: 'Furry Friday',
+  url: 'https://thebearcalendar.example/events/furry-friday-2026/',
+  start: '2026-08-28T19:00:00', // the wall clock the feed-clock step hands over (the feed prints +00:00)
+  end: null,
+  tz: 'UTC',
+  recurrence: 'Fridays',
+  rrule: 'FREQ=WEEKLY;BYDAY=FR',
+  category: 'party',
+  venue: 'Kings Cross Hotel',
+  city: 'Sydney',
+  country: 'Australia',
+  organizer: 'Harbour City Bears',
+  ticket_url: 'https://hcbears.example/event-6700980/Registration',
+  website_url: 'https://hcbears.example/event-6700980',
+  image: 'https://feed-images.example/event-images/8f34856f66beb1b0.png'
+};
+
+// By the time the shape is judged the copies carry no `url` of their own
+// (run file: url null on all 13 rows; the shape line named `website`).
+function expandOwnSeriesRows(parser, rows) {
+  const copies = withCapturedLogsReturning(() => parser.extractEventsFromJsonApiPayload(
+    { events: rows.map(row => JSON.parse(JSON.stringify(row))) }, 'https://thebearcalendar.example/feed.json', null));
+  for (const copy of copies) copy.url = '';
+  return copies;
+}
+
+function withCapturedLogsReturning(run) {
+  const original = console.log;
+  console.log = () => {};
+  try { return run(); } finally { console.log = original; }
+}
+
+// The record the enrich crawl reads off the ticket link every copy shares.
+function buildSharedLinkPageRecord(copy, overrides = {}) {
+  return {
+    title: 'Furry Friday',
+    bar: 'Kings Cross Hotel',
+    address: '244-248 William Street, Kings Cross',
+    startDate: new Date(copy.startDate.getTime()),
+    endDate: new Date(copy.startDate.getTime()),
+    url: 'https://hcbears.example/event-6700980/Registration',
+    website: 'https://hcbears.example/event-6700980/Registration',
+    image: 'https://hcbears.example/resources/Pictures/furry-friday.jpg',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+
+test('series shape: thirteen dates we made from ONE feed row that states a rule stay one series when the row\'s shared link is read once — and the log says whose dates they are', () => {
+  const parser = createParser();
+  const copies = expandOwnSeriesRows(parser, [OWN_EXPANSION_FEED_ROW]);
+  assert.equal(copies.length, 13, 'the rule row is fanned into thirteen Fridays');
+  assert.ok(copies.every(copy => typeof copy._seriesRowExpansion === 'string' && copy._seriesRowExpansion.startsWith('FREQ=WEEKLY;BYDAY=FR@')),
+    'every copy says it is our own expansion of the rule row');
+  assert.equal(new Set(copies.map(copy => copy._seriesRowExpansion)).size, 1, 'one row, one stamp');
+
+  // The defect, reproduced on the same records without the stamp: one date
+  // wears a page the others do not, so the family is taken for per-night
+  // publication and nothing is a series.
+  const unstamped = copies.map(copy => { const bare = { ...copy }; delete bare._seriesRowExpansion; return bare; });
+  const unstampedRecords = [...unstamped, buildSharedLinkPageRecord(unstamped[0])];
+  const before = withCapturedLogs(() => parser.applyDerivedCadenceStamps(unstampedRecords));
+  assert.ok(before.some(line => line.includes('🔁 SHAPE: "Furry Friday" is occurrence-expanded (distinct per-date website artifacts across 13 dates) — 14 record(s) over 13 date(s) kept individual')),
+    `the old verdict is reproduced, got: ${JSON.stringify(before)}`);
+  assert.ok(unstampedRecords.every(record => record.recurrenceRule === undefined));
+
+  // With the dates known to be ours: one stated series.
+  const records = [...copies, buildSharedLinkPageRecord(copies[0])];
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  const rules = new Set(records.map(record => record.recurrenceRule));
+  assert.deepEqual([...rules], ['FREQ=WEEKLY;BYDAY=FR'], 'all fourteen records carry the one rule');
+  assert.equal(new Set(records.map(record => record._cadenceGroup)).size, 1, 'one same-series marker, so the series collapse can fold them');
+  assert.ok(records.every(record => record._seriesInfo === undefined), 'not an occurrence-expanded family');
+  const shape = logs.find(line => line.includes('🔁 SHAPE: "Furry Friday" is stated-series'));
+  assert.ok(shape, `stated-series line expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(shape.includes('every one of its 13 dates is our own copy of one feed row that states FREQ=WEEKLY;BYDAY=FR'), shape);
+  assert.ok(shape.includes('the 1 other record(s) read, on 1 date(s), show no page published per date'), shape);
+  assert.ok(!logs.some(line => line.includes('occurrence-expanded')), JSON.stringify(logs));
+});
+
+test('series shape: pages really read on two of those dates still make separate nights; two rule rows, or a date no copy covers, are judged by their artifacts as before', () => {
+  // Two different pages read on two different nights: the site does publish
+  // a page per night, whatever the feed's one row says.
+  const twoPagesParser = createParser();
+  const copies = expandOwnSeriesRows(twoPagesParser, [OWN_EXPANSION_FEED_ROW]);
+  const twoPages = [
+    ...copies,
+    buildSharedLinkPageRecord(copies[0], { url: 'https://hcbears.example/event-6700980', website: 'https://hcbears.example/event-6700980' }),
+    buildSharedLinkPageRecord(copies[1], { url: 'https://hcbears.example/event-6700981', website: 'https://hcbears.example/event-6700981' })
+  ];
+  const twoPagesLogs = withCapturedLogs(() => twoPagesParser.applyDerivedCadenceStamps(twoPages));
+  assert.ok(twoPagesLogs.some(line => line.includes('🔁 SHAPE: "Furry Friday" is occurrence-expanded') && line.includes('distinct per-date url artifacts across 2 dates')),
+    JSON.stringify(twoPagesLogs));
+  assert.ok(twoPages.every(record => record.recurrenceRule === undefined), 'no series conversion');
+
+  // Two rule rows for one party (the feed lists the Friday night and the
+  // Wednesday night separately): two rows are two publications — the feed
+  // row ids differ across dates exactly as before.
+  const twoRowsParser = createParser();
+  const twoRows = expandOwnSeriesRows(twoRowsParser, [
+    OWN_EXPANSION_FEED_ROW,
+    { ...OWN_EXPANSION_FEED_ROW, slug: 'furry-friday-2026-2', start: '2026-08-26T19:00:00', recurrence: 'Wednesdays', rrule: 'FREQ=WEEKLY;BYDAY=WE' }
+  ]);
+  assert.equal(twoRows.length, 26);
+  assert.equal(new Set(twoRows.map(copy => copy._seriesRowExpansion)).size, 2);
+  const twoRowsLogs = withCapturedLogs(() => twoRowsParser.applyDerivedCadenceStamps(twoRows));
+  assert.ok(twoRowsLogs.some(line => line.includes('is occurrence-expanded') && line.includes('distinct per-date feed row id artifacts')),
+    JSON.stringify(twoRowsLogs));
+
+  // A dated row of its own on a night the rule does not reach: that date is
+  // the feed's, not ours, so the family is not "all our own copies".
+  const extraParser = createParser();
+  const ruleCopies = expandOwnSeriesRows(extraParser, [OWN_EXPANSION_FEED_ROW]);
+  const special = {
+    ...ruleCopies[0],
+    startDate: new Date(ruleCopies[0].startDate.getTime() + 24 * 60 * 60 * 1000),
+    endDate: null,
+    _sourceRowId: 'furry-friday-special-2026'
+  };
+  delete special._seriesRowExpansion;
+  const withSpecial = [...ruleCopies, special];
+  const specialLogs = withCapturedLogs(() => extraParser.applyDerivedCadenceStamps(withSpecial));
+  assert.ok(specialLogs.some(line => line.includes('is occurrence-expanded') && line.includes('distinct per-date feed row id artifacts')),
+    JSON.stringify(specialLogs));
+
+  // And a family nobody expanded keeps the old rule to the letter: a page
+  // only one date wears is that date's own publication.
+  const plainParser = createParser();
+  const plain = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) => buildCadenceStampRecord({
+    startDate: new Date(`${date}T20:00:00.000Z`),
+    endDate: new Date(`${date}T23:00:00.000Z`),
+    url: '',
+    website: index === 0 ? 'https://fixture-eagle.example/events/karaoke/tickets' : 'https://fixture-eagle.example/events/karaoke/'
+  }));
+  const plainLogs = withCapturedLogs(() => plainParser.applyDerivedCadenceStamps(plain));
+  assert.ok(plainLogs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is occurrence-expanded') && line.includes('distinct per-date website artifacts')),
+    JSON.stringify(plainLogs));
+});
