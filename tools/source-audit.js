@@ -11,8 +11,11 @@
 //      page is fetched through the web adapter (politeness, robots, the
 //      browser route and the page cache all apply — one page per host) and
 //      its readable text is searched for the series title. Verdicts:
-//      still-listed (found → OUR miss), site-removed (not found), unknown
-//      (page unreachable). The verdict is written into the loss state
+//      still-listed (found → OUR miss), site-removed (not found AND the
+//      text read is shown to be the listing that covers the lost days —
+//      see stillOnSite; carries its proof), unknown (anything else: page
+//      unreachable, or not found in a text that does not cover the day —
+//      never grounds for a removal card). The verdict is written into the loss state
 //      (source-upcoming.json) so the next ledger line carries lost[].still,
 //      and into source-audit.json for the dashboard today.
 //   2. Missing / fake events — for the hosts in the day's rotation (cap 3,
@@ -56,6 +59,10 @@ const DEFAULT_BUDGET_MS = 240000;
 // reached it. composeAuditText shares the cap between the pages instead,
 // the page that names the most extracted events first. The cap stays.
 const PAGE_TEXT_CAP = 6000;
+// The still-on-site search is ours, not the model's: it reads each listing
+// page whole (up to this many characters; a page cut here says "unknown",
+// never "removed"). The model still sees PAGE_TEXT_CAP.
+const STILL_SEARCH_TEXT_CAP = 200000;
 const MAX_RUNS_KEPT = 60;
 const STILL_VERDICTS = ['still-listed', 'site-removed', 'set-aside', 'unknown'];
 
@@ -87,7 +94,8 @@ function normalizeSourceAuditStore(parsed) {
             page: entry.page && typeof entry.page === 'object' ? Object.assign({ url: String(entry.page.url || ''), fetchedAt: String(entry.page.fetchedAt || ''), chars: Number(entry.page.chars) || 0 }, entry.page.kind ? { kind: String(entry.page.kind) } : {}) : null,
             still: Array.isArray(entry.still) ? entry.still.filter((item) => item && item.title && STILL_VERDICTS.includes(item.verdict)).map((item) => Object.assign(
                 { title: String(item.title), verdict: String(item.verdict), checked_at: String(item.checked_at || ''), line: String(item.line || '') },
-                item.how ? { how: String(item.how) } : {}, item.twin ? { twin: String(item.twin) } : {}, item.extracted_on ? { extracted_on: String(item.extracted_on) } : {})) : [],
+                item.how ? { how: String(item.how) } : {}, item.twin ? { twin: String(item.twin) } : {}, item.extracted_on ? { extracted_on: String(item.extracted_on) } : {},
+                item.proof ? { proof: String(item.proof) } : {}, Array.isArray(item.days) && item.days.length ? { days: item.days.map(String) } : {}, item.why ? { why: String(item.why) } : {})) : [],
             missing: Array.isArray(entry.missing) ? entry.missing.filter((item) => item && item.title).map((item) => ({ title: String(item.title), date: String(item.date || '') })) : [],
             fake: Array.isArray(entry.fake) ? entry.fake.filter((item) => item && item.title).map((item) => ({ title: String(item.title), kind: String(item.kind || ''), reason: String(item.reason || '') })) : [],
             // Only rows the record confirmed (they name their field); the
@@ -190,12 +198,12 @@ function titleTokens(title) {
     return [...new Set(foldAuditText(title).split(' ').filter((word) => word.length > 2))];
 }
 
-function stillOnSite(title, pageText, options = {}) {
-    const minOverlap = Number.isFinite(options.minOverlap) ? options.minOverlap : 0.6;
+// Is a title named in a listing's (folded) lines? One line, or two lines
+// that follow each other, holding 60% of the title's words (a one-word
+// title: that word).
+function titleNamedInLines(title, lines, minOverlap = 0.6) {
     const tokens = titleTokens(title);
-    if (!tokens.length) return { verdict: 'unknown', line: '', overlap: 0 };
-    const lines = String(pageText || '').split('\n').map(foldAuditText).filter(Boolean);
-    if (!lines.length) return { verdict: 'unknown', line: '', overlap: 0 };
+    if (!tokens.length || !lines.length) return { named: false, line: '', overlap: 0, tokens: tokens.length };
     let best = { overlap: 0, line: '' };
     const score = (text) => {
         const words = new Set(text.split(' '));
@@ -212,7 +220,177 @@ function stillOnSite(title, pageText, options = {}) {
         const pair = score(`${lines[index]} ${lines[index + 1]}`);
         if (pair > best.overlap) best = { overlap: pair, line: `${lines[index]} / ${lines[index + 1]}` };
     }
-    return { verdict: best.overlap >= needed ? 'still-listed' : 'site-removed', line: best.line.slice(0, 160), overlap: Math.round(best.overlap * 100) / 100 };
+    return { named: best.overlap >= needed, line: best.line.slice(0, 160), overlap: Math.round(best.overlap * 100) / 100, tokens: tokens.length };
+}
+
+// ---------------------------------------------------------------------------
+// WHICH DAYS A LISTING COVERS. "The title's words are not in the text" says
+// the site removed an event only when the text read is the listing FOR THAT
+// DAY. Until 2026-11-09 it was taken as removal for any day: Eagle LA's
+// calendar page prints the current month's grid, and seven December and
+// January parties ("EAGLE LA NEW YEARS BASH!!", "MLK BUST", …) the run had
+// stopped reading for a reason of our own (a month-feed cache key) were
+// stamped "removed by the site" from a page that only shows November — and
+// went to the review deck as removal cards.
+//
+// A listing covers a day in one of three ways, each read off the page:
+//   grid    — a month grid: a line that is only "<Month> <Year>", then the
+//             bare day numbers 1…N on their own lines, N the length of that
+//             month. Every day of that month is covered, empty cells too.
+//   printed — a dated row or feed line prints that very day.
+//   between — dated rows print a day within LISTING_BRACKET_DAYS before it
+//             AND a day within LISTING_BRACKET_DAYS after it: the list runs
+//             through the day.
+// A date with no year is this year's and is never rolled forward (in
+// December "Jan 5" is not assumed to be next January — that day is simply
+// not covered). Only English month names and their three-letter forms count.
+// ---------------------------------------------------------------------------
+const LISTING_BRACKET_DAYS = 31;
+const LISTING_MONTH_WORDS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const LISTING_MONTH_PATTERN = '(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sept|sep|oct|nov|dec)';
+
+function listingMonthNumber(word) {
+    const value = String(word || '').toLowerCase();
+    if (value === 'sept') return 9;
+    const index = LISTING_MONTH_WORDS.findIndex((name) => name === value || (value.length === 3 && name.slice(0, 3) === value));
+    return index + 1;
+}
+
+function listingDayKey(year, month, day) {
+    const y = Number(year); const m = Number(month); const d = Number(day);
+    if (!(y >= 2000 && y <= 2100) || !(m >= 1 && m <= 12) || !(d >= 1)) return '';
+    if (d > new Date(Date.UTC(y, m, 0)).getUTCDate()) return '';
+    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function shiftDayKey(dayKey, days) {
+    const ms = Date.parse(`${dayKey}T00:00:00Z`);
+    if (!Number.isFinite(ms)) return '';
+    return new Date(ms + days * 86400000).toISOString().slice(0, 10);
+}
+
+// The days a listing text prints: { grid: Set, rows: Set } of YYYY-MM-DD.
+function listingPrintedDays(pageText, today) {
+    const grid = new Set();
+    const rows = new Set();
+    const thisYear = String(today || new Date().toISOString().slice(0, 10)).slice(0, 4);
+    const headerPattern = new RegExp(`^${LISTING_MONTH_PATTERN}\\.?,?\\s+(\\d{4})$`, 'i');
+    const monthFirst = new RegExp(`(?<![a-z])${LISTING_MONTH_PATTERN}(?![a-z])\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?![\\d:])(?:,?\\s*(\\d{4})(?!\\d))?`, 'gi');
+    const dayFirst = new RegExp(`(?<![\\d:])(\\d{1,2})(?:st|nd|rd|th)?\\s+${LISTING_MONTH_PATTERN}(?![a-z])\\.?(?:,?\\s*(\\d{4})(?!\\d))?`, 'gi');
+    const isoPattern = /(?<!\d)(\d{4})-(\d{2})-(\d{2})(?!\d)/g;
+    let open = null; // the month grid being read: { year, month, next }
+    const closeGrid = () => {
+        if (open && open.next > 1) {
+            const length = new Date(Date.UTC(open.year, open.month, 0)).getUTCDate();
+            // The whole month, in order, or it is not a month grid.
+            if (open.next - 1 === length) for (let day = 1; day <= length; day += 1) grid.add(listingDayKey(open.year, open.month, day));
+        }
+        open = null;
+    };
+    String(pageText || '').split('\n').forEach((raw) => {
+        const line = raw.trim();
+        if (!line) return;
+        const header = headerPattern.exec(line);
+        if (header) {
+            closeGrid();
+            open = { year: Number(header[2]), month: listingMonthNumber(header[1]), next: 1 };
+            return;
+        }
+        if (open && /^\d{1,2}$/.test(line)) {
+            // Cells of the month before (29, 30, 31 ahead of the 1) and of
+            // the month after (1, 2, 3 behind the last day) are not the next
+            // number and are passed over.
+            if (Number(line) === open.next) open.next += 1;
+            return;
+        }
+        let match;
+        isoPattern.lastIndex = 0;
+        while ((match = isoPattern.exec(line))) { const key = listingDayKey(match[1], match[2], match[3]); if (key) rows.add(key); }
+        monthFirst.lastIndex = 0;
+        while ((match = monthFirst.exec(line))) { const key = listingDayKey(match[3] || thisYear, listingMonthNumber(match[1]), match[2]); if (key) rows.add(key); }
+        dayFirst.lastIndex = 0;
+        while ((match = dayFirst.exec(line))) { const key = listingDayKey(match[3] || thisYear, listingMonthNumber(match[2]), match[1]); if (key) rows.add(key); }
+    });
+    closeGrid();
+    return { grid, rows };
+}
+
+// How (if at all) the printed days cover one day: { how, from, to } with
+// the window of days the claim rests on, or null.
+function listingCoversDay(printed, day) {
+    const value = String(day || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !printed) return null;
+    if (printed.grid.has(value)) {
+        const month = value.slice(0, 8);
+        const days = [...printed.grid].filter((key) => key.startsWith(month)).sort();
+        return { how: 'grid', from: days[0], to: days[days.length - 1] };
+    }
+    if (printed.rows.has(value)) return { how: 'printed', from: value, to: value };
+    const all = [...printed.rows, ...printed.grid].sort();
+    const floor = shiftDayKey(value, -LISTING_BRACKET_DAYS);
+    const ceiling = shiftDayKey(value, LISTING_BRACKET_DAYS);
+    const before = all.filter((key) => key < value && key >= floor).pop();
+    const after = all.find((key) => key > value && key <= ceiling);
+    if (before && after) return { how: 'between', from: before, to: after };
+    return null;
+}
+
+// ---------------------------------------------------------------------------
+// STILL ON THE SITE? Three answers, and "removed" is the one that needs
+// proof (the owner's rule: a destructive proposal needs POSITIVE
+// verification; not seeing it is not proof):
+//   still-listed — the title's words are in the text read.
+//   site-removed — they are not, AND for every lost day still ahead the text
+//                  read is the listing that covers that day (above), AND the
+//                  text is the listing the run reads: it names every event
+//                  the run read from the host inside the covering window,
+//                  and there is at least one (a "featured" strip, an empty
+//                  JS calendar shell or a filtered view names none of them
+//                  or misses some). Carries proof: 'listing-covers' and the
+//                  days it vouches for.
+//   unknown      — anything else, with the reason in `why`. When some lost
+//                  days are covered and some are not, the verdict is unknown
+//                  and `days` still lists the ones the listing vouches for
+//                  (a weekly night gone from the November grid, its December
+//                  nights not shown anywhere yet).
+// options: days (the lost days), today, events (the run's rows for the host:
+// { title, day }), truncated (the text was cut), incomplete (a listing page
+// of the host could not be read — the reason).
+// ---------------------------------------------------------------------------
+function stillOnSite(title, pageText, options = {}) {
+    const minOverlap = Number.isFinite(options.minOverlap) ? options.minOverlap : 0.6;
+    const lines = String(pageText || '').split('\n').map(foldAuditText).filter(Boolean);
+    const found = titleNamedInLines(title, lines, minOverlap);
+    if (!found.tokens || !lines.length) return { verdict: 'unknown', line: '', overlap: 0, why: !found.tokens ? 'the title has no words to look for' : 'no text was read' };
+    if (found.named) return { verdict: 'still-listed', line: found.line, overlap: found.overlap };
+    const unknown = (why, days) => Object.assign({ verdict: 'unknown', line: found.line, overlap: found.overlap, why }, days && days.length ? { proof: 'listing-covers', days } : {});
+    const today = String(options.today || new Date().toISOString().slice(0, 10));
+    const lostDays = [...new Set((Array.isArray(options.days) ? options.days : []).map(String).filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day) && day >= today))].sort();
+    if (!lostDays.length) return unknown('no lost day ahead to check the listing against');
+    if (options.truncated) return unknown('the listing text was cut short — the rest was not read');
+    if (options.incomplete) return unknown(`a listing page of the site could not be read (${String(options.incomplete).slice(0, 80)})`);
+    const printed = listingPrintedDays(pageText, today);
+    const runRows = (Array.isArray(options.events) ? options.events : []).filter((event) => event && event.title && /^\d{4}-\d{2}-\d{2}$/.test(String(event.day || '')));
+    const vouched = [];
+    let why = '';
+    const agreement = new Map();
+    lostDays.forEach((day) => {
+        const cover = listingCoversDay(printed, day);
+        if (!cover) { if (!why) why = `the text read does not cover ${day} (no month grid for it, no dated row on or around it)`; return; }
+        const windowKey = `${cover.from}|${cover.to}`;
+        if (!agreement.has(windowKey)) {
+            const inWindow = runRows.filter((event) => String(event.day) >= cover.from && String(event.day) <= cover.to && String(event.day) >= today);
+            const unnamed = inWindow.find((event) => !titleNamedInLines(event.title, lines, minOverlap).named);
+            agreement.set(windowKey, !inWindow.length
+                ? `the run read no event from the site between ${cover.from} and ${cover.to} — nothing shows the text is the listing it reads`
+                : (unnamed ? `the text does not name "${String(unnamed.title).slice(0, 60)}" (${unnamed.day}), which the run read from the site — it is not the whole listing` : ''));
+        }
+        const disagreement = agreement.get(windowKey);
+        if (disagreement) { if (!why) why = disagreement; return; }
+        vouched.push(day);
+    });
+    if (vouched.length === lostDays.length) return { verdict: 'site-removed', line: found.line, overlap: found.overlap, proof: 'listing-covers', days: vouched };
+    return unknown(why || 'the listing does not cover every lost day', vouched);
 }
 
 // ---------------------------------------------------------------------------
@@ -234,7 +412,14 @@ function stillOnSite(title, pageText, options = {}) {
 // ---------------------------------------------------------------------------
 function refineStillVerdict(series, match, events) {
     const out = { verdict: match.verdict, line: match.line };
-    if (match.verdict !== 'still-listed') return out;
+    if (match.verdict !== 'still-listed') {
+        // The proof a "removed" rests on, the days it vouches for, and the
+        // reason an "unknown" is unknown travel with the verdict.
+        if (match.proof) out.proof = String(match.proof);
+        if (Array.isArray(match.days) && match.days.length) out.days = match.days.map(String);
+        if (match.why) out.why = String(match.why).slice(0, 200);
+        return out;
+    }
     const rows = (Array.isArray(events) ? events : []).filter((event) => event && event.title);
     if (!rows.length) return out;
     const lostFold = foldAuditText(series.title);
@@ -572,7 +757,12 @@ function stampStillIntoLossState(sharedRoot, host, verdicts, checkedAt, fsLike =
         const key = foldAuditText(item.title);
         const series = entry.lost[key];
         if (!series) return;
-        series.still = { verdict: item.verdict, at: checkedAt };
+        // The proof and the days it vouches for go with the verdict: the
+        // review deck raises a "gone from the source" card only for a day
+        // the listing was shown to cover (SharedCore.buildGoneFromSourceCandidates).
+        series.still = Object.assign({ verdict: item.verdict, at: checkedAt },
+            item.proof ? { proof: String(item.proof) } : {},
+            Array.isArray(item.days) && item.days.length ? { days: item.days.map(String) } : {});
         touched += 1;
     });
     if (!touched) return false;
@@ -813,7 +1003,14 @@ async function fetchListingText(adapter, url, options = {}) {
     const readable = kind === 'html'
         ? reviewQueue.readableTextFromHtml(page.html, cap)
         : (readableTextFromFeedBody(page.html, cap) || { text: page.html.slice(0, cap), chars: page.html.length });
-    return { page: { url: page.url || url, fetchedAt: page.fetchedAt || new Date().toISOString(), chars: readable.chars, text: readable.text, kind }, reason: '' };
+    // The same page whole, for the still-on-site search (searchText): a
+    // title past the model's cap is still on the page, and a page cut short
+    // can never vouch that the site removed anything (searchTruncated).
+    const searchCap = Math.max(cap, STILL_SEARCH_TEXT_CAP);
+    const whole = kind === 'html'
+        ? reviewQueue.readableTextFromHtml(page.html, searchCap)
+        : (readableTextFromFeedBody(page.html, searchCap) || { text: page.html.slice(0, searchCap), chars: page.html.length, truncated: page.html.length > searchCap });
+    return { page: { url: page.url || url, fetchedAt: page.fetchedAt || new Date().toISOString(), chars: readable.chars, text: readable.text, kind, searchText: whole.text, searchTruncated: whole.truncated === true }, reason: '' };
 }
 
 async function askAi(options, prompt) {
@@ -908,7 +1105,8 @@ async function runSourceAudit(options = {}) {
             // searched together and shown to the model together.
             const pages = [];
             let reason = '';
-            for (const candidate of listingUrlsForHost(results, row.host, url)) {
+            const listingUrls = listingUrlsForHost(results, row.host, url);
+            for (const candidate of listingUrls) {
                 let fetched = await fetchListingText(options.adapter, candidate, { pageTextCap: options.pageTextCap });
                 if (fetched.page && lossDay && String(fetched.page.fetchedAt).slice(0, 10) < lossDay) {
                     const fresh = await fetchListingText(options.adapter, candidate, { fresh: true, pageTextCap: options.pageTextCap });
@@ -927,8 +1125,17 @@ async function runSourceAudit(options = {}) {
                 entry.still = (row.lost || []).map((series) => ({ title: series.title, verdict: 'unknown', checked_at: checkedAt, line: '' }));
             } else {
                 entry.page = { url: fetched.page.url, fetchedAt: fetched.page.fetchedAt, chars: fetched.page.chars, kind: fetched.page.kind };
+                // The title search reads every listing page whole; "removed
+                // by the site" needs the text to cover the lost days and to
+                // be the listing the run reads (stillOnSite). A page cut
+                // short or a listing page that could not be read leaves the
+                // answer unknown.
+                const searchText = pages.map((page) => (typeof page.searchText === 'string' ? page.searchText : page.text)).join('\n\n');
+                const searchTruncated = pages.some((page) => page.searchTruncated === true);
+                const unreadListing = pages.length < listingUrls.length ? (reason || 'a listing page was not read') : '';
                 entry.still = (row.lost || []).map((series) => {
-                    const refined = refineStillVerdict(series, stillOnSite(series.title, fetched.page.text), hostEvents);
+                    const match = stillOnSite(series.title, searchText, { days: series.days, today, events: hostEvents, truncated: searchTruncated, incomplete: unreadListing });
+                    const refined = refineStillVerdict(series, match, hostEvents);
                     return Object.assign({ title: series.title, checked_at: checkedAt }, refined);
                 });
                 if (item.full && !htmlPages.length) {
@@ -995,6 +1202,11 @@ async function runSourceAudit(options = {}) {
                 summary.losses.push(row.host);
             }
             const stillListed = entry.still.filter((check) => check.verdict === 'still-listed').length;
+            // Every "removed" names its proof and every "unknown" its reason.
+            entry.still.forEach((check) => {
+                if (check.verdict === 'site-removed') log(`source-audit: ${row.host} — "${String(check.title).slice(0, 60)}" removed by the site: its listing covers ${(check.days || []).join(', ')} and does not carry it`);
+                else if (check.verdict === 'unknown') log(`source-audit: ${row.host} — "${String(check.title).slice(0, 60)}" not found in the text read, but that proves nothing: ${check.why || 'the listing page was not read'}${Array.isArray(check.days) && check.days.length ? ` (covered and not carried: ${check.days.join(', ')})` : ''}`);
+            });
             log(`source-audit: ${row.host} — ${item.full ? `${entry.missing.length} missing, ${entry.fake.length} not events, ${entry.wrong.length} wrong${entry.unverified ? ` (+${entry.unverified} the record could not confirm)` : ''}, ai ${entry.ai}${entry.reason ? ` (${entry.reason})` : ''}` : 'loss check'}${entry.still.length ? `, lost series: ${stillListed} still listed, ${entry.still.filter((check) => check.verdict === 'set-aside').length} held by the run (set aside or renamed), ${entry.still.filter((check) => check.verdict === 'site-removed').length} removed by the site, ${entry.still.filter((check) => check.verdict === 'unknown').length} unknown` : ''}${entry.note ? ` — ${entry.note.slice(0, 120)}` : ''}`);
         } catch (error) {
             summary.errors.push(`${row.host}: ${error.message}`);
@@ -1025,6 +1237,11 @@ module.exports = {
     pickAuditHosts,
     foldAuditText,
     stillOnSite,
+    titleNamedInLines,
+    listingPrintedDays,
+    listingCoversDay,
+    STILL_SEARCH_TEXT_CAP,
+    LISTING_BRACKET_DAYS,
     refineStillVerdict,
     auditClockMinutes,
     auditFieldDiffers,
