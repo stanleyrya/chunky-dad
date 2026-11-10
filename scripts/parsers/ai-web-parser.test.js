@@ -23962,3 +23962,21 @@ test('site sections: about-us / contact-us / team / staff pages are never follow
   try { links = parser.extractAdditionalUrls(html, home, {}); } finally { console.log = quiet; }
   assert.deepEqual(links, ['https://akbarsilverlake.com/upcoming-events/']);
 });
+
+// rockbarnyc.com, run 20261109-053706: the calendar widget row "PRIVATE EVENT"
+// ("Tonight, we will be CLOSED after 10pm for a PRIVATE EVENT") was read as an
+// event and left to the bear check to turn away.
+test('closure notices: a row named only "private event" is a notice, not an event, and the log says so; a named private party is still a name', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  for (const title of ['PRIVATE EVENT', 'Private Party!', 'A private event']) assert.equal(parser.isVenueClosureNoticeTitle(title), true, title);
+  for (const title of ['Private Dancer: 80s Night', 'BEARS NIGHT OUT', 'Private Event Space Open House', 'Private']) assert.equal(parser.isVenueClosureNoticeTitle(title), false, title);
+  const logs = [];
+  const quiet = console.log;
+  console.log = (line) => logs.push(String(line));
+  try {
+    const row = { segmentText: 'PRIVATE EVENT\nTonight, we will be CLOSED after 10pm for a PRIVATE EVENT. Yes, that one. IYKYK', html: 'PRIVATE EVENT' };
+    assert.equal(parser.normalizeAiEvent({ title: 'PRIVATE EVENT', startDate: '2026-10-10', startTime: '22:00' }, {}, row, null, null), null);
+    assert.ok(logs.some((line) => line.includes('🚪 CLOSED: "PRIVATE EVENT" is a closure notice')), logs.join('\n'));
+  } finally { console.log = quiet; }
+});

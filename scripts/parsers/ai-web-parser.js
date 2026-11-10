@@ -3445,6 +3445,11 @@ class AiWebParser {
         if (/^(?:bar\s+|venue\s+|we\s+are\s+|we're\s+)?closed(?:\s*[!.]*$|\s+(?:for|due|until|till|today|tonight|tomorrow|on|this|thru|through|thanksgiving|christmas|x-?mas|new\s+year|labou?r|memorial|easter|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b)/i.test(text)) return true;
         if (/^(?:no\s+events?|dark)\s*(?:tonight|today|this\s+\w+)?\s*[!.]*$/i.test(text)) return true;
         if (/^we\s+(?:will\s+)?re-?open\b/i.test(text)) return true;
+        // A row named only "PRIVATE EVENT" is the same notice without the
+        // word "closed" (rockbarnyc.com, run 20261109-053706: "PRIVATE
+        // EVENT" — "Tonight, we will be CLOSED after 10pm for a PRIVATE
+        // EVENT"). A private party with a name is still a name.
+        if (/^(?:a\s+)?private\s+(?:event|party|function|hire|booking)\s*[!.]*$/i.test(text)) return true;
         return false;
     }
 
