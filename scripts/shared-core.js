@@ -14285,6 +14285,11 @@ class SharedCore {
         const tag = mode === 'report' ? ' [report]' : '';
         const counts = { bear: 0, keyword: 0, ai: 0, tagged: 0, flagged: 0, dropped: 0 };
         const kept = [];
+        // A venue's own standing lines (dress code, shop notice, sponsor
+        // credit) are marked on these records before any of them is judged:
+        // "how many different parties carry this sentence" needs them all in
+        // view. See applyDescriptionChromeFlags.
+        this.applyDescriptionChromeFlags(events);
         // Drops are decided per record here but FINALISED after the loop, once
         // every record's verdict exists — see the twin sweep below.
         const pendingDrops = [];
@@ -14524,6 +14529,15 @@ class SharedCore {
             return decision;
         }
         const machine = this.collectMachineEventTags(event);
+        // Flag, don't drop silently: a tag word that sits only in a line the
+        // venue prints under many different parties is named here, with the
+        // line, and is not a candidate.
+        const siteLineHits = machine.siteLineHits || {};
+        for (const siteTag of Object.keys(siteLineHits)) {
+            if (machine.candidates.includes(siteTag)) continue;
+            const hit = siteLineHits[siteTag];
+            console.log(`🏷️ TAGS: "${title}" — ${siteTag} (${hit.keywords.join(', ')}) is named only in "${hit.line.slice(0, 120)}", a line this venue prints under ${TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES}+ different parties — the venue's line, not this event's; not a candidate`);
+        }
         let tags = [];
         if (machine.candidates.length > 0) {
             const describe = tag => {
@@ -14624,6 +14638,13 @@ class SharedCore {
         // title may be a trim of it (see statedNameBehindTitle).
         const statedTitles = this.getStatedTitles(event);
         const searchText = `${event.title || ''}${statedTitles.length > 0 ? ` ${statedTitles.join(' ')}` : ''} ${event.description || ''} ${event.bar || ''}`;
+        // A generic keyword is read in the description without the lines the
+        // venue prints under many different parties (applyDescriptionChromeFlags).
+        // The allowlist gate below keeps the whole text, as it always had.
+        const ownDescription = this.getDescriptionWithoutSiteLines(event);
+        const keywordText = ownDescription.siteLines.length === 0
+            ? searchText
+            : `${event.title || ''}${statedTitles.length > 0 ? ` ${statedTitles.join(' ')}` : ''} ${ownDescription.text} ${event.bar || ''}`;
 
         // Per-event trust: a registry-matched promoter's bearAffinity
         // overrides parserConfig.alwaysBear (see getEventBearTrust);
@@ -14654,8 +14675,21 @@ class SharedCore {
         // venue-name hits are identity and still short-circuit; a hit found
         // ONLY in the free-text description short-circuits only when that
         // description NAMES a registry brand.
-        const matched = this.matchBearKeywords(searchText);
-        const keywordTier = this.classifyBearKeywordMatch(event, matched);
+        // Identity hits (title, stated name, venue, a registry brand named
+        // anywhere in the description) are judged on the whole text, as
+        // before. A GENERIC word is evidence only outside the venue's
+        // standing lines.
+        const matchedAnywhere = this.matchBearKeywords(searchText);
+        const keywordTier = this.classifyBearKeywordMatch(event, matchedAnywhere);
+        let matched = matchedAnywhere;
+        if (!keywordTier.shortCircuit && ownDescription.siteLines.length > 0) {
+            matched = this.matchBearKeywords(keywordText);
+            const onlyInSiteLines = matchedAnywhere.filter(keyword => !matched.includes(keyword));
+            if (onlyInSiteLines.length > 0) {
+                const line = ownDescription.siteLines.find(siteLine => this.matchBearKeywords(siteLine).length > 0) || '';
+                console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — keyword ${onlyInSiteLines.join(', ')} is only in "${line.slice(0, 120)}", a line this venue prints under ${TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES}+ different parties — the venue's line, not keyword evidence for this event`);
+            }
+        }
         if (matched.length > 0 && keywordTier.shortCircuit) {
             if (keywordTier.source === 'stated-title') {
                 console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — keyword ${matched.join(', ')} is in the name the page stated, "${keywordTier.stated}"`);
@@ -14868,7 +14902,21 @@ class SharedCore {
                     if (!title.includes(keyword)) title.push(keyword);
                 }
             }
-            const description = this.matchTagKeywords(event.description, tag);
+            // The description is read without the lines the venue prints
+            // under many different parties (applyDescriptionChromeFlags): a
+            // standing dress code is not this event's theme.
+            const own = this.getDescriptionWithoutSiteLines(event);
+            const description = this.matchTagKeywords(own.text, tag);
+            if (own.siteLines.length > 0) {
+                const inSiteLines = this.matchTagKeywords(own.siteLines.join(' '), tag)
+                    .filter(keyword => !description.includes(keyword) && !title.includes(keyword));
+                if (inSiteLines.length > 0) {
+                    const line = own.siteLines.find(siteLine => this.matchTagKeywords(siteLine, tag).length > 0) || '';
+                    // Only present when a venue line was set aside.
+                    if (!result.siteLineHits) result.siteLineHits = {};
+                    result.siteLineHits[tag] = { keywords: inSiteLines, line };
+                }
+            }
             if (title.length === 0 && description.length === 0) continue;
             result.candidates.push(tag);
             if (title.length > 0) result.fromTitle.push(tag);
@@ -29819,20 +29867,8 @@ class SharedCore {
     // answered from a pair of records.
     applyTitleTokenCorpusFlags(events) {
         if (!Array.isArray(events) || events.length === 0) return;
-        const hostOf = (event) => {
-            const source = (event && (event._sourcePageUrl || event._venueSitePageHost || event.url || event.website)) || '';
-            const host = String(source).includes('/')
-                ? this.getHostFromUrl(String(source))
-                : String(source);
-            return String(host || '').trim().toLowerCase().replace(/^www\./, '');
-        };
-        const tokensOf = (event) => {
-            const venueKeys = [
-                this.normalizeBarNameKey(event && event.bar),
-                String((event && event._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-            ].filter(Boolean);
-            return this.getCrossSourceTitleTokens((event && (event.title || event.name)) || '', venueKeys);
-        };
+        const hostOf = (event) => this.getSourceCorpusHost(event);
+        const tokensOf = (event) => this.getSourceCorpusTitleTokens(event);
         // host → token → Set of distinct token-sequences carrying it
         const corpora = new Map();
         const tokenCache = new Map();
@@ -29862,6 +29898,148 @@ class SharedCore {
             }
             event._titleTokenDocFreq = freq;
         }
+    }
+
+    // The two readers every "how often does this SOURCE say this" pass shares:
+    // whose corpus a record belongs to (the page it was read from), and the
+    // token sequence that makes its title one party (venue, city, cadence and
+    // performer words removed — three nights of one party are one title).
+    getSourceCorpusHost(event) {
+        const source = (event && (event._sourcePageUrl || event._venueSitePageHost || event.url || event.website)) || '';
+        const host = String(source).includes('/')
+            ? this.getHostFromUrl(String(source))
+            : String(source);
+        return String(host || '').trim().toLowerCase().replace(/^www\./, '');
+    }
+
+    getSourceCorpusTitleTokens(event) {
+        const venueKeys = [
+            this.normalizeBarNameKey(event && event.bar),
+            String((event && event._venueSitePageHost) || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+        ].filter(Boolean);
+        return this.getCrossSourceTitleTokens((event && (event.title || event.name)) || '', venueKeys);
+    }
+
+    // A description as its sentences, in order: [{ text, key }]. A sentence
+    // ends at a line break, at an emoji (venues bullet their standing lines
+    // with them: "🧢 Our Leather Shop is Now Open! ⭐ No cover!"), at a spaced
+    // bullet, or at closing punctuation before a new capital. `key` is the
+    // wording alone — case, accents and punctuation folded — so the same
+    // line reads the same on every page that prints it.
+    splitDescriptionSentences(text) {
+        const source = String(text || '');
+        if (!source.trim()) return [];
+        const pictographRun = /(?:[\p{Extended_Pictographic}\u{1F3FB}-\u{1F3FF}]|\uFE0F|\u200D)+/gu;
+        const sentences = [];
+        for (const part of source.replace(pictographRun, '\n').split(/\n+|\s+[|•·]\s+|(?<=[.!?…])\s+(?=[\p{Lu}\p{N}"'“‘(#@$])/u)) {
+            const sentence = part.replace(/\s+/g, ' ').trim();
+            if (!sentence) continue;
+            const key = this.foldDiacritics(sentence).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+            if (key.replace(/[^a-z]/g, '').length < 4) continue;
+            sentences.push({ text: sentence, key });
+        }
+        return sentences;
+    }
+
+    // A LINE THE SOURCE PRINTS ON MANY OF ITS OWN PARTIES DESCRIBES THE
+    // SOURCE, NOT THE EVENT (2026-11-09). The same corpus question as
+    // applyTitleTokenCorpusFlags, asked of description sentences: a sentence
+    // that TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES or more DIFFERENT parties of
+    // one site carry word for word is the site's standing line — a dress
+    // code, a shop notice, a sponsor credit, the door price. Run
+    // 20261109-053706, thedallaseagle.com: "Our Leather Shop is Now Open!"
+    // and "Leather and fetish gear encouraged, but not required" sat under a
+    // Thanksgiving opening, a drag show, a trivia night and a retro tea
+    // dance, seeded a leather candidate on each, and the model confirmed it
+    // on some and declined it on others — the Thanksgiving opening was kept
+    // as a leather event on the shop notice alone.
+    //
+    // Parties, not rows: the count is of distinct titles (the same token
+    // sequence the title corpus uses), so twelve nights of one weekly party
+    // repeating their own description are ONE. And a sentence whose carriers
+    // all share a title word ("Sunday Funday: Rewind", "Sunday Funday:
+    // Disco", "Sunday Funday: Latin") belongs to that family of parties, not
+    // to the site — it stays evidence.
+    //
+    // One venue: the parties must be at the same bar. A standing line is a
+    // venue's line; the same sentence under three parties at three venues
+    // of a festival or a listing site is what those parties have in common
+    // ("Part of … Spooky Bear" under seven events of one bear weekend,
+    // ursamen.org, same run) and stays evidence.
+    //
+    // Stamps `_descriptionChromeSentences` (the keys of the event's own
+    // sentences that are the site's line). Underscore field, in-run only. It
+    // is stamped by the bear check on the very records it is about to judge,
+    // so no fold sits between the stamp and its readers. Nothing is removed
+    // from the description: the line is still shown, it is only never read
+    // as a tag candidate or as bear-keyword evidence
+    // (getDescriptionWithoutSiteLines).
+    applyDescriptionChromeFlags(events) {
+        if (!Array.isArray(events) || events.length === 0) return;
+        // "host venue" → sentence key → { titles: Map(titleKey → token list), text }
+        const corpusOf = (event) => {
+            const host = this.getSourceCorpusHost(event);
+            return host ? `${host} ${this.normalizeBarNameKey(event && event.bar) || ''}` : '';
+        };
+        const corpora = new Map();
+        const sentenceCache = new Map();
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            delete event._descriptionChromeSentences;
+            const sentences = this.splitDescriptionSentences(event.description);
+            if (sentences.length === 0) continue;
+            const tokens = this.getSourceCorpusTitleTokens(event);
+            if (tokens.length === 0) continue;
+            const host = corpusOf(event);
+            if (!host) continue;
+            sentenceCache.set(event, sentences);
+            if (!corpora.has(host)) corpora.set(host, new Map());
+            const corpus = corpora.get(host);
+            const titleKey = tokens.join(' ');
+            for (const sentence of sentences) {
+                if (!corpus.has(sentence.key)) corpus.set(sentence.key, { titles: new Map(), text: sentence.text });
+                corpus.get(sentence.key).titles.set(titleKey, tokens);
+            }
+        }
+        const siteLines = new Map();
+        for (const [host, corpus] of corpora) {
+            for (const [key, entry] of corpus) {
+                if (entry.titles.size < TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES) continue;
+                const tokenLists = [...entry.titles.values()];
+                const sharedByAll = tokenLists[0].some(token => tokenLists.every(list => list.includes(token)));
+                if (sharedByAll) continue;
+                if (!siteLines.has(host)) siteLines.set(host, new Map());
+                siteLines.get(host).set(key, entry);
+            }
+        }
+        for (const [host, lines] of siteLines) {
+            const widest = [...lines.values()].sort((a, b) => b.titles.size - a.titles.size)[0];
+            console.log(`🧱 SITE LINES: ${host.split(' ')[0]} prints ${lines.size} line(s) word for word under ${TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES}+ different parties at one venue (e.g. "${widest.text.slice(0, 90)}" under ${widest.titles.size}) — the venue's standing lines, never a tag candidate or generic bear-keyword evidence for one event`);
+        }
+        for (const [event, sentences] of sentenceCache) {
+            const lines = siteLines.get(corpusOf(event));
+            if (!lines) continue;
+            const keys = sentences.map(sentence => sentence.key).filter(key => lines.has(key));
+            if (keys.length > 0) event._descriptionChromeSentences = [...new Set(keys)];
+        }
+    }
+
+    // The event's description with the site's standing lines left out (see
+    // applyDescriptionChromeFlags), and the lines that were left out. With no
+    // stamp the description is returned exactly as it is.
+    getDescriptionWithoutSiteLines(event) {
+        const description = String((event && event.description) || '');
+        const stamped = event && Array.isArray(event._descriptionChromeSentences) ? event._descriptionChromeSentences : [];
+        if (!description || stamped.length === 0) return { text: description, siteLines: [] };
+        const chrome = new Set(stamped);
+        const kept = [];
+        const siteLines = [];
+        for (const sentence of this.splitDescriptionSentences(description)) {
+            if (chrome.has(sentence.key)) siteLines.push(sentence.text);
+            else kept.push(sentence.text);
+        }
+        if (siteLines.length === 0) return { text: description, siteLines: [] };
+        return { text: kept.join(' '), siteLines };
     }
 
     // Does the pair share at least one title token that is DISTINCTIVE in the

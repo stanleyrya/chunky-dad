@@ -30519,3 +30519,149 @@ test('currency twins: a currency selector is not part of a link\'s identity, lik
   assert.equal(core.isSameLinkTarget(`${plain}?currency=CAD`, plain), true);
   assert.notEqual(core.getUrlDedupeKey(`${plain}?paged=2`), core.getUrlDedupeKey(plain));
 });
+
+// A VENUE'S STANDING LINE IS NOT ONE EVENT'S THEME (2026-11-09). Fixtures are
+// the thedallaseagle.com records of run 20261109-053706, descriptions trimmed.
+function buildStandingLineRecords() {
+  const page = 'https://www.thedallaseagle.com/events/';
+  const row = (title, description, startDate) => ({ title, description, bar: 'Dallas Eagle', city: 'dallas', timezone: 'America/Chicago', _sourcePageUrl: page, startDate: new Date(startDate) });
+  return {
+    rewind: row('Sunday Funday: Rewind', 'Turn back time and turn up the dance floor at Rewind! 😎🦅 🦅 No dress code, take off your shirt and have fun. Lockers available for $5. 🍻 Get here early for Happy Hour 🧢 Our Leather Shop is Now Open! ⭐ No…', '2026-11-15T23:00:00.000Z'),
+    dragShow: row('UCLSE Drag Show', 'The Dallas Eagle welcomes back the United Court of the Lone Star Empire for their Drag Show! 👑 🍻 Enjoy low Happy Hour prices until 8pm 🧢 Our Leather Shop is Now Open! ⭐ No cover! Free Parking. Uber and Lyft ride shares are recommended. 🚗 #dallaseagle , ...', '2026-12-06T01:00:00.000Z'),
+    dirtyPop: row('Dirty Pop with DJ Drew G', 'Harder. Longer. Dirtier. 🦅 No dress code, just take off your shirt and have fun. Lockers available for $5 🍻 Get here early for Happy Hour 4pm 🧢 Our Leather Shop is Now Open! ⭐ No cover! Free Parking. Uber and Lyft ride shares are recommended.…', '2026-11-08T23:00:00.000Z'),
+    gearNight: row('Gear Night with DJ Tristan Jaxx', 'Grab your gear, it\'s time for GEAR NIGHT! Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle! 🔥 🦅 Leather and gear highly encouraged, but not required. Lockers available for $5 🧢 Our Leather Shop is Now Open! ⭐…', '2026-11-22T03:00:00.000Z'),
+    thanksgiving: row('Dirty Bird Thanksgiving', 'Gobble Gobble! Celebrate Turkey Day at the Dirty Bird! 🦃🦅 🦅 Leather and fetish gear encouraged, but not required. Lockers available for clothes check for $5 🧢 Our Leather Shop is Now Open! ⭐ No cover! Free Parking. Uber and Lyft ride shares are recommended. 🚗 #dallaseagle , ...', '2026-11-27T03:00:00.000Z')
+  };
+}
+
+test('standing lines: a sentence one venue prints word for word under three different parties is never a tag candidate, the log names the record and the line, and the party\'s own sentence still is', async () => {
+  const core = createCore();
+  const records = buildStandingLineRecords();
+  const events = Object.values(records);
+
+  // Before the stamp the shop notice reads as a leather word on every row.
+  assert.ok(core.collectMachineEventTags(records.rewind).candidates.includes('leather'));
+  assert.deepEqual(core.splitDescriptionSentences('🧢 Our Leather Shop is Now Open! ⭐ No cover! Free Parking.').map(sentence => sentence.text),
+    ['Our Leather Shop is Now Open!', 'No cover!', 'Free Parking.'], 'an emoji bullet and closing punctuation both end a sentence');
+
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => lines.push(args.join(' '));
+  let kept;
+  let adapter;
+  try {
+    // The model confirms leather whenever it is asked, quoting the shop
+    // notice — what it did for the Thanksgiving opening in the real run.
+    adapter = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'no bear wording' }, { leather: { applies: true, eventEvidence: ['Our Leather Shop is Now Open!'], reason: 'leather shop' } });
+    kept = await core.filterBearEvents(events, bearCheckConfig('enforce'), adapter);
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.deepEqual(records.rewind._descriptionChromeSentences, ['lockers available for 5', 'our leather shop is now open'], 'only the lines three different parties carry are the venue\'s');
+  assert.ok(records.thanksgiving._descriptionChromeSentences.includes('our leather shop is now open'));
+  assert.ok(!records.thanksgiving._descriptionChromeSentences.includes('leather and fetish gear encouraged but not required'), 'a sentence only this event carries is its own');
+
+  // The shop notice alone seeds nothing: no tag question is asked, and the log says why.
+  for (const name of ['rewind', 'dragShow', 'dirtyPop']) {
+    const machine = core.collectMachineEventTags(records[name]);
+    assert.ok(!machine.candidates.includes('leather'), `${records[name].title}: the shop notice is not a leather candidate`);
+    assert.deepEqual(machine.siteLineHits.leather, { keywords: ['leather'], line: 'Our Leather Shop is Now Open!' });
+    assert.ok(lines.some(line => line.includes('🏷️ TAGS:') && line.includes(`"${records[name].title}"`) && line.includes('"Our Leather Shop is Now Open!"') && line.includes('not a candidate')), `${records[name].title}: the set-aside line is logged`);
+  }
+  const asked = adapter.calls.map(call => String(call.prompt || '')).filter(prompt => /^Tag: leather$/m.test(prompt));
+  assert.ok(!asked.some(prompt => prompt.includes('Sunday Funday: Rewind') || prompt.includes('Dirty Pop')), 'the model is not asked about a venue line');
+  assert.ok(!kept.some(event => event.title === 'Sunday Funday: Rewind' || event.title === 'Dirty Pop with DJ Drew G'), 'a not-bear night is no longer kept on the shop notice');
+  assert.ok(lines.some(line => line.includes('🧱 SITE LINES: thedallaseagle.com') && line.includes('at one venue')));
+
+  // The party's own words still count: the gear night is named in its title
+  // and its own sentences, and the Thanksgiving row's dress-code sentence is
+  // its own wording (no other party prints it word for word).
+  const gear = core.collectMachineEventTags(records.gearNight);
+  assert.ok(gear.candidates.includes('leather'));
+  assert.ok(gear.hits.leather.description.includes('leather'), 'its own sentences are still read');
+  assert.equal(gear.siteLineHits, undefined, 'nothing was set aside that its own words do not also say');
+  assert.ok(core.collectMachineEventTags(records.thanksgiving).candidates.includes('leather'), 'a reworded dress code is not caught by this rule');
+  assert.ok(kept.some(event => event.title === 'Gear Night with DJ Tristan Jaxx'));
+
+  // Nothing is cut from the description itself.
+  assert.ok(records.rewind.description.includes('Our Leather Shop is Now Open!'));
+});
+
+test('standing lines: nights of one party, parties that share a title word, and parties at different venues are not a venue\'s standing line', () => {
+  const core = createCore();
+  const page = 'https://venue.example/events/';
+  const line = 'Leather and gear welcome all night.';
+  const row = (title, bar = 'The Venue', extra = '') => ({ title, description: `${extra} ${line}`.trim(), bar, _sourcePageUrl: page, startDate: new Date('2026-11-20T03:00:00.000Z') });
+  const silence = (run) => { const original = console.log; console.log = () => {}; try { return run(); } finally { console.log = original; } };
+
+  // Rows, not parties: twelve nights of one weekly party are one title — and
+  // the night's DJ does not make it another one.
+  const nights = [row('Filth'), row('Filth'), row('FILTH with DJ Gamma'), row('Filth w/ DJ Delta')];
+  silence(() => core.applyDescriptionChromeFlags(nights));
+  assert.ok(nights.every(event => event._descriptionChromeSentences === undefined), 'one party repeating its own line');
+
+  // A family: every carrier shares a title word, so the line is the family's.
+  const family = [row('Sunday Funday: Rewind'), row('Sunday Funday: Disco'), row('Sunday Funday: Latin')];
+  silence(() => core.applyDescriptionChromeFlags(family));
+  assert.ok(family.every(event => event._descriptionChromeSentences === undefined), 'a family of parties');
+
+  // Three venues: what a festival's parties have in common, not a venue line.
+  const venues = [row('Opening Party', 'Bar One'), row('Tea Dance', 'Bar Two'), row('Closing Ball', 'Bar Three')];
+  silence(() => core.applyDescriptionChromeFlags(venues));
+  assert.ok(venues.every(event => event._descriptionChromeSentences === undefined), 'three venues');
+
+  // Two parties are not many.
+  const two = [row('Opening Party'), row('Tea Dance')];
+  silence(() => core.applyDescriptionChromeFlags(two));
+  assert.ok(two.every(event => event._descriptionChromeSentences === undefined));
+
+  // Three different parties at one venue: the venue's line. A re-run on a
+  // smaller set clears an old stamp.
+  const three = [row('Opening Party'), row('Tea Dance', 'The Venue', 'Disco classics until late.'), row('Closing Ball')];
+  silence(() => core.applyDescriptionChromeFlags(three));
+  assert.ok(three.every(event => Array.isArray(event._descriptionChromeSentences) && event._descriptionChromeSentences.length === 1));
+  assert.deepEqual(core.getDescriptionWithoutSiteLines(three[1]), { text: 'Disco classics until late.', siteLines: [line] });
+  silence(() => core.applyDescriptionChromeFlags(three.slice(0, 2)));
+  assert.equal(three[0]._descriptionChromeSentences, undefined);
+  assert.deepEqual(core.getDescriptionWithoutSiteLines(three[0]), { text: line, siteLines: [] }, 'no stamp: the description is read whole');
+});
+
+test('standing lines: a generic bear word only in a venue\'s standing line is not keyword evidence when no model can be asked; a registry brand named in one still decides', async () => {
+  const registry = [{ name: 'Bearracuda', bearAffinity: 'always' }];
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, promoters: registry });
+  const page = 'https://venue.example/events/';
+  const row = (title, description) => ({ title, description, bar: 'The Venue', _sourcePageUrl: page, startDate: new Date('2026-11-20T03:00:00.000Z') });
+  const down = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'x' }, {}, { fail: true });
+  const config = bearCheckConfig('enforce');
+  const run = async (events, target) => {
+    const lines = [];
+    const original = console.log;
+    console.log = (...args) => lines.push(args.join(' '));
+    try {
+      core.applyDescriptionChromeFlags(events);
+      return { decision: await core.computeBearCheckVerdict(target, config, down), lines };
+    } finally {
+      console.log = original;
+    }
+  };
+
+  // The same sentence under ONE party is that party's own description.
+  const own = row('Trivia Tuesday', 'Bears and cubs drink free.');
+  const alone = await run([own], own);
+  assert.equal(alone.decision.result, 'bear', 'unchanged: with no model, a description keyword keeps its legacy verdict');
+  assert.match(alone.decision.provenance, /keyword: .*\(ai unavailable\)/);
+
+  // Under three different parties it is the venue's line.
+  const generic = ['Trivia Tuesday', 'Karaoke', 'Drag Bingo'].map(title => row(title, `${title} starts at eight. Bears and cubs drink free.`));
+  const standing = await run(generic, generic[0]);
+  assert.equal(standing.decision.result, 'unsure', 'flagged for review, not kept on the venue\'s line and not dropped');
+  assert.ok(standing.lines.some(line => line.includes('🐻 BEAR CHECK: "Trivia Tuesday"') && line.includes('"Bears and cubs drink free."') && line.includes('not keyword evidence')), 'the log names the record and the line');
+
+  // A registry brand is curated identity wherever the page prints it.
+  const branded = ['Opening Party', 'Tea Dance', 'Closing Ball'].map(title => row(title, `${title}. Presented by Bearracuda.`));
+  const brand = await run(branded, branded[0]);
+  assert.deepEqual(branded[0]._descriptionChromeSentences, ['presented by bearracuda']);
+  assert.equal(brand.decision.result, 'bear');
+  assert.match(brand.decision.provenance, /^keyword: /);
+});
