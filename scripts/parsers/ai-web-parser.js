@@ -92,9 +92,11 @@ const LISTED_OCCURRENCE_MIN_SPAN_DAYS = 8;
 // How many images to CONSIDER per page. Not an OCR budget — the budget below
 // counts only uncached reads — just a bound on scanning an enormous document.
 const OCR_CANDIDATE_SCAN_LIMIT = 300;
-// Page-identity scans (JSON-LD, meta tags, brand names, footer text) read at
-// most this many characters of the raw HTML — a bound on scanning an
-// enormous document, not a content window.
+// Page scans (JSON-LD, meta tags, brand names, footer text, the prompt's
+// body text) read at most this many characters of the page — a bound on
+// scanning an enormous document, not a content window. The bound counts what
+// those scans can READ, not what the template pads the page with: see
+// boundHtmlForScan.
 const HTML_SCAN_MAX_CHARS = 500000;
 // The smallest HTML budget an extraction prompt is ever built with, whatever
 // aiConfig.maxHtmlChars says.
@@ -8771,6 +8773,39 @@ class AiWebParser {
         }
         const weekdaysAbbrev = CURATED_DATE_VOCABULARY.weekdayAbbreviations;
 
+        // Which day of the week a heading word names (0 = Monday … 6 =
+        // Sunday): the position the name was generated at, exactly like the
+        // month numbers above — the Intl-derived and static arrays are both
+        // Monday-first. English is included here (the map names a day; it
+        // adds nothing to the heading patterns). An abbreviation names the
+        // day whose full names it begins, and only when every full name it
+        // begins is the same day ("dim" starts fr "dimanche" AND ca
+        // "dimarts"/"dimecres", so it names none); a curated synonym with no
+        // position names none either. No hand-kept weekday table.
+        const weekdayIndexByName = {};
+        const weekdayIndexConflicts = new Set();
+        const addWeekdayIndexes = (weekdays) => weekdays.forEach((name, index) => {
+            if (!name || weekdayIndexConflicts.has(name)) return;
+            if (name in weekdayIndexByName && weekdayIndexByName[name] !== index) {
+                delete weekdayIndexByName[name];
+                weekdayIndexConflicts.add(name);
+                return;
+            }
+            weekdayIndexByName[name] = index;
+        });
+        for (const locale of DATE_VOCABULARY_LOCALES) {
+            addWeekdayIndexes(derived[locale].weekdays);
+            addWeekdayIndexes((STATIC_DATE_VOCABULARY_FALLBACK[locale] || { weekdays: [] }).weekdays);
+        }
+        const fullWeekdayNames = Object.keys(weekdayIndexByName);
+        for (const abbreviation of weekdaysAbbrev) {
+            if (abbreviation in weekdayIndexByName || weekdayIndexConflicts.has(abbreviation)) continue;
+            const named = new Set(fullWeekdayNames
+                .filter(name => name.startsWith(abbreviation))
+                .map(name => weekdayIndexByName[name]));
+            if (named.size === 1) weekdayIndexByName[abbreviation] = Array.from(named)[0];
+        }
+
         const alternation = (names) => names
             .slice()
             .sort((a, b) => b.length - a.length)
@@ -8797,6 +8832,7 @@ class AiWebParser {
             monthAdjacentPattern,
             weekdayHeaderPattern,
             weekdayAbbrevHeaderPattern,
+            weekdayIndexByName,
             monthNamePattern: new RegExp(`\\b(?:${monthAlternation})\\b`),
             weekdayNamePattern: new RegExp(`\\b(?:${alternation(weekdaysFull)}|${alternation(weekdaysAbbrev)})\\b\\.?`, 'gi')
         };
@@ -8901,7 +8937,79 @@ class AiWebParser {
             };
         };
 
-        return resolve(rangeMatches, false) || resolve(fullDateMatches, true);
+        return this.applyDayHeadingYearVote(lines, resolve(rangeMatches, false) || resolve(fullDateMatches, true));
+    }
+
+    // The programme's own day headings state which year it is. A heading
+    // "JUEVES- 03" under a September context says: the 3rd of September is a
+    // Thursday — true of one year in any four. The header's year is what
+    // every one of those headings is about to be anchored to (see
+    // buildSegmentDateContextLine), so the two must agree.
+    //
+    // bearssitges.org/bears-sitges-week (run 2026-11-09): the organiser put
+    // next year's banner on top — "PROGRAMA oficial 2027 / PRÓXIMAMENTE /
+    // BEARS SITGES WEEK 2027 / Del 3 al 12 de SEPTIEMBRE" — and left the
+    // finished 2026 programme underneath, "JUEVES- 03 … DOMINGO - 13". The
+    // header year anchored all eleven day sections to September 2027, where
+    // the 3rd is a Friday, and 34 parties that were over came back as new
+    // events ten months out.
+    //
+    // The rule, page shape only:
+    //   • it counts the headings the context would anchor — whole-line
+    //     weekday + day-of-month, no month of their own — one vote per day
+    //     number (a day headed by two different weekdays votes for nothing);
+    //   • fewer than three such headings is no programme, nothing changes;
+    //   • a header year that at least half the headings agree with stands;
+    //   • otherwise the ONE year from last year to two years out that most
+    //     of the headings (at least three) fall on is the programme's year,
+    //     and the log says which headings said so;
+    //   • no such year, or the header states none → the context is returned
+    //     exactly as it was (and a contradicted header says so in the log).
+    // Within those four years no two can fit the same headings: the weekday
+    // of a date moves one or two days a year.
+    applyDayHeadingYearVote(lines, context) {
+        if (!context || !Number.isFinite(context.month) || !Number.isFinite(context.year)) return context;
+        const vocab = this.getMultilingualDateVocabulary();
+        const byDay = new Map();
+        for (const rawLine of Array.isArray(lines) ? lines : []) {
+            const folded = this.foldDiacritics(this.normalizeWhitespace(rawLine));
+            if (!folded || folded.length > 40) continue;
+            const headerMatch = folded.match(vocab.weekdayHeaderPattern) || folded.match(vocab.weekdayAbbrevHeaderPattern);
+            if (!headerMatch) continue;
+            const dayText = headerMatch.slice(1).find(g => g && /^\d{1,2}$/.test(g));
+            const day = dayText ? parseInt(dayText, 10) : NaN;
+            if (!Number.isFinite(day) || day < 1 || day > 31) continue;
+            const nameMatch = folded.match(/[a-z]+(?:-[a-z]+)?/);
+            const weekdayIndex = nameMatch ? vocab.weekdayIndexByName[nameMatch[0]] : undefined;
+            if (!Number.isInteger(weekdayIndex)) continue;
+            const seen = byDay.get(day);
+            if (!seen) byDay.set(day, { day, weekdayIndex, heading: this.normalizeWhitespace(rawLine) });
+            else if (seen.weekdayIndex !== weekdayIndex) seen.weekdayIndex = null;
+        }
+        const headings = Array.from(byDay.values()).filter(entry => entry.weekdayIndex !== null);
+        if (headings.length < 3) return context;
+
+        const fits = (year) => headings.filter((entry) => {
+            const date = new Date(Date.UTC(year, context.month - 1, entry.day));
+            if (date.getUTCMonth() !== context.month - 1) return false;
+            return (date.getUTCDay() + 6) % 7 === entry.weekdayIndex;
+        }).length;
+        const headerFits = fits(context.year);
+        if (headerFits * 2 >= headings.length) return context;
+
+        const currentYear = this.now().getFullYear();
+        const fitting = [currentYear - 1, currentYear, currentYear + 1, currentYear + 2]
+            .filter(year => year !== context.year)
+            .map(year => ({ year, count: fits(year) }))
+            .filter(candidate => candidate.count >= 3 && candidate.count * 2 > headings.length);
+        const sample = headings.slice(0, 3).map(entry => `"${entry.heading}"`).join(', ') + (headings.length > 3 ? ' …' : '');
+        if (fitting.length !== 1) {
+            console.log(`📅 PAGE YEAR: the header beside "${context.phrase}" says ${context.year}, but only ${headerFits} of ${headings.length} day headings (${sample}) fall on their weekday that year, and no single nearby year fits them — the page's year is left as stated (report-only)`);
+            return context;
+        }
+        const programmeYear = fitting[0].year;
+        console.log(`📅 PAGE YEAR: the header beside "${context.phrase}" says ${context.year}, but ${fitting[0].count} of ${headings.length} day headings (${sample}) fall on their weekday only in ${programmeYear} (${headerFits} in ${context.year}) — the programme under that header is ${programmeYear}'s; its days are anchored to ${programmeYear}, not ${context.year}`);
+        return { ...context, year: programmeYear, headerYear: context.year, yearSource: 'day-headings' };
     }
 
     // The programme's own header block states the year on the line ABOVE its
@@ -8921,7 +9029,7 @@ class AiWebParser {
     // the neighbours disagree, the page stays year-less as before.
     resolveAdjacentHeaderYear(lines, winners) {
         const vocab = this.getMultilingualDateVocabulary();
-        const currentYear = new Date().getFullYear();
+        const currentYear = this.now().getFullYear();
         const found = new Set();
         for (const winner of Array.isArray(winners) ? winners : []) {
             if (!Number.isFinite(winner.lineIndex)) continue;
@@ -12409,10 +12517,39 @@ class AiWebParser {
      * cross-date differences classify. Fail closed per the doctrine: when
      * the artifacts say per-date, the family stays individual occurrences —
      * unsure never converts to a series.
+     *
+     * DATES WE MADE OURSELVES are not the site's expansion. A feed row that
+     * states a rule is fanned by expandJsonApiSeriesRow into dated copies
+     * (stamped _seriesRowExpansion); when EVERY date of the family is a copy
+     * of that one row, the site published one row and one rule, and the
+     * copies — identical by construction — prove nothing either way. Only
+     * the records actually READ somewhere else can then show per-date
+     * publication, and it takes two of them on two dates with different
+     * artifacts: the single record read by following the link every copy
+     * shares is the series' own page, dated to its next night. That one
+     * record's url and poster are the series', not that night's
+     * (thebearcalendar.com "Furry Friday", run 20261109-053706: 13 copies of
+     * one FREQ=WEEKLY;BYDAY=FR row plus the record read from their shared
+     * ticket link — the family was called occurrence-expanded on `website`
+     * and stood as 13 separate new events, while every other rule row of
+     * the same feed stayed one series).
      */
     classifyCadenceSourceShape(group, hasOccurrenceLinkObservations) {
         if (hasOccurrenceLinkObservations) {
             return { shape: 'occurrence-expanded', reason: 'the site publishes per-date ?occurrence= links' };
+        }
+        const ownExpansion = this.getOwnSeriesRowExpansion(group);
+        if (ownExpansion) {
+            const readElsewhere = group.members.filter(member => !ownExpansion.copies.has(member));
+            const verdict = this.classifyCadenceSourceShape({ members: readElsewhere }, false);
+            if (verdict.shape === 'occurrence-expanded') return verdict;
+            const readDates = new Set(readElsewhere.map(member => member.nightKey));
+            return {
+                shape: 'stated-series',
+                reason: `every one of its ${ownExpansion.dates} dates is our own copy of one feed row that states ${ownExpansion.rrule}; ${readElsewhere.length === 0
+                    ? 'nothing else was read'
+                    : `the ${readElsewhere.length} other record(s) read, on ${readDates.size} date(s), show no page published per date`}`
+            };
         }
         // `_sourceRowId` is the feed's OWN per-row identity (Tockify eid.uid,
         // an aggregator slug, a VEVENT UID — see getJsonApiRowIdentity). A
@@ -12456,6 +12593,29 @@ class AiWebParser {
             }
         }
         return { shape: 'stated-series', reason: 'no per-date identity artifacts observed' };
+    }
+
+    // The family's dates are OURS when every one of them carries a copy of
+    // the same rule-stating feed row (see classifyCadenceSourceShape). One
+    // row only: two rows, or a date no copy covers, is a shape the feed
+    // itself published and is judged by its artifacts as before.
+    getOwnSeriesRowExpansion(group) {
+        const members = group && Array.isArray(group.members) ? group.members : [];
+        const copies = new Set();
+        const rows = new Set();
+        const copyDates = new Set();
+        const allDates = new Set();
+        for (const member of members) {
+            allDates.add(member.nightKey);
+            const stamp = member.event && typeof member.event._seriesRowExpansion === 'string' ? member.event._seriesRowExpansion : '';
+            if (!stamp) continue;
+            copies.add(member);
+            rows.add(stamp);
+            copyDates.add(member.nightKey);
+        }
+        if (rows.size !== 1 || copyDates.size < 2 || copyDates.size !== allDates.size) return null;
+        const stamp = Array.from(rows)[0];
+        return { copies, dates: copyDates.size, rrule: stamp.slice(0, stamp.indexOf('@')) };
     }
 
     /**
@@ -16682,11 +16842,16 @@ class AiWebParser {
             ? event.endDate.getTime() - event.startDate.getTime()
             : 0;
         console.log(`🔁 SERIES: "${event.title}" (${rrule}) → ${starts.length} dated occurrence(s) from ${starts[0].toISOString().slice(0, 10)}; the series row itself (${event.startDate.toISOString().slice(0, 10)}) is not an event`);
+        const seriesRowStamp = `${rrule}@${event.startDate.toISOString()}#${typeof event._sourceRowId === 'string' ? event._sourceRowId : ''}#${event.title || ''}`;
         return starts.map(start => {
             const copy = { ...event, startDate: start };
             copy.endDate = durationMs > 0 ? new Date(start.getTime() + durationMs) : null;
             delete copy._jsonApiRrule;
             delete copy._jsonApiSeriesExclusions;
+            // This date is OURS, not the feed's: the rule, the row's own
+            // start and the row's id name the one row every copy came from
+            // (read by classifyCadenceSourceShape).
+            copy._seriesRowExpansion = seriesRowStamp;
             return copy;
         });
     }
@@ -21152,6 +21317,53 @@ class AiWebParser {
         return `${section.label}\n${section.lines.join('\n')}`;
     }
 
+    // The scan bound counts CONTENT, not padding. Every scan that takes the
+    // bounded page reads its title, meta tags, JSON-LD and body text — and
+    // nothing else — so what none of them can read is removed BEFORE the
+    // bound is applied: <style> blocks, <script> blocks other than JSON-LD,
+    // comments, and runs of whitespace (a run holding a line break stays one
+    // line break, so the page's lines are the same lines).
+    //
+    // gruntparty.monster/goodbyegrunt, 2026-11-08: an 873,845-character
+    // Squarespace page of which ~670,000 are indentation INSIDE four
+    // template tags (<header … data-current-styles="{ … }"> is 239,502
+    // characters, 234,560 of them whitespace). The raw 500,000-character cut
+    // landed inside the second of those tags, 142,000 characters short of
+    // "NOVEMBER 28 at THE STUD … (1123 FOLSOM STREET, SF, CA)": the prompt
+    // held the page title and 70 lines of the cut tag's attribute JSON, every
+    // pass answered blank and the season closer read as 0 events on every run
+    // (the blank answers are cached under that broken prompt). Of the 177
+    // cached pages over the bound that day, 134 lost body text to it.
+    //
+    // A page at or under the bound is returned untouched, so nothing changes
+    // for a page that was already read whole. A cut that still lands inside
+    // a tag drops that tag's orphaned opener instead of leaving its
+    // attributes behind as page text.
+    boundHtmlForScan(html) {
+        const source = String(html || '');
+        if (source.length <= HTML_SCAN_MAX_CHARS) return source;
+        const memo = this._boundHtmlForScanMemo;
+        if (memo && memo.source === source) return memo.bounded;
+        let bounded = source
+            .replace(/<script\b([^>]*)>[\s\S]*?<\/script[^>]*>/gi, (block, attributes) => (
+                /type=["']application\/ld\+json["']/i.test(attributes) ? block : ' '
+            ))
+            .replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ')
+            .replace(/<!--[\s\S]*?-->/g, ' ')
+            .replace(/\s{2,}/g, (run) => (run.indexOf('\n') >= 0 ? '\n' : ' '));
+        const readable = bounded.length;
+        if (bounded.length > HTML_SCAN_MAX_CHARS) {
+            bounded = bounded.slice(0, HTML_SCAN_MAX_CHARS);
+            const lastOpen = bounded.lastIndexOf('<');
+            if (lastOpen > bounded.lastIndexOf('>') && /^<[a-z\/!]/i.test(bounded.slice(lastOpen, lastOpen + 2))) {
+                bounded = bounded.slice(0, lastOpen);
+            }
+            console.log(`🤖 AI Web: Page scan bound reached — ${readable} readable characters (of ${source.length}), the last ${readable - bounded.length} are not scanned for title, meta, JSON-LD or prompt text`);
+        }
+        this._boundHtmlForScanMemo = { source, bounded };
+        return bounded;
+    }
+
     // The 500,000-char corpus cap can slice through the middle of a <script>,
     // <style> or comment block, orphaning its opening tag. Every corpus
     // stripper matches open→close PAIRS, so an orphaned opener means the
@@ -21197,7 +21409,7 @@ class AiWebParser {
     }
 
     getPromptSectionBundle(html, aiConfig = {}) {
-        const source = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
+        const source = this.sealTruncatedHtmlBlocks(this.boundHtmlForScan(html));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -22214,7 +22426,7 @@ class AiWebParser {
         if (!htmlData || typeof htmlData !== 'object') return [];
         if (Array.isArray(htmlData._collectionNames)) return htmlData._collectionNames;
         const names = [];
-        const html = typeof htmlData.html === 'string' ? htmlData.html.slice(0, HTML_SCAN_MAX_CHARS) : '';
+        const html = typeof htmlData.html === 'string' ? this.boundHtmlForScan(htmlData.html) : '';
         const regex = /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
         const collectionTypes = /^(?:https?:\/\/schema\.org\/)?(?:CollectionPage|ItemList|SearchResultsPage|Collection)$/i;
         const visit = (node, depth) => {
@@ -22280,7 +22492,7 @@ class AiWebParser {
         if (!htmlData || typeof htmlData !== 'object') return false;
         if (typeof htmlData.hasEventTypedJsonLd === 'boolean') return htmlData.hasEventTypedJsonLd;
         const html = typeof htmlData.html === 'string' ? htmlData.html : '';
-        const result = this.extractJsonLdParts(String(html).slice(0, HTML_SCAN_MAX_CHARS))
+        const result = this.extractJsonLdParts(this.boundHtmlForScan(html))
             .some(part => this.containsEventType(part));
         if (Object.isExtensible(htmlData)) {
             htmlData.hasEventTypedJsonLd = result;
@@ -22801,7 +23013,7 @@ class AiWebParser {
     cleanHtml(html, aiConfig = {}) {
         if (!html) return '';
         const payloadMode = this.normalizePayloadMode(aiConfig.payloadMode);
-        const source = this.sealTruncatedHtmlBlocks(String(html).slice(0, HTML_SCAN_MAX_CHARS));
+        const source = this.sealTruncatedHtmlBlocks(this.boundHtmlForScan(html));
         const title = this.extractTitlePart(source);
         const metaParts = this.extractMetaParts(source);
         const jsonLdParts = this.extractJsonLdParts(source);
@@ -28511,7 +28723,26 @@ TEXT:
         const weekday = '(sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:s|nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)';
         const month = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
         const dayNum = '\\d{1,2}(?:st|nd|rd|th)?';
-        const dateToken = `(?:${month}\\.?\\s*${dayNum}|${dayNum}\\s*(?:of\\s+)?${month}|\\d{1,2}[\\/.\\-]\\d{1,2})`;
+        // A numeric date ("8/22", "22.8") — never a CLOCK RANGE. Opening
+        // hours put a weekday right before two small numbers too ("TUE-SAT
+        // 4-6PM"), and they state no day of any month: read as a date, the
+        // "Sat" pinned whatever date the model had made up to the nearest
+        // year in which it falls on a Saturday, and a pinned year is held
+        // against the window repair (thelumberyardbar.com home page, run
+        // 20261109-053706: "TUE-SAT 4-6PM • SUN 12-7PM" turned an invented
+        // 2024-01-01 into 2028-01-01). A slash is never a clock. Two numbers
+        // joined by a hyphen and followed by am/pm or "h" are hours ("4-6PM");
+        // joined by a dot they are an hour and its minutes when am/pm
+        // follows them ("9.30pm") or follows the far end of their range
+        // ("4.30-6pm"). Unsure means no pin — the year is then left to the
+        // ordinary repair, as it was before pinning existed.
+        const clockMark = '(?:[ap]\\.?m\\b|h\\b)';
+        const numericDate = '(?:'
+            + '\\d{1,2}\\/\\d{1,2}'
+            + `|\\d{1,2}-\\d{1,2}(?!\\d|:\\d)(?!\\s*${clockMark})`
+            + `|\\d{1,2}\\.\\d{1,2}(?!\\d)(?!\\s*${clockMark}|\\s*[-–—]\\s*\\d{1,2}(?:[:.]\\d{2})?\\s*${clockMark})`
+            + ')';
+        const dateToken = `(?:${month}\\.?\\s*${dayNum}|${dayNum}\\s*(?:of\\s+)?${month}|${numericDate})`;
         const weekdayThenDate = new RegExp(`\\b${weekday}\\b\\.?,?\\s*${dateToken}`, 'i');
         const dateThenWeekday = new RegExp(`${dateToken}\\s*,?\\s*\\(?\\b${weekday}\\b`, 'i');
         const match = raw.match(weekdayThenDate) || raw.match(dateThenWeekday);
@@ -28921,7 +29152,7 @@ TEXT:
     }
 
     extractPageBrandNames(html) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const names = new Set();
         const addName = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -28990,7 +29221,7 @@ TEXT:
     }
 
     extractPageSiteTaglines(html) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const taglines = new Set();
         const addTagline = value => {
             const text = this.normalizeWhitespace(this.decodeBasicEntities(String(value || '')));
@@ -29121,7 +29352,7 @@ TEXT:
     // First og-style meta content for a key (e.g. 'og:title', 'og:site_name'),
     // entity-decoded and whitespace-collapsed. '' when absent.
     extractOgMetaContent(html, keyName) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const metaRegex = /<meta\b[^>]*>/gi;
         let match;
         while ((match = metaRegex.exec(source)) !== null) {
@@ -29142,7 +29373,7 @@ TEXT:
     // above answers only the first, so the rest were invisible. Same decoding, so
     // list[0] always equals extractOgMetaContent's answer.
     extractOgMetaContentAll(html, keyName) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const metaRegex = /<meta\b[^>]*>/gi;
         const values = [];
         let match;
@@ -29166,7 +29397,7 @@ TEXT:
     // skip-empty rule, so filtering the result to one key always equals
     // extractOgMetaContentAll's answer for that key.
     extractOgMetaEntriesAll(html, keyNames) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const wanted = new Set(keyNames);
         const metaRegex = /<meta\b[^>]*>/gi;
         const entries = [];
@@ -32912,7 +33143,7 @@ TEXT:
     }
 
     extractJsonLdSiteSignals(html) {
-        const source = String(html || '').slice(0, HTML_SCAN_MAX_CHARS);
+        const source = this.boundHtmlForScan(html);
         const signals = { venueType: '', venueName: '', organizationTypeFound: false };
         const venueTypePattern = /^(NightClub|BarOrPub|EventVenue|MusicVenue)$/i;
         const organizerTypePattern = /^(Organization|PerformingGroup)$/i;
@@ -32982,7 +33213,7 @@ TEXT:
     // them, but "the venue's address in the site footer" is exactly the
     // signal the single-recurring-address fact needs).
     getPageTextForSiteRole(html) {
-        let text = this.sealTruncatedHtmlBlocks(String(html || '').slice(0, HTML_SCAN_MAX_CHARS));
+        let text = this.sealTruncatedHtmlBlocks(this.boundHtmlForScan(html));
         text = text.replace(/<script\b[^>]*>[\s\S]*?<\/script[^>]*>/gi, ' ');
         text = text.replace(/<style\b[^>]*>[\s\S]*?<\/style[^>]*>/gi, ' ');
         text = text.replace(/<!--[\s\S]*?-->/g, ' ');

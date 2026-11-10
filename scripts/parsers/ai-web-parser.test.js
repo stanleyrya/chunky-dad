@@ -9343,7 +9343,11 @@ test('multilingual signals stay conservative: no mid-sentence weekdays, bare mon
 
 test('Sitges-shaped multi-event page splits into per-day segments with September anchoring', () => {
   const parser = createParser();
-  const programmeYear = new Date().getFullYear();
+  // Pinned to the year these headings are true of (3 September 2026 is a
+  // Thursday): the day headings vote on the page's year, so a fixture that
+  // moved with the clock would state a programme its own weekdays contradict.
+  parser.now = FROZEN_NOW;
+  const programmeYear = 2026;
   const lines = [
     'PROGRAMA oficial',
     `BEARS SITGES WEEK ${programmeYear}`,
@@ -24137,4 +24141,509 @@ test('URL discovery: a URL embedded in another URL\'s query string ends at the e
   // Direct helper edges.
   assert.equal(parser.cutUrlEmbeddedInQuery('', 0, 'https://x.example/a&b'), 'https://x.example/a&b');
   assert.equal(parser.cutUrlEmbeddedInQuery('"app://s/?l=https://x.example/a&b"', 12, 'https://x.example/a&b'), 'https://x.example/a');
+});
+
+// ---------------------------------------------------------------------------
+// Page-scan bound counts what a scan can READ, not template padding
+// (gruntparty.monster/goodbyegrunt, 2026-11-08: 873,845 characters, ~670,000
+// of them whitespace inside four template tags — the raw 500,000 cut landed
+// inside the second one, the party's date and venue were never read and the
+// orphaned tag's attribute JSON was served as the page's text; 0 events).
+// ---------------------------------------------------------------------------
+
+function paddedTemplatePage(bodyHtml, padChars) {
+  // The real shape, trimmed: a builder writes its header settings into a
+  // data attribute and indents every key with tens of thousands of blanks.
+  const pad = `\n${' '.repeat(padChars)}`;
+  const styles = `{${pad}&quot;layout&quot;: &quot;navRight&quot;,${pad}&quot;action&quot;: {${pad}&quot;buttonText&quot;: &quot;March 28 TIXXX&quot;,${pad}&quot;newWindow&quot;: true${pad}}${pad}}`;
+  return [
+    '<!doctype html><html><head><title>Season Closer — GRUNT</title>',
+    '<meta property="og:title" content="Season Closer — GRUNT"/>',
+    '</head><body>',
+    `<header class="header theme-col--primary${pad}" data-section-theme="" data-current-styles="${styles}">`,
+    '<a href="/">GRUNT</a></header>',
+    `<div class="header-menu header-menu--folder-list${pad}" data-section-theme="" data-current-styles="${styles}">`,
+    '</div>',
+    bodyHtml,
+    '</body></html>'
+  ].join('\n');
+}
+
+test('scan bound: whitespace padding inside template tags does not push the event text out of the scan', () => {
+  const parser = createParser();
+  const html = paddedTemplatePage([
+    '<main><h1>Season Closer</h1>',
+    '<p>Come to GRUNT to say goodbye, for now.</p>',
+    '<h2>NOVEMBER 28 at THE STUD</h2>',
+    '<p>At THE STUD (1123 FOLSOM STREET, SF, CA)</p></main>'
+  ].join('\n'), 40000);
+  assert.ok(html.length > 500000, 'the fixture must exceed the raw bound');
+  assert.ok(html.indexOf('NOVEMBER 28') > 500000, 'the event text sits past the raw bound, as on the real page');
+  assert.ok(html.slice(0, 500000).lastIndexOf('<div class="header-menu') > html.slice(0, 500000).lastIndexOf('">'),
+    'the raw cut lands inside the second template tag, as on the real page');
+
+  const bundle = parser.getPromptSectionBundle(html, {});
+  const contentLines = bundle.content ? bundle.content.lines.join('\n') : '';
+  assert.ok(contentLines.includes('NOVEMBER 28 at THE STUD'), `the date line is read: ${contentLines.slice(0, 300)}`);
+  assert.ok(contentLines.includes('At THE STUD (1123 FOLSOM STREET, SF, CA)'), 'the venue line is read');
+  assert.equal(/buttonText|navRight|header-menu/.test(contentLines), false, 'no tag attribute is served as page text');
+
+  const cleaned = parser.cleanHtml(html, {});
+  assert.ok(cleaned.includes('NOVEMBER 28 at THE STUD'));
+  assert.equal(cleaned.includes('buttonText'), false);
+  assert.equal(parser.extractOgMetaContent(html, 'og:title'), 'Season Closer — GRUNT');
+});
+
+test('scan bound: a page under the bound is scanned exactly as fetched; over it only unread markup is dropped', () => {
+  const parser = createParser();
+  const small = '<html><head><style>a{}</style><script>var a = 1;</script></head><body><!-- note --><p>hi   there</p></body></html>';
+  assert.equal(parser.boundHtmlForScan(small), small, 'under the bound nothing changes');
+  assert.equal(parser.boundHtmlForScan(''), '');
+  assert.equal(parser.boundHtmlForScan(null), '');
+
+  // Over the bound: inline scripts, styles and comments are not page text and
+  // go; an Event's JSON-LD (which the scans DO read) stays, wherever it sits.
+  const jsonLd = '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Event","name":"Season Closer","startDate":"2026-11-28T22:00:00-08:00"}</script>';
+  const big = [
+    '<html><head><title>Season Closer</title>',
+    `<style>.a{color:red}/* ${'s'.repeat(200000)} */</style>`,
+    `<script>window.__boot = "${'x'.repeat(200000)}";</script>`,
+    `<!-- ${'c'.repeat(200000)} -->`,
+    jsonLd,
+    '</head><body><p>NOVEMBER 28 at THE STUD</p></body></html>'
+  ].join('\n');
+  assert.ok(big.indexOf('application/ld+json') > 500000);
+  const bounded = parser.boundHtmlForScan(big);
+  assert.ok(bounded.length < 2000, `only the readable page is left (${bounded.length})`);
+  assert.ok(bounded.includes(jsonLd), 'the JSON-LD block survives whole');
+  assert.equal(/__boot|color:red|ccccc/.test(bounded), false);
+  assert.ok(bounded.includes('<p>NOVEMBER 28 at THE STUD</p>'));
+  assert.equal(parser.pageHasEventTypedJsonLd({ url: 'https://example.com/closer', html: big }), true, 'an Event past the raw bound is still seen');
+  assert.equal(parser.boundHtmlForScan(big), bounded, 'the same page is bounded once');
+});
+
+test('scan bound: a page with more readable text than the bound is cut between tags, and says so', () => {
+  const parser = createParser();
+  const row = '<p class="row" data-kind="listing-row">row text that is really on the page</p>\n';
+  const html = `<html><body>${row.repeat(Math.ceil(520000 / row.length))}<p>LAST LINE</p></body></html>`;
+  let bounded = '';
+  const logs = captureLogs(() => { bounded = parser.boundHtmlForScan(html); });
+  assert.ok(bounded.length <= 500000);
+  assert.equal(bounded.includes('LAST LINE'), false, 'the bound still holds for real text');
+  assert.ok(bounded.lastIndexOf('<') < bounded.lastIndexOf('>'), 'no orphaned tag opener is left at the cut');
+  assert.ok(logs.some(line => line.includes('Page scan bound reached') && line.includes(`of ${html.length}`)),
+    `the cut is logged: ${JSON.stringify(logs)}`);
+});
+
+test('confidence retry: a retry that answers blank never erases what the first pass read', () => {
+  const parser = createParser();
+  const firstPass = { title: 'Season Closer — GRUNT', bar: 'THE STUD', address: '1123 FOLSOM STREET, SF, CA', startDate: '2026-11-28' };
+  const merged = parser.mergeAiEventFields(firstPass, { bar: '', address: null, startDate: '   ', city: 'san francisco' });
+  assert.equal(merged.bar, 'THE STUD');
+  assert.equal(merged.address, '1123 FOLSOM STREET, SF, CA');
+  assert.equal(merged.startDate, '2026-11-28');
+  assert.equal(merged.city, 'san francisco', 'a retry may still ADD a field');
+});
+
+// ---------------------------------------------------------------------------
+// The programme's own day headings state its year.
+//
+// bearssitges.org/bears-sitges-week (page cached 2026-11-08, run 2026-11-09):
+// the organiser put next year's banner on top and left the finished 2026
+// programme underneath it. The header's "2027" anchored every "JUEVES- 03"
+// section to September 2027 — where the 3rd is a Friday — and 34 parties that
+// were over came back as new events ten months out.
+// ---------------------------------------------------------------------------
+
+// The cached page's own lines, trimmed (rows shortened, eleven headings kept).
+const STALE_PROGRAMME_LINES = [
+  'PROGRAMA oficial 2027',
+  'PRóXIMAMENTE',
+  'BEARS SITGES WEEK 2027',
+  'Del 3 al 12 de SEPTIEMBRE',
+  '(Bear-Village abierto del 6 al 12)',
+  'JUEVES- 03',
+  '19h. INAUGURACIÓN BEARS SITGES WEEK 2025 Brindaremos con Cava y Aperitivo. Hotel Calipolis. Entrada Libre',
+  'VIERNES - 04',
+  '20:30h a 03:30h: OPENING «EARLY-VILLAGE» 2026 Con motivo del 25º aniversario de Bears Sitges abrimos el Bear-Village',
+  'SÁBADO - 05',
+  '14:00h: BBQ & Music – POP-Air en Restaurant LE PATIO. **Tickets a la venta en Clica AQUÍ',
+  'DOMINGO - 06',
+  '20:30h a 03h: EARLY-VILLAGE 2026 Para celebrar el 25 aniversario de Bears Sitges',
+  'LUNES - 07',
+  '16h a 21h: Inauguración BEARS SITGES MARKET en Hotel Calipolis',
+  'MARTES - 08',
+  '20:30h a 03h Especial NOCHE BLANCA con PRAGUE BEARS en Bear-Village con DJ PAW.L',
+  'MIÉRCOLES - 09',
+  '16h a 20:30h BEAR TEA-DANCE : En el RoofTop del Hotel MiM **Plazas Limitadas**',
+  'JUEVES - 10',
+  '01h a 06h CAPITÁN Party en «BEARS DISCO» by Scandal',
+  'VIERNES - 11',
+  '21:30h to 03:30h 25º ANIVERSARIO BEARS SITGES Special Night at Bear-Village with DJ PERFECTO.',
+  'SABADO -12',
+  '21h a 04h Noche Especial Mr. BEAR SITGES 2026: en Bear-Village con DJ Radio Chi.',
+  'DOMINGO - 13',
+  '12h BEARS SITGES MARKET en Hotel Calipolis'
+];
+const wrapProgrammeLines = (lines) => `<html><body>${lines.map(l => `<p>${l}</p>`).join('\n')}</body></html>`;
+// The day of the run that found it: 2026-11-09.
+const STALE_PROGRAMME_NOW = () => new Date(Date.UTC(2026, 10, 9, 12, 0, 0));
+const capturePageYearLogs = (run) => {
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+  try {
+    return { result: run(), logs: logs.filter(line => line.includes('PAGE YEAR')) };
+  } finally {
+    console.log = originalLog;
+  }
+};
+
+test('page year: a programme whose day headings fall on last year\'s weekdays is last year\'s programme, whatever the banner above it says — and the log names the headings', () => {
+  const parser = createParser();
+  parser.now = STALE_PROGRAMME_NOW;
+  const { result: ctx, logs } = capturePageYearLogs(() => parser.derivePageDateContext(wrapProgrammeLines(STALE_PROGRAMME_LINES)));
+
+  assert.equal(ctx.month, 9);
+  assert.equal(ctx.year, 2026, 'eleven headings, every one true of September 2026 and none of September 2027');
+  assert.equal(ctx.headerYear, 2027, 'what the banner said is kept beside it');
+  assert.equal(ctx.yearSource, 'day-headings');
+  assert.equal(logs.length, 1, 'one line, and only one, says the page year was not the banner\'s');
+  assert.match(logs[0], /says 2027/);
+  assert.match(logs[0], /11 of 11 day headings/);
+  assert.match(logs[0], /"JUEVES- 03"/);
+  assert.match(logs[0], /anchored to 2026, not 2027/);
+
+  // What the model is told for each day section follows the page's year.
+  const friday = { lines: ['VIERNES - 04', '20:30h a 03:30h: OPENING «EARLY-VILLAGE» 2026 Con motivo del 25º aniversario'] };
+  assert.ok(parser.buildSegmentDateContextLine(friday, ctx).startsWith('SEGMENT_DATE_CONTEXT: September 4, 2026 ('),
+    `got: ${parser.buildSegmentDateContextLine(friday, ctx)}`);
+});
+
+test('page year: the banner stands when the headings agree with it, when there are too few of them, when the page states no year, and when no single year fits', () => {
+  const parser = createParser();
+  parser.now = STALE_PROGRAMME_NOW;
+  const header = ['PROGRAMA oficial 2027', 'BEARS SITGES WEEK 2027', 'Del 3 al 12 de SEPTIEMBRE'];
+  const derive = (lines) => capturePageYearLogs(() => parser.derivePageDateContext(wrapProgrammeLines(lines)));
+
+  // Next year's programme really is up: 3 September 2027 is a Friday.
+  const published = derive([...header, 'VIERNES - 03', '19h. INAUGURACIÓN', 'SÁBADO - 04', '21h Fiesta', 'DOMINGO - 05', '12h Market']);
+  assert.equal(published.result.year, 2027);
+  assert.equal(published.result.headerYear, undefined, 'nothing was changed, nothing is stamped');
+  assert.deepEqual(published.logs, []);
+
+  // Two day headings are not a programme.
+  const two = derive([...header, 'JUEVES- 03', '19h. INAUGURACIÓN', 'VIERNES - 04', '21h Fiesta']);
+  assert.equal(two.result.year, 2027);
+  assert.deepEqual(two.logs, []);
+
+  // No year on the page: the vote checks a stated year, it never supplies one.
+  const yearless = derive(['PROGRAMA oficial', 'Del 3 al 12 de SEPTIEMBRE', 'JUEVES- 03', 'x', 'VIERNES - 04', 'y', 'SÁBADO - 05', 'z']);
+  assert.equal(yearless.result.year, null);
+  assert.deepEqual(yearless.logs, []);
+
+  // Headings no year can make true (three consecutive days all "Monday"):
+  // the banner's year is left alone, and the log says it was doubted.
+  const impossible = derive([...header, 'LUNES - 03', 'a', 'LUNES - 04', 'b', 'LUNES - 05', 'c']);
+  assert.equal(impossible.result.year, 2027);
+  assert.equal(impossible.logs.length, 1);
+  assert.match(impossible.logs[0], /no single nearby year fits them/);
+  assert.match(impossible.logs[0], /report-only/);
+
+  // A programme older than last year fits no year in reach either (3
+  // September 2024 was a Tuesday): never guessed at.
+  const older = derive([...header, 'MARTES - 03', 'a', 'MIÉRCOLES - 04', 'b', 'JUEVES - 05', 'c']);
+  assert.equal(older.result.year, 2027);
+  assert.match(older.logs[0], /report-only/);
+
+  // One day headed by two different weekdays votes for nothing — and takes
+  // the count under three here.
+  const twice = derive([...header, 'JUEVES- 03', 'a', 'VIERNES - 03', 'b', 'VIERNES - 04', 'c', 'SÁBADO - 05', 'd']);
+  assert.equal(twice.result.year, 2027);
+  assert.deepEqual(twice.logs, []);
+});
+
+test('page year: one mistyped heading does not outvote the rest, short weekday forms vote too, and a short form that could be two days names none', () => {
+  const parser = createParser();
+  parser.now = STALE_PROGRAMME_NOW;
+  const header = ['BEARS SITGES WEEK 2027', 'Del 3 al 12 de SEPTIEMBRE'];
+  const quiet = (lines) => capturePageYearLogs(() => parser.derivePageDateContext(wrapProgrammeLines(lines))).result;
+
+  // "LUNES - 06" is a slip (the 6th was a Sunday); four other headings agree.
+  const typo = quiet([...header, 'JUEVES- 03', 'a', 'VIERNES - 04', 'b', 'SÁBADO - 05', 'c', 'LUNES - 06', 'd', 'LUNES - 07', 'e']);
+  assert.equal(typo.year, 2026);
+
+  const shortForms = quiet([...header, 'JUE 03', 'a', 'VIE 04', 'b', 'SAB 05', 'c']);
+  assert.equal(shortForms.year, 2026, 'abbreviated day headings are the same statement');
+
+  // The weekday a word names comes from the position the locale tables list
+  // it at, Monday first — never from a hand-kept table.
+  const { weekdayIndexByName } = parser.getMultilingualDateVocabulary();
+  assert.equal(weekdayIndexByName.jueves, 3);
+  assert.equal(weekdayIndexByName.sabado, 5);
+  assert.equal(weekdayIndexByName.donnerstag, 3);
+  assert.equal(weekdayIndexByName.dimanche, 6);
+  assert.equal(weekdayIndexByName['sexta-feira'], 4);
+  assert.equal(weekdayIndexByName.sexta, 4, 'a short form names the day whose full names it begins');
+  assert.equal(weekdayIndexByName.mar, 1);
+  assert.equal(weekdayIndexByName.dim, undefined, '"dim" begins fr "dimanche" and ca "dimarts"/"dimecres" — it names none');
+  assert.equal(weekdayIndexByName.sonnabend, undefined, 'a curated synonym has no position, so it does not vote');
+});
+
+test('page year: with the day sections anchored to the year their weekdays state, a finished programme is dropped as an archive instead of coming back as next year\'s events', async () => {
+  global.EventSchema = EventSchema; // earlier tests leak a mocked schema
+  const read = async (contextYear, answeredYear) => {
+    const parser = createParser();
+    parser.now = STALE_PROGRAMME_NOW;
+    const html = [
+      'SEGMENT_INDEX: 3/37',
+      `SEGMENT_DATE_CONTEXT: September 4, ${contextYear} (day-of-month heading anchored to this page's date context "Del 3 al 12 de SEPTIEMBRE")`,
+      'VIERNES - 04',
+      '20:30h a 03:30h: OPENING «EARLY-VILLAGE» Con motivo del 25º aniversario de Bears Sitges abrimos el Bear-Village'
+    ].join('\n');
+    // The model quotes the heading, not the context line — the shape of the
+    // real answers for this page.
+    parser.core.callAiGenerate = async () => JSON.stringify({
+      title: { value: 'OPENING «EARLY-VILLAGE»', evidence: 'OPENING «EARLY-VILLAGE»', confidence: 95 },
+      startDate: { value: `${answeredYear}-09-04`, evidence: 'VIERNES - 04', confidence: 85 },
+      startTime: { value: '20:30', evidence: '20:30h a 03:30h', confidence: 95 }
+    });
+    const htmlData = { html, url: 'https://bearssitges.example/bears-sitges-week/' };
+    const logs = [];
+    const original = { log: console.log, warn: console.warn };
+    console.log = (...args) => logs.push(args.join(' '));
+    console.warn = (...args) => logs.push(args.join(' '));
+    try {
+      const extracted = await parser.extractEventWithTwoPassAi(htmlData, {}, null, {}, ['title', 'startDate', 'startTime'], html, 'test', { dataFlags: { segment: true } });
+      return { extracted, event: parser.normalizeAiEvent({ ...extracted }, htmlData, null, null, null), logs };
+    } finally {
+      console.log = original.log;
+      console.warn = original.warn;
+    }
+  };
+
+  // The defect, reproduced: anchored to the banner's year, the 2027 date is
+  // "stated by the source" and ships.
+  const before = await read(2027, 2027);
+  assert.deepEqual(before.extracted.__explicitSourceYears, { start: 2027 });
+  assert.equal(before.event.startDate.toISOString().slice(0, 10), '2027-09-04');
+
+  // Anchored to the programme's own year: a stated, finished date. Dropped,
+  // and the log names the record and the reason.
+  const after = await read(2026, 2026);
+  assert.deepEqual(after.extracted.__explicitSourceYears, { start: 2026 });
+  assert.equal(after.event, null);
+  assert.ok(after.logs.some(line => /Dropping "OPENING «EARLY-VILLAGE»" — source states an explicit 2026 date/.test(line)));
+
+  // …and a model that answers next year anyway has nothing on the page to
+  // stand on: the date is not held as stated, and never ships as 2027.
+  const stubborn = await read(2026, 2027);
+  assert.equal(stubborn.extracted.__explicitSourceYears, undefined);
+  assert.notEqual(stubborn.event && stubborn.event.startDate.getUTCFullYear(), 2027);
+});
+
+// ---------------------------------------------------------------------------
+// Series shape: the dates WE made from a feed row's rule are not the site's
+// expansion (run 20261109-053706, thebearcalendar.com "Furry Friday").
+// The row below is that feed row, trimmed. The feed states ONE row and one
+// rule; expandJsonApiSeriesRow fans it into 13 Fridays, all wearing the same
+// event page and the same ticket link. The enrich crawl follows that ticket
+// link once and reads one record, dated to the next Friday, whose own page
+// is the ticket page and whose poster is that page's. One date wearing a
+// page and a poster the other twelve do not read as "the site publishes a
+// page per night": the stated rule was demoted and 13 separate new events
+// were proposed, while every other rule row of the feed stayed one series.
+// ---------------------------------------------------------------------------
+const OWN_EXPANSION_FEED_ROW = {
+  slug: 'furry-friday-2026',
+  title: 'Furry Friday',
+  url: 'https://thebearcalendar.example/events/furry-friday-2026/',
+  start: '2026-08-28T19:00:00', // the wall clock the feed-clock step hands over (the feed prints +00:00)
+  end: null,
+  tz: 'UTC',
+  recurrence: 'Fridays',
+  rrule: 'FREQ=WEEKLY;BYDAY=FR',
+  category: 'party',
+  venue: 'Kings Cross Hotel',
+  city: 'Sydney',
+  country: 'Australia',
+  organizer: 'Harbour City Bears',
+  ticket_url: 'https://hcbears.example/event-6700980/Registration',
+  website_url: 'https://hcbears.example/event-6700980',
+  image: 'https://feed-images.example/event-images/8f34856f66beb1b0.png'
+};
+
+// By the time the shape is judged the copies carry no `url` of their own
+// (run file: url null on all 13 rows; the shape line named `website`).
+function expandOwnSeriesRows(parser, rows) {
+  const copies = withCapturedLogsReturning(() => parser.extractEventsFromJsonApiPayload(
+    { events: rows.map(row => JSON.parse(JSON.stringify(row))) }, 'https://thebearcalendar.example/feed.json', null));
+  for (const copy of copies) copy.url = '';
+  return copies;
+}
+
+function withCapturedLogsReturning(run) {
+  const original = console.log;
+  console.log = () => {};
+  try { return run(); } finally { console.log = original; }
+}
+
+// The record the enrich crawl reads off the ticket link every copy shares.
+function buildSharedLinkPageRecord(copy, overrides = {}) {
+  return {
+    title: 'Furry Friday',
+    bar: 'Kings Cross Hotel',
+    address: '244-248 William Street, Kings Cross',
+    startDate: new Date(copy.startDate.getTime()),
+    endDate: new Date(copy.startDate.getTime()),
+    url: 'https://hcbears.example/event-6700980/Registration',
+    website: 'https://hcbears.example/event-6700980/Registration',
+    image: 'https://hcbears.example/resources/Pictures/furry-friday.jpg',
+    source: 'ai-web',
+    ...overrides
+  };
+}
+
+test('series shape: thirteen dates we made from ONE feed row that states a rule stay one series when the row\'s shared link is read once — and the log says whose dates they are', () => {
+  const parser = createParser();
+  const copies = expandOwnSeriesRows(parser, [OWN_EXPANSION_FEED_ROW]);
+  assert.equal(copies.length, 13, 'the rule row is fanned into thirteen Fridays');
+  assert.ok(copies.every(copy => typeof copy._seriesRowExpansion === 'string' && copy._seriesRowExpansion.startsWith('FREQ=WEEKLY;BYDAY=FR@')),
+    'every copy says it is our own expansion of the rule row');
+  assert.equal(new Set(copies.map(copy => copy._seriesRowExpansion)).size, 1, 'one row, one stamp');
+
+  // The defect, reproduced on the same records without the stamp: one date
+  // wears a page the others do not, so the family is taken for per-night
+  // publication and nothing is a series.
+  const unstamped = copies.map(copy => { const bare = { ...copy }; delete bare._seriesRowExpansion; return bare; });
+  const unstampedRecords = [...unstamped, buildSharedLinkPageRecord(unstamped[0])];
+  const before = withCapturedLogs(() => parser.applyDerivedCadenceStamps(unstampedRecords));
+  assert.ok(before.some(line => line.includes('🔁 SHAPE: "Furry Friday" is occurrence-expanded (distinct per-date website artifacts across 13 dates) — 14 record(s) over 13 date(s) kept individual')),
+    `the old verdict is reproduced, got: ${JSON.stringify(before)}`);
+  assert.ok(unstampedRecords.every(record => record.recurrenceRule === undefined));
+
+  // With the dates known to be ours: one stated series.
+  const records = [...copies, buildSharedLinkPageRecord(copies[0])];
+  const logs = withCapturedLogs(() => parser.applyDerivedCadenceStamps(records));
+  const rules = new Set(records.map(record => record.recurrenceRule));
+  assert.deepEqual([...rules], ['FREQ=WEEKLY;BYDAY=FR'], 'all fourteen records carry the one rule');
+  assert.equal(new Set(records.map(record => record._cadenceGroup)).size, 1, 'one same-series marker, so the series collapse can fold them');
+  assert.ok(records.every(record => record._seriesInfo === undefined), 'not an occurrence-expanded family');
+  const shape = logs.find(line => line.includes('🔁 SHAPE: "Furry Friday" is stated-series'));
+  assert.ok(shape, `stated-series line expected, got: ${JSON.stringify(logs)}`);
+  assert.ok(shape.includes('every one of its 13 dates is our own copy of one feed row that states FREQ=WEEKLY;BYDAY=FR'), shape);
+  assert.ok(shape.includes('the 1 other record(s) read, on 1 date(s), show no page published per date'), shape);
+  assert.ok(!logs.some(line => line.includes('occurrence-expanded')), JSON.stringify(logs));
+});
+
+test('series shape: pages really read on two of those dates still make separate nights; two rule rows, or a date no copy covers, are judged by their artifacts as before', () => {
+  // Two different pages read on two different nights: the site does publish
+  // a page per night, whatever the feed's one row says.
+  const twoPagesParser = createParser();
+  const copies = expandOwnSeriesRows(twoPagesParser, [OWN_EXPANSION_FEED_ROW]);
+  const twoPages = [
+    ...copies,
+    buildSharedLinkPageRecord(copies[0], { url: 'https://hcbears.example/event-6700980', website: 'https://hcbears.example/event-6700980' }),
+    buildSharedLinkPageRecord(copies[1], { url: 'https://hcbears.example/event-6700981', website: 'https://hcbears.example/event-6700981' })
+  ];
+  const twoPagesLogs = withCapturedLogs(() => twoPagesParser.applyDerivedCadenceStamps(twoPages));
+  assert.ok(twoPagesLogs.some(line => line.includes('🔁 SHAPE: "Furry Friday" is occurrence-expanded') && line.includes('distinct per-date url artifacts across 2 dates')),
+    JSON.stringify(twoPagesLogs));
+  assert.ok(twoPages.every(record => record.recurrenceRule === undefined), 'no series conversion');
+
+  // Two rule rows for one party (the feed lists the Friday night and the
+  // Wednesday night separately): two rows are two publications — the feed
+  // row ids differ across dates exactly as before.
+  const twoRowsParser = createParser();
+  const twoRows = expandOwnSeriesRows(twoRowsParser, [
+    OWN_EXPANSION_FEED_ROW,
+    { ...OWN_EXPANSION_FEED_ROW, slug: 'furry-friday-2026-2', start: '2026-08-26T19:00:00', recurrence: 'Wednesdays', rrule: 'FREQ=WEEKLY;BYDAY=WE' }
+  ]);
+  assert.equal(twoRows.length, 26);
+  assert.equal(new Set(twoRows.map(copy => copy._seriesRowExpansion)).size, 2);
+  const twoRowsLogs = withCapturedLogs(() => twoRowsParser.applyDerivedCadenceStamps(twoRows));
+  assert.ok(twoRowsLogs.some(line => line.includes('is occurrence-expanded') && line.includes('distinct per-date feed row id artifacts')),
+    JSON.stringify(twoRowsLogs));
+
+  // A dated row of its own on a night the rule does not reach: that date is
+  // the feed's, not ours, so the family is not "all our own copies".
+  const extraParser = createParser();
+  const ruleCopies = expandOwnSeriesRows(extraParser, [OWN_EXPANSION_FEED_ROW]);
+  const special = {
+    ...ruleCopies[0],
+    startDate: new Date(ruleCopies[0].startDate.getTime() + 24 * 60 * 60 * 1000),
+    endDate: null,
+    _sourceRowId: 'furry-friday-special-2026'
+  };
+  delete special._seriesRowExpansion;
+  const withSpecial = [...ruleCopies, special];
+  const specialLogs = withCapturedLogs(() => extraParser.applyDerivedCadenceStamps(withSpecial));
+  assert.ok(specialLogs.some(line => line.includes('is occurrence-expanded') && line.includes('distinct per-date feed row id artifacts')),
+    JSON.stringify(specialLogs));
+
+  // And a family nobody expanded keeps the old rule to the letter: a page
+  // only one date wears is that date's own publication.
+  const plainParser = createParser();
+  const plain = ['2026-08-05', '2026-08-12', '2026-08-19', '2026-08-26'].map((date, index) => buildCadenceStampRecord({
+    startDate: new Date(`${date}T20:00:00.000Z`),
+    endDate: new Date(`${date}T23:00:00.000Z`),
+    url: '',
+    website: index === 0 ? 'https://fixture-eagle.example/events/karaoke/tickets' : 'https://fixture-eagle.example/events/karaoke/'
+  }));
+  const plainLogs = withCapturedLogs(() => plainParser.applyDerivedCadenceStamps(plain));
+  assert.ok(plainLogs.some(line => line.includes('🔁 SHAPE: "KARAOKE" is occurrence-expanded') && line.includes('distinct per-date website artifacts')),
+    JSON.stringify(plainLogs));
+});
+
+// ---------------------------------------------------------------------------
+// Weekday pin: opening hours are not a date (run 20261109-053706,
+// thelumberyardbar.com home page). The model answered an invented
+// startDate "2024-01-01" for the bar's happy hour with the evidence
+// "TUE-SAT 4-6PM • SUN 12-7PM (recurring weekly)". The weekday reader took
+// "SAT 4-6" for a weekday beside a numeric date, so the pin moved the made-up
+// day to the nearest year in which January 1st is a Saturday — 2028 — and
+// held it there against the window repair.
+// ---------------------------------------------------------------------------
+
+test('weekday pin: a weekday beside opening hours states no day of any month — a made-up date is not pinned to it', () => {
+  const parser = createParser();
+  parser.now = () => new Date(Date.UTC(2026, 10, 9, 13, 0, 0));
+  const hours = 'TUE-SAT 4-6PM • SUN 12-7PM (recurring weekly)';
+  assert.equal(parser.extractStatedWeekdayAdjacentToDate(hours), null);
+  const { result, logs } = (() => {
+    const lines = [];
+    const original = console.log;
+    console.log = (...args) => { lines.push(args.join(' ')); };
+    try {
+      return { result: parser.resolveWeekdayPinnedYear('2024-01-01', hours, 'Happy Hour Menu\nTUE-SAT 4-6PM • SUN 12-7PM'), logs: lines };
+    } finally {
+      console.log = original;
+    }
+  })();
+  assert.equal(result, null, 'the invented date is left to the ordinary year repair');
+  assert.ok(!logs.some(line => line.includes('Weekday-pinned year')), logs.join('\n'));
+
+  // Every clock shape a weekday can sit in front of.
+  for (const clock of [
+    'SAT 4-6PM', 'Sat 4-6 pm', 'SUN 12-7PM', 'Sat 10-2AM', 'Sat 10-12PM', 'Fri 9-10:30pm', 'Fri 9.30pm',
+    'Sat 4.30-6pm', 'Sat 4.30 – 6 p.m.', 'Sa 16-19h', '4-6pm Saturday', '9.30pm, Friday'
+  ]) {
+    assert.equal(parser.extractStatedWeekdayAdjacentToDate(clock), null, clock);
+    assert.equal(parser.resolveWeekdayPinnedYear('2024-01-01', clock), null, clock);
+  }
+});
+
+test('weekday pin: a numeric date beside a weekday still pins, with its clock time after it', () => {
+  const parser = createParser();
+  parser.now = FROZEN_NOW;
+  // 2026-08-22 is a Saturday (the 2026-07-12 run's own example).
+  for (const evidence of [
+    'Sat 8/22', 'Sat 8/22 9PM', 'Sat 8/22 - 9pm', 'Sat 8/22: doors 9pm', 'Sat, 8/22 • 4-6PM', 'Sat 8-22', 'Sat 8-22 9PM',
+    'Sat 8-22: doors 9pm', 'Sat 22.8', 'Sat 22.8. 21h', '8/22 (Sat) 4-6pm', 'Sat, Aug 22 • 4-6PM', 'Saturday 22 August, 4.30-6pm'
+  ]) {
+    assert.equal(parser.extractStatedWeekdayAdjacentToDate(evidence), 6, evidence);
+    const pinned = parser.resolveWeekdayPinnedYear('2024-08-22', evidence);
+    assert.ok(pinned, evidence);
+    assert.equal(pinned.value, '2026-08-22', evidence);
+  }
 });

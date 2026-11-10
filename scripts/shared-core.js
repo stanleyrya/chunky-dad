@@ -3479,7 +3479,8 @@ class SharedCore {
         const sameStreet = this.areSameStreetLine(calendar.address, event.address);
         if (savedBarKey && newBarKey) {
             const sameBar = savedBarKey === newBarKey
-                || (savedBarKey.length >= 4 && newBarKey.length >= 4 && (savedBarKey.includes(newBarKey) || newBarKey.includes(savedBarKey)));
+                || (savedBarKey.length >= 4 && newBarKey.length >= 4 && (savedBarKey.includes(newBarKey) || newBarKey.includes(savedBarKey)))
+                || this.areBarNamesOneSpelling(savedBar, newBar);
             if (sameBar) agree.push(`same bar (${newBar})`);
             else if (sameStreet) agree.push(`same street (${text(event.address).split(',')[0]})`);
             else fields.push({ field: 'bar', from: savedBar, to: newBar });
@@ -12364,6 +12365,9 @@ class SharedCore {
                         ticketVendorDomains: offSite.ticketVendorDomains
                     })
                     : null;
+                // An enrich-only page that turned out to be the source's own
+                // listing is read as a listing (see isOwnSiteListingPage).
+                let ownSiteListingPage = false;
                 if (!discoveryOnly) {
                     let parsedEvents = await this.prepareParsedEvents(parseResult?.events, parserConfig, mainConfig, pageClassification, this.normalizerPipeline, httpAdapter, url);
                     // Each event remembers the page it was actually extracted from
@@ -12487,7 +12491,11 @@ class SharedCore {
                         });
                         parsedEvents = [];
                     }
-                    if (enrichContext && parsedEvents.length > 0) {
+                    if (enrichContext && this.isOwnSiteListingPage(url, parserConfig, pageClassification, parsedEvents)) {
+                        ownSiteListingPage = true;
+                        await displayAdapter.logInfo(`SYSTEM: Enrich-only crawl: ${url} is a listing on this source's own site (${parsedEvents.length} events) — read as a listing of its own, not as the ticket page of "${enrichContext.parentTitle}": no event dropped as a sibling`);
+                    }
+                    if (enrichContext && !ownSiteListingPage && parsedEvents.length > 0) {
                         // Enrich-only page: keep ONLY events that are the same event
                         // as the originating (parent) event — same identity predicate
                         // the parser-level dedup uses — and drop the venue's sibling
@@ -12497,7 +12505,7 @@ class SharedCore {
                         for (const childEvent of parsedEvents) {
                             const keptByParent = enrichContext.parentEvents.find(parentEvent =>
                                 this.getSameEventIdentitySignal(childEvent, parentEvent, { requireCloseStartTimes: false })
-                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url)) || null;
+                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url, parsedEvents)) || null;
                             if (keptByParent) {
                                 // WHO VOUCHES FOR THIS RECORD? It was read on
                                 // someone else's page (a ticket page, a venue
@@ -12617,7 +12625,7 @@ class SharedCore {
                             await displayAdapter.logInfo(`SYSTEM: 🧭 ROOT: following ${listingLinks.length} listing link(s) from ${pageClassification === 'unknown' ? 'an unknown' : `a${/^[aeiou]/i.test(pageClassification) ? 'n' : ''} ${pageClassification}`} home page: ${listingLinks.join(', ')} — the site's own menu names its listing page in the site's words, whatever the home page reads as`);
                         }
                     }
-                    if (enrichContext) {
+                    if (enrichContext && !ownSiteListingPage) {
                         // No fan-out from enrich-only pages: a venue calendar reached
                         // through a ticket link must never seed further crawling.
                         if (linksToConsider.length > 0) {
@@ -12731,7 +12739,7 @@ class SharedCore {
                 // event-page path already follows ticket links.
                 const eventPageFollowsTickets = pageClassification === 'event-page'
                     && (adaptiveCrawl || (shouldFollowLinks && !adaptiveEnrichOnlyEventPage));
-                if (!discoveryOnly && !enrichContext && !eventPageFollowsTickets && pageEventsForEnrich.length > 0) {
+                if (!discoveryOnly && (!enrichContext || ownSiteListingPage) && !eventPageFollowsTickets && pageEventsForEnrich.length > 0) {
                     const ticketLinks = [];
                     const seenTicketLinks = new Set();
                     const allowlistRefusedLinks = [];
@@ -13233,6 +13241,46 @@ class SharedCore {
         if (!pageDomain) return false;
         const configured = parserConfig && Array.isArray(parserConfig.urls) ? parserConfig.urls : [];
         return configured.some(root => this.getRegistrableDomainFromUrl(root) === pageDomain);
+    }
+
+    // Is this crawled page a LISTING ON THE SOURCE'S OWN SITE — and so never
+    // an enrich-only page, however the crawl reached it?
+    //
+    // Camp Out Poconos, run 20261109-053706: the home page's one row ("2027
+    // reservations open") carried a link to the campground's own
+    // /calendar/, the crawl queued that page as the row's TICKET page, and
+    // an enrich-only page keeps nothing but the event that linked it — so
+    // the six real weekends the calendar widget listed were dropped as
+    // "siblings" ("kept 0 matching event(s), dropped 6 sibling event(s) from
+    // campoutpoconos.com"), and because the page had now been read it was
+    // never read again as the listing it is. The Heretic's own /tickets
+    // page lost a party the same way in the same run (kept 3, dropped 1).
+    //
+    // "Enrich-only" exists to keep a VENUE'S calendar out of a promoter's
+    // source: a ticket link that lands on somebody else's listing may
+    // confirm the one event that linked it and nothing more. That reason
+    // does not hold on the source's own site — its listing is the thing
+    // the owner pointed the parser at, by whichever link the crawl found
+    // it. Three things must all be true, all read off the page and the
+    // config:
+    //   - the page is on the registrable domain of a configured URL, and
+    //     that domain is not a shared ticketing platform (a source
+    //     configured at a platform organiser page shares its domain with
+    //     every other organiser there);
+    //   - the source is not an aggregator (its deeper pages are other
+    //     people's events — the same line the first-party window draws);
+    //   - the page classified as a listing AND produced two or more events
+    //     (one event on an own-site page is that row's own page, which
+    //     enrich-only handles correctly).
+    isOwnSiteListingPage(url, parserConfig, pageClassification, pageEvents) {
+        if (pageClassification !== 'multi-event-page') return false;
+        if (!Array.isArray(pageEvents) || pageEvents.length < 2) return false;
+        const siteRole = String((parserConfig && parserConfig.siteRole) || '').toLowerCase();
+        if (siteRole === 'aggregator') return false;
+        if (!this.isConfiguredSiteUrl(url, parserConfig)) return false;
+        const host = this.getHostFromUrl(url);
+        if (!host || this.isKnownTicketingPlatformHost(host)) return false;
+        return true;
     }
 
     // Does a crawled page get the machine-door probe a configured root gets?
@@ -20855,6 +20903,29 @@ class SharedCore {
             ? this.decideWholeDayKind(calendarObject, SharedCore.allDayDaysInZone(calendarObject.startDate, calendarObject.endDate, timezone))
             : '');
         const scrapedAllDay = !scraperObject._timezoneUnresolved && inZone(scraperObject);
+        // 4. A saved MULTI-DAY span is not replaced by one night inside it.
+        //    A festival's ticket page states a door time, a page about its
+        //    Saturday states Saturday, a home page states the first date and
+        //    no end: each is a PART of the event, and none of them says the
+        //    event got shorter. The scraped side takes the saved days (start
+        //    and end together), so nothing downstream sees a date conflict
+        //    and the merge goes on with every other field. Bear Fuzz Fest,
+        //    replay of run 20261109-053706: without this, the merge the
+        //    match now finds rewrote the saved Dec 10–13 as one evening.
+        //    A scraped span of several days is another statement of the
+        //    whole span (dates moved, a day added) and stays with the
+        //    ordinary rules.
+        if (calendarAllDay) {
+            const savedDays = SharedCore.allDayDaysInZone(calendarObject.startDate, calendarObject.endDate, timezone);
+            const inside = this.getSpanInsideSavedDays(scraperObject, savedDays, timezone);
+            if (inside && inside.oneNight) {
+                console.log(`🗓️ ALL DAY: "${label}" — the saved event runs ${inside.startDay} to ${inside.endDay}; this run read one ${scrapedAllDay ? 'day' : 'night'} inside it (${inside.day}), a part of the event, not its whole span — the saved days are kept`);
+                scraperObject.startDate = calendarObject.startDate;
+                scraperObject.endDate = calendarObject.endDate;
+                SharedCore.setWholeDayFlags(scraperObject, SharedCore.wholeDayKind(calendarObject));
+                return;
+            }
+        }
         if (scrapedAllDay === calendarAllDay) return;
         const clockOf = (side) => {
             const wall = this.getZonedWallParts(side.startDate, timezone);
@@ -28518,6 +28589,26 @@ class SharedCore {
             });
         }
 
+        // Span containment (getSpanContainmentSignal): a night inside a
+        // saved multi-day event of the same name at the same place is that
+        // event. Last of the fold rungs, and before the overlap check below,
+        // whose "different title/venue" exit is exactly where such a record
+        // used to leave as NEW, on top of the festival it belongs to.
+        for (const existing of existingEventsData) {
+            const spanSignal = this.getSpanContainmentSignal(event, existing);
+            if (!spanSignal) continue;
+            const recurringMergeDecision = this.resolveRecurringMergeCandidate(existingEventsData, existing);
+            if (recurringMergeDecision) {
+                return finalize(recurringMergeDecision);
+            }
+            console.log(`🗓️ SPAN: "${event.title || 'event'}" is "${existing.title || existing.name || 'event'}" — ${spanSignal}, same name and place: the saved event, never a second one`);
+            return finalize({
+                action: 'merge',
+                reason: `Inside a saved multi-day event of the same name and place (${spanSignal})`,
+                existingEvent: existing
+            });
+        }
+
         // Check for overlapping events - only merge when time and title/venue are similar
         const timeConflicts = existingEventsData.filter(existing =>
             this.doDatesOverlap(existing.startDate, existing.endDate,
@@ -29057,6 +29148,25 @@ class SharedCore {
         return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
+    // "&" and "and" are ONE word in a place name. "Eisenhower Hotel &
+    // Conference Center" (the organizer's ticket page) and "Eisenhower
+    // Hotel and Conference Center" (the saved event, written from an
+    // aggregator's feed) are one hotel — but with the punctuation simply
+    // stripped the two read "…hotelconferencecenter" and
+    // "…hotelandconferencecenter", neither equal nor one inside the other,
+    // so no rung could say "same place" and the organizer's own record was
+    // proposed as a NEW event beside the saved one (Bear Fuzz Fest, run
+    // 20261109-053706). Asked BESIDE the plain comparison, never instead of
+    // it: it can only find two spellings of one name, it never tells two
+    // names apart that compared equal before.
+    areBarNamesOneSpelling(nameA, nameB) {
+        const spell = (name) => this.normalizeIdentityText(String(name || '').replace(/&amp;/gi, '&').replace(/\s*&\s*/g, ' and '));
+        const a = spell(nameA);
+        const b = spell(nameB);
+        if (!a || !b) return false;
+        return a === b || (a.length >= 4 && b.length >= 4 && (a.includes(b) || b.includes(a)));
+    }
+
     normalizeTicketUrlForIdentity(url) {
         const text = String(this.resolveUrlAlias(url) || '').trim().toLowerCase();
         if (!text) return '';
@@ -29263,6 +29373,8 @@ class SharedCore {
         if (barA && barB) {
             if (barA === barB) return true;
             if (barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA))) return true;
+            // "&" and "and" are one word (areBarNamesOneSpelling).
+            if (this.areBarNamesOneSpelling(shapeA.bar, shapeB.bar)) return true;
         }
 
         // Calendar events often carry the venue inside a free-form location string
@@ -29743,7 +29855,24 @@ class SharedCore {
     // sites). Only the enrich-only crawl asks this — the page WAS reached
     // through that link — so no other dedup pass can fold a row into a
     // listing it merely links.
-    isTicketLinkPageRecord(pageRecord, row, pageUrl = '') {
+    // …and the pointer only names the row when the page it opens is the
+    // row's OWN ticket page. A row's "TICKETS" link may open the venue's
+    // whole what's-on listing instead: Thotyssey's "Bear Belly at C'mon
+    // Everybody" (Dec 5, 6pm–10pm) links cmoneverybody.com/events, whose 28
+    // rows are 28 different parties, and the only other party there that
+    // night — "STANK.BK", doors 10:30pm, $15 — was taken to be the row and
+    // folded into it (run 20261109-053706: a wrong cover and ticket link
+    // headed for a saved event; the same run folded "Out & Abt NYC November"
+    // into "Goldiloxx: Bear Tea at 3 Dollar Bill" off that venue's /rsvp
+    // listing). So when the page gave several records under two or more
+    // different names (pageRecords: everything read off it — parties, not
+    // rows, are counted, so a page of 21 editions of ONE party is still that
+    // party's page), "same night" is not enough: the record must also be the
+    // row by NAME (the big-drift guard's own "same party in other words"
+    // test, a shared curated brand, or the same flyer file). Otherwise it is
+    // a neighbour on a listing: nothing enriched, nothing folded, and the
+    // enrich-only crawl drops and lists it with the page's other siblings.
+    isTicketLinkPageRecord(pageRecord, row, pageUrl = '', pageRecords = null) {
         if (!pageRecord || typeof pageRecord !== 'object' || !row || typeof row !== 'object') return false;
         const rowShape = this.buildIdentityComparisonShape(row);
         if (!rowShape.ticketUrl) return false;
@@ -29752,6 +29881,11 @@ class SharedCore {
         const pageShape = this.buildIdentityComparisonShape(pageRecord);
         if (!this.areIdentityDatesOnSameLocalDay(pageShape, rowShape)) return false;
         if (this.isFanInTicketUrl(pageRecord, row)) return false;
+        const partyCount = this.countDistinctEventNames(pageRecords);
+        if (partyCount >= 2 && !this.ticketLinkPageRecordSharesRowName(pageRecord, row)) {
+            console.log(`🛑 ENRICH: "${pageRecord.title || 'event'}" is on the page "${row.title || 'event'}"'s ticket link opens (${rowShape.ticketUrl}), on the same night, but that page lists ${partyCount} differently named parties and the two names share nothing — a listing's neighbour, not the row's ticket page: nothing enriched, nothing folded`);
+            return false;
+        }
         const contradiction = this.getIdentityContradiction(pageRecord, row, { requireCloseStartTimes: false, softBarNames: true });
         if (contradiction) {
             console.log(`🛑 IDENTITY: "${pageRecord.title || 'event'}" is on the page "${row.title || 'event'}"'s ticket link opens, on the same night, but their ${contradiction} contradict — not folded`);
@@ -29764,6 +29898,28 @@ class SharedCore {
         pageRecord._ticketLinkPageOf = rowShape.ticketUrl;
         console.log(`🎟️ ENRICH: "${pageRecord.title || 'event'}" is the night on the page "${row.title || 'event'}"'s ticket link opens (${rowShape.ticketUrl}) — one event, kept`);
         return true;
+    }
+
+    // How many differently named parties a set of records holds: titles
+    // folded to letters and digits, so 21 editions of one night count once.
+    countDistinctEventNames(records) {
+        if (!Array.isArray(records)) return 0;
+        const names = new Set();
+        for (const record of records) {
+            const key = this.normalizeIdentityText(this.foldDiacritics(this.decodeBasicHtmlEntities(String((record && record.title) || ''))));
+            if (key) names.add(key);
+        }
+        return names.size;
+    }
+
+    // Is the record read off a listing the row that pointed at it, by NAME?
+    // The big-drift guard's test (venue, city and cadence words never count),
+    // one curated brand on both, or one flyer file.
+    ticketLinkPageRecordSharesRowName(pageRecord, row) {
+        const bar = (row && row.bar) || (pageRecord && pageRecord.bar) || '';
+        return this.titlesShareIdentity(String((pageRecord && pageRecord.title) || ''), String((row && row.title) || ''), bar)
+            || this.recordsShareEventBrand(pageRecord, row)
+            || this.recordsShareImageFile(pageRecord, row);
     }
 
     recordsShareSourcePage(eventA, eventB) {
@@ -30023,6 +30179,7 @@ class SharedCore {
             });
         const sameBarSpelledTwice = barA === barB
             || (barA.length >= 4 && barB.length >= 4 && (barA.includes(barB) || barB.includes(barA)))
+            || (Boolean(barA && barB) && this.areBarNamesOneSpelling(shapeA.bar, shapeB.bar))
             || leadsTheOther(shapeA.bar, shapeB.bar) || leadsTheOther(shapeB.bar, shapeA.bar)
             || namedInPlaceText(barA, shapeB) || namedInPlaceText(barB, shapeA)
             || namedAsTitle(barA, shapeB) || namedAsTitle(barB, shapeA);
@@ -31256,6 +31413,97 @@ class SharedCore {
             return null;
         }
         return 'place+day+title-subset';
+    }
+
+    // ------------------------------------------------------------------
+    // SPAN CONTAINMENT — a night inside a saved multi-day event of the same
+    // name at the same place is that event, never a second one.
+    // A festival is saved as its whole run of days (all-day, Thursday to
+    // Sunday). Its ticket page states a door time — one evening — and a
+    // page about its Saturday states Saturday. Every rung above demands
+    // the same local START day or starts within the hour, so a reading of
+    // day two, three or four met nothing and was proposed as a NEW event
+    // sitting on top of the festival (the overlap check's "different
+    // title/venue" exit). Bear Fuzz Fest, run 20261109-053706: saved
+    // 2026-12-10 to 12-13 all-day; the organizer's ticket page read
+    // 4pm on the 10th.
+    //
+    // Does this record's own span lie inside these saved days? Fails
+    // closed: the saved days must be a real multi-day span no longer than
+    // the longest festival (SANITY_MAX_EVENT_DURATION_DAYS — a longer
+    // "event" is a series range written as one record, and anchors
+    // nothing); the record must START on one of the days and END no later
+    // than the morning after the last one; an unresolved zone answers
+    // nothing. `oneNight` says the record is a single day or night (no end,
+    // or an end within 24 hours) — a part of the span, as opposed to
+    // another statement of the whole span.
+    // Returns { startDay, endDay, day, oneNight } or null.
+    getSpanInsideSavedDays(record, savedDays, timezone) {
+        if (!record || typeof record !== 'object' || !savedDays || !timezone || record._timezoneUnresolved) return null;
+        if (!savedDays.startDay || !savedDays.endDay || savedDays.startDay === savedDays.endDay) return null;
+        const dayMs = 24 * 60 * 60 * 1000;
+        const dayToMs = (day) => Date.parse(`${day}T00:00:00Z`);
+        const lengthDays = Math.round((dayToMs(savedDays.endDay) - dayToMs(savedDays.startDay)) / dayMs) + 1;
+        if (!Number.isFinite(lengthDays) || lengthDays < 2 || lengthDays > SANITY_MAX_EVENT_DURATION_DAYS) return null;
+        const startMs = this.toEpochMillis(record.startDate);
+        const startWall = this.getZonedWallParts(record.startDate, timezone);
+        if (startMs === null || !startWall) return null;
+        const day = SharedCore.formatDayKey(startWall);
+        if (day < savedDays.startDay || day > savedDays.endDay) return null;
+        const endMs = this.toEpochMillis(record.endDate);
+        let oneNight = true;
+        if (endMs !== null && endMs > startMs) {
+            const endWall = this.getZonedWallParts(record.endDate, timezone);
+            if (!endWall) return null;
+            const endDay = SharedCore.formatDayKey(endWall);
+            const morningAfter = new Date(dayToMs(savedDays.endDay) + dayMs).toISOString().slice(0, 10);
+            if (endDay > morningAfter || (endDay === morningAfter && endWall.hour >= 12)) return null;
+            oneNight = (endMs - startMs) <= dayMs;
+        }
+        return { startDay: savedDays.startDay, endDay: savedDays.endDay, day, oneNight };
+    }
+
+    // The calendar-match rung, LAST of the fold rungs in analyzeEventAction
+    // (a new reader goes last: every stronger signal has already had its
+    // say). All of:
+    //   - the saved record is a multi-day all-day span and the scraped
+    //     record's own span lies inside it (getSpanInsideSavedDays);
+    //   - the SAME NAME — the two titles' significant tokens are the same
+    //     set once the edition year is taken out ("Bear Fuzz Fest 2026" is
+    //     "Bear Fuzz Fest"). Not "similar", not a subset: a festival's
+    //     "… Pool Party" or "… Closing Night" is a session with its own
+    //     name and stays its own event;
+    //   - POSITIVE place identity (areIdentityPlacesSimilar) — a side with
+    //     no place evidence never matches;
+    //   - no hard-fact contradiction (getIdentityContradiction). The stated
+    //     days are not compared: a night on day three "contradicts" the
+    //     span's first day by construction, and containment is the day test;
+    //   - the scraped record is not itself a series definition.
+    // The merge that follows keeps the saved days (alignAllDayMergeSides).
+    getSpanContainmentSignal(newEvent, existingEvent) {
+        if (!newEvent || typeof newEvent !== 'object' || !existingEvent || typeof existingEvent !== 'object') return null;
+        if (SharedCore.isRecurringSeriesEvent(newEvent)) return null;
+        const timezone = this.getEventZone(newEvent) || this.getEventZone(existingEvent);
+        if (!timezone) return null;
+        const savedDays = this.getStoredAllDayDays(existingEvent)
+            || SharedCore.allDayDaysInZone(existingEvent.startDate, existingEvent.endDate, timezone);
+        const inside = this.getSpanInsideSavedDays(newEvent, savedDays, timezone);
+        if (!inside) return null;
+        const incoming = this.buildIdentityComparisonShape(newEvent);
+        const existing = this.buildIdentityComparisonShape(existingEvent);
+        const venueKeys = [this.normalizeBarNameKey(incoming.bar), this.normalizeBarNameKey(existing.bar)].filter(Boolean);
+        const nameTokens = (title) => this.getCrossSourceTitleTokens(title, venueKeys)
+            .filter(token => !/^(?:19|20)\d{2}$/.test(token)).sort().join(' ');
+        const nameA = nameTokens(newEvent.title || newEvent.name);
+        const nameB = nameTokens(existingEvent.title || existingEvent.name);
+        if (!nameA || nameA !== nameB) return null;
+        if (!this.areIdentityPlacesSimilar(incoming, existing)) return null;
+        const contradiction = this.getIdentityContradiction(newEvent, existingEvent, { ignoreStatedDays: true });
+        if (contradiction) {
+            console.log(`🛑 IDENTITY: "${newEvent.title || newEvent.name || 'event'}" (${inside.day}) lies inside the saved "${existingEvent.title || existingEvent.name || 'event'}" (${inside.startDay} to ${inside.endDay}) under the same name, but their ${contradiction} contradict — two events, not folded`);
+            return null;
+        }
+        return `${inside.day} inside the saved ${inside.startDay} to ${inside.endDay}`;
     }
 
     // Primary designation for a cross-source merge: the record with more

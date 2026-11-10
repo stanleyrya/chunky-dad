@@ -32120,3 +32120,452 @@ test('ticket-link enrichment: with an allowlist, a link or a title that matches 
   assert.equal(can('https://vendor.example/e/1', 'Flannel Nite', [foreignRegExp]), false);
   assert.equal(can('https://vendor.example/e/1', 'Flannel Nite', ['whereto.party/in/', { not: 'a pattern' }]), true, 'unreadable pattern: follow');
 });
+
+// ---------------------------------------------------------------------------
+// A ticket link that opens a venue's WHOLE listing: the neighbour on the
+// row's night is not the row (Thotyssey, run 20261109-053706).
+// ---------------------------------------------------------------------------
+
+// Real record shapes from that run, trimmed. The aggregator's row carries the
+// venue's listing as its "ticket" link; the listing's 10:30pm party the same
+// evening is somebody else's night.
+function buildListingNeighbourPair() {
+  const row = {
+    title: "Bear Belly at C'mon Everybody",
+    startDate: new Date('2026-12-05T23:00:00.000Z'),
+    endDate: new Date('2026-12-06T03:00:00.000Z'),
+    timezone: 'America/New_York',
+    bar: "C'mon Everybody",
+    address: '325 Franklin Ave, Brooklyn, NY 11238, USA',
+    ticketUrl: 'https://www.cmoneverybody.com/events',
+    source: 'ai-web',
+    city: 'nyc',
+    _sourcePageUrl: 'https://tockify.com/api/ngevent?max=100&calname=thotyssey&tags=bears',
+    _pageOrigin: 'listing'
+  };
+  const neighbour = {
+    title: 'STANK.BK',
+    startDate: new Date('2026-12-06T03:30:00.000Z'),
+    endDate: new Date('2026-12-06T09:00:00.000Z'),
+    timezone: 'America/New_York',
+    bar: "C'mon Everybody",
+    address: '325 Franklin Avenue, New York, 11238',
+    website: 'https://www.cmoneverybody.com/events',
+    ticketUrl: 'https://link.dice.fm/s7740e082534',
+    cover: '$15',
+    source: 'dice',
+    city: 'nyc',
+    _organizer: 'cmon everybody',
+    _pageClassification: 'multi-event-page',
+    _sourcePageUrl: 'https://www.cmoneverybody.com/events',
+    _pageOrigin: 'crawl'
+  };
+  const listing = [
+    neighbour,
+    { ...neighbour, title: 'Funny Moms', startDate: new Date('2026-11-10T01:00:00.000Z'), endDate: null, ticketUrl: 'https://link.dice.fm/a1' },
+    { ...neighbour, title: 'Mall Drag', startDate: new Date('2026-11-13T01:00:00.000Z'), endDate: null, ticketUrl: 'https://link.dice.fm/a2' },
+    { ...neighbour, title: 'DEEPER *Speedo Edition*', startDate: new Date('2026-11-14T03:30:00.000Z'), endDate: null, ticketUrl: 'https://link.dice.fm/a3' }
+  ];
+  return { row, neighbour, listing };
+}
+
+test('ticket-link page: a differently named party on a listing of several parties is the row\'s neighbour, not the row — nothing enriched, nothing folded, and the log says so', () => {
+  const core = createCore();
+  const { row, neighbour, listing } = buildListingNeighbourPair();
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  try {
+    assert.equal(core.getSameEventIdentitySignal(neighbour, row, { requireCloseStartTimes: false }), null, 'no ordinary rung meets them');
+    assert.equal(core.isTicketLinkPageRecord(neighbour, row, 'https://www.cmoneverybody.com/events', listing), false);
+    assert.equal(neighbour._ticketLinkPageOf, undefined, 'no pointer is stamped, so the dedup ladder cannot fold them later');
+    assert.equal(core.getSameEventIdentitySignal(neighbour, row, { requireCloseStartTimes: false }), null);
+    const refusal = logs.find((line) => line.includes('🛑 ENRICH'));
+    assert.ok(refusal, logs.join('\n'));
+    assert.ok(refusal.includes('"STANK.BK"') && refusal.includes('"Bear Belly at C\'mon Everybody"'), refusal);
+    assert.ok(refusal.includes('lists 4 differently named parties'), refusal);
+    assert.ok(refusal.includes('nothing enriched, nothing folded'), refusal);
+  } finally { console.log = quiet; }
+});
+
+test('ticket-link page: on a listing of several parties, the record that carries the row\'s name is still the row', () => {
+  const core = createCore();
+  const { row, neighbour, listing } = buildListingNeighbourPair();
+  const quiet = console.log; console.log = () => {};
+  try {
+    // The venue's own card for the same party, in the venue's shorter words, at the venue's clock.
+    const own = { ...neighbour, title: 'Bear Belly', startDate: new Date('2026-12-06T00:00:00.000Z'), endDate: new Date('2026-12-06T03:00:00.000Z') };
+    assert.equal(core.isTicketLinkPageRecord(own, row, 'https://www.cmoneverybody.com/events', [own, ...listing]), true);
+    assert.equal(own._ticketLinkPageOf, 'cmoneverybody.com/events');
+    // The same flyer file on both is the same party under another name.
+    const flyer = 'https://dice-media.imgix.net/attachments/2026-11-05/c54d563c-5327-4591-bad3-75ecd3a66d55.jpg';
+    const sameFlyer = { ...neighbour, image: flyer };
+    assert.equal(core.isTicketLinkPageRecord(sameFlyer, { ...row, image: flyer }, 'https://www.cmoneverybody.com/events', listing.map((r) => (r === neighbour ? sameFlyer : r))), true);
+  } finally { console.log = quiet; }
+});
+
+test('ticket-link page: a page that lists ONE party (every edition of it) still gives the row its night under another name', () => {
+  const core = createCore();
+  const { row, neighbour } = buildListingNeighbourPair();
+  const quiet = console.log; console.log = () => {};
+  try {
+    // The Two Tons shape: the ticket page marks up every edition under one name.
+    const editions = [
+      neighbour,
+      { ...neighbour, startDate: new Date('2026-11-07T03:30:00.000Z'), endDate: null },
+      { ...neighbour, startDate: new Date('2027-01-03T03:30:00.000Z'), endDate: null }
+    ];
+    assert.equal(core.countDistinctEventNames(editions), 1);
+    assert.equal(core.isTicketLinkPageRecord(neighbour, row, 'https://www.cmoneverybody.com/events', editions), true);
+    // Names are counted as written, minus case, accents and entities.
+    assert.equal(core.countDistinctEventNames([{ title: 'Café &amp; Bears' }, { title: 'CAFE & BEARS' }, { title: '' }, null]), 1);
+    assert.equal(core.countDistinctEventNames(null), 0);
+  } finally { console.log = quiet; }
+});
+
+test('enrich-only crawl: a ticket link that opens a venue\'s whole listing enriches the row with nothing when no party on it carries the row\'s name', async () => {
+  const core = new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: ENRICH_RULES
+  });
+  const display = createDisplayAdapterStub();
+  const night = new Date(Date.now() + 10 * 86400000);
+  night.setUTCHours(0, 0, 0, 0);
+  const at = (hours, dayOffset = 0) => new Date(night.getTime() + dayOffset * 86400000 + hours * 3600000);
+  const pages = {
+    'https://promoter.example/': {
+      events: [{ title: 'Bear Belly at Venue Club', bar: 'Venue Club', timezone: 'Europe/London', startDate: at(18), endDate: at(22), ticketUrl: 'https://venue.example/events' }]
+    },
+    'https://venue.example/events': {
+      events: [
+        { title: 'STANK.BK', bar: 'Venue Club', address: '12 Old Quebec Street, London', timezone: 'Europe/London', startDate: at(22.5), endDate: at(28), cover: '$15', ticketUrl: 'https://link.tickets.example/s7740' },
+        { title: 'Funny Moms', bar: 'Venue Club', timezone: 'Europe/London', startDate: at(20, 2), ticketUrl: 'https://link.tickets.example/a1' },
+        { title: 'Mall Drag', bar: 'Venue Club', timezone: 'Europe/London', startDate: at(20, 5), ticketUrl: 'https://link.tickets.example/a2' }
+      ]
+    }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let result;
+  try {
+    result = await core.processParser(
+      { name: 'Listing Aggregator', urls: ['https://promoter.example/'], alwaysBear: true, ai: CRAWL_AI },
+      {}, httpAdapter, display, parsers
+    );
+  } finally { console.log = quiet; }
+
+  assert.ok(fetched.includes('https://venue.example/events'), 'the ticket link is still followed');
+  assert.ok(
+    display.logs.includes('SYSTEM: Enrich-only crawl: kept 0 matching event(s), dropped 3 sibling event(s) from venue.example (reached via ticket link from "Bear Belly at Venue Club")'),
+    `expected every listing row dropped as a sibling, got: ${JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))}`
+  );
+  assert.ok(logs.some((line) => line.includes('🛑 ENRICH') && line.includes('"STANK.BK"')), 'the refusal names the record and the reason');
+  assert.equal(result.events.length, 1);
+  const row = result.events[0];
+  assert.equal(row.title, 'Bear Belly at Venue Club');
+  assert.equal(row.startDate.getTime(), at(18).getTime(), 'the row keeps its own clock');
+  assert.equal(row.endDate.getTime(), at(22).getTime());
+  assert.ok(!row.cover, 'the neighbour\'s cover never reaches the row');
+  assert.deepEqual(result.enrichOnlyDrops[0].droppedEvents.map(e => e.title), ['STANK.BK', 'Funny Moms', 'Mall Drag']);
+});
+
+// ---------------------------------------------------------------------------
+// A listing on the source's OWN site is never an enrich-only page (Camp Out
+// Poconos, run 20261109-053706: six calendar weekends dropped as "siblings").
+// ---------------------------------------------------------------------------
+
+const OWN_LISTING_RULES = [
+  { pattern: /camp\.example\/calendar/i, classification: 'multi-event-page' },
+  { pattern: /camp\.example\/stay/i, classification: 'event-page' },
+  { pattern: /venue\.example/i, classification: 'multi-event-page' }
+];
+
+function buildOwnListingPages(listingUrl) {
+  const day = new Date(Date.now() + 20 * 86400000);
+  day.setUTCHours(16, 0, 0, 0);
+  const weekend = (title, weeks) => ({ title, bar: 'Camp Out', startDate: new Date(day.getTime() + weeks * 7 * 86400000), endDate: new Date(day.getTime() + (weeks * 7 + 3) * 86400000) });
+  return {
+    // The home page's one "row" is a banner; its link is the site's own calendar.
+    'https://camp.example/': {
+      events: [{ title: '2027 reservations open', bar: 'Camp Out', startDate: new Date(day.getTime() + 90 * 86400000), ticketUrl: listingUrl }]
+    },
+    [listingUrl]: {
+      events: [
+        weekend('LEATHER BEARS', 0),
+        weekend('CAMPCON: GEEKS & GAYMERS', 1),
+        weekend('HALLOWEEN WEEKEND', 2),
+        weekend('Friendsgiving', 5),
+        weekend("NEW YEAR'S EVE AT CAMP", 9),
+        weekend('Drag Fest in Stroudsburg', 14)
+      ],
+      additionalLinks: ['https://camp.example/stay/leather-bears']
+    },
+    'https://camp.example/stay/leather-bears': {}
+  };
+}
+
+test('enrich-only crawl: a listing on the source\'s own site, reached through a row\'s ticket link, is read as a listing — every event kept, and the log says why', async () => {
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, pageClassificationRules: OWN_LISTING_RULES });
+  const display = createDisplayAdapterStub();
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(buildOwnListingPages('https://camp.example/calendar/'));
+  const result = await core.processParser(
+    { name: 'Campground', urls: ['https://camp.example/'], alwaysBear: true, siteRole: 'venue', ai: CRAWL_AI },
+    {}, httpAdapter, display, parsers
+  );
+  assert.ok(fetched.includes('https://camp.example/calendar/'));
+  assert.ok(
+    display.logs.includes('SYSTEM: Enrich-only crawl: https://camp.example/calendar/ is a listing on this source\'s own site (6 events) — read as a listing of its own, not as the ticket page of "2027 reservations open": no event dropped as a sibling'),
+    `expected the own-site listing line, got: ${JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))}`
+  );
+  assert.ok(!display.logs.some(l => l.includes('dropped') && l.includes('sibling event(s) from camp.example')), 'nothing dropped as a sibling');
+  assert.equal((result.enrichOnlyDrops || []).length, 0);
+  const titles = result.events.map(e => e.title);
+  for (const title of ['LEATHER BEARS', 'CAMPCON: GEEKS & GAYMERS', 'HALLOWEEN WEEKEND', 'Friendsgiving', "NEW YEAR'S EVE AT CAMP", 'Drag Fest in Stroudsburg']) {
+    assert.ok(titles.includes(title), `${title} is kept (got ${JSON.stringify(titles)})`);
+  }
+  // Read as a listing in full: its own links are followed like any crawled listing's.
+  assert.ok(fetched.includes('https://camp.example/stay/leather-bears'), 'the listing\'s event link is followed');
+  assert.ok(!display.logs.some(l => l.includes('Enrich-only crawl: not following')), 'no enrich-only fan-out block');
+});
+
+test('enrich-only crawl: the same listing on SOMEBODY ELSE\'S site stays enrich-only — the venue\'s calendar never joins this source', async () => {
+  // Another site's listing: the venue's calendar never joins this source.
+  {
+    const core = new SharedCore(CITIES, { eventSchema: EventSchema, pageClassificationRules: OWN_LISTING_RULES });
+    const display = createDisplayAdapterStub();
+    const { httpAdapter, parsers } = createCrawlHarness(buildOwnListingPages('https://venue.example/calendar/'));
+    const result = await core.processParser(
+      { name: 'Campground', urls: ['https://camp.example/'], alwaysBear: true, siteRole: 'venue', ai: CRAWL_AI },
+      {}, httpAdapter, display, parsers
+    );
+    assert.ok(
+      display.logs.includes('SYSTEM: Enrich-only crawl: kept 0 matching event(s), dropped 6 sibling event(s) from venue.example (reached via ticket link from "2027 reservations open")'),
+      JSON.stringify(display.logs.filter(l => l.includes('Enrich-only')))
+    );
+    assert.deepEqual(result.events.map(e => e.title), ['2027 reservations open']);
+  }
+});
+
+test('own-site listing: one event is the row\'s own page, a platform domain is nobody\'s own site, and only a page classified as a listing counts', () => {
+  const core = createCore();
+  const own = { name: 'Campground', urls: ['https://camp.example/'], siteRole: 'venue' };
+  const two = [{ title: 'LEATHER BEARS' }, { title: 'HALLOWEEN WEEKEND' }];
+  assert.equal(core.isOwnSiteListingPage('https://camp.example/calendar/', own, 'multi-event-page', two), true);
+  assert.equal(core.isOwnSiteListingPage('https://www.camp.example/calendar/', own, 'multi-event-page', two), true, 'same registrable domain');
+  assert.equal(core.isOwnSiteListingPage('https://camp.example/calendar/', own, 'multi-event-page', two.slice(0, 1)), false, 'one event: the row\'s own page');
+  assert.equal(core.isOwnSiteListingPage('https://camp.example/calendar/', own, 'event-page', two), false, 'not classified as a listing');
+  assert.equal(core.isOwnSiteListingPage('https://venue.example/calendar/', own, 'multi-event-page', two), false, 'another site');
+  assert.equal(core.isOwnSiteListingPage('https://camp.example/calendar/', { ...own, siteRole: 'aggregator' }, 'multi-event-page', two), false, 'aggregator');
+  // A source configured at a ticketing platform's organiser page shares that domain with every organiser.
+  const onPlatform = { name: 'Promoter', urls: ['https://www.eventbrite.com/o/some-promoter-123'], siteRole: 'promoter' };
+  assert.equal(core.isConfiguredSiteUrl('https://www.eventbrite.com/d/ny--new-york/events/', onPlatform), true);
+  assert.equal(core.isOwnSiteListingPage('https://www.eventbrite.com/d/ny--new-york/events/', onPlatform, 'multi-event-page', two), false);
+});
+
+// ── A night inside a saved multi-day event is that event (Bear Fuzz Fest, run 20261109-053706) ──
+// The real pair, trimmed: the organizer's ticket page read one evening (4pm
+// on the 10th, a JSON-LD start with no end); the calendar holds the festival
+// as four all-day days, written from an aggregator's feed with the hotel
+// spelled "and" where the ticket page spells "&".
+function buildFuzzFestTicketPageRecord(overrides = {}) {
+  return {
+    title: 'Bear Fuzz Fest',
+    startDate: new Date('2026-12-10T21:00:00.000Z'),
+    endDate: new Date('2026-12-11T10:00:00.000Z'),
+    bar: 'Eisenhower Hotel & Conference Center',
+    address: '2634 Emmitsburg Road, Gettysburg, PA 17325',
+    ticketUrl: 'https://www.sickening.events/e/bear-fuzz-fest-2026/tickets',
+    website: 'https://bearfuzzfest.com/',
+    location: '39.765789, -77.2691996',
+    city: 'gettysburg',
+    timezone: 'America/New_York',
+    source: 'ai-web',
+    key: 'bear-fuzz-fest|2026-12-10|eisenhower hotel & conference center',
+    _sourcePageUrl: 'https://sickening.events/e/bear-fuzz-fest-2026',
+    ...overrides
+  };
+}
+
+function buildFuzzFestSavedEvent(overrides = {}) {
+  return {
+    title: 'Bear Fuzz Fest',
+    startDate: new Date('2026-12-10T05:00:00.000Z'),
+    endDate: new Date('2026-12-14T04:59:59.000Z'),
+    isAllDay: true,
+    allDayStartDay: '2026-12-10',
+    allDayEndDay: '2026-12-13',
+    location: '',
+    url: '',
+    identifier: 'B8B8D8E1-74BB-421A-9635-22292DEC63BC',
+    notes: [
+      'bar: Eisenhower Hotel and Conference Center',
+      'address: Gettysburg, PA',
+      'website: https://bearfuzzfest.com/',
+      'ticketUrl: https://sickening.events/e/bear-fuzz-fest-2026',
+      'timezone: America/New_York',
+      'key: bear-fuzz-fest|2026-12-10|eisenhower hotel and conference center',
+      'allDay: true'
+    ].join('\n'),
+    ...overrides
+  };
+}
+
+function captureConsole(run) {
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let result;
+  try { result = run(); } finally { console.log = original; }
+  return { logs, result };
+}
+
+test('place names: "&" and "and" are one word — two spellings of one hotel are one place, and nothing that compared equal before is told apart', () => {
+  const core = createCore();
+  assert.equal(core.areBarNamesOneSpelling('Eisenhower Hotel & Conference Center', 'Eisenhower Hotel and Conference Center'), true);
+  assert.equal(core.areBarNamesOneSpelling('Eisenhower Hotel &amp; Conference Center', 'Eisenhower Hotel and Conference Center'), true, 'an entity-escaped "&" too');
+  assert.equal(core.areBarNamesOneSpelling('Bears&Beers', 'Bears and Beers'), true, 'with or without spaces');
+  assert.equal(core.areBarNamesOneSpelling('Eisenhower Hotel & Conference Center', 'Wyndham Gettysburg'), false);
+  assert.equal(core.areBarNamesOneSpelling('', 'Eisenhower Hotel and Conference Center'), false, 'a blank side says nothing');
+
+  const ticketPage = core.buildIdentityComparisonShape(buildFuzzFestTicketPageRecord());
+  const saved = core.buildIdentityComparisonShape(buildFuzzFestSavedEvent());
+  assert.equal(core.areIdentityPlacesSimilar(ticketPage, saved), true, 'the saved side has no street line and no pin: the name is all there is');
+  assert.equal(core.haveContradictingPlaceEvidence(ticketPage, saved, buildFuzzFestTicketPageRecord(), buildFuzzFestSavedEvent()), false, 'two spellings are not two bars');
+
+  // The rule is asked BESIDE the plain comparison: a pair that was one
+  // place with the punctuation stripped still is.
+  const plain = (bar) => core.buildIdentityComparisonShape({ title: 'Night', bar, startDate: new Date('2026-12-10T21:00:00.000Z'), timezone: 'America/New_York' });
+  assert.equal(core.areIdentityPlacesSimilar(plain('Tom & Jerry'), plain('Tom Jerry')), true);
+  assert.equal(core.areIdentityPlacesSimilar(plain('Rough & Ready Saloon'), plain('Brass Rail')), false);
+});
+
+test('calendar match: the organizer\'s one-evening record is the saved four-day festival, not a new event beside it', () => {
+  const core = createCore();
+  const { logs, result } = captureConsole(() => core.analyzeEventAction(buildFuzzFestTicketPageRecord(), [buildFuzzFestSavedEvent()]));
+  assert.equal(result.action, 'merge', logs.join('\n'));
+  assert.equal(result.existingEvent.identifier, 'B8B8D8E1-74BB-421A-9635-22292DEC63BC');
+  assert.match(result.reason, /Same-day venue title-subset match/, 'the opening evening shares the span\'s first day: the existing same-day rung meets it once the hotel is one place');
+});
+
+test('span containment: a night on day three of a saved multi-day event, same name and place, is that event — and the log says so', () => {
+  const core = createCore();
+  const saturday = buildFuzzFestTicketPageRecord({
+    title: 'Bear Fuzz Fest 2026',
+    startDate: new Date('2026-12-12T23:00:00.000Z'),
+    endDate: new Date('2026-12-13T04:00:00.000Z'),
+    key: 'bear-fuzz-fest-2026|2026-12-12|eisenhower hotel & conference center'
+  });
+  const { logs, result } = captureConsole(() => core.analyzeEventAction(saturday, [buildFuzzFestSavedEvent()]));
+  assert.equal(result.action, 'merge', logs.join('\n'));
+  assert.match(result.reason, /Inside a saved multi-day event of the same name and place \(2026-12-12 inside the saved 2026-12-10 to 2026-12-13\)/);
+  assert.ok(logs.some(line => line.includes('🗓️ SPAN: "Bear Fuzz Fest 2026" is "Bear Fuzz Fest"') && line.includes('never a second one')), logs.join('\n'));
+  assert.equal(core.getSpanContainmentSignal(saturday, buildFuzzFestSavedEvent()), '2026-12-12 inside the saved 2026-12-10 to 2026-12-13');
+
+  // The last night may end the morning after the last day.
+  const closing = buildFuzzFestTicketPageRecord({ startDate: new Date('2026-12-14T02:00:00.000Z'), endDate: new Date('2026-12-14T08:00:00.000Z') });
+  assert.ok(core.getSpanContainmentSignal(closing, buildFuzzFestSavedEvent()), 'Sunday 9pm to Monday 3am is still Sunday\'s night');
+  // A saved record that carries no all-day stamp is read off its own dates.
+  const unstamped = buildFuzzFestSavedEvent();
+  delete unstamped.isAllDay; delete unstamped.allDayStartDay; delete unstamped.allDayEndDay;
+  assert.ok(core.getSpanContainmentSignal(saturday, unstamped));
+});
+
+test('span containment fails closed: a session with its own name, another place, a night outside the days, a series, a one-day or over-long saved record, a contradicting street', () => {
+  const core = createCore();
+  const saved = buildFuzzFestSavedEvent();
+  const saturday = (overrides = {}) => buildFuzzFestTicketPageRecord({
+    startDate: new Date('2026-12-12T23:00:00.000Z'),
+    endDate: new Date('2026-12-13T04:00:00.000Z'),
+    key: 'x|2026-12-12|x',
+    ticketUrl: '',
+    ...overrides
+  });
+  const analyze = (event, existing = saved) => captureConsole(() => core.analyzeEventAction(event, [existing]));
+
+  // A session carries the festival's name AND its own: it stays its own event.
+  const session = analyze(saturday({ title: 'Bear Fuzz Fest Pool Party' }));
+  assert.equal(session.result.action, 'new', session.logs.join('\n'));
+  assert.equal(core.getSpanContainmentSignal(saturday({ title: 'Bear Fuzz Fest Pool Party' }), saved), null);
+  assert.equal(core.getSpanContainmentSignal(saturday({ title: 'Drag Bingo' }), saved), null);
+
+  // The same name somewhere else.
+  assert.equal(core.getSpanContainmentSignal(saturday({ bar: 'Wyndham Gettysburg', address: '95 Presidential Circle, Gettysburg, PA', location: '39.8455, -77.2042' }), saved), null);
+  // No place evidence on the saved side: nothing positive, no match.
+  assert.equal(core.getSpanContainmentSignal(saturday(), buildFuzzFestSavedEvent({ notes: 'timezone: America/New_York' })), null);
+
+  // The night after the last day, and the night before the first.
+  assert.equal(core.getSpanContainmentSignal(saturday({ startDate: new Date('2026-12-14T23:00:00.000Z'), endDate: new Date('2026-12-15T04:00:00.000Z') }), saved), null);
+  assert.equal(core.getSpanContainmentSignal(saturday({ startDate: new Date('2026-12-09T23:00:00.000Z'), endDate: new Date('2026-12-10T04:00:00.000Z') }), saved), null);
+  // A record that runs past the saved days is not inside them.
+  assert.equal(core.getSpanContainmentSignal(saturday({ endDate: new Date('2026-12-16T04:00:00.000Z') }), saved), null);
+
+  // A series definition is never "inside" a span.
+  assert.equal(core.getSpanContainmentSignal(saturday({ _recurring: true }), saved), null);
+
+  // A saved ONE-day record is the ordinary same-day case, not a span…
+  assert.equal(core.getSpanContainmentSignal(saturday(), buildFuzzFestSavedEvent({
+    startDate: new Date('2026-12-12T05:00:00.000Z'), endDate: new Date('2026-12-13T04:59:59.000Z'), allDayStartDay: '2026-12-12', allDayEndDay: '2026-12-12'
+  })), null);
+  // …and a saved "event" longer than any festival is a series range written as one record: it anchors nothing.
+  assert.equal(core.getSpanContainmentSignal(saturday(), buildFuzzFestSavedEvent({
+    startDate: new Date('2026-11-06T05:00:00.000Z'), endDate: new Date('2027-01-02T04:59:59.000Z'), allDayStartDay: '2026-11-06', allDayEndDay: '2027-01-01'
+  })), null);
+  // A saved TIMED record that merely overlaps is not a span either.
+  assert.equal(core.getSpanContainmentSignal(saturday(), buildFuzzFestSavedEvent({
+    isAllDay: false, allDayStartDay: undefined, allDayEndDay: undefined, startDate: new Date('2026-12-10T21:00:00.000Z'), endDate: new Date('2026-12-13T17:00:00.000Z')
+  })), null);
+
+  // Hard facts still veto, and the log says so: one vendor names its events
+  // by path, so two paths on one vendor are two events. (One hotel name over
+  // two street numbers is NOT such a fact — one venue's two doors, as before.)
+  const otherTicket = saturday({ ticketUrl: 'https://www.sickening.events/e/fuzz-after-dark/tickets', _sourcePageUrl: 'https://sickening.events/e/fuzz-after-dark' });
+  const vetoed = captureConsole(() => core.getSpanContainmentSignal(otherTicket, saved));
+  assert.equal(vetoed.result, null);
+  assert.ok(vetoed.logs.some(line => line.includes('🛑 IDENTITY') && line.includes('(2026-12-12) lies inside the saved "Bear Fuzz Fest" (2026-12-10 to 2026-12-13)') && line.includes('two events, not folded')), vetoed.logs.join('\n'));
+  assert.equal(analyze(otherTicket).result.action, 'new');
+  const otherDoor = saturday({ address: '95 Presidential Circle, Gettysburg, PA', location: '' });
+  const savedWithStreet = buildFuzzFestSavedEvent({ notes: buildFuzzFestSavedEvent().notes.replace('address: Gettysburg, PA', 'address: 2634 Emmitsburg Road, Gettysburg, PA') });
+  assert.ok(core.getSpanContainmentSignal(otherDoor, savedWithStreet));
+});
+
+test('merge into a saved multi-day event: one night inside it never rewrites the saved days, and the log says so; a scraped span of several days is still a statement about the span', async () => {
+  const core = createCore();
+  const { scraped: wiring } = buildArbitrationPair();
+  const scraped = { ...buildFuzzFestTicketPageRecord(), _fieldPriorities: wiring._fieldPriorities, _parserConfig: wiring._parserConfig };
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let merged;
+  try { merged = await core.createFinalEventObject(buildFuzzFestSavedEvent(), scraped, { httpAdapter: buildArbitrationAdapter({}) }); } finally { console.log = original; }
+  assert.equal(new Date(merged.startDate).toISOString(), '2026-12-10T05:00:00.000Z', logs.join('\n'));
+  assert.equal(new Date(merged.endDate).toISOString(), '2026-12-14T04:59:59.000Z', 'the festival keeps its four days');
+  assert.equal(merged.allDay, true);
+  assert.ok(!(merged._changes || []).some(field => field === 'startDate' || field === 'endDate' || field === 'allDay'), `no date change is proposed: ${JSON.stringify(merged._changes)}`);
+  assert.ok(logs.some(line => line.includes('🗓️ ALL DAY: "Bear Fuzz Fest" — the saved event runs 2026-12-10 to 2026-12-13; this run read one night inside it (2026-12-10)') && line.includes('the saved days are kept')), logs.join('\n'));
+  assert.equal(merged.address, '2634 Emmitsburg Road, Gettysburg, PA 17325', 'every other field still merges: the street line the saved event lacked is filled');
+
+  // The sides, directly. A date with no time and no end (the festival's home page read "December 10") is one day inside the span.
+  const saved = buildFuzzFestSavedEvent();
+  const calendarSide = () => ({ title: saved.title, startDate: saved.startDate, endDate: saved.endDate });
+  const oneDay = { title: 'Bear Fuzz Fest', timezone: 'America/New_York', ...core.buildAllDaySpan('2026-12-11', '2026-12-11', 'America/New_York'), timeUnknown: true };
+  const quiet = captureConsole(() => core.alignAllDayMergeSides(oneDay, calendarSide(), saved));
+  assert.deepEqual(core.getAllDayDays(oneDay), { startDay: '2026-12-10', endDay: '2026-12-13' });
+  assert.equal(oneDay.allDay, true);
+  assert.equal('timeUnknown' in oneDay, false);
+  assert.ok(quiet.logs.some(line => line.includes('this run read one day inside it (2026-12-11)')), quiet.logs.join('\n'));
+
+  // Several days inside the span (the dates moved: now Friday to Saturday) is a statement about the whole span — left to the ordinary rules.
+  const shorter = { title: 'Bear Fuzz Fest', timezone: 'America/New_York', ...core.buildAllDaySpan('2026-12-11', '2026-12-12', 'America/New_York'), allDay: true };
+  captureConsole(() => core.alignAllDayMergeSides(shorter, calendarSide(), saved));
+  assert.deepEqual(core.getAllDayDays(shorter), { startDay: '2026-12-11', endDay: '2026-12-12' });
+  // A night outside the saved days is a date conflict, as before.
+  const after = { title: 'Bear Fuzz Fest', timezone: 'America/New_York', startDate: new Date('2026-12-15T23:00:00.000Z'), endDate: null };
+  captureConsole(() => core.alignAllDayMergeSides(after, calendarSide(), saved));
+  assert.equal(after.startDate.toISOString(), '2026-12-15T23:00:00.000Z');
+  // A saved ONE-day all-day record still takes a time found for that day (rule 3 is untouched).
+  const oneDaySaved = { isAllDay: true, allDayStartDay: '2026-12-10', allDayEndDay: '2026-12-10', startDate: new Date('2026-12-10T05:00:00.000Z'), endDate: new Date('2026-12-11T04:59:59.000Z') };
+  const oneDayCalendar = { title: 'Bear Fuzz Fest', startDate: oneDaySaved.startDate, endDate: oneDaySaved.endDate };
+  const timed = { title: 'Bear Fuzz Fest', timezone: 'America/New_York', startDate: new Date('2026-12-10T21:00:00.000Z'), endDate: null };
+  captureConsole(() => core.alignAllDayMergeSides(timed, oneDayCalendar, oneDaySaved));
+  assert.equal(oneDayCalendar.startDate.toISOString(), '2026-12-10T21:00:00.000Z');
+});
