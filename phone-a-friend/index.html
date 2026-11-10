@@ -182,6 +182,7 @@ body { overscroll-behavior-y:none; }
 .sheet.gone .sheet-modes .mode-notbear, .sheet.gone .sheet-modes .mode-never, .sheet.gone .sheet-fix-note { display:none; }
 .curated { color:var(--ok); font-weight:700; }
 .bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
+.bear-notice { margin-top:5px; padding-top:5px; border-top:1px dashed var(--line); }
 .missing-cal { margin:8px 16px 0; padding:8px 12px; border:1px solid var(--no); border-radius:10px; font-size:13px; background:var(--card); }
 .series { margin:0 0 8px; padding:6px 10px; border:1px solid var(--line); border-radius:10px; font-size:13px; background:var(--bg); }
 .series .nights { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
@@ -242,7 +243,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 /* One round button and a caption per answer, every column the same width:
    nothing can run out of its button at any phone width. */
 .controls button { display:flex; flex-direction:column; align-items:center; gap:5px; min-width:0; padding:0; border:none; background:none; color:var(--muted); font:600 11px/1.2 Poppins, -apple-system, system-ui, sans-serif; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-.controls .ic { width:54px; height:54px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:var(--ink); background:var(--card); border:1px solid var(--line); box-shadow:0 4px 14px rgba(0,0,0,.18); transition:transform .12s ease; }
+.controls .ic { width:min(54px, 100%); aspect-ratio:1 / 1; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:700; color:var(--ink); background:var(--card); border:1px solid var(--line); box-shadow:0 4px 14px rgba(0,0,0,.18); transition:transform .12s ease; }
 .controls .lb { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .controls button:active .ic { transform:scale(.92); }
 .controls .btn-no .ic { background:var(--no); border-color:transparent; color:#fff; }
@@ -324,7 +325,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 @media (prefers-reduced-motion: reduce) { .card { transition:none; } }
 /* Friend mode (renderFriendPage): the same deck, nothing that needs the Mac. */
 .friend-mode #run-select, .friend-mode #results-link, .friend-mode .subbar, .friend-mode .tools, .friend-mode .missing-cal,
-.friend-mode #btn-ask, .friend-mode #sheet-ask-mode, .friend-mode .sheet-friend, .friend-mode .execute, .friend-mode .snapshot, .friend-mode #waiting-wrap, .friend-mode #friends-wrap, .friend-mode #decided-wrap, .friend-mode .meta .keys { display:none !important; }
+.friend-mode #btn-ask, .friend-mode #btn-maybe, .friend-mode #sheet-ask-mode, .friend-mode .sheet-friend, .friend-mode .execute, .friend-mode .snapshot, .friend-mode #waiting-wrap, .friend-mode #friends-wrap, .friend-mode #decided-wrap, .friend-mode .meta .keys { display:none !important; }
 #friend-sms { display:none; }
 .friend-mode #friend-sms { display:inline-flex; }
 </style></head>
@@ -352,10 +353,11 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
   <button class="btn-no" id="btn-reject" type="button"><span class="ic">✕</span><span class="lb">Not yet</span></button>
   <button class="btn-notbear" id="btn-notbear" type="button" title="Not a bear event — one tap, final, covers every night of the party (key: n)"><span class="ic">🚫</span><span class="lb">Not bear</span></button>
   <button class="btn-ask" id="btn-ask" type="button" title="Not sure? Put it on a friend's list — they answer from a link (key: f)"><span class="ic">🙋</span><span class="lb">Ask</span></button>
+  <button class="btn-maybe" id="btn-maybe" type="button" title="Not sure yet? Park the party — every night of it stays off the calendar and waits on the Maybes tab (key: m)"><span class="ic">🤔</span><span class="lb">Maybe</span></button>
   <button class="btn-skip" id="btn-skip" type="button"><span class="ic">↷</span><span class="lb">Skip</span></button>
   <button class="btn-ok" id="btn-approve" type="button"><span class="ic">✓</span><span class="lb">Approve</span></button>
 </div>
-<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button><span class="keys"> · ← not yet · ↖ not bear · ↙ needs a fix · ↓ pull down: ask a friend · → approve · ␣ skip · n not bear · f ask a friend</span></div>
+<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button><span class="keys"> · ← not yet · ↖ not bear · ↙ needs a fix · ↓ pull down: ask a friend · → approve · ␣ skip · n not bear · m maybe · f ask a friend</span></div>
 <div class="outbox" id="outbox" hidden></div>
 <div class="execute" id="execute"></div>
 <div class="snapshot"><a href="scriptable:///run?scriptName=display-saved-run&amp;snapshot=1">🔄 Refresh the phone's calendar snapshot</a><small>Opens Scriptable: reads the phone's calendars and rewrites the snapshot the Mac analyses against — no scrape, no calendar write.</small></div>
@@ -464,12 +466,22 @@ window.__startDeck = function () {
   var outbox = !friendMode && window.ReviewOutbox ? window.ReviewOutbox.create({ send: function (p, b) { return sendTo(p, b); }, onRefused: function (entry, error) { toast('The Mac refused a waiting swipe: ' + error.message); } }) : null;
   var waitingKeys = outbox ? outbox.keys() : {};
   var offlineInfo = null; // { cachedAt } when the page or its data came from the worker's saved copy, {} when the browser says offline
-  var queue = deck.cards.filter(function (c) { return !awaitingFriend(c) && !waitingKeys[c.key]; });
+  // A maybe that waits to be sent parks its card, it does not decide it
+  // (the last waiting word on a key is the one that counts).
+  var parkedWaiting = {};
+  if (outbox) outbox.entries().forEach(function (entry) {
+    var body = entry.body || {};
+    if (body.key) parkedWaiting[body.key] = entry.path === '/review/bear' && body.verdict === 'maybe';
+  });
+  var queue = deck.cards.filter(function (c) {
+    if (parkedWaiting[c.key]) c.parked = true;
+    return !awaitingFriend(c) && (!waitingKeys[c.key] || parkedWaiting[c.key]);
+  });
   var decided = deck.decided.slice();
   if (outbox) {
     outbox.entries().forEach(function (entry) {
       var body = entry.body || {};
-      if (!body.key || body.verdict === 'clear') return;
+      if (!body.key || body.verdict === 'clear' || parkedWaiting[body.key]) return;
       var card = deck.cards.filter(function (c) { return c.key === body.key; })[0];
       var isBearPost = entry.path === '/review/bear';
       if (decided.some(function (d) { return d.key === body.key; })) return;
@@ -526,8 +538,23 @@ window.__startDeck = function () {
     }
     return true;
   }
+  // PARKED ("maybe", owner 2026-11-10): the party is a maybe in the
+  // verdict store. Its cards stay on the page with every control, on the
+  // Maybes tab only — a later answer is an ordinary swipe there.
+  // WORTH A LOOK is a view of the Not-bear pile: the cards with something
+  // speaking for them (card.worth), flyers that show a big man first.
+  function canPark(c) { return !friendMode && Boolean(c) && !c.parked && (c.kind === 'dropped' || c.kind === 'new'); }
+  function flyerWorth(c) { return (c.worth || []).indexOf('flyer') !== -1; }
+  function inTab(c) {
+    if (filter === 'maybe') return c.parked === true;
+    if (c.parked) return false;
+    if (filter === 'worth') return c.kind === 'dropped' && (c.worth || []).length > 0;
+    return filter === 'all' ? c.kind !== 'dropped' : tabOf(c.kind) === filter;
+  }
   function visible() {
-    return queue.filter(function (c) { return (filter === 'all' ? c.kind !== 'dropped' : tabOf(c.kind) === filter) && matchesWords(c); });
+    var list = queue.filter(function (c) { return inTab(c) && matchesWords(c); });
+    if (filter === 'worth') list = list.filter(flyerWorth).concat(list.filter(function (c) { return !flyerWorth(c); }));
+    return list;
   }
   // The stack shows ITEMS: a card, or every pending night of one party
   // (card.series) folded into one — one swipe decides them all, each under
@@ -670,8 +697,15 @@ window.__startDeck = function () {
     if (join && series) join.onclick = function () { delete solo[series.key]; toast('Folded back — one swipe decides them all'); render(); };
   }
   function counts() {
-    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, gone: 0, dropped: 0, 'verdict-conflict': 0 };
-    queue.forEach(function (c) { if (!matchesCity(c)) return; out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1; if (c.kind !== 'dropped') out.all++; });
+    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, gone: 0, dropped: 0, 'verdict-conflict': 0, maybe: 0, worth: 0 };
+    queue.forEach(function (c) {
+      if (!matchesCity(c)) return;
+      // A parked card is in the Maybes count and no other.
+      if (c.parked) { out.maybe++; return; }
+      out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1;
+      if (c.kind !== 'dropped') out.all++;
+      else if ((c.worth || []).length > 0) out.worth++;
+    });
     return out;
   }
   // ---- the city select: every city on the queue with its pending count,
@@ -683,7 +717,7 @@ window.__startDeck = function () {
     var select = document.getElementById('city');
     if (!select) return;
     var tally = {};
-    queue.forEach(function (c) { if (c.kind === 'dropped') return; var key = cityOf(c); tally[key] = (tally[key] || 0) + 1; });
+    queue.forEach(function (c) { if (c.kind === 'dropped' || c.parked) return; var key = cityOf(c); tally[key] = (tally[key] || 0) + 1; });
     var names = deck.cityNames || {};
     var keys = Object.keys(tally).sort(function (a, b) { return tally[b] - tally[a] || String(names[a] || a).localeCompare(String(names[b] || b)); });
     var total = keys.reduce(function (sum, key) { return sum + tally[key]; }, 0);
@@ -707,6 +741,9 @@ window.__startDeck = function () {
     var html = '';
     // The conflicts tab shows only while there is one — most runs have none.
     var tabs = [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['gone', 'Gone'], ['dropped', 'Not bear']];
+    // Shown only while they hold something, like the conflicts tab.
+    if (c.worth > 0 || filter === 'worth') tabs.push(['worth', '👀 Worth a look']);
+    if (c.maybe > 0 || filter === 'maybe') tabs.push(['maybe', '🤔 Maybes']);
     if (c['verdict-conflict'] > 0 || filter === 'verdict-conflict') tabs.push(['verdict-conflict', 'Both ways']);
     tabs.forEach(function (pair) {
       html += '<span class="pill' + (filter === pair[0] ? ' on' : '') + '" data-f="' + pair[0] + '">' + pair[1] + ' <b>' + (c[pair[0]] || 0) + '</b></span>';
@@ -777,6 +814,14 @@ window.__startDeck = function () {
     document.getElementById('left').textContent = list.length + ' left' + (nights !== list.length ? ' (' + nights + ' nights)' : '');
     var disabled = list.length === 0;
     ['btn-reject', 'btn-skip', 'btn-approve', 'btn-ask'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
+    // Maybe parks a new or a not-bear card; on a parked card the same
+    // button takes the maybe back.
+    var topCard = list.length > 0 ? list[0].cards[0] : null;
+    var maybeBtn = document.getElementById('btn-maybe');
+    var parkedTop = Boolean(topCard) && topCard.parked === true;
+    maybeBtn.disabled = !parkedTop && !canPark(topCard);
+    maybeBtn.querySelector('.ic').textContent = parkedTop ? '↩︎' : '🤔';
+    maybeBtn.querySelector('.lb').textContent = parkedTop ? 'Un-park' : 'Maybe';
     document.getElementById('btn-undo').disabled = history.length === 0;
   }
   function renderExecute() {
@@ -1277,6 +1322,12 @@ window.__startDeck = function () {
     // "Keep it, not bear, but…": a tagged verdict with its tags, then the
     // approval — under the dropped card's fix target when it has one.
     var taggedKeep = verdict === 'approve' && reason && reason.mode === 'tagged' && (reason.eventTags || []).length > 0;
+    // An answer on a PARKED kept card ends the maybe: a verdict (not bear,
+    // tagged) replaces it in the store by itself; an approval or a note is
+    // only a deck decision, so the maybe is cleared with it — or the next
+    // run would still hold the party out. A parked not-bear card's swipe is
+    // a verdict already.
+    var clearsMaybe = card.parked === true && card.kind !== 'dropped' && !isConflict(card) && !alsoNotBear && !taggedKeep;
     var request = taggedKeep
       ? postBear(card, 'tagged', null, reason.eventTags).then(keepBear).then(function () {
           if (isConflict(card)) return null;
@@ -1296,7 +1347,9 @@ window.__startDeck = function () {
       : post(withTwinMirror(card, verdict, reason, { key: card.key, kind: card.kind, verdict: verdict, runId: deck.runId, snapshot: card.proposal, reason: reason || null })).then(keepDecision)
           .then(function (result) { return alsoNotBear ? postBear(card, 'not_bear').then(keepBear).then(function () { return result; }) : result; });
     return request.then(function (result) {
-      var record = { queued: !!(result && result.queued), replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: (droppedNote || droppedApprove) ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve' && !isConflict(card), html: card.html, series: card.series || null };
+      return clearsMaybe ? postBear(card, 'clear').then(function () { return result; }) : result;
+    }).then(function (result) {
+      var record = { parked: card.parked === true, worth: card.worth || [], clearedMaybe: clearsMaybe, queued: !!(result && result.queued), replaced: replaced, id: card.id, kind: card.kind, key: card.key, verdict: verdict, stampedAt: new Date().toISOString(), reason: reason || null, rejectionMode: verdict === 'reject' && reason ? ((reason.tags || []).indexOf('not bear') !== -1 ? 'not-bear' : (reason.mode || '')) : '', title: card.kind === 'bar' ? card.proposal.name : card.proposal.title, proposal: card.proposal, bearIdentity: card.bearIdentity, fixTarget: card.fixTarget || null, noteKey: (droppedNote || droppedApprove) ? card.fixTarget.key : '', notBearVerdict: alsoNotBear, pendingExecute: verdict === 'approve' && !isConflict(card), html: card.html, series: card.series || null };
       decided.push(record);
       return record;
     });
@@ -1355,10 +1408,69 @@ window.__startDeck = function () {
   }
   function requeue(record) {
     decided = decided.filter(function (d) { return d.key !== record.key; });
-    queue.unshift({ id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, fixTarget: record.fixTarget || null, html: record.html, series: record.series || null });
+    queue.unshift({ id: record.id, kind: record.kind, key: record.key, proposal: record.proposal, bearIdentity: record.bearIdentity, fixTarget: record.fixTarget || null, html: record.html, series: record.series || null, parked: record.parked === true, worth: record.worth || [] });
     history.forEach(function (h) { h.records = h.records.filter(function (r) { return r.key !== record.key; }); });
-    history = history.filter(function (h) { return h.records.length > 0; });
+    history = history.filter(function (h) { return h.records.length > 0 || h.parked; });
   }
+  // MAYBE: park the top item — one maybe per night's card (the store keys
+  // it by party and place, so the nights of one party are one entry). No
+  // decision is recorded: nothing for the phone to write, nothing in the
+  // rejections. The cards move to the Maybes tab.
+  function parkItem(item) {
+    var cards = item.cards.filter(canPark);
+    if (cards.length === 0) { toast('Maybe is for a new card or a not-bear card'); return; }
+    var el = stage.querySelector('.card[data-key="' + CSS.escape(item.key) + '"]');
+    flyOut(el, 'gone-down');
+    var entry = { item: item, records: [], parked: cards, replaced: null };
+    cards.forEach(function (c) { c.parked = true; });
+    history.push(entry);
+    render();
+    var queued = false;
+    var chain = Promise.resolve();
+    cards.forEach(function (c) {
+      chain = chain.then(function () {
+        return postBear(c, 'maybe').then(function (result) {
+          queued = queued || !!(result && result.queued);
+          // The firm verdict a maybe took the place of comes back on undo.
+          var was = result && result.replacedAll && result.replacedAll.length > 1 ? result.replacedAll : (result && result.replaced ? result.replaced : null);
+          var firm = was && (was.length ? was.some(function (w) { return w.verdict !== 'maybe'; }) : was.verdict !== 'maybe');
+          if (!entry.replaced && firm) entry.replaced = was;
+        });
+      });
+    });
+    chain.then(function () {
+      toast(queued ? 'Kept on the phone — it sends when the Mac is back' : 'Parked as a maybe — every night of this party stays off the calendar until you answer');
+    }).catch(function (error) {
+      cards.forEach(function (c) { c.parked = false; });
+      history = history.filter(function (h) { return h !== entry; });
+      toast('Not saved: ' + error.message);
+      render();
+    });
+  }
+  // Taking a maybe back: the store entry goes (or the firm verdict it
+  // replaced returns) and the cards are ordinary cards again.
+  function unparkCards(cards, restore, entry) {
+    var chain = Promise.resolve();
+    cards.forEach(function (c, i) {
+      chain = chain.then(function () {
+        if (outbox && parkedWaiting[c.key] && outbox.keys()[c.key]) { outbox.drop(c.key); delete parkedWaiting[c.key]; return null; }
+        return postBear(c, 'clear', i === 0 ? restore : null);
+      });
+    });
+    return chain.then(function () {
+      cards.forEach(function (c) { c.parked = false; });
+      if (entry) history = history.filter(function (h) { return h !== entry; });
+      toast('No longer a maybe — back on the stack');
+      render();
+    }).catch(function (error) { toast('Undo failed: ' + error.message); });
+  }
+  function maybeTop() {
+    if (friendMode) return;
+    var item = topItem(); if (!item) return;
+    if (item.cards[0].parked) { unparkCards(item.cards.filter(function (c) { return c.parked; }), null, null); return; }
+    parkItem(item);
+  }
+  document.getElementById('btn-maybe').onclick = maybeTop;
   function undoDecision(record) {
     // Never sent: nothing to clear on the Mac — the waiting entry goes and the card comes back.
     if (record.queued && outbox && outbox.keys()[record.key]) {
@@ -1376,6 +1488,9 @@ window.__startDeck = function () {
       : post({ key: record.key, verdict: 'clear', restore: was.decision || undefined })
           .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear', was.bear).then(function () { return result; }) : result; });
     return request.then(function (result) {
+      // The decision had ended a maybe: the party is parked again.
+      return record.clearedMaybe ? postBear(record, 'maybe').then(function () { return result; }) : result;
+    }).then(function (result) {
       requeue(record);
       toast(result && result.restored ? 'Undone — your earlier decision is back' : 'Undone');
       render();
@@ -1384,6 +1499,7 @@ window.__startDeck = function () {
   function undoLast() {
     var last = history[history.length - 1];
     if (!last) return;
+    if (last.parked) { unparkCards(last.parked, last.replaced, last); return; }
     var chain = Promise.resolve();
     last.records.slice().forEach(function (record) { chain = chain.then(function () { return undoDecision(record); }); });
   }
@@ -1800,6 +1916,7 @@ window.__startDeck = function () {
     else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); skipTop(); }
     else if (e.key === 'n' || e.key === 'N') { e.preventDefault(); notBearTop(); }
     else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); askTop(); }
+    else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); maybeTop(); }
     else if (e.key === 'z' || e.key === 'Z') { undoLast(); }
   });
 
