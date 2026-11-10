@@ -9286,6 +9286,10 @@ class SharedCore {
         // in merge arbitration — see canonicalizeIdentityLinks.
         this.placeVirtualEventsAtSourceHome(deduplicatedEvents, effectiveParserConfig);
         this.canonicalizeIdentityLinks(deduplicatedEvents);
+        // Nights of one party share its text before anything judges them
+        // (see borrowPartyDescriptions): after dedup, so each night is one
+        // record with everything its own pages said.
+        this.borrowPartyDescriptions(deduplicatedEvents);
         const bearEvents = await this.filterBearEvents(deduplicatedEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
 
         await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${bearEvents.length} final`);
@@ -14307,6 +14311,142 @@ class SharedCore {
             
             return true;
         });
+    }
+
+    // ------------------------------------------------------------------
+    // A NIGHT BORROWS ITS PARTY'S DESCRIPTION. A calendar grid or feed prints
+    // a cut-off excerpt of each night's text, and only the nights whose own
+    // page was read carry the whole of it: thedallaseagle.com, run
+    // 20261109-053706 — "Underwear Night and Contest" on 11-11 (its page
+    // read) had 502 characters, the 11-18 and 12-02 nights kept the month
+    // grid's 320 ending "…for cash prizes and a cha , ...", and the bear
+    // check and the tagger judged those nights on the stump. Within one
+    // source's records of a run, nights of ONE party (same title, same
+    // venue, same source) share a text:
+    //   - a text that is the cut-off OPENING of another night's fuller text
+    //     (it ends in an ellipsis mark, or stops inside a word of the fuller
+    //     one) takes the fuller text. A night whose excerpt differs — it
+    //     names its own theme — is not a prefix and keeps its own words;
+    //   - a night with NO text takes the party's text only when at least
+    //     two other nights carry it, every night that has a text says the
+    //     same thing, and that text names no calendar date (a text that
+    //     dates itself belongs to its night). One night's words may be that
+    //     night's alone — tockify rows of a weekly Friday, same run: only
+    //     11-14 said "DJs … spin at …" and twelve blank Fridays would have
+    //     been given its DJs — so a single text is not lent, and nights
+    //     that disagree leave the blank blank: nothing is picked for it.
+    // No page is fetched for this; every borrow and every refusal is logged.
+    // ------------------------------------------------------------------
+
+    // A description as compared (see normalizeDescriptionForContainment)
+    // without the mark of a cut: " , ...", "...", "…", "[...]" — and without
+    // the half entity a cut can leave behind ("Happy Hour! 5 &#8211 , ...").
+    // Only the DETACHED comma of the grid's mark goes with it: a comma
+    // written against a word ("…your finest leather, …") is the text's own,
+    // or the stump would read one character short of its uncut twin and
+    // "open" a text that says nothing more.
+    readDescriptionStem(value) {
+        const text = this.normalizeDescriptionForContainment(value);
+        const cut = text.match(/^([\s\S]*?)(?:\s+,)?\s*(?:\[\s*\.{3,}\s*\]|\.{3,})\s*$/);
+        let stem = cut ? cut[1] : text;
+        if (cut) stem = stem.replace(/&#?[a-z0-9]{0,8}$/, '');
+        return { stem: stem.trim(), marked: !!cut };
+    }
+
+    // TRUE when `shorter` is the cut-off opening of `fuller`.
+    isCutOffOpeningOf(shorter, fuller) {
+        const part = this.readDescriptionStem(shorter);
+        const whole = this.readDescriptionStem(fuller);
+        // Twenty characters: an opening shorter than that is a greeting, not a text.
+        if (part.stem.length < 20 || whole.stem.length <= part.stem.length || !whole.stem.startsWith(part.stem)) return false;
+        if (part.marked) return true;
+        const isWordChar = (char) => /[a-z0-9]/.test(char || '');
+        return isWordChar(part.stem[part.stem.length - 1]) && isWordChar(whole.stem[part.stem.length]);
+    }
+
+    // A month with a day number, or a numeric date: the text speaks of one night.
+    descriptionNamesCalendarDate(value) {
+        const text = this.normalizeDescriptionForContainment(value);
+        const month = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+        return new RegExp(`\\b${month}\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?\\b|\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${month}\\b|\\b\\d{1,2}[/.]\\d{1,2}(?:[/.]\\d{2,4})?\\b`).test(text);
+    }
+
+    // `events` are ONE source's records of the run (the caller's parser):
+    // that is the "same source". A record's own `source` field names the
+    // route that read it (the grid row "mec", the page-read night "ai-web"),
+    // which is exactly the pair this rule joins.
+    borrowPartyDescriptions(events) {
+        const list = Array.isArray(events) ? events.filter(event => event && typeof event === 'object') : [];
+        const parties = new Map();
+        for (const event of list) {
+            const title = this.normalizeIdentityText(event.title);
+            const venue = this.normalizeBarNameKey(event.bar)
+                || String(typeof event.location === 'string' ? event.location : '').replace(/\s+/g, '')
+                || this.normalizeIdentityText(event.address);
+            if (!title || !venue) continue;
+            const key = `${title}|${venue}`;
+            if (!parties.has(key)) parties.set(key, []);
+            parties.get(key).push(event);
+        }
+        const textOf = (event) => (typeof event.description === 'string' ? event.description.trim() : '');
+        const nightOf = (event) => this.getEventLocalDayKey(event) || 'an undated night';
+        let borrowed = 0;
+        for (const nights of parties.values()) {
+            if (nights.length < 2) continue;
+            // 1. A cut-off opening takes the fullest text it opens. Decided
+            // on the texts as they were read, then applied.
+            const fuller = new Map();
+            for (const night of nights) {
+                const own = textOf(night);
+                if (!own) continue;
+                let donor = null;
+                for (const other of nights) {
+                    if (other === night || !this.isCutOffOpeningOf(own, textOf(other))) continue;
+                    if (!donor || textOf(other).length > textOf(donor).length) donor = other;
+                }
+                if (donor) fuller.set(night, donor);
+            }
+            for (const [night, donor] of fuller) {
+                const own = textOf(night);
+                const text = textOf(donor);
+                console.log(`📝 DESCRIPTION: "${night.title || 'Unknown'}" ${nightOf(night)} — its text (${own.length} chars, ending "${own.slice(-24)}") is the cut-off opening of the ${nightOf(donor)} night's (same party, same venue, same source); the fuller text (${text.length} chars) is used`);
+                night.description = text;
+                borrowed++;
+            }
+            // 2. A night with no text.
+            const blanks = nights.filter(night => !textOf(night));
+            if (blanks.length === 0 || blanks.length === nights.length) continue;
+            const said = new Map();
+            for (const night of nights) {
+                const text = textOf(night);
+                if (!text) continue;
+                const key = this.normalizeDescriptionForContainment(text);
+                if (!said.has(key)) said.set(key, []);
+                said.get(key).push(night);
+            }
+            const title = blanks[0].title || 'Unknown';
+            const blankNights = blanks.map(nightOf).join(', ');
+            if (said.size > 1) {
+                console.log(`📝 DESCRIPTION: "${title}" has no text on ${blankNights}, and its other nights say ${said.size} different things — none is picked for it; left blank`);
+                continue;
+            }
+            const agreeing = Array.from(said.values())[0];
+            const donor = agreeing[0];
+            if (agreeing.length < 2) {
+                console.log(`📝 DESCRIPTION: "${title}" has no text on ${blankNights}; only the ${nightOf(donor)} night has one, and one night's words may be that night's alone — not borrowed; left blank`);
+                continue;
+            }
+            if (this.descriptionNamesCalendarDate(textOf(donor))) {
+                console.log(`📝 DESCRIPTION: "${title}" has no text on ${blankNights}; the ${nightOf(donor)} night's text names a calendar date, so it is that night's — not borrowed; left blank`);
+                continue;
+            }
+            for (const night of blanks) {
+                console.log(`📝 DESCRIPTION: "${night.title || 'Unknown'}" ${nightOf(night)} has no text of its own — borrowed the ${nightOf(donor)} night's (${textOf(donor).length} chars; same party, same venue, same source, and all ${agreeing.length} nights that have a text say the same)`);
+                night.description = textOf(donor);
+                borrowed++;
+            }
+        }
+        return borrowed;
     }
 
     // Bear-check cascade: keyword match → AI verdict with promoter context →

@@ -30381,3 +30381,165 @@ test('feed fidelity: a page that links its own http spelling is read once', asyn
   );
   assert.equal(second.fetched.filter(url => /^https?:\/\/www\.venue\.example\/$/.test(url)).length, 1, JSON.stringify(second.fetched));
 });
+
+// ---------------------------------------------------------------------------
+// Feed fidelity: nights of one party share its description (borrowPartyDescriptions).
+// Fixtures are the records of run 20261109-053706, trimmed: thedallaseagle.com's
+// "Underwear Night and Contest" (one night read from its page, the others kept
+// the month grid's cut-off excerpt) and the shapes seen beside it that must be
+// left alone.
+// ---------------------------------------------------------------------------
+const PARTY_TEXT_FULL = 'Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅 Where else can you strip down to your undies and indulge in premium cocktails and ice cold draft beer? FREE Lockers are available, so drop your pants and join in on some humpday fun! Compete in our weekly Underwear Contest at 11pm for cash prizes and a chance to enter our monthly contest! 🔥 Sponsored by Package Dallas! 🦅 Underwear and jocks recommended, legal clothing coverage required at all times. Free lockers! 🍻 Get here early…';
+const PARTY_TEXT_GRID = 'Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅 Where else can you strip down to your undies and indulge in premium cocktails and ice cold draft beer? FREE Lockers are available, so drop your pants and join in on some humpday fun! Compete in our weekly Underwear Contest at 11pm for cash prizes and a cha , ...';
+const PARTY_TEXT_THEMED = 'Every Wednesday night is UNDERWEAR NIGHT at the Dallas Eagle! 🦅 🧣 Theme – Flannel Where else can you strip down to your undies and indulge in premium cocktails and ice cold draft beer? FREE Lockers are available, so drop your pants and join in on some humpday fun! Compete in our weekly Underwear Contest at 11pm f , ...';
+function partyNight(startDate, description, extra = {}) {
+  return Object.assign({
+    title: 'Underwear Night and Contest',
+    startDate,
+    bar: 'Dallas Eagle',
+    location: '32.7693483, -96.8112576',
+    address: '525 S Riverfront Blvd, Dallas, TX 75207',
+    timezone: 'America/Chicago',
+    source: 'mec',
+    description
+  }, extra);
+}
+function capturePartyLogs(fn) {
+  const quiet = console.log; const lines = [];
+  console.log = (line) => lines.push(String(line));
+  try { return { result: fn(), lines: lines.filter(line => line.includes('📝 DESCRIPTION')) }; } finally { console.log = quiet; }
+}
+
+test('feed fidelity: a grid excerpt cut off mid-word takes the fuller text of the same party\'s night whose page was read; a themed night keeps its own words', () => {
+  const core = createCore();
+  const events = [
+    partyNight('2026-11-12T03:00:00.000Z', PARTY_TEXT_FULL, { source: 'ai-web' }),
+    partyNight('2026-11-19T03:00:00.000Z', PARTY_TEXT_GRID),
+    partyNight('2026-11-26T03:00:00.000Z', PARTY_TEXT_THEMED),
+    partyNight('2026-12-03T03:00:00.000Z', PARTY_TEXT_GRID)
+  ];
+  const { result, lines } = capturePartyLogs(() => core.borrowPartyDescriptions(events));
+  assert.equal(result, 2);
+  assert.deepEqual(events.map(event => event.description), [PARTY_TEXT_FULL, PARTY_TEXT_FULL, PARTY_TEXT_THEMED, PARTY_TEXT_FULL]);
+  assert.equal(lines.length, 2, lines.join('\n'));
+  assert.match(lines[0], /"Underwear Night and Contest" 2026-11-18 — its text \(327 chars, ending "h prizes and a cha , \.\.\."\) is the cut-off opening of the 2026-11-11 night's .*the fuller text \(502 chars\) is used/);
+  assert.match(lines[1], /2026-12-02/);
+});
+
+test('feed fidelity: only a cut-off OPENING borrows — a whole shorter text, a same-length stump and another party or venue are left alone', () => {
+  const core = createCore();
+  // A whole sentence that the longer text happens to start with is not a cut: no mark, and it does not stop inside a word.
+  const whole = [
+    partyNight('2026-11-12T03:00:00.000Z', 'Strip down to your undies and join the fun.'),
+    partyNight('2026-11-19T03:00:00.000Z', 'Strip down to your undies and join the fun. Tonight only: a guest DJ from Austin.')
+  ];
+  assert.equal(capturePartyLogs(() => core.borrowPartyDescriptions(whole)).result, 0);
+  assert.equal(whole[0].description, 'Strip down to your undies and join the fun.');
+  // eagleportland.com "L.U.R.E", same run: one night ends "…finest leather, …", the others "…finest leather," —
+  // the same stump twice; the comma is the text's own, and neither is the fuller one.
+  const stumps = [
+    partyNight('2026-11-29T03:00:00.000Z', 'Leather. Uniform. Rubber. Everything Else.\nIf it\'s got a fetish and a fit, it belongs at L.U.R.E. Come dressed in your finest leather, …', { title: 'L.U.R.E' }),
+    partyNight('2026-12-27T03:00:00.000Z', 'Leather. Uniform. Rubber. Everything Else.\nIf it\'s got a fetish and a fit, it belongs at L.U.R.E. Come dressed in your finest leather,', { title: 'L.U.R.E' })
+  ];
+  const stumpRun = capturePartyLogs(() => core.borrowPartyDescriptions(stumps));
+  assert.equal(stumpRun.result, 0, stumpRun.lines.join('\n'));
+  assert.match(stumps[0].description, /leather, …$/);
+  // Same words, another party's title — and the same title at another venue: neither is "the same party".
+  const strangers = [
+    partyNight('2026-11-12T03:00:00.000Z', PARTY_TEXT_FULL, { source: 'ai-web' }),
+    partyNight('2026-11-19T03:00:00.000Z', PARTY_TEXT_GRID, { title: 'Jockstrap Night' }),
+    partyNight('2026-11-26T03:00:00.000Z', PARTY_TEXT_GRID, { bar: 'Another Bar', location: '32.81, -96.80', address: '1 Other St, Dallas, TX' }),
+    partyNight('2026-12-03T03:00:00.000Z', '', { bar: '', location: '', address: '' })
+  ];
+  assert.equal(capturePartyLogs(() => core.borrowPartyDescriptions(strangers)).result, 0);
+  assert.equal(strangers[1].description, PARTY_TEXT_GRID);
+  assert.equal(strangers[2].description, PARTY_TEXT_GRID);
+  assert.equal(strangers[3].description, '', 'a night with no venue at all joins no party');
+  // The stem a cut leaves: the mark, the grid's detached comma and a half entity go; an attached comma stays.
+  assert.deepEqual(core.readDescriptionStem('Happy Hour! 5 &#8211 , ...'), { stem: 'happy hour! 5', marked: true });
+  assert.deepEqual(core.readDescriptionStem('Come in leather, …'), { stem: 'come in leather,', marked: true });
+  assert.deepEqual(core.readDescriptionStem('Doors at nine.'), { stem: 'doors at nine.', marked: false });
+  assert.equal(core.isCutOffOpeningOf('Hi there...', 'Hi there and welcome to the bar'), false, 'a greeting is too short to name a text');
+});
+
+test('feed fidelity: a night with no text takes the party\'s text only when at least two other nights carry it and none says otherwise', () => {
+  const core = createCore();
+  // eagle-la "SUNDAY BEER BUST", same run: the nights that have a text all say the same thing.
+  const agreed = [
+    partyNight('2026-11-15T22:00:00.000Z', 'Sunday Beer Bust 2pm $5 domestic drafts', { title: 'SUNDAY BEER BUST' }),
+    partyNight('2026-11-22T22:00:00.000Z', 'Sunday Beer Bust 2pm $5 domestic drafts', { title: 'SUNDAY BEER BUST' }),
+    partyNight('2026-11-29T22:00:00.000Z', '', { title: 'SUNDAY BEER BUST' }),
+    partyNight('2026-12-06T22:00:00.000Z', undefined, { title: 'Sunday Beer Bust' })
+  ];
+  const agreedRun = capturePartyLogs(() => core.borrowPartyDescriptions(agreed));
+  assert.equal(agreedRun.result, 2);
+  assert.deepEqual(agreed.map(event => event.description), Array(4).fill('Sunday Beer Bust 2pm $5 domestic drafts'));
+  assert.match(agreedRun.lines[0], /"SUNDAY BEER BUST" 2026-11-29 has no text of its own — borrowed the 2026-11-15 night's \(39 chars; same party, same venue, same source, and all 2 nights that have a text say the same\)/);
+  // One night's words may be that night's alone (tockify "Friday at The Eagle NYC": only 11-13 named its DJs).
+  const single = [
+    partyNight('2026-11-14T03:00:00.000Z', 'DJs Alex Ramos & Mark Cicero spin at The Eagle NYC.', { title: 'Friday at The Eagle NYC' }),
+    partyNight('2026-11-21T03:00:00.000Z', '', { title: 'Friday at The Eagle NYC' }),
+    partyNight('2026-11-28T03:00:00.000Z', '', { title: 'Friday at The Eagle NYC' })
+  ];
+  const singleRun = capturePartyLogs(() => core.borrowPartyDescriptions(single));
+  assert.equal(singleRun.result, 0);
+  assert.deepEqual(single.map(event => event.description), ['DJs Alex Ramos & Mark Cicero spin at The Eagle NYC.', '', '']);
+  assert.equal(singleRun.lines.length, 1);
+  assert.match(singleRun.lines[0], /"Friday at The Eagle NYC" has no text on 2026-11-20, 2026-11-27; only the 2026-11-13 night has one, and one night's words may be that night's alone — not borrowed; left blank/);
+  // Nights that disagree (eagle-la "B BAR": two wordings): nothing is picked for the blank.
+  const split = [
+    partyNight('2026-11-13T04:00:00.000Z', 'Every Thursday 9pm no cover', { title: 'B BAR' }),
+    partyNight('2026-11-20T04:00:00.000Z', 'Every Thursday 9pm no cover', { title: 'B BAR' }),
+    partyNight('2026-11-27T04:00:00.000Z', 'B BAR Every Thursday with DJ Chris', { title: 'B BAR' }),
+    partyNight('2026-12-04T04:00:00.000Z', '', { title: 'B BAR' })
+  ];
+  const splitRun = capturePartyLogs(() => core.borrowPartyDescriptions(split));
+  assert.equal(splitRun.result, 0);
+  assert.equal(split[3].description, '');
+  assert.match(splitRun.lines[0], /"B BAR" has no text on 2026-12-03, and its other nights say 2 different things — none is picked for it; left blank/);
+  // A text that dates itself is its night's, however many rows repeat it.
+  const dated = [
+    partyNight('2026-11-14T03:00:00.000Z', 'Join us Friday, November 13th for the anniversary party.', { title: 'Anniversary' }),
+    partyNight('2026-11-15T03:00:00.000Z', 'Join us Friday, November 13th for the anniversary party.', { title: 'Anniversary' }),
+    partyNight('2026-11-21T03:00:00.000Z', '', { title: 'Anniversary' })
+  ];
+  const datedRun = capturePartyLogs(() => core.borrowPartyDescriptions(dated));
+  assert.equal(datedRun.result, 0);
+  assert.equal(dated[2].description, '');
+  assert.match(datedRun.lines[0], /names a calendar date, so it is that night's — not borrowed; left blank/);
+  assert.equal(core.descriptionNamesCalendarDate('Doors 9pm. $5 drafts every Sunday.'), false);
+  assert.equal(core.descriptionNamesCalendarDate('Back on 12/5 with a new DJ'), true);
+  assert.equal(core.descriptionNamesCalendarDate('See you on the 5th of December'), true);
+  // A party with no text on any night, and a lone night, say nothing: no borrow, no note.
+  const silent = [partyNight('2026-11-14T03:00:00.000Z', '', { title: 'Club Night' }), partyNight('2026-11-21T03:00:00.000Z', '', { title: 'Club Night' }), partyNight('2026-11-22T03:00:00.000Z', '', { title: 'Twisted Tuesday' })];
+  const silentRun = capturePartyLogs(() => core.borrowPartyDescriptions(silent));
+  assert.equal(silentRun.result, 0);
+  assert.equal(silentRun.lines.length, 0);
+  assert.equal(core.borrowPartyDescriptions(null), 0);
+});
+
+test('feed fidelity: in a run, the nights a parser returns leave with their party\'s whole text — the themed night with its own', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const day = (offset) => new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + offset, 3, 0, 0));
+  const night = (offset, description, source) => partyNight(day(offset), description, { source, url: `https://www.venue.example/events/underwear-night/?occurrence=${offset}` });
+  const pages = {
+    'https://www.venue.example/': {
+      events: [night(3, PARTY_TEXT_FULL, 'ai-web'), night(10, PARTY_TEXT_GRID, 'mec'), night(17, PARTY_TEXT_THEMED, 'mec'), night(24, PARTY_TEXT_GRID, 'mec')],
+      additionalLinks: []
+    }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const quiet = console.log; const lines = [];
+  console.log = (line) => lines.push(String(line));
+  let result;
+  try {
+    result = await core.processParser(
+      { name: 'Venue', urls: ['https://www.venue.example/'], alwaysBear: true, ai: CRAWL_AI },
+      {}, httpAdapter, display, parsers
+    );
+  } finally { console.log = quiet; }
+  const texts = result.events.slice().sort((a, b) => new Date(a.startDate) - new Date(b.startDate)).map(event => event.description);
+  assert.deepEqual(texts, [PARTY_TEXT_FULL, PARTY_TEXT_FULL, PARTY_TEXT_THEMED, PARTY_TEXT_FULL]);
+  assert.equal(lines.filter(line => line.includes('📝 DESCRIPTION') && line.includes('cut-off opening')).length, 2);
+});
