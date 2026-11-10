@@ -636,3 +636,99 @@ test('buildSourceLedger: a copy an aggregator listed under its own name, folded 
   const siteHealth = health.rows.find((row) => row.host === 'theboatslip.com');
   assert.ok(!(siteHealth.quality && siteHealth.quality.signals || []).some((s) => s.key === 'renamed'), 'the site is not blamed');
 });
+
+// ---------------------------------------------------------------------------
+// new_upcoming: how many of a host's NEW proposals are still to come.
+// Bears of San Francisco, 2026-11-09: the feed's own past list gave 30 rows,
+// every one already over, and the ledger line read upcoming 0 beside
+// proposals.new 30 — the "new" count alone made a site with nothing coming
+// look like the day's busiest. The old fields keep their meaning; the new
+// one sits beside them.
+// ---------------------------------------------------------------------------
+function finishedFeedPayload() {
+  // Record shapes from run 20261109-053706 (trimmed).
+  const row = (title, startDate, slug, extra = {}) => ({
+    title, startDate, bar: 'The Willows', city: 'sf', timezone: 'America/Los_Angeles',
+    website: `https://www.bosf.org/events/${slug}`, _sourcePageUrl: 'https://www.bosf.org/events', isBearEvent: true, ...extra
+  });
+  const brunch = row('BOSF Brunch', '2026-10-10T20:00:00.000Z', 'july-dinner-night-pte22');
+  const contest = row('Bay Area Cub Contest', '2026-09-06T23:00:00.000Z', 'bay-area-cub-contest-1');
+  const dinner = row('BOSF Dinner Night', '2026-11-21T03:00:00.000Z', 'november-dinner-night');
+  const tonight = row('Bear Coffee', '2026-11-09T18:00:00.000Z', 'bear-coffee');
+  return {
+    summary: { runId: '20261109-053706', timestamp: '2026-11-09T10:37:06.000Z' },
+    runContext: { type: 'automated', environment: 'node', trigger: 'scheduled' },
+    parserResults: [{
+      name: 'Bears of San Francisco', totalEvents: 4, durationMs: 800,
+      config: { urls: ['https://www.bosf.org/events'] },
+      urlClassifications: { 'https://www.bosf.org/events': 'multi-event-page' },
+      events: [brunch, contest, dinner, tonight]
+    }],
+    analyzedEvents: [
+      { ...brunch, _action: 'new' },
+      { ...contest, _action: 'new' },
+      { ...dinner, _action: 'new' },
+      { ...tonight, _action: 'new' },
+      // A finished night that only updates its saved record is no proposal to create.
+      { ...row('BOSF Brunch', '2026-11-07T20:00:00.000Z', 'november-brunch'), _action: 'merge' },
+      // A junk title has no ledger key: the host comes from its page, the day from its start.
+      { title: 'View Event →', startDate: '2026-10-01T20:00:00.000Z', timezone: 'America/Los_Angeles', website: 'https://www.bosf.org/events/old', _sourcePageUrl: 'https://www.bosf.org/events', _action: 'new' },
+      { title: 'View Event →', startDate: '2026-12-01T20:00:00.000Z', timezone: 'America/Los_Angeles', website: 'https://www.bosf.org/events/next', _sourcePageUrl: 'https://www.bosf.org/events', _action: 'new' }
+    ],
+    errors: []
+  };
+}
+
+test('new_upcoming: the ledger line says how many of the new proposals are still to come, and every older field keeps its count', () => {
+  const now = new Date('2026-11-09T10:37:06Z');
+  const built = SharedCore.buildSourceLedger(finishedFeedPayload(), { now });
+  const line = built.records.find((r) => r.host === 'bosf.org');
+  assert.deepEqual(line.proposals, { new: 6, merge: 1 }, 'proposals still counts every record the run would create, finished or not');
+  assert.equal(SharedCore.sourceLedgerEventKey({ title: 'View Event →', startDate: '2026-12-01T20:00:00.000Z', timezone: 'America/Los_Angeles' }), '', 'link text has no ledger key');
+  assert.equal(line.new_upcoming, 3, 'the dinner, tonight (today counts, as it does for `upcoming`) and the keyless row dated in December');
+  assert.equal(line.upcoming, 2, 'upcoming is unchanged: the two kept rows dated today or later');
+  assert.equal(line.extracted, 4);
+  assert.equal(line.events, 4);
+  assert.equal(line.quality.runs_since_new, 0, 'the "runs since a new event" counter is not redefined');
+
+  // Nothing new that is still to come: the count is 0, not missing.
+  const allOver = finishedFeedPayload();
+  allOver.analyzedEvents = allOver.analyzedEvents.filter((event) => String(event.startDate) < '2026-11-09');
+  const overLine = SharedCore.buildSourceLedger(allOver, { now }).records.find((r) => r.host === 'bosf.org');
+  assert.deepEqual(overLine.proposals, { new: 3, merge: 1 });
+  assert.equal(overLine.new_upcoming, 0);
+
+  // A host with no proposals at all carries 0 too, and the count survives the ndjson round trip.
+  const quiet = SharedCore.buildSourceLedger(samplePayload(), { now: new Date('2026-10-06T12:00:00Z') });
+  assert.equal(quiet.records.find((r) => r.host === 'quietbar.example').new_upcoming, 0);
+  assert.equal(quiet.records.find((r) => r.host === 'eaglela.com').new_upcoming, 1, 'Beer Bust on 2026-10-11 is still to come on 2026-10-06');
+  const reread = parseSourceLedger(built.records.map((r) => JSON.stringify(r)).join('\n'));
+  assert.equal(reread.find((r) => r.host === 'bosf.org').new_upcoming, 3);
+});
+
+test('new_upcoming: the verdict does not move, the host card shows the count beside Proposals, and a line written before the field reads as before', () => {
+  const { buildHostSummaryHtml } = require('./metrics-sections');
+  const now = new Date('2026-11-09T12:00:00Z');
+  const built = SharedCore.buildSourceLedger(finishedFeedPayload(), { now });
+  const withField = built.records;
+  const withoutField = built.records.map((record) => { const copy = { ...record }; delete copy.new_upcoming; return copy; });
+
+  const health = assessSourceHealth(withField, { now });
+  const oldHealth = assessSourceHealth(withoutField, { now });
+  const row = health.rows.find((r) => r.host === 'bosf.org');
+  const oldRow = oldHealth.rows.find((r) => r.host === 'bosf.org');
+  assert.equal(row.verdict, oldRow.verdict, 'recorded only: the verdict is the same with and without the count');
+  assert.deepEqual(row.quality && row.quality.badges, oldRow.quality && oldRow.quality.badges);
+
+  const card = buildHostSummaryHtml(row);
+  assert.match(card, /6 new \/ 1 merge<span class="metric-subvalue">3 of the new still to come<\/span>/);
+  const oldCard = buildHostSummaryHtml(oldRow);
+  assert.match(oldCard, /6 new \/ 1 merge\s*<\/div>/, 'an older line shows the proposals alone');
+  assert.doesNotMatch(oldCard, /still to come/);
+
+  // No new proposal, nothing to qualify.
+  const noNew = finishedFeedPayload();
+  noNew.analyzedEvents = noNew.analyzedEvents.filter((event) => event._action === 'merge');
+  const mergeOnly = assessSourceHealth(SharedCore.buildSourceLedger(noNew, { now }).records, { now }).rows.find((r) => r.host === 'bosf.org');
+  assert.doesNotMatch(buildHostSummaryHtml(mergeOnly), /still to come/);
+});

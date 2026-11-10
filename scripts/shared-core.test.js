@@ -30211,4 +30211,263 @@ test('tags: a stored bear verdict given without tags is described by the machine
   assert.equal(result[1].tags, 'bear-crowd', 'the owner gave tags: exactly those');
   assert.equal(drops.length, 1, 'a stored not-bear is the owner\'s word; a tag does not overrule it');
   assert.match(drops[0].reason, /^manual store: not_bear/);
+// ---------------------------------------------------------------------------
+// Over before it was found: evidence for a merge, never a NEW event (2026-11-09)
+// Run 20261109-053706 analyzed 730 records as NEW; 318 of them were already
+// over. Record shapes below are that run's, trimmed.
+// ---------------------------------------------------------------------------
+
+const PAST_CREATE_NOW = Date.parse('2026-11-09T10:37:06.000Z');
+const PAST_CREATE_BOSF = { name: 'Bears of San Francisco', urls: ['https://www.bosf.org/events'] };
+const PAST_CREATE_FOLSOM = { name: 'Folsom Europe', urls: ['https://ems.switchedapp.com/programme/folsomeurope'] };
+
+// Gathr's "Bears Night Out" (2026-04-05), an aggregator copy of a finished night.
+function pastAggregatorCopy(overrides = {}) {
+  return {
+    title: 'Bears Night Out', bar: 'Rockbar', address: '185 Christopher St, New York, NY 10014', city: 'nyc', timezone: 'America/New_York',
+    startDate: '2026-04-05T02:00:00.000Z', endDate: '2026-04-05T08:00:00.000Z',
+    url: 'https://www.theurbanbear.com/', website: 'https://www.theurbanbear.com/', source: 'ai-web',
+    bearSource: 'keyword', isBearEvent: true, shortName: 'BNO',
+    _parserConfig: GATHR, _action: 'new',
+    ...overrides
+  };
+}
+
+// bosf.org/events?format=json answered "0 upcoming, 30 past"; this is one of the 30.
+function pastListRow(overrides = {}) {
+  return {
+    title: 'Beer Bust', bar: 'SF Eagle', address: '398 12th Street, San Francisco, CA 94103', city: 'sf', timezone: null,
+    startDate: '2026-06-14T22:00:00.000Z', endDate: '2026-06-15T02:00:00.000Z',
+    url: 'https://www.bosf.org/events/2l06zubi7hu38b6q4p2hivgy473le2', website: 'https://www.bosf.org/events/2l06zubi7hu38b6q4p2hivgy473le2',
+    source: 'squarespace', bearSource: 'manual-bear (verdict store 2026-10-01)', isBearEvent: true, shortName: 'BB',
+    _extractionSource: 'squarespace', _sourcePageUrl: 'https://www.bosf.org/events', _pageOrigin: 'listing', _titleFromListing: true,
+    _feedPastList: { feed: 'https://www.bosf.org/events', page: 'https://www.bosf.org/events/2l06zubi7hu38b6q4p2hivgy473le2' },
+    _parserConfig: PAST_CREATE_BOSF, _action: 'new',
+    ...overrides
+  };
+}
+
+// Folsom Europe's programme door: 35 finished rows, every one kept only as tagged.
+function pastTaggedRow(overrides = {}) {
+  return {
+    title: 'Folsom Kieztour - Puppies Edition', city: 'berlin', timezone: 'Europe/Berlin',
+    startDate: '2026-09-09T13:30:00.000Z', endDate: '2026-09-09T16:30:00.000Z',
+    website: 'https://folsomeurope.berlin', source: 'ai-web', tags: 'kink', shortName: 'FK',
+    bearSource: "tagged (ai: The event title and description refer to a 'Kinky Walking Tour' and 'Pupp...)", isBearEvent: true,
+    _extractionSource: 'programme', _sourcePageUrl: 'https://ems.switchedapp.com/programme/folsomeurope', _pageOrigin: 'listing', _titleFromListing: true,
+    _parserConfig: PAST_CREATE_FOLSOM, _action: 'new',
+    ...overrides
+  };
+}
+
+test('over, not new: an aggregator copy, a row from its feed\'s own past list and a record kept only as tagged are each withheld once their span is over', () => {
+  const core = createCore();
+
+  const aggregator = core.assessPastCreateWithhold(pastAggregatorCopy(), PAST_CREATE_NOW);
+  assert.deepEqual(aggregator, { rule: 'aggregator', source: 'Gathr', reason: "Gathr is an aggregator and this night is already over — an aggregator's finished event is never proposed as new" });
+
+  const pastList = core.assessPastCreateWithhold(pastListRow(), PAST_CREATE_NOW);
+  assert.equal(pastList.rule, 'feed-past-list');
+  assert.equal(pastList.source, 'Bears of San Francisco');
+  assert.match(pastList.reason, /^the feed it was read from \(https:\/\/www\.bosf\.org\/events\) files it under past/);
+
+  const tagged = core.assessPastCreateWithhold(pastTaggedRow(), PAST_CREATE_NOW);
+  assert.deepEqual(tagged, { rule: 'tagged', source: 'Folsom Europe', reason: 'kept only for its tags (not a bear verdict) and already over — never proposed as new' });
+  for (const shape of ['tagged (keyword: leather)', 'tagged (bear-run: Folsom Europe)', 'Tagged (ai: x)']) {
+    assert.equal(core.assessPastCreateWithhold(pastTaggedRow({ bearSource: shape }), PAST_CREATE_NOW).rule, 'tagged', shape);
+  }
+
+  // The night before the run counts: Gathr's copy that ended 4 hours ago.
+  const lastNight = pastAggregatorCopy({ startDate: new Date(PAST_CREATE_NOW - 10 * 3600000), endDate: new Date(PAST_CREATE_NOW - 4 * 3600000) });
+  assert.equal(core.assessPastCreateWithhold(lastNight, PAST_CREATE_NOW).rule, 'aggregator');
+});
+
+test('over, not new: nothing still to come, nothing matched to a saved event and no first-party night is touched', () => {
+  const core = createCore();
+  const upcoming = { startDate: '2026-11-14T03:00:00.000Z', endDate: '2026-11-14T08:00:00.000Z' };
+  const ongoing = { startDate: new Date(PAST_CREATE_NOW - 3600000), endDate: new Date(PAST_CREATE_NOW + 3600000) };
+
+  for (const build of [pastAggregatorCopy, pastListRow, pastTaggedRow]) {
+    assert.equal(core.assessPastCreateWithhold(build(upcoming), PAST_CREATE_NOW), null, 'an upcoming night is proposed as today');
+    assert.equal(core.assessPastCreateWithhold(build(ongoing), PAST_CREATE_NOW), null, 'a night still running is not over');
+    // The rule reads action `new` only: a past record still matches and
+    // folds into a saved event exactly as before.
+    assert.equal(core.assessPastCreateWithhold(build({ _action: 'merge' }), PAST_CREATE_NOW), null, 'a merge is never touched');
+    assert.equal(core.assessPastCreateWithhold(build({ _action: 'conflict' }), PAST_CREATE_NOW), null);
+    // A stated series is one calendar event with future nights.
+    assert.equal(core.assessPastCreateWithhold(build({ recurring: true, recurrence: 'RRULE:FREQ=WEEKLY;BYDAY=SU' }), PAST_CREATE_NOW), null, 'a series is not one finished night');
+    // A single night written over a saved series carries the occurrence it replaces.
+    assert.equal(core.assessPastCreateWithhold(build({ _original: { calendar: { title: 'Saved series' } }, _analysis: { action: 'new', reason: 'override of a saved series occurrence' } }), PAST_CREATE_NOW), null, 'an override create is not a discovery');
+    // Fail closed: no readable date, no verdict.
+    assert.equal(core.assessPastCreateWithhold(build({ startDate: null, endDate: null }), PAST_CREATE_NOW), null);
+  }
+
+  // NOT this rule (the owner's open call): a first-party source's own
+  // finished night that is none of the three — Rockbar's own page, a bear
+  // verdict, last Saturday.
+  const firstParty = pastAggregatorCopy({ _parserConfig: { name: 'Rockbar', urls: ['https://www.rockbarnyc.com/'] }, startDate: '2026-11-08T03:00:00.000Z', endDate: '2026-11-08T08:00:00.000Z' });
+  assert.equal(core.assessPastCreateWithhold(firstParty, PAST_CREATE_NOW), null);
+  // The owner's own "kept, tagged" verdict is not the automatic one.
+  assert.equal(core.assessPastCreateWithhold(pastTaggedRow({ bearSource: 'manual-tagged (verdict store 2026-11-05)' }), PAST_CREATE_NOW), null);
+  // Upcoming rows of the same feed carry no stamp and are untouched even when read late.
+  assert.equal(core.assessPastCreateWithhold(pastListRow({ _feedPastList: undefined }), PAST_CREATE_NOW), null);
+  assert.equal(core.assessPastCreateWithhold(null, PAST_CREATE_NOW), null);
+});
+
+test('over, not new: a clock the run could not place is given two days before its night counts as over', () => {
+  const core = createCore();
+  const hoursAgo = (hours) => new Date(PAST_CREATE_NOW - hours * 3600000);
+  const unplaced = (endedHoursAgo) => pastAggregatorCopy({ city: 'unknown', timezone: null, _timezoneUnresolved: true, startDate: hoursAgo(endedHoursAgo + 3), endDate: hoursAgo(endedHoursAgo) });
+  assert.equal(core.assessPastCreateWithhold(unplaced(20), PAST_CREATE_NOW), null, 'the stored instant may be a day off in either direction');
+  assert.equal(core.assessPastCreateWithhold(unplaced(50), PAST_CREATE_NOW).rule, 'aggregator');
+  // The same record with a placed clock is over the moment it ends.
+  assert.equal(core.assessPastCreateWithhold(pastAggregatorCopy({ startDate: hoursAgo(23), endDate: hoursAgo(20) }), PAST_CREATE_NOW).rule, 'aggregator');
+});
+
+test('over, not new: the analysis stamps it, logs the record and one line per source, and gate, label, deck and re-analysis agree', async () => {
+  const core = createCore();
+  const now = Date.now();
+  const recent = (daysAgo) => ({ startDate: new Date(now - daysAgo * 86400000), endDate: new Date(now - daysAgo * 86400000 + 4 * 3600000) });
+  const batch = [
+    // Five days ago: inside the 30-day window the plain PAST SPAN rule leaves alone.
+    pastAggregatorCopy({ ...recent(5), _action: undefined }),
+    pastAggregatorCopy({ ...recent(6), title: 'Rockstrap', shortName: 'RS', bearSource: 'manual-bear (verdict store 2026-09-19)', _action: undefined }),
+    pastListRow({ ...recent(7), _action: undefined }),
+    pastTaggedRow({ ...recent(8), _action: undefined }),
+    // A venue's own last-weekend night: untouched (the open owner call).
+    { title: 'Bear Night Last Weekend', bar: 'Massive', city: 'seattle', timezone: 'America/Los_Angeles', shortName: 'BNLW', bearSource: 'keyword', isBearEvent: true, ...recent(5), _parserConfig: { name: 'Massive' } },
+    // An aggregator's upcoming night: untouched.
+    pastAggregatorCopy({ title: 'Bear Milk', shortName: 'BM', startDate: new Date(now + 5 * 86400000), endDate: new Date(now + 5 * 86400000 + 4 * 3600000), _action: undefined })
+  ];
+  const { result: analyzed, logs } = await withLogsAsync(() => core.prepareEventsForCalendar(batch, buildPrepCalendarAdapter([]), {}));
+  assert.equal(analyzed.length, 6, 'flag, don\'t drop: every record stays in results');
+  const byTitle = (title) => analyzed.find(event => event.title === title);
+  assert.deepEqual(analyzed.map(event => event._action), ['new', 'new', 'new', 'new', 'new', 'new']);
+  assert.equal(byTitle('Bears Night Out')._pastCreateWithheld.rule, 'aggregator');
+  assert.equal(byTitle('Rockstrap')._pastCreateWithheld.rule, 'aggregator');
+  assert.equal(byTitle('Beer Bust')._pastCreateWithheld.rule, 'feed-past-list');
+  assert.equal(byTitle('Folsom Kieztour - Puppies Edition')._pastCreateWithheld.rule, 'tagged');
+  assert.equal(byTitle('Bear Night Last Weekend')._pastCreateWithheld, undefined);
+  assert.equal(byTitle('Bear Milk')._pastCreateWithheld, undefined);
+  assert.equal(analyzed.filter(event => event._pastSpanWithheld).length, 0, 'none of these is old enough for the plain past-span rule');
+
+  // Every withheld record is named with its reason.
+  assert.ok(logs.some(line => line.startsWith('⏳ OVER, NOT NEW: "Bears Night Out" (Gathr, ') && line.includes('Gathr is an aggregator and this night is already over') && line.endsWith('write withheld, no deck card, kept in results')), logs.filter(line => line.includes('OVER')).join('\n'));
+  assert.ok(logs.some(line => line.startsWith('⏳ OVER, NOT NEW: "Beer Bust" (Bears of San Francisco, ') && line.includes('files it under past')));
+  assert.ok(logs.some(line => line.startsWith('⏳ OVER, NOT NEW: "Folsom Kieztour - Puppies Edition" (Folsom Europe, ') && line.includes('kept only for its tags')));
+  // One summary line per source: the count, the kind, the first titles.
+  const summaries = logs.filter(line => /^⏳ OVER, NOT NEW: [^"]/.test(line));
+  assert.equal(summaries.length, 3, summaries.join('\n'));
+  assert.ok(summaries.some(line => line.startsWith('⏳ OVER, NOT NEW: Gathr — 2 finished records not proposed as new (2 aggregator copy)') && line.includes('"Bears Night Out", "Rockstrap"')), summaries.join('\n'));
+  assert.ok(summaries.some(line => line.startsWith("⏳ OVER, NOT NEW: Bears of San Francisco — 1 finished record not proposed as new (1 on the feed's past list)") && line.includes('"Beer Bust"')), summaries.join('\n'));
+  assert.ok(summaries.some(line => line.startsWith('⏳ OVER, NOT NEW: Folsom Europe — 1 finished record not proposed as new (1 kept only as tagged)')), summaries.join('\n'));
+
+  // Gate, label and deck agree.
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed).map(event => event.title).sort(), ['Bear Milk', 'Bear Night Last Weekend']);
+  assert.deepEqual(SharedCore.filterEventsForExecution(analyzed, { offeringToOwner: true }).map(event => event.title).sort(), ['Bear Milk', 'Bear Night Last Weekend'], 'the deck is offered none of them');
+  for (const title of ['Bears Night Out', 'Rockstrap', 'Beer Bust', 'Folsom Kieztour - Puppies Edition']) {
+    assert.equal(core.isOwnerReviewCandidate(byTitle(title)), false, `${title}: no deck card`);
+    assert.match(SharedCore.describeExecutionDisposition(byTitle(title)), /^WITHHELD \(already over, not proposed as new — /);
+  }
+  assert.equal(SharedCore.describeExecutionDisposition(byTitle('Bear Night Last Weekend')), 'NEW');
+
+  // The phone's re-analysis recomputes the verdict from what the run saved:
+  // the verdict stamp is stripped, the feed's past filing is parse-time data.
+  assert.ok(SharedCore.getCalendarAnalysisStampKeys().includes('_pastCreateWithheld'));
+  assert.ok(!SharedCore.getCalendarAnalysisStampKeys().includes('_feedPastList'));
+  const stripped = SharedCore.stripCalendarAnalysisStamps(byTitle('Beer Bust'));
+  assert.equal(stripped._pastCreateWithheld, undefined);
+  assert.deepEqual(stripped._feedPastList, { feed: 'https://www.bosf.org/events', page: 'https://www.bosf.org/events/2l06zubi7hu38b6q4p2hivgy473le2' });
+  const again = await core.prepareEventsForCalendar([stripped], buildPrepCalendarAdapter([]), {});
+  assert.equal(again[0]._pastCreateWithheld.rule, 'feed-past-list');
+});
+
+test('over, not new: a finished aggregator copy still merges into the saved event it matches, exactly as before', async () => {
+  const core = createCore();
+  const now = Date.now();
+  const startDate = new Date(now - 5 * 86400000);
+  const endDate = new Date(startDate.getTime() + 4 * 3600000);
+  const saved = { title: 'Bears Night Out', startDate, endDate, location: '', notes: 'bar: Rockbar\nwebsite: https://www.rockbarnyc.com/' };
+  const copy = pastAggregatorCopy({ startDate, endDate, _action: undefined });
+  const { result: analyzed, logs } = await withLogsAsync(() => core.prepareEventsForCalendar([copy], buildPrepCalendarAdapter([saved]), {}));
+  assert.equal(analyzed.length, 1);
+  assert.equal(analyzed[0]._action, 'merge');
+  assert.equal(analyzed[0]._pastCreateWithheld, undefined);
+  assert.ok(!logs.some(line => line.startsWith('⏳ OVER, NOT NEW:')), 'nothing withheld, nothing logged');
+});
+
+test('over, not new: an aggregator pointer at a finished night stays withheld but raises no deck card; an upcoming one still does', async () => {
+  const core = createCore();
+  const now = Date.now();
+  const pointer = () => ({ aggregator: 'Gathr', site: 'chunk-party.com', source: 'CHUNK', day: '2026-11-07', reason: 'Gathr points at chunk-party.com, which CHUNK read this run (2 events) and lists no event that night' });
+  const overCopy = gathrCopy({ startDate: new Date(now - 2 * 86400000), endDate: new Date(now - 2 * 86400000 + 3 * 3600000), isBearEvent: true, shortName: 'CHUNK', _aggregatorUnbackedWithheld: pointer() });
+  const upcomingCopy = gathrCopy({ title: 'CHUNK Later', startDate: new Date(now + 6 * 86400000), endDate: new Date(now + 6 * 86400000 + 3 * 3600000), isBearEvent: true, shortName: 'CL', _aggregatorUnbackedWithheld: pointer() });
+  const { result: analyzed, logs } = await withLogsAsync(() => core.prepareEventsForCalendar([overCopy, upcomingCopy], buildPrepCalendarAdapter([]), {}));
+  const over = analyzed.find(event => event.title === 'CHUNK');
+  const upcoming = analyzed.find(event => event.title === 'CHUNK Later');
+  assert.equal(over._action, 'new');
+  assert.equal(over._aggregatorUnbackedWithheld.noCard, 'the night is already over');
+  assert.equal(overCopy._aggregatorUnbackedWithheld.noCard, undefined, 'the parsed record is not rewritten');
+  assert.equal(over._pastCreateWithheld.rule, 'aggregator', 'and, matched to nothing saved, it is not a new event either');
+  assert.deepEqual(SharedCore.filterEventsForExecution([over]), [], 'withheld from every automatic write');
+  assert.deepEqual(SharedCore.filterEventsForExecution([over], { offeringToOwner: true }), []);
+  assert.equal(core.isOwnerReviewCandidate(over), false, 'no card for a night nobody can attend');
+  assert.ok(logs.some(line => line.startsWith('🧭 AGGREGATOR: "CHUNK" (Gathr, 2026-11-07) points at chunk-party.com for a night that is already over — still withheld, no deck card')), logs.filter(line => line.includes('AGGREGATOR')).join('\n'));
+
+  // The pointer rule on its own (the stamp without the past-create verdict):
+  // still withheld from automatic writes, labelled, and no card.
+  const pointerOnly = { ...over, _pastCreateWithheld: undefined };
+  assert.deepEqual(SharedCore.filterEventsForExecution([pointerOnly]), []);
+  assert.equal(core.isOwnerReviewCandidate(pointerOnly), false);
+  assert.equal(SharedCore.describeExecutionDisposition(pointerOnly), "WITHHELD (aggregator's copy — Gathr points at chunk-party.com, which CHUNK read this run (2 events) and lists no event that night; the night is already over — no deck card)");
+
+  assert.equal(upcoming._aggregatorUnbackedWithheld.noCard, undefined);
+  assert.equal(upcoming._pastCreateWithheld, undefined);
+  assert.equal(core.isOwnerReviewCandidate(upcoming), true, 'an upcoming pointer is still the owner\'s call');
+  assert.match(SharedCore.describeExecutionDisposition(upcoming), /; decide on the deck\)$/);
+
+  // A yes the owner already gave on the deck (the card was raised while the
+  // night was still to come) is his decision: it still writes.
+  const approved = { ...over, _ownerReviewApproved: { key: 'k' } };
+  assert.equal(SharedCore.filterEventsForExecution([approved]).length, 1);
+  assert.equal(SharedCore.describeExecutionDisposition(approved), 'NEW');
+});
+
+test('over, not new: the feed\'s past filing survives the parser merge with a reading of its own site and is dropped, out loud, for a reading from another site', async () => {
+  const core = createCore();
+  const row = pastListRow({ _action: undefined });
+  // The AI reading of the row's own event page (run 20261109-053706:
+  // "PARSER MERGE: … (squarespace) + … (ai-web)" on 3 of the 30 rows).
+  const ownPage = {
+    title: 'Beer Bust', bar: 'SF Eagle', city: 'sf', startDate: row.startDate, endDate: row.endDate,
+    url: row.url, website: row.website, source: 'ai-web', description: 'Join the Bears of San Francisco for our monthly beer bust.',
+    _extractionSource: 'ai', _pageOrigin: 'crawl', _sourcePageUrl: 'https://bosf.org/events/2l06zubi7hu38b6q4p2hivgy473le2', _parserConfig: PAST_CREATE_BOSF
+  };
+  const stampOf = (record) => record._feedPastList;
+  // Whichever side is the base of the merge.
+  const { result: asBase, logs: quiet } = await withLogsAsync(() => core.mergeParsedEvents(row, { ...ownPage }, {}));
+  assert.deepEqual(stampOf(asBase), row._feedPastList, 'the page reading was the base: the stamp is carried over');
+  const flipped = await core.mergeParsedEvents({ ...ownPage }, row, {});
+  assert.deepEqual(stampOf(flipped), row._feedPastList);
+  assert.ok(!quiet.some(line => line.startsWith('⏳ PAST LIST:')));
+  // Two rows of the same past list.
+  assert.deepEqual(stampOf(await core.mergeParsedEvents(row, pastListRow({ _action: undefined }), {})), row._feedPastList);
+  // The merged record is still withheld once analyzed as new.
+  assert.equal(core.assessPastCreateWithhold({ ...asBase, _action: 'new' }, PAST_CREATE_NOW).rule, 'feed-past-list');
+
+  // The venue's own page lists the same night: an independent first-party
+  // reading. The filing is the promoter site's, so it does not ride along.
+  const venuePage = { ...ownPage, _sourcePageUrl: 'https://sf-eagle.com/events', url: 'https://sf-eagle.com/events', website: 'https://sf-eagle.com/events', _parserConfig: { name: 'SF Eagle', urls: ['https://sf-eagle.com/events'] } };
+  for (const [existing, incoming] of [[row, { ...venuePage }], [{ ...venuePage }, row]]) {
+    const { result: merged, logs } = await withLogsAsync(() => core.mergeParsedEvents(existing, incoming, {}));
+    assert.equal(stampOf(merged), undefined);
+    assert.ok(logs.some(line => line.startsWith('⏳ PAST LIST: "Beer Bust" — https://www.bosf.org/events files it under past, but it merged with a reading from https://sf-eagle.com/events; the past-list filing is not carried onto the merged record')), logs.filter(line => line.includes('PAST LIST')).join('\n'));
+    assert.equal(core.assessPastCreateWithhold({ ...merged, _action: 'new' }, PAST_CREATE_NOW), null, 'today\'s behavior for that record');
+  }
+  // A reading with no page of its own carries nothing either.
+  const unnamed = await core.mergeParsedEvents(row, { ...ownPage, _sourcePageUrl: undefined }, {});
+  assert.equal(stampOf(unnamed), undefined);
+  // An aggregator's copy folds into the row and the row keeps its filing.
+  const folded = await core.mergeParsedEvents(row, pastAggregatorCopy({ title: 'Beer Bust', bar: 'SF Eagle', city: 'sf', startDate: row.startDate, endDate: row.endDate, _action: undefined }), {});
+  assert.deepEqual(stampOf(folded), row._feedPastList);
 });

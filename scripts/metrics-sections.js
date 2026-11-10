@@ -1005,6 +1005,12 @@ function buildHostSummaryHtml(row, options = {}) {
         `${Array.isArray(row.series) ? row.series.length : 0} runs on record`
     ].filter(Boolean);
     const proposals = latest.proposals || {};
+    // How many of the new proposals are still to come. Shown only when the
+    // ledger line carries the count (lines written before 2026-11-09 do
+    // not) and there is a new proposal to qualify.
+    const newUpcomingNote = Number.isFinite(latest.new_upcoming) && Number(proposals.new) > 0
+        ? `${latest.new_upcoming} of the new still to come`
+        : null;
     const metric = (label, value, sub = null) => `
           <div class="metric">
             <div class="metric-value">${escapeHtml(value)}${sub ? `<span class="metric-subvalue">${escapeHtml(sub)}</span>` : ''}</div>
@@ -1025,7 +1031,7 @@ function buildHostSummaryHtml(row, options = {}) {
           ${metric('Bear', Number(latest.bear) || 0, `${Number(latest.events) || 0} kept`)}
           ${metric('Upcoming', Number(latest.upcoming) || 0)}
           ${metric('Lost', Number(row.lostDays) || 0, `${Array.isArray(row.lost) ? row.lost.length : 0} series${row.suspected ? ` • ${row.suspected} suspected` : ''}`)}
-          ${metric('Proposals', `${Number(proposals.new) || 0} new / ${Number(proposals.merge) || 0} merge`)}
+          ${metric('Proposals', `${Number(proposals.new) || 0} new / ${Number(proposals.merge) || 0} merge`, newUpcomingNote)}
           ${metric('Pages', `${Number(latest.pages) || 0}`, `${Number(latest.page_errors) || 0} errors • ${Number(latest.outbound_pages) || 0} outbound`)}
           ${metric('Duration', formatSourceDuration(Number(latest.duration_ms) || 0))}
         </div>`;

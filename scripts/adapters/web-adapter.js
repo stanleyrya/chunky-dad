@@ -1154,7 +1154,10 @@ class WebAdapter {
                         parser: value.parser,
                         dryRun: value.dryRun,
                         city: value.city,
-                        calendarSearchRangeDays: value.calendarSearchRangeDays
+                        calendarSearchRangeDays: value.calendarSearchRangeDays,
+                        // Kept for the execute path's re-analysis (see the
+                        // Scriptable adapter): aggregator rules read it.
+                        siteRole: value.siteRole
                     };
                 }
                 if (key === '_existingEvent' && value) {

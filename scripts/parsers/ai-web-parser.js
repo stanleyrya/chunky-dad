@@ -9695,6 +9695,15 @@ class AiWebParser {
             // month ago is the calendar's archive, read the way an iCalendar
             // export's archive is; a repeating entry stays, its rule decides.
             const rows = published.filter(row => !this.isArchivedElfsightRow(row));
+            // Flag, don't drop: a repeat the widget itself ended is named in
+            // the log with its own end, so nobody has to wonder where a
+            // "repeating" entry went.
+            for (const row of published) {
+                const repeatEnded = this.getElfsightRepeatLastDay(row);
+                if (repeatEnded && this.isArchivedElfsightRow(row)) {
+                    console.log(`🗓️ ELFSIGHT: "${String(row.name || '').trim()}" (from ${row.start && row.start.date ? row.start.date : 'an unknown date'}) is a repeat the widget itself ended by ${repeatEnded} — the calendar's archive, not read`);
+                }
+            }
             console.log(`🗓️ ELFSIGHT: widget ${widgetId} on ${sourceUrl} published ${published.length} event(s)${rows.length < published.length ? ` — ${published.length - rows.length} ended more than ${ELFSIGHT_ARCHIVE_DAYS} days ago (the calendar's archive), ${rows.length} read` : ''}`);
             if (rows.length === 0) continue;
             events.push(...rows);
@@ -9706,15 +9715,66 @@ class AiWebParser {
     // A widget entry with no repeat whose last day (end, else start) is more
     // than ELFSIGHT_ARCHIVE_DAYS days ago. Dates are the entry's own wall
     // dates (YYYY-MM-DD), so no zone is needed to tell a month-old night.
+    //
+    // A REPEATING entry is archive the same way when the widget ITSELF ended
+    // the repeat that long ago (its "ends on <date>" / "ends after N times").
+    // Until 2026-11 every repeating entry was kept "for its rule to decide" —
+    // but a `custom` repeat has no rule here (buildElfsightRecurrenceBase),
+    // so the entry shipped as its first night: rockbarnyc.com's "Drag Race
+    // Viewing Party" (from 2024-02-02, weekly, ended 2024-05-01) was read as
+    // a night and bear-checked in the 2026-11-09 run, and Black Eagle
+    // Toronto's 2025 "BLUF TORONTO" (ended 2025-12-30) sat beside the live
+    // entry of the same party. A repeat with no stated end is never archive.
     isArchivedElfsightRow(row, now = new Date()) {
         if (!row || typeof row !== 'object') return false;
         const period = typeof row.repeatPeriod === 'string' ? row.repeatPeriod : '';
-        if (period && period !== 'noRepeat' && period !== 'none') return false;
+        const cutoff = new Date(now.getTime() - ELFSIGHT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        if (period && period !== 'noRepeat' && period !== 'none') {
+            const repeatEnded = this.getElfsightRepeatLastDay(row);
+            return Boolean(repeatEnded) && repeatEnded < cutoff;
+        }
         const day = (entry) => (entry && typeof entry === 'object' && /^\d{4}-\d{2}-\d{2}$/.test(String(entry.date || '')) ? String(entry.date) : '');
         const last = day(row.end) || day(row.start);
         if (!last) return false;
-        const cutoff = new Date(now.getTime() - ELFSIGHT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
         return last < cutoff;
+    }
+
+    // The last day (YYYY-MM-DD) a repeating widget entry can still have a
+    // night, read from the entry's own end of repeat — '' when it repeats
+    // with no stated end, or the end cannot be read (then nothing is
+    // archived on it).
+    //   - "ends on <date>": that date.
+    //   - "ends after N times": no later than N steps after the first night,
+    //     a step being the entry's own period (a week for a weekly entry, 31
+    //     days for a monthly one, …) times its interval. Deliberately an
+    //     UPPER bound — a repeat on several weekdays finishes sooner — so an
+    //     entry is only ever called over late, never early.
+    getElfsightRepeatLastDay(row) {
+        if (!row || typeof row !== 'object') return '';
+        const period = typeof row.repeatPeriod === 'string' ? row.repeatPeriod.trim() : '';
+        if (!period || period === 'noRepeat' || period === 'none') return '';
+        const isDay = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+        const ends = String(row.repeatEnds || '').trim();
+        if (ends === 'onDate') {
+            const date = row.repeatEndsDate && typeof row.repeatEndsDate === 'object' ? row.repeatEndsDate.date : '';
+            return isDay(date) ? String(date) : '';
+        }
+        if (ends !== 'afterOccurrences') return '';
+        const count = Number(row.repeatEndsOccurrences);
+        const first = row.start && typeof row.start === 'object' ? row.start.date : '';
+        if (!Number.isFinite(count) || count < 1 || !isDay(first)) return '';
+        const frequencyDays = { daily: 1, weekly: 7, monthly: 31, yearly: 366 };
+        // The frequency/interval fields are the entry's own only for a
+        // `custom` repeat (every other shape carries the widget's defaults:
+        // a "3rd Wednesday" entry still says frequency "daily").
+        const stepDays = period === 'custom'
+            ? (frequencyDays[String(row.repeatFrequency || '').trim().toLowerCase()] || 0)
+                * (Number.isFinite(Number(row.repeatInterval)) && Number(row.repeatInterval) >= 1 ? Math.floor(Number(row.repeatInterval)) : 1)
+            : ({ weeklyOn: 7, nthDayInMonth: 31, lastDayInMonth: 31 }[period] || 0);
+        if (!stepDays) return '';
+        const firstMs = Date.parse(`${first}T00:00:00Z`);
+        if (!Number.isFinite(firstMs)) return '';
+        return new Date(firstMs + Math.floor(count) * stepDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     }
 
     // Is this URL one the parser was configured to fetch? Compared on the
@@ -10146,7 +10206,7 @@ class AiWebParser {
         }
         const upcoming = Array.isArray(payload.upcoming) ? payload.upcoming.length : 0;
         const past = Array.isArray(payload.past) ? payload.past.length : 0;
-        console.log(`🟦 SQUARESPACE: ${twinUrl} published ${rows.length} dated item(s)${upcoming || past ? ` (${upcoming} upcoming, ${past} past on this page)` : ''}`);
+        console.log(`🟦 SQUARESPACE: ${twinUrl} published ${rows.length} dated item(s)${upcoming || past ? ` (${upcoming} upcoming, ${past} past on this page)` : ''}${past ? ' — a past-list row may update a saved event, it is never proposed as a new one' : ''}`);
         return rows;
     }
 
@@ -10167,6 +10227,14 @@ class AiWebParser {
     // Dated items from an events-collection payload: upcoming[] and past[]
     // (the split listing), else items[] (a plain collection). An item counts
     // when it has a title and an epoch-millisecond startDate.
+    // THE FEED'S OWN "PAST" LIST IS REMEMBERED. A row the feed files under
+    // past[] (and not also under upcoming[]) is noted per row object
+    // (_feedPastRows — the rows themselves are returned untouched), and
+    // buildEventFromSquarespaceItem stamps the event it builds from one
+    // with `_feedPastList`: evidence for a saved event, never a NEW one
+    // (SharedCore.assessPastCreateWithhold). Run 20261109-053706: one
+    // promoter's twin answered "0 upcoming, 30 past" and all 30 rows were
+    // analyzed as new events.
     collectSquarespaceCollectionItems(payload) {
         if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return [];
         const collection = payload.collection && typeof payload.collection === 'object' ? payload.collection : {};
@@ -10180,6 +10248,7 @@ class AiWebParser {
         const buckets = [payload.upcoming, payload.past, payload.items].filter(Array.isArray);
         const seen = new Set();
         const rows = [];
+        if (!this._feedPastRows) this._feedPastRows = new WeakSet();
         for (const bucket of buckets) {
             for (const item of bucket) {
                 if (!isDatedItem(item)) continue;
@@ -10188,6 +10257,7 @@ class AiWebParser {
                 if (seen.has(key)) continue;
                 seen.add(key);
                 rows.push(item);
+                if (bucket === payload.past) this._feedPastRows.add(item);
             }
         }
         return rows;
@@ -10310,6 +10380,10 @@ class AiWebParser {
         }
         const ticketUrl = this.pickTicketLinkFromBodyHtml(bodyHtml, origin);
         if (ticketUrl) event.ticketUrl = ticketUrl;
+        // A row from the feed's own past[] list (collectSquarespaceCollectionItems).
+        if (this._feedPastRows && this._feedPastRows.has(item)) {
+            event._feedPastList = { feed: String(sourceUrl || ''), page: eventPageUrl };
+        }
         return event;
     }
 

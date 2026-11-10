@@ -23484,3 +23484,137 @@ test('session lines on a day-dated event page: a Squarespace 00:01 start with "F
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T04:00:00Z'), timezone: 'America/New_York' }), '2026-10-30');
   assert.equal(parser.dateOnlyStartDay({ startDate: new Date('2026-10-30T23:00:00Z'), timezone: 'America/New_York' }), '');
 });
+
+// ---------------------------------------------------------------------------
+// Ended repeats (2026-11-09 audit). A widget entry that repeats is archive
+// once the widget ITSELF ended the repeat more than a month ago. Row shapes
+// are the cached boot payloads' own (core.service.elfsight.com/p/boot, fetched
+// 2026-11-08), trimmed: rockbarnyc.com's "Drag Race Viewing Party" and Black
+// Eagle Toronto's 2025 "BLUF TORONTO" / 2026 "STUDIO 457" entries.
+// ---------------------------------------------------------------------------
+const ENDED_REPEAT_ROWS = {
+  dragRace: { name: 'Drag Race Viewing Party', start: { type: 'datetime', date: '2024-02-02', time: '19:00' }, end: { type: 'datetime', date: '2024-02-02', time: '22:00' }, timeZone: 'America/New_York', repeatPeriod: 'custom', repeatInterval: 1, repeatFrequency: 'weekly', repeatWeeklyOnDays: ['fr'], repeatEnds: 'onDate', repeatEndsDate: { type: 'datetime', date: '2024-05-01', time: '19:00' }, repeatEndsOccurrences: 1 },
+  bluf2025: { name: 'BLUF TORONTO', visible: true, start: { date: '2025-10-25', time: '18:00' }, end: { date: '2025-10-25', time: '20:30' }, timeZone: 'America/Toronto', repeatPeriod: 'custom', repeatFrequency: 'monthly', repeatWeeklyOnDays: [], repeatEnds: 'onDate', repeatEndsDate: { date: '2025-12-30', time: '23:59', type: 'datetime' }, repeatEndsOccurrences: 1 },
+  studioTwice: { name: 'STUDIO 457 •  RETRO DANCE PARTY', visible: true, start: { type: 'datetime', date: '2026-07-05', time: '21:00' }, end: { type: 'datetime', date: '2026-07-05', time: '21:00' }, timeZone: 'America/Toronto', repeatPeriod: 'custom', repeatInterval: 1, repeatFrequency: 'weekly', repeatWeeklyOnDays: ['su'], repeatEnds: 'afterOccurrences', repeatEndsOccurrences: 2 },
+  studioOpen: { name: 'STUDIO 457 •  RETRO DANCE PARTY', visible: true, start: { type: 'datetime', date: '2026-10-25', time: '21:00' }, end: { type: 'datetime', date: '2026-10-25', time: '23:45' }, timeZone: 'America/Toronto', repeatPeriod: 'custom', repeatInterval: 2, repeatFrequency: 'weekly', repeatWeeklyOnDays: ['su'], repeatEnds: 'never', repeatEndsOccurrences: 1 },
+  nakedNight: { name: 'NAKED NIGHT', visible: true, start: { type: 'datetime', date: '2026-07-16', time: '21:00' }, end: { type: 'datetime', date: '2026-07-16', time: '21:00' }, timeZone: 'America/Toronto', repeatPeriod: 'nthDayInMonth', repeatInterval: 1, repeatFrequency: 'daily', repeatWeeklyOnDays: [], repeatEnds: 'never', repeatEndsOccurrences: 1 }
+};
+
+test('ended repeats: a repeating widget entry whose own repeat ended more than a month ago is archive', () => {
+  const parser = createParser();
+  const now = new Date('2026-11-09T10:37:06Z');
+  const rows = ENDED_REPEAT_ROWS;
+  assert.equal(parser.getElfsightRepeatLastDay(rows.dragRace), '2024-05-01');
+  assert.equal(parser.isArchivedElfsightRow(rows.dragRace, now), true, 'weekly, ended on a date in 2024');
+  assert.equal(parser.isArchivedElfsightRow(rows.bluf2025, now), true, 'monthly, ended on a date last year');
+  // "ends after 2 times", weekly: no night later than two weeks after the first.
+  assert.equal(parser.getElfsightRepeatLastDay(rows.studioTwice), '2026-07-19');
+  assert.equal(parser.isArchivedElfsightRow(rows.studioTwice, now), true);
+  // Left exactly alone: a repeat with no stated end, whatever its first night.
+  assert.equal(parser.getElfsightRepeatLastDay(rows.studioOpen), '');
+  assert.equal(parser.isArchivedElfsightRow(rows.studioOpen, now), false);
+  assert.equal(parser.isArchivedElfsightRow(rows.nakedNight, now), false, 'the widget defaults (frequency "daily", occurrences 1) are not an end');
+  // A repeat that ends later, or ended inside the month, is not archive.
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: { date: '2026-12-31' } }, now), false);
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: { date: '2026-10-20' } }, now), false, 'inside the archive window');
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: { date: '2026-10-05' } }, now), true);
+  // An end that cannot be read archives nothing.
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: null }, now), false);
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.dragRace, repeatEndsDate: { date: 'May 1' } }, now), false);
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.studioTwice, repeatEndsOccurrences: 0 }, now), false);
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.studioTwice, repeatFrequency: 'fortnightly' }, now), false, 'an unknown step is not guessed at');
+  // The bound is an upper bound: interval and count stretch it.
+  assert.equal(parser.getElfsightRepeatLastDay({ ...rows.studioTwice, repeatInterval: 2, repeatEndsOccurrences: 3 }), '2026-08-16');
+  assert.equal(parser.getElfsightRepeatLastDay({ ...rows.nakedNight, repeatEnds: 'afterOccurrences', repeatEndsOccurrences: 3 }), '2026-10-17', 'a monthly shape counts 31-day steps');
+  assert.equal(parser.isArchivedElfsightRow({ ...rows.nakedNight, repeatEnds: 'afterOccurrences', repeatEndsOccurrences: 3 }, now), false, 'three months from July ends inside the window');
+  // A one-off is judged by its own day, as before — repeat fields on it are ignored.
+  assert.equal(parser.getElfsightRepeatLastDay({ name: 'ONE NIGHT', start: { date: '2026-11-20' }, repeatPeriod: 'noRepeat', repeatEnds: 'onDate', repeatEndsDate: { date: '2024-01-01' } }), '');
+  assert.equal(parser.isArchivedElfsightRow({ name: 'ONE NIGHT', start: { date: '2026-11-20' }, repeatPeriod: 'noRepeat', repeatEnds: 'onDate', repeatEndsDate: { date: '2024-01-01' } }, now), false);
+});
+
+test('ended repeats: the widget reader leaves the ended repeat out, names it in the log, and still reads the open one', async () => {
+  const parser = createParser();
+  const widgetId = 'e122bc50-bc4f-4cde-a6b9-ee6d4e31531a';
+  const rows = ENDED_REPEAT_ROWS;
+  // 2037: an entry that repeats with no stated end, and one whose repeat ends in the future.
+  const open = { ...rows.studioOpen, name: 'OPEN REPEAT', start: { date: '2037-10-25', time: '21:00' }, end: { date: '2037-10-25', time: '23:45' } };
+  const endsLater = { ...rows.dragRace, name: 'ENDS LATER', visible: true, start: { date: '2037-02-06', time: '19:00' }, end: { date: '2037-02-06', time: '22:00' }, repeatEndsDate: { date: '2037-05-01' } };
+  const payload = JSON.stringify({ data: { widgets: { [widgetId]: { data: { settings: { events: [{ ...rows.dragRace, visible: true }, rows.bluf2025, rows.studioTwice, open, endsLater] } } } } } });
+  const httpAdapter = { fetchData: async () => ({ html: payload }) };
+  const logs = [];
+  const original = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let read;
+  try {
+    read = await parser.collectElfsightCalendarEvents(
+      { html: `<html><body><div class="elfsight-app-${widgetId}"></div></body></html>`, url: 'https://bar.example/calendar' },
+      { urls: ['https://bar.example/calendar'] },
+      httpAdapter
+    );
+  } finally { console.log = original; }
+  assert.deepEqual(read.map(row => row.name), ['OPEN REPEAT', 'ENDS LATER']);
+  assert.ok(logs.some(line => line.includes('"Drag Race Viewing Party" (from 2024-02-02) is a repeat the widget itself ended by 2024-05-01')), logs.join('\n'));
+  assert.ok(logs.some(line => line.includes('"BLUF TORONTO" (from 2025-10-25) is a repeat the widget itself ended by 2025-12-30')), logs.join('\n'));
+  assert.ok(logs.some(line => line.includes('"STUDIO 457 •  RETRO DANCE PARTY" (from 2026-07-05) is a repeat the widget itself ended by 2026-07-19')), logs.join('\n'));
+  assert.ok(logs.some(line => line.includes('published 5 event(s) — 3 ended more than 30 days ago')), logs.join('\n'));
+});
+
+// ---------------------------------------------------------------------------
+// The feed's own "past" list (2026-11-09). bosf.org/events?format=json
+// answered "0 upcoming, 30 past" in run 20261109-053706 and all 30 rows were
+// analyzed as new events. Rows below are that cached twin's, trimmed.
+// ---------------------------------------------------------------------------
+
+const SQUARESPACE_PAST_ONLY_TWIN = {
+  collection: { typeName: 'events', title: 'Events', fullUrl: '/events' },
+  upcoming: [],
+  past: [
+    { id: '6a5bdf420a13915c9c50a578', title: 'Barbells, Bears, and Butts Deadlift Competition 2026', startDate: 1792267200730, endDate: 1792278000730,
+      fullUrl: '/events/barbells-bears-and-butts-deadlift-competition-2026', urlId: 'barbells-bears-and-butts-deadlift-competition-2026', excerpt: '',
+      location: { mapZoom: 12, addressTitle: '', addressLine1: '', addressLine2: '', addressCountry: '' } },
+    { id: '6ab59f5cac137d2ea8f17f61', title: 'BOSF Brunch', startDate: 1791662400478, endDate: 1791673200478,
+      fullUrl: '/events/july-dinner-night-pte22', urlId: 'july-dinner-night-pte22', excerpt: '',
+      location: { mapZoom: 12, addressTitle: '', addressLine1: '', addressLine2: '', addressCountry: '' } }
+  ]
+};
+
+test('Squarespace collection: a row the feed files under past is stamped with that filing; an upcoming row, and a row the feed lists in both, is not', async () => {
+  const parser = createParser();
+
+  // A feed with nothing upcoming: every row it publishes is a past-list row.
+  const pastOnly = squarespaceStubAdapter(SQUARESPACE_PAST_ONLY_TWIN);
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => { logs.push(args.join(' ')); };
+  let pastRows;
+  try {
+    pastRows = await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.bosf.example/events' }, { urls: ['https://www.bosf.example/events'] }, pastOnly.httpAdapter);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(pastRows.length, 2);
+  assert.ok(logs.some(line => line.includes('published 2 dated item(s) (0 upcoming, 2 past on this page) — a past-list row may update a saved event, it is never proposed as a new one')), logs.join('\n'));
+  const pastEvents = pastRows.map(row => parser.buildEventFromSquarespaceItem(row, 'https://www.bosf.example/events'));
+  assert.deepEqual(pastEvents.map(event => event._feedPastList), [
+    { feed: 'https://www.bosf.example/events', page: 'https://www.bosf.example/events/barbells-bears-and-butts-deadlift-competition-2026' },
+    { feed: 'https://www.bosf.example/events', page: 'https://www.bosf.example/events/july-dinner-night-pte22' }
+  ]);
+  assert.equal(pastEvents[1].title, 'BOSF Brunch', 'the row is still read in full — it is evidence for a saved event');
+  assert.equal(pastEvents[1].startDate.toISOString(), '2026-10-10T20:00:00.000Z');
+  // The rows themselves are returned untouched.
+  assert.deepEqual(Object.keys(pastRows[0]).filter(key => key.startsWith('_')), []);
+
+  // A split listing: upcoming rows carry no stamp; "Bear Tea" is in both
+  // lists and the upcoming filing is the one that counts.
+  const split = squarespaceStubAdapter();
+  const rows = await parser.collectSquarespaceCollectionEvents({ html: SQUARESPACE_LISTING_HTML, url: 'https://www.3dollarbillbk.example/rsvp' }, { urls: ['https://www.3dollarbillbk.example/rsvp'] }, split.httpAdapter);
+  const events = rows.map(row => parser.buildEventFromSquarespaceItem(row, 'https://www.3dollarbillbk.example/rsvp'));
+  assert.deepEqual(events.map(event => [event.title, Boolean(event._feedPastList)]), [['Bear Tea', false], ['WANTED', false], ['GraveSTONED', true]]);
+  assert.deepEqual(events[2]._feedPastList, { feed: 'https://www.3dollarbillbk.example/rsvp', page: 'https://www.3dollarbillbk.example/rsvp/2026/8/11/gravestoned' });
+
+  // A plain collection (items[] only) says nothing about past or upcoming.
+  const plain = parser.collectSquarespaceCollectionItems({ items: SQUARESPACE_PAST_ONLY_TWIN.past.map(item => ({ ...item })) });
+  assert.deepEqual(plain.map(row => Boolean(parser.buildEventFromSquarespaceItem(row, 'https://www.bosf.example/events')._feedPastList)), [false, false]);
+  // An item built with no read behind it (another parser instance) is unstamped.
+  assert.equal(createParser().buildEventFromSquarespaceItem(SQUARESPACE_PAST_ONLY_TWIN.past[0], 'https://www.bosf.example/events')._feedPastList, undefined);
+});
