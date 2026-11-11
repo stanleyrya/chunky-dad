@@ -26,7 +26,8 @@
     "palette": "#602d2c:23:7 #0a0201:17:3 #90e7f9:15:9 #fc2127:11:24 #10b90b:6:23",
     "accent": "#fc2127",
     "faviconPlate": "#020202",
-    "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z",
+    "scene": "bear"
   },
   {
     "name": "Kings Arms",
@@ -37,7 +38,8 @@
     "facebook": "https://www.facebook.com/kingsarms.soho",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJBUDtIZcEdkgR0k-Xw7rA8wM",
     "gayCities": "https://london.gaycities.com/bars/2046-the-kings-arms",
-    "gayCitiesLastScrapedAt": "2026-06-13T16:37:29.296Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T16:37:29.296Z",
+    "scene": "bear"
   },
   {
     "name": "Eagle London",
@@ -54,7 +56,8 @@
     "paletteSource": "favicon",
     "palette": "#000000:56:0 #bcbcbc:8:0 #939393:8:0",
     "faviconPlate": "#000000",
-    "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z",
+    "scene": "leather"
   },
   {
     "name": "Westminster Pier",
@@ -72,6 +75,7 @@
     "name": "City of Quebec (Officers Club)",
     "city": "london",
     "address": "12 Old Quebec Street, London, United Kingdom W1H 7AF",
-    "coordinates": "51.51386, -0.1580566"
+    "coordinates": "51.51386, -0.1580566",
+    "scene": "adjacent"
   }
 ]

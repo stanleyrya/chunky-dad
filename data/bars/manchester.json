@@ -9,7 +9,8 @@
     "faviconFg": "#a7a7a8",
     "paletteSource": "favicon",
     "palette": "#111113:81:0 #868686:4:0 #ffffff:3:0",
-    "faviconPlate": "#111113"
+    "faviconPlate": "#111113",
+    "scene": "leather"
   },
   {
     "name": "YES",

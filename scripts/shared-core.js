@@ -617,13 +617,24 @@ class SharedCore {
         // CUBHOUSE, BEEFWITCH, Bearracuda); common words that misfire as
         // substrings ("fatal", "furniture", "update", "puppet") require word
         // boundaries.
+        // 'jock', 'pup' and 'furry' left these lists on 2026-11-10 (owner:
+        // "I agree with your choices"). Measured over 51 saved runs: 35
+        // parties passed on one of the three alone, the owner had marked 21
+        // of them not bear and none bear (Jockstrap Wednesday, Pup Night,
+        // FURRYRAVE, a DJ called Pup). With the words gone the AI tier reads
+        // those events like any other: it dropped 22, 17 of them his own
+        // not-bears and none a party he had approved, and kept the bear
+        // promoters' nights (SWEAT, Concours PUP, Mass Bears and Cubs'
+        // Jocks). 'daddy'/'dad'/'dads' stay: the AI dropped eight parties he
+        // had approved. 'beef', 'chunk', 'chub', 'fat', 'thick' stay: zero
+        // not-bear verdicts in 58 parties.
         this.bearSubstringKeywords = [
-            'bear', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 'otter',
+            'bear', 'woof', 'grr', 'hairy', 'daddy', 'cub', 'otter',
             'bearracuda', 'furball', 'megawoof', 'grizzly', 'chunk',
-            'chub', 'beef', 'scruff', 'jock'
+            'chub', 'beef', 'scruff'
         ];
         this.bearWordBoundaryKeywords = [
-            'dad', 'dads', 'fat', 'fur', 'pup', 'pig', 'wolf', 'wolves',
+            'dad', 'dads', 'fat', 'fur', 'pig', 'wolf', 'wolves',
             'thick', 'burly', 'stocky', 'husky', 'beard', 'bearded'
         ];
         // Tag vocabulary is TAG evidence, not bear evidence (owner ruling

@@ -6196,6 +6196,46 @@ test('bear keyword tier: a deferred description-only hit is judged by the AI, an
   assert.equal(brandKept[0].bearSource, 'keyword');
 });
 
+// Owner, 2026-11-10: jock, pup and furry stop passing an event by themselves.
+// Titles verbatim from the saved runs; he had marked all three not bear.
+test('bear keyword tier: jock, pup and furry in a name no longer pass an event — the AI reads it; daddy, beef and chub still pass', async () => {
+  const core = createBearTierCore();
+  for (const title of ['JOCKSTRAP WEDNESDAY | $20 CASH COVER', 'JOCK STRAP NIGHT', 'PUP NIGHT', 'FURRYRAVE Vol.3', '🎧 DJ PUP SAM + 🎧 DJ LORANT']) {
+    assert.deepEqual(core.matchBearKeywords(title), [], `"${title}" names no bear keyword`);
+  }
+  assert.deepEqual(core.matchBearKeywords('Disco Daddy'), ['daddy']);
+  assert.deepEqual(core.matchBearKeywords('BEEFMINCE x RVT'), ['beef']);
+  assert.deepEqual(core.matchBearKeywords('Chub Rub'), ['chub']);
+
+  const declineTags = {
+    pup: { applies: false, eventEvidence: [], reason: 'declined for the test' },
+    underwear: { applies: false, eventEvidence: [], reason: 'declined for the test' }
+  };
+  const jockstrap = { title: 'JOCKSTRAP WEDNESDAY | $20 CASH COVER', bar: 'Eagle NYC', city: 'nyc', description: 'Strip down every Wednesday. Clothes check available.' };
+  const notBear = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'an underwear night, no bear vocabulary', eventEvidence: [] }, declineTags);
+  const drops = [];
+  const kept = await createBearTierCore().filterBearEvents([{ ...jockstrap }], bearCheckConfig('enforce'), notBear, drops);
+  assert.equal(notBear.calls.filter(call => !/^Tag: /m.test(call.prompt)).length, 1, 'the AI was asked — the title no longer answers for it');
+  assert.equal(kept.length, 0);
+  assert.match(drops[0].reason, /^ai: /);
+
+  // The same word under a bear party is still kept: the model says so from
+  // the event's own words, as for any other event.
+  const jocks = { title: 'Jocks', bar: "Jacque's Cabaret", city: 'boston', description: 'A jockstrap night for big guys and their admirers.' };
+  const bear = buildTagAwareAdapter({ verdict: 'bear', reason: 'a night for big guys and their admirers', eventEvidence: ['big guys and their admirers'] }, declineTags);
+  const keptBear = await createBearTierCore().filterBearEvents([{ ...jocks }], bearCheckConfig('enforce'), bear, []);
+  assert.equal(keptBear.length, 1);
+  assert.match(keptBear[0].bearSource, /^ai/);
+
+  // A stored owner verdict still outranks everything, in both directions.
+  const stored = createBearTierCore();
+  stored.bearVerdicts = [{ verdict: 'bear', stampedAt: '2026-11-10T00:00:00.000Z', title: 'PUP NIGHT', venue: 'The Heretic', address: '', location: '', city: 'atlanta' }];
+  const never = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'nope' });
+  const keptStored = await stored.filterBearEvents([{ title: 'PUP NIGHT', bar: 'The Heretic', city: 'atlanta' }], bearCheckConfig('enforce'), never, []);
+  assert.equal(never.calls.filter(call => !/^Tag: /m.test(call.prompt)).length, 0);
+  assert.equal(keptStored.length, 1);
+});
+
 test('bear check report mode returns exactly what legacy returns', async () => {
   const events = [
     { title: 'Bear Night' },
@@ -12399,6 +12439,32 @@ function barsWithoutPresentationFields(bars) {
     return trimmed;
   });
 }
+
+// The sheet sync rewrites every curated record through cleanBarObject, and a
+// field that function does not name is gone the next night: the owner's 66
+// scene marks were, on 2026-11-11. No list of fields here — the records
+// themselves are the list.
+test('bars sync keeps every field the curated bar records carry', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const { cleanBarObject } = require('../tools/sync-bars');
+  const barsDir = path.join(__dirname, '..', 'data', 'bars');
+  const lost = [];
+  let records = 0;
+  for (const file of fs.readdirSync(barsDir).filter(name => name.endsWith('.json'))) {
+    for (const bar of JSON.parse(fs.readFileSync(path.join(barsDir, file), 'utf8'))) {
+      records += 1;
+      const cleaned = cleanBarObject(bar);
+      for (const field of Object.keys(bar)) {
+        if (bar[field] === undefined || bar[field] === null || String(bar[field]).trim() === '') continue;
+        if (!(field in cleaned)) lost.push(`${file}: ${bar.name} loses "${field}"`);
+      }
+    }
+  }
+  assert.ok(records > 100, 'the curated bars were read');
+  assert.deepEqual(lost, [], 'a sync would drop these fields — name them in cleanBarObject (tools/sync-bars.js)');
+  assert.ok(JSON.parse(fs.readFileSync(path.join(barsDir, 'sf.json'), 'utf8')).some(bar => bar.scene), 'the scene marks are in the records');
+});
 
 test('curated bars: torremolinos.json carries Aqua Emporio and the generated scraper-bars twins are in sync', () => {
   const fs = require('fs');

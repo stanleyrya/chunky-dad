@@ -14,7 +14,8 @@
     "palette": "#da4f0a:43:19 #fffffe:24:0 #f59a56:18:14",
     "accent": "#da4f0a",
     "faviconPlate": "#ffffff",
-    "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z",
+    "scene": "bear"
   },
   {
     "name": "The SoFo Tap",
@@ -30,7 +31,8 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:52:0 #000000:38:0 #cacaca:2:0",
     "faviconPlate": "#ffffff",
-    "gayCitiesLastScrapedAt": "2026-06-13T18:37:37.979Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T18:37:37.979Z",
+    "scene": "bear"
   },
   {
     "name": "Jackhammer",
@@ -47,7 +49,8 @@
     "paletteSource": "favicon",
     "palette": "#000000:47:0 #ffffff:46:0 #d4d4d4:2:0",
     "faviconPlate": "#000000",
-    "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z",
+    "scene": "leather"
   },
   {
     "name": "Touché",
@@ -58,7 +61,8 @@
     "facebook": "https://www.facebook.com/ToucheChicago",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJnwLkWrzRD4gREreJ-KlTEoU",
     "gayCities": "https://chicago.gaycities.com/bars/184-touch%C3%A9",
-    "gayCitiesLastScrapedAt": "2026-06-13T20:34:54.431Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T20:34:54.431Z",
+    "scene": "leather"
   },
   {
     "name": "Cell Block",
@@ -69,7 +73,8 @@
     "facebook": "https://www.facebook.com/cellblockchi",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
     "gayCities": "https://chicago.gaycities.com/bars/145-cell-block",
-    "gayCitiesLastScrapedAt": "2026-06-14T01:14:36.735Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T01:14:36.735Z",
+    "scene": "leather"
   },
   {
     "name": "Metro",
@@ -90,7 +95,8 @@
     "name": "The Jackhammer Complex",
     "city": "chicago",
     "address": "6406 N Clark St, Chicago, IL 60626",
-    "coordinates": "41.9993427, -87.6709201"
+    "coordinates": "41.9993427, -87.6709201",
+    "scene": "leather"
   },
   {
     "name": "Steamworks",
