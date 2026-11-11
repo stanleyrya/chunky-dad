@@ -817,6 +817,35 @@ function flyerOcrStatesClockTime(ocrText, timeHHMM) {
         || (!reading.unambiguous && (reading.minutes + 720) % 1440 === target));
 }
 
+// What a flyer's OCR text says about its date, as data: the four-digit
+// years, the month names (EN/FR) and the month+day pairs it prints. Each
+// month carries the word it was read from and whether a day number sat
+// next to it ("MAY 3" is a date; "you may" is not known to be one).
+// Read by the date-contradiction veto below and by the deck's shape report
+// (tools/event-shape.js), which shows the owner what the flyer says.
+function readFlyerOcrDates(ocrText) {
+    const text = String(ocrText || '');
+    const out = { years: [], months: [], monthDays: [] };
+    if (!text.trim()) return out;
+    const years = new Set();
+    const yearPattern = /\b(20\d{2})\b/g;
+    let yearMatch;
+    while ((yearMatch = yearPattern.exec(text)) !== null) years.add(parseInt(yearMatch[1], 10));
+    out.years = Array.from(years);
+    for (const [monthNumber, pattern] of FLYER_OCR_MONTH_TOKEN_PATTERNS) {
+        pattern.lastIndex = 0;
+        let match;
+        while ((match = pattern.exec(text)) !== null) {
+            const after = text.slice(pattern.lastIndex).match(/^\.?,?\s{0,3}(\d{1,2})(?:st|nd|rd|th|er|e)?\b/i);
+            if (after) out.monthDays.push({ month: monthNumber, day: parseInt(after[1], 10) });
+            const before = text.slice(0, match.index).match(/(\d{1,2})(?:st|nd|rd|th|er|e)?\s{0,3}$/i);
+            if (before) out.monthDays.push({ month: monthNumber, day: parseInt(before[1], 10) });
+            out.months.push({ month: monthNumber, token: match[0], withDay: Boolean(after || before) });
+        }
+    }
+    return out;
+}
+
 // TRUE when the flyer's OCR text names a date that cannot be this event's
 // local start date (or the previous day — an after-midnight start belongs
 // to the prior night's flyer). Absent date tokens are never a
@@ -825,27 +854,12 @@ function flyerOcrStatesClockTime(ocrText, timeHHMM) {
 function flyerOcrContradictsEventDate(ocrText, localDates) {
     const text = String(ocrText || '');
     if (!text.trim() || !Array.isArray(localDates) || localDates.length === 0) return false;
-    const years = new Set();
-    const yearPattern = /\b(20\d{2})\b/g;
-    let yearMatch;
-    while ((yearMatch = yearPattern.exec(text)) !== null) years.add(parseInt(yearMatch[1], 10));
-    if (years.size > 0 && !localDates.some(date => years.has(date.year))) return true;
-    const monthsFound = new Set();
-    const monthDayPairs = [];
-    for (const [monthNumber, pattern] of FLYER_OCR_MONTH_TOKEN_PATTERNS) {
-        pattern.lastIndex = 0;
-        let match;
-        while ((match = pattern.exec(text)) !== null) {
-            monthsFound.add(monthNumber);
-            const after = text.slice(pattern.lastIndex).match(/^\.?,?\s{0,3}(\d{1,2})(?:st|nd|rd|th|er|e)?\b/i);
-            if (after) monthDayPairs.push({ month: monthNumber, day: parseInt(after[1], 10) });
-            const before = text.slice(0, match.index).match(/(\d{1,2})(?:st|nd|rd|th|er|e)?\s{0,3}$/i);
-            if (before) monthDayPairs.push({ month: monthNumber, day: parseInt(before[1], 10) });
-        }
-    }
+    const stated = readFlyerOcrDates(text);
+    if (stated.years.length > 0 && !localDates.some(date => stated.years.includes(date.year))) return true;
+    const monthsFound = new Set(stated.months.map(entry => entry.month));
     if (monthsFound.size > 0 && !localDates.some(date => monthsFound.has(date.month))) return true;
-    if (monthDayPairs.length > 0
-        && !localDates.some(date => monthDayPairs.some(pair => pair.month === date.month && pair.day === date.day))) {
+    if (stated.monthDays.length > 0
+        && !localDates.some(date => stated.monthDays.some(pair => pair.month === date.month && pair.day === date.day))) {
         return true;
     }
     return false;
@@ -35387,7 +35401,7 @@ TEXT:
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AiWebParser, normalizeCityValue, normalizeStartTimeValue, combineDateAndTime, readFlyerStartTimeFromOcrText };
+    module.exports = { AiWebParser, normalizeCityValue, normalizeStartTimeValue, combineDateAndTime, readFlyerStartTimeFromOcrText, readFlyerOcrDates, flyerOcrContradictsEventDate };
 } else if (typeof window !== 'undefined') {
     window.AiWebParser = AiWebParser;
     window.normalizeCityValue = normalizeCityValue;

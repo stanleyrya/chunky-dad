@@ -673,7 +673,13 @@ test('buildDeck: a series card says its rhythm; another party and a merge never 
 
   // The owner unfolds the card ("one at a time") and decides the second night alone.
   const alone = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: series[1].key, kind: 'new', verdict: 'approve', runId: deck.runId, snapshot: series[1].proposal }));
-  const rest = deckOf(payload, alone).cards.filter((card) => card.series);
+  // Low risk (2026-11-11): the other nights of a party he just approved
+  // differ only in their flyer, so each waits as a tile on the Low risk tab.
+  const tiles = deckOf(payload, alone).cards.filter((card) => card.kind === 'new' && card.proposal.title === 'Jockstrap Wednesday');
+  assert.deepEqual(tiles.map((card) => [card.key.split('|')[3], card.lowRisk, card.series]), ['2030-10-03', '2030-10-17', '2030-10-24'].map((day) => [day, 'repeat', undefined]));
+  // Pulled out to the stack, they are one group of three again.
+  const held = Object.fromEntries(tiles.map((card) => [card.key, '2030-01-01T00:00:00.000Z']));
+  const rest = deckOf(payload, alone, { deckSettings: { held } }).cards.filter((card) => card.series);
   assert.deepEqual(rest.map((card) => card.key.split('|')[3]), ['2030-10-03', '2030-10-17', '2030-10-24'], 'the decided night left the group');
   assert.equal(rest[0].series.size, 3);
   assert.equal(rest[0].series.cadence, null, 'no longer a week apart — the nights are listed');
@@ -1845,4 +1851,141 @@ test('buildDeck: a dropped card says what speaks for it — the listed bar, the 
   assert.deepEqual(card('Elsewhere').worth, ['flyer']);
   assert.equal(deck.counts.worth, 7, 'the four cards at his bear bar, one at his leather bar, one at his adjacent bar and the big man elsewhere');
   assert.equal(deck.counts.dropped, 9, 'worth a look sorts the pile; every dropped card is still in it');
+});
+
+// ---------------------------------------------------------------------------
+// Low risk (owner 2026-11-11: "we need to start automating. Just add checks
+// wherever possible ... Consider using text from flyer as a signal"): every
+// event card carries a shape report (tools/event-shape.js); a clean card of
+// one of three classes waits on its own tab instead of the stack, and a
+// class he switched on is approved for him. Every switch is off to start.
+// ---------------------------------------------------------------------------
+function furballNight(days, overrides = {}) {
+  return newEvent({
+    startDate: iso(FUTURE + days * 86400000), endDate: iso(FUTURE + days * 86400000 + 4 * 3600000),
+    ...(days ? { image: `https://furball.nyc/week-${days}.jpg` } : {}),
+    ...overrides
+  });
+}
+
+function approvedFirstNight() {
+  const first = deckOf(runPayload({ analyzedEvents: [furballNight(0)] }));
+  return rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: first.cards[0].key, kind: 'new', verdict: 'approve', snapshot: first.cards[0].proposal }));
+}
+
+function quietMerge(days = 0, overrides = {}) {
+  const start = iso(FUTURE + days * 86400000);
+  const existing = { title: 'BEEFMINCE x RVT', identifier: `ABC${days}`, startDate: start, endDate: iso(FUTURE + days * 86400000 + 4 * 3600000), location: '51.4863391, -0.1217784', notes: 'bar: Royal Vauxhall Tavern\nwebsite: https://beefmince.co.uk/' };
+  return mergeEvent({
+    startDate: start, endDate: iso(FUTURE + days * 86400000 + 5 * 3600000),
+    _existingEvent: existing, _original: { scraper: {}, calendar: { ...existing, website: 'https://beefmince.co.uk/' } },
+    _changes: ['endDate'],
+    ...overrides
+  });
+}
+
+test('low risk: a first night of a party is an ordinary card with a clean shape report; a later night of a party he approved is a repeat and leaves the stack\'s count', () => {
+  const first = deckOf(runPayload({ analyzedEvents: [furballNight(0)] }));
+  assert.equal(first.cards[0].lowRisk, undefined, 'nothing approved yet: his to look at');
+  assert.equal(first.cards[0].shape.ok, true);
+  assert.equal(first.counts.lowRisk, 0);
+  assert.deepEqual(first.lowRisk.auto, { repeat: false, 'series-night': false, 'quiet-merge': false }, 'every switch is off to start');
+  assert.deepEqual(Object.keys(first.lowRisk.classes), ['repeat', 'series-night', 'quiet-merge']);
+
+  const later = deckOf(runPayload({ analyzedEvents: [furballNight(0), furballNight(7), furballNight(14)] }), approvedFirstNight());
+  assert.deepEqual(later.cards.map((card) => card.lowRisk), ['repeat', 'repeat'], 'a new flyer on an approved party, nothing else different');
+  assert.deepEqual(later.cards.map((card) => card.prior.night), ['2030-10-03', '2030-10-03']);
+  assert.equal(later.counts.lowRisk, 2);
+  assert.equal(later.counts.shapeFlagged, 0);
+  assert.ok(later.cards.every((card) => card.series === undefined), 'a low-risk card is one tile, never folded into a series card');
+  assert.deepEqual(later.autoApprovals || [], [], 'nothing is approved for him while the switch is off');
+});
+
+test('low risk: a failed check keeps the card in the stack — a flyer that prints another date, a night unlike the approved ones, a clash at the venue, a second look', () => {
+  const store = approvedFirstNight();
+  const flyerText = { lookup: (url) => (/week-7/.test(url) ? { text: 'FURBALL NYC\nSATURDAY NOVEMBER 27' } : null) };
+  const deck = deckOf(runPayload({ analyzedEvents: [
+    furballNight(7),
+    furballNight(14, { url: 'https://tickets.example.com/furball' }),
+    furballNight(21, { _venueOverlap: [{ withTitle: 'B BAR' }] }),
+    furballNight(28)
+  ] }), store, { flyerText });
+  const [wrongFlyer, otherLink, clash, clean] = deck.cards;
+  assert.deepEqual(wrongFlyer.shape.failed, ['flyer-date', 'flyer-weekday']);
+  assert.equal(wrongFlyer.lowRisk, undefined);
+  assert.deepEqual(otherLink.shape.failed, ['usual-link']);
+  assert.equal(otherLink.lowRisk, undefined);
+  assert.deepEqual(clash.shape.failed, ['slot-clash']);
+  assert.equal(clash.lowRisk, undefined);
+  assert.equal(clean.lowRisk, 'repeat');
+  assert.equal(deck.counts.lowRisk, 1);
+  assert.equal(deck.counts.shapeFlagged, 3);
+  assert.ok(deck.cards.slice(0, 3).some((card) => card.series), 'the cards that stay in the stack still fold as one party');
+
+  // His own "no" on this very card, then the card changed: a second look is always his.
+  const decidedThenChanged = rq.upsertDecision(store, rq.buildDecision({ key: clean.key, kind: 'new', verdict: 'reject', snapshot: clean.proposal, reason: { tags: ['other'], text: 'wrong picture' } }));
+  const again = deckOf(runPayload({ analyzedEvents: [furballNight(28, { image: 'https://furball.nyc/another.jpg' })] }), decidedThenChanged);
+  assert.equal(again.cards[0].prior.verdict, 'reject');
+  assert.equal(again.cards[0].prior.night, undefined);
+  assert.equal(again.cards[0].shape.ok, true);
+  assert.equal(again.cards[0].lowRisk, undefined);
+});
+
+test('low risk: a switch turned on approves the class for him (and only that class); a card he pulled out stays in the stack; an inbox picture is never approved for him', () => {
+  const store = approvedFirstNight();
+  const events = [furballNight(7), furballNight(14), quietMerge()];
+  const off = deckOf(runPayload({ analyzedEvents: events }), store);
+  assert.deepEqual(off.cards.map((card) => card.lowRisk), ['repeat', 'repeat', 'quiet-merge']);
+
+  const held = { [off.cards[1].key]: '2030-01-01T00:00:00.000Z' };
+  const on = deckOf(runPayload({ analyzedEvents: events }), store, { deckSettings: { auto: { repeat: true }, held } });
+  assert.deepEqual(on.cards.map((card) => [card.key, card.lowRisk || null, card.lowRiskHeld || null]), [
+    [off.cards[1].key, null, 'repeat'],
+    [off.cards[2].key, 'quiet-merge', null]
+  ], 'the pulled-out night waits in the stack and says what it was; the other class is untouched');
+  assert.equal(on.lowRisk.held, 1);
+  assert.equal(on.counts.lowRisk, 1);
+  assert.equal(on.autoApprovals.length, 1);
+  assert.equal(on.autoApprovals[0].key, off.cards[0].key);
+  assert.equal(on.autoApprovals[0].verdict, 'approve');
+  assert.deepEqual(on.autoApprovals[0].autoApproved, { lowRisk: 'repeat' });
+  assert.equal(on.autoApprovals[0].snapshot.image, 'https://furball.nyc/week-7.jpg', 'the approval stores what was approved');
+  const filed = on.decided.find((entry) => entry.key === off.cards[0].key);
+  assert.deepEqual(filed.autoApproved, { lowRisk: 'repeat' });
+  assert.equal(filed.pendingExecute, true, 'nothing reaches the calendar until the phone executes');
+
+  // Approving an inbox picture pushes it to the site: his tap only.
+  const inboxPicture = ReviewSharedCore.sharedInboxUrl('file', 'abc123.jpg');
+  assert.equal(ReviewSharedCore.isSharedInboxUrl(inboxPicture), true);
+  const inbox = deckOf(runPayload({ analyzedEvents: [furballNight(7, { image: inboxPicture })] }), store, { deckSettings: { auto: { repeat: true } } });
+  assert.equal(inbox.autoApprovals.length, 0);
+  assert.equal(inbox.cards[0].lowRisk, 'repeat', 'it waits on the tab for his tap');
+});
+
+test('low risk: an approval the deck made never becomes "the usual" — the next night is still compared with what HE approved', () => {
+  const eventShape = require('../tools/event-shape');
+  const store = approvedFirstNight();
+  const on = deckOf(runPayload({ analyzedEvents: [furballNight(7, { url: 'https://furball.nyc/tickets' })] }), store, { deckSettings: { auto: { repeat: true } } });
+  // The server stores it with the class in its words.
+  const withAuto = rq.upsertDecision(store, { ...on.autoApprovals[0], reason: { tags: [], text: eventShape.lowRiskAutoReasonText('repeat') } });
+  // A night whose picture is gone: the approved night had one, the deck-approved night is not asked.
+  const next = deckOf(runPayload({ analyzedEvents: [furballNight(14, { image: '' })] }), withAuto, { deckSettings: { auto: { repeat: true } } });
+  assert.equal(next.autoApprovals.length, 0);
+  assert.deepEqual(next.cards[0].shape.failed, ['usual-picture']);
+});
+
+test('low risk: an update that changes neither the name nor the link is a quiet update; a rename, a new link or a start moved by hours is not', () => {
+  const deck = deckOf(runPayload({ analyzedEvents: [
+    quietMerge(0),
+    mergeEvent({ startDate: iso(FUTURE + 86400000), endDate: iso(FUTURE + 86400000 + 4 * 3600000) }),
+    quietMerge(2, { _venueOverlap: [{ withTitle: 'SUNDAY BEER BUST' }] })
+  ] }));
+  const [quiet, renamed, clash] = deck.cards;
+  assert.equal(quiet.kind, 'merge');
+  assert.deepEqual(Object.keys(quiet.proposal.changes), ['endDate']);
+  assert.equal(quiet.lowRisk, 'quiet-merge');
+  assert.ok(Object.keys(renamed.proposal.changes).includes('title'));
+  assert.equal(renamed.lowRisk, undefined);
+  assert.deepEqual(clash.shape.failed, ['slot-clash']);
+  assert.equal(clash.lowRisk, undefined);
 });

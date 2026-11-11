@@ -2561,3 +2561,133 @@ test('gone card and audit page: the proof the card rests on has its own line; a 
   assert.equal(audit.split('<span class="badge still-removed">site removed</span>').length - 1, 1, 'one proven removal');
   assert.equal(audit.split('<span class="badge">unknown — not found, no proof</span>').length - 1, 1, 'one guess from before the rule');
 });
+
+// ---------------------------------------------------------------------------
+// Low risk on the deck (owner 2026-11-11): the tab and its grid, the shape
+// report a second reader fetches, and the settings route — every switch off
+// until he turns one on, an approval made for him stored as an ordinary
+// decision that says so, and an undo that keeps the card in the stack.
+// ---------------------------------------------------------------------------
+function lowRiskRunFixture(runId) {
+  const fixture = reviewRunFixture(runId);
+  // The shape check refuses a start more than 18 months out, so these nights
+  // sit a month from today rather than in the fixture's 2030.
+  const soon = new Date(Date.now() + 30 * 86400000);
+  const start = Date.UTC(soon.getUTCFullYear(), soon.getUTCMonth(), soon.getUTCDate(), 2);
+  const base = { ...fixture.analyzedEvents[0], image: 'https://furball.nyc/flyer.jpg',
+    startDate: new Date(start).toISOString(), endDate: new Date(start + 4 * 3600000).toISOString() };
+  const night = (days, image) => ({
+    ...base,
+    startDate: new Date(Date.parse(base.startDate) + days * 86400000).toISOString(),
+    endDate: new Date(Date.parse(base.endDate) + days * 86400000).toISOString(),
+    image
+  });
+  fixture.analyzedEvents = [base, night(7, 'https://furball.nyc/week-7.jpg'), night(14, 'https://furball.nyc/week-14.jpg')];
+  return fixture;
+}
+
+test('low risk routes: the tab is on the page; the shape report is served; a hold, a switch and an undo go through /review/low-risk and the decision store', async () => {
+  const eventShape = require('../tools/event-shape');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-lowrisk-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  const fixture = lowRiskRunFixture('20300101-051500');
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(fixture));
+  // The flyer of the third night prints another date: the picture is a witness.
+  const printed = new Date(Date.parse(fixture.analyzedEvents[2].startDate) + 9 * 86400000);
+  const printedText = `${printed.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' })} ${printed.getUTCDate()}`;
+  fs.mkdirSync(path.join(dir, 'storage', 'ocr', 'furball.nyc'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'storage', 'ocr', 'furball.nyc', 'week-14.json'), JSON.stringify({
+    url: 'https://furball.nyc/week-14.jpg', cachedAt: '2030-01-01T00:00:00.000Z',
+    response: { text: JSON.stringify({ text: `FURBALL NYC\n${printedText.toUpperCase()}`, imageClassification: 'flyer' }) }
+  }));
+  const previousEnv = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  const state = createServerState();
+  const log = console.log; console.log = () => {};
+  const deckJson = async () => JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+  const post = (body) => request(state, 'POST', '/review/low-risk', typeof body === 'string' ? body : JSON.stringify(body));
+  try {
+    // Nothing approved yet: three ordinary cards, no low-risk class.
+    let deck = await deckJson();
+    assert.equal(deck.counts.pending, 3);
+    assert.equal(deck.counts.lowRisk, 0);
+    const first = deck.cards[0];
+    await request(state, 'POST', '/review/decide', JSON.stringify({ key: first.key, kind: first.kind, verdict: 'approve', runId: deck.runId, snapshot: first.proposal }));
+
+    // He approved the party: the next night is a repeat; the night whose flyer says another date is not.
+    deck = await deckJson();
+    const [repeat, wrongFlyer] = deck.cards;
+    assert.equal(repeat.lowRisk, 'repeat');
+    assert.equal(wrongFlyer.lowRisk, undefined);
+    assert.deepEqual(wrongFlyer.shape.failed, ['flyer-date']);
+    const flyerSays = wrongFlyer.shape.checks.find((entry) => entry.code === 'flyer-date').detail;
+    assert.ok(flyerSays.startsWith(`the flyer says ${printedText}; this card is `), flyerSays);
+    assert.deepEqual(deck.lowRisk.auto, { repeat: false, 'series-night': false, 'quiet-merge': false });
+    assert.equal(fs.existsSync(eventShape.getDeckSettingsPath(dir)), false, 'reading the deck writes no settings file');
+
+    const page = (await request(state, 'GET', '/review')).body;
+    for (const piece of ['id="lowrisk"', "['lowrisk', '🟢 Low risk']", '"lowRisk":"repeat"', 'data-act="approve-all"', 'data-act="pull"', 'role="switch"', "sendTo('/review/low-risk'", '.friend-mode #lowrisk { display:none; }', flyerSays]) {
+      assert.ok(page.includes(piece), `the page carries ${piece}`);
+    }
+    assert.ok(/"lowRisk":\{"classes":\{"repeat":\{"label":"Repeat nights"/.test(page), 'the classes and their switches ride in the deck payload');
+    for (const source of [...page.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1])) {
+      assert.doesNotThrow(() => new Function(source), 'the page script parses');
+    }
+
+    const report = JSON.parse((await request(state, 'GET', '/review/shape.json')).body);
+    assert.equal(report.ok, true);
+    assert.equal(report.runId, '20300101-051500');
+    assert.deepEqual(report.summary.lowRisk, { repeat: 1, 'series-night': 0, 'quiet-merge': 0 });
+    assert.equal(report.summary.cards, 3);
+    assert.deepEqual(report.summary.failedByCheck, { 'flyer-date': 1 });
+    const flagged = report.cards.find((row) => row.key === wrongFlyer.key);
+    assert.equal(flagged.checks.find((entry) => entry.code === 'flyer-date').detail, flyerSays);
+
+    // The settings route refuses what it does not understand.
+    assert.equal((await post('{nope')).status, 400);
+    assert.equal((await post({ auto: { everything: true } })).status, 400);
+    assert.equal((await post({})).status, 400);
+    assert.equal(fs.existsSync(eventShape.getDeckSettingsPath(dir)), false, 'a refused change writes nothing');
+
+    // Pull it out: it waits in the stack and says what it was. Put it back.
+    const held = await post({ hold: repeat.key });
+    assert.equal(held.status, 200, held.body);
+    assert.equal(JSON.parse(held.body).held, 1);
+    assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(eventShape.getDeckSettingsPath(dir), 'utf8')).held), [repeat.key]);
+    deck = await deckJson();
+    assert.deepEqual([deck.cards[0].lowRisk, deck.cards[0].lowRiskHeld, deck.counts.lowRisk], [undefined, 'repeat', 0]);
+    assert.ok((await request(state, 'GET', '/review')).body.includes('🟢 low risk (repeat nights), pulled out by you'), 'the card says where it came from');
+    assert.equal((await post({ release: [repeat.key] })).status, 200);
+    assert.equal((await deckJson()).cards[0].lowRisk, 'repeat');
+
+    // The switch: approved for him, stored as an ordinary decision that says so.
+    const on = await post({ auto: { repeat: true } });
+    assert.equal(JSON.parse(on.body).auto.repeat, true);
+    deck = await deckJson();
+    assert.deepEqual(deck.cards.map((card) => card.key), [wrongFlyer.key], 'the night its flyer contradicts is still his');
+    const stored = JSON.parse(fs.readFileSync(reviewQueue.getDecisionsPath(dir), 'utf8')).decisions.find((decision) => decision.key === repeat.key);
+    assert.equal(stored.verdict, 'approve');
+    assert.equal(stored.reason.text, 'auto: low risk (repeat)');
+    assert.equal(stored.snapshot.image, 'https://furball.nyc/week-7.jpg');
+    assert.ok(/"auto":"repeat"/.test((await request(state, 'GET', '/review')).body), 'the decided row tells the page it was approved for him');
+    assert.equal(JSON.parse((await request(state, 'GET', '/review/shape.json')).body).cards.find((row) => row.key === repeat.key).approvedForYou, 'repeat');
+
+    // Undo = hold, then clear: the card is back in the stack and stays there.
+    await post({ hold: repeat.key });
+    await request(state, 'POST', '/review/decide', JSON.stringify({ key: repeat.key, verdict: 'clear' }));
+    deck = await deckJson();
+    assert.deepEqual(deck.cards.map((card) => [card.key, card.lowRiskHeld || null]), [[repeat.key, 'repeat'], [wrongFlyer.key, null]]);
+    assert.equal(JSON.parse(fs.readFileSync(reviewQueue.getDecisionsPath(dir), 'utf8')).decisions.some((decision) => decision.key === repeat.key), false, 'and is not approved again behind his back');
+
+    // Off again: nothing more is approved for him.
+    await post({ auto: { repeat: false }, release: repeat.key });
+    deck = await deckJson();
+    assert.equal(deck.cards[0].lowRisk, 'repeat');
+    assert.equal(deck.counts.pending, 2);
+  } finally {
+    console.log = log;
+    if (previousEnv === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR;
+    else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
