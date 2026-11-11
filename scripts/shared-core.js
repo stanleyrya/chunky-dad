@@ -655,7 +655,11 @@ class SharedCore {
             diaper: { substring: ['diaper', 'abdl'], word: ['nappy', 'nappies'] },
             drag: { substring: ['dragula'], word: ['drag'] },
             pup: { substring: ['puppy', 'puppies'], word: ['pup', 'pups', 'mosh', 'pet night', 'pet play'] },
-            underwear: { substring: ['underwear', 'jockstrap'], word: ['undies', 'jocks', 'singlet', 'singlets'] }
+            underwear: { substring: ['underwear', 'jockstrap'], word: ['undies', 'jocks', 'singlet', 'singlets'] },
+            sportswear: { substring: ['sportswear', 'sneaker', 'lycra', 'spandex', 'tracksuit', 'trackies', 'sports gear', 'sport gear', 'sports kit', 'sport kit', 'locker room', 'gym gear'], word: ['sneaks', 'sneax', 'scally'] },
+            country: { substring: ['line danc', 'two-step', 'two step', 'honky tonk', 'honky-tonk', 'hoedown', 'square danc'], word: ['country', 'western', 'rodeo', 'cowboy', 'cowboys'] },
+            naked: { substring: ['naked', 'nudist', 'naturist', 'clothing optional', 'clothing-optional', 'clothes optional'], word: ['nude', 'nudity'] },
+            'sex-party': { substring: ['sex party', 'sex-party', 'play party', 'sex club', 'jack off', 'jack-off', 'jackoff', 'circle jerk', 'gang bang', 'gangbang', 'fisting', 'bathhouse'], word: ['sex', 'orgy', 'j/o'] }
         };
 
         

@@ -6027,7 +6027,7 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
 test('tags: every machine tag in the schema has a keyword family; the bear check never hears about tags, the tag check carries the gloss', () => {
   const core = createCore();
   const machineTags = SharedCore.getAiConfirmableTags();
-  assert.deepEqual(machineTags, ['leather', 'kink', 'rubber', 'diaper', 'drag', 'pup', 'underwear']);
+  assert.deepEqual(machineTags, ['leather', 'kink', 'rubber', 'diaper', 'drag', 'pup', 'underwear', 'sportswear', 'country', 'naked', 'sex-party']);
   for (const tag of machineTags) {
     assert.ok(core.tagKeywords[tag], `${tag} has a keyword family`);
     assert.ok(core.matchTagKeywords(`${tag} night`, tag).length > 0, `${tag} names itself`);
@@ -6044,6 +6044,30 @@ test('tags: every machine tag in the schema has a keyword family; the bear check
   assert.deepEqual(core.matchTagKeywords('Dragon Boat Race', 'drag'), []);
   assert.deepEqual(core.matchTagKeywords('Dragula viewing', 'drag'), ['dragula']);
   assert.deepEqual(core.matchTagKeywords('Dungeons & Drag Queens', 'kink'), ['dungeon']);
+});
+
+test('tags: sportswear, country, naked and sex-party families — words that name the scene, whole words where a fragment lies', () => {
+  const core = createCore();
+  // Measured on run 20261110 (1,637 distinct events): "orgy" inside a
+  // performer's name, "sex" inside other words.
+  assert.deepEqual(core.matchTagKeywords("Thorgy's Auction House", 'sex-party'), []);
+  assert.deepEqual(core.matchTagKeywords('Middlesex County Fair', 'sex-party'), []);
+  assert.deepEqual(core.matchTagKeywords('A sex party for bears', 'sex-party'), ['sex party', 'sex']);
+  assert.deepEqual(core.matchTagKeywords('All-male play party', 'sex-party'), ['play party']);
+  assert.deepEqual(core.matchTagKeywords('Sneakfreaxx: trackies and sneakers', 'sportswear'), ['sneaker', 'trackies']);
+  assert.deepEqual(core.matchTagKeywords('Scallywag Sunday', 'sportswear'), []);
+  assert.deepEqual(core.matchTagKeywords('Line dancing and two-step lessons', 'country'), ['line danc', 'two-step']);
+  assert.deepEqual(core.matchTagKeywords('Countryside Hike', 'country'), []);
+  assert.deepEqual(core.matchTagKeywords('Clothing-optional pool party', 'naked'), ['clothing-optional']);
+  assert.deepEqual(core.matchTagKeywords('Denude the Forest', 'naked'), []);
+  // One event carries every tag its words name; each is its own question.
+  const both = core.collectMachineEventTags({ title: 'Naked Social', description: 'A social and play party. Full nudity mandatory.' });
+  assert.deepEqual(both.candidates, ['kink', 'naked', 'sex-party']);
+  // None of the four keeps an event that is not bear: they describe.
+  for (const tag of ['sportswear', 'country', 'naked', 'sex-party']) {
+    assert.equal(EventSchema.EVENT_TAGS[tag].who, 'machine');
+    assert.ok(!EventSchema.EVENT_TAGS[tag].keeps, `${tag} describes, never keeps`);
+  }
 });
 
 test('bear keyword tier: a description-only hit that NAMES a registry brand keeps its short-circuit', () => {
@@ -30027,7 +30051,8 @@ test('tags: one question per candidate tag — confirmed only with a verbatim qu
   assert.equal(several[0].tags, 'kink, leather', 'rubber claimed a quote the text does not contain → declined, fail closed');
   assert.equal(several[0].bearSource, 'tagged (ai: a gear night)');
   const tagCalls = adapter.calls.filter(call => /^Tag: /m.test(call.prompt));
-  assert.equal(tagCalls.length, 3, 'one call per candidate tag');
+  // leather, kink, rubber — and sportswear, which "sports gear" names.
+  assert.equal(tagCalls.length, 4, 'one call per candidate tag');
   assert.ok(adapter.calls.some(call => !/^Tag: /m.test(call.prompt)), 'plus the bear check');
 
   const confirmed = await createCore().filterBearEvents(
