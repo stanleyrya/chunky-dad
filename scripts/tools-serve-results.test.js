@@ -1087,6 +1087,7 @@ const {
   formatReviewUtcLine,
   describeReviewTimeDelta,
   renderReviewCard,
+  renderReviewBearRow,
   renderReviewPage,
   createServerState,
   handleRequest
@@ -1270,6 +1271,41 @@ test('renderReviewCard (dropped): the drop reason is the bear row, and the card 
   assert.ok(!html.includes('<button'), 'the swipe is the verdict — no buttons');
 });
 
+test('renderReviewBearRow: a maybe is said as a hold, never as a verdict; the bar and flyer notices are facts under the state line', () => {
+  const dropped = (reason) => ({ kind: 'dropped', title: 'Disco Night', dropReason: reason });
+  const parked = { maybe: { stampedAt: '2030-01-02T03:04:05.000Z', on: '' } };
+  const held = renderReviewBearRow(parked, dropped('manual store: maybe (parked 2030-01-02)'));
+  assert.ok(held.includes('🤔 held out of the calendar — your maybe') && held.includes('you parked this as a maybe (2030-01-02)'));
+  assert.ok(!held.includes('dropped as not bear'), 'a maybe is not a not-bear');
+  // Parked today, the run read it before: the drop reason still stands and the parking is said next to it.
+  const fresh = renderReviewBearRow(parked, dropped('ai: no bear language'));
+  assert.ok(fresh.includes('🚫 dropped as not bear — AI: no bear language') && fresh.includes('you parked this as a maybe'));
+  // The maybe was answered or taken back after the run held the event.
+  const stale = renderReviewBearRow({}, dropped('manual store: maybe (parked 2030-01-02)'));
+  assert.ok(stale.includes('held as a maybe when this run read it') && !stale.includes('you parked this'));
+  // A kept night of a parked party, matched through another listing's title.
+  const kept = renderReviewBearRow({ maybe: { stampedAt: '2030-01-02T03:04:05.000Z', on: 'Disco Night with DJ <X>' } }, { kind: 'new', title: 'Disco Night' });
+  assert.ok(kept.includes('on the same party, listed as “Disco Night with DJ &lt;X&gt;”'));
+  // A firm verdict outranks the maybe line.
+  const firm = renderReviewBearRow({ ...parked, bearVerdict: 'not_bear' }, dropped('ai: x'));
+  assert.ok(!firm.includes('parked this as a maybe'));
+
+  const noticed = renderReviewBearRow({
+    barNotice: { bar: 'Dallas Eagle', scene: 'leather', ownSite: true, host: 'dallaseagle.com', kept: 3, dropped: 5 },
+    flyerNotice: { heavyset: true, bigBearded: false, description: 'A shirtless heavyset man <b>' }
+  }, dropped('ai: no bear language'));
+  assert.ok(noticed.includes('<div class="bear-notice">🍺 A leather bar on your list: Dallas Eagle. Read from its own site. This run kept 3 of its 8 parties.</div>'));
+  assert.ok(noticed.includes('<div class="bear-notice">🧔 The flyer shows a heavyset man — “A shirtless heavyset man &lt;b&gt;” (a machine look)</div>'));
+  const elsewhere = renderReviewBearRow({ barNotice: { bar: 'Rockbar', ownSite: false, host: '', kept: 0, dropped: 1 }, flyerNotice: { heavyset: true, bigBearded: true, description: '' } }, dropped('ai: x'));
+  assert.ok(elsewhere.includes('🍺 On your bars list: Rockbar. This run kept 0 of its 1 party.') && !elsewhere.includes('own site'));
+  const bearBar = renderReviewBearRow({ barNotice: { bar: 'Rockbar', scene: 'bear', ownSite: false, host: '', kept: 0, dropped: 0 } }, dropped('ai: x'));
+  assert.ok(bearBar.includes('<div class="bear-notice">🍺 A bear bar on your list: Rockbar.</div>'));
+  assert.ok(renderReviewBearRow({ barNotice: { bar: 'Nowhere Bar', scene: 'adjacent', ownSite: false, host: '', kept: 0, dropped: 0 } }, dropped('ai: x')).includes('<div class="bear-notice">🍺 A bear-adjacent bar on your list: Nowhere Bar.</div>'));
+  assert.ok(renderReviewBearRow({ barNotice: { bar: 'Rockbar', scene: '<b>', ownSite: false, host: '', kept: 0, dropped: 0 } }, dropped('ai: x')).includes('🍺 On your bars list: Rockbar.'), 'an unknown mark is no mark');
+  assert.ok(elsewhere.includes('🧔 The flyer shows a heavyset, big bearded man (a machine look)'));
+  assert.ok(!renderReviewBearRow({}, dropped('ai: x')).includes('bear-notice'), 'no notice without a fact');
+});
+
 test('renderReviewCard degrades without a context or display (a decided entry re-rendered from its snapshot)', () => {
   const html = renderReviewCard({ kind: 'new', key: 'k', proposal: { title: 'Solo', startDate: '2030-10-04T02:00:00.000Z', timezone: 'UTC', bar: 'Rockbar', city: 'nyc', url: 'https://furball.nyc/' } });
   assert.ok(html.includes('<h2>Solo</h2>') && html.includes('📍 Rockbar') && html.includes('>🔗 furball.nyc/</a>'));
@@ -1413,7 +1449,7 @@ test('review routes: deck → decide → decided → undo, over a temp shared di
     assert.equal(deckWithVerdict.cards[0].display.bearVerdict, 'bear', 'the deck shows the stored verdict');
     const clearedBear = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'clear', event: { title: 'FURBALL NYC', bar: 'Rockbar', city: 'nyc' } }));
     assert.equal(JSON.parse(clearedBear.body).removed, true);
-    assert.equal((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'maybe', event: {} }))).status, 400);
+    assert.equal((await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'perhaps', event: {} }))).status, 400);
 
     const taggedNoTags = await request(state, 'POST', '/review/bear', JSON.stringify({ verdict: 'tagged', event: { title: 'Beer Bust', bar: 'Eagle NYC', city: 'nyc' } }));
     assert.equal(taggedNoTags.status, 400, 'a tagged verdict needs its tags');
@@ -1710,6 +1746,9 @@ test('the review page offers the three left-swipe answers, a one-tap Not bear, a
   assert.ok(!html.includes("if (c.cards[0].kind === 'dropped') { decide(c, 'reject', null, 'gone-left'); return; }\n    pending = c; openSheet(c);"), 'a left swipe on a not-bear card opens the sheet');
   assert.ok(html.includes('"waitingGone":[{"key":"event|gone|bar|2030-01-05"'), 'orphaned notes ride into the client');
   assert.ok(!html.includes('id="sheet-reject"'), 'the single Reject button is gone');
+  // Maybe (owner 2026-11-10): a sixth control, its key, the two tabs, and no decision record.
+  for (const piece of ['id="btn-maybe"', '· m maybe ·', '.friend-mode #btn-maybe', "function canPark(c) { return !friendMode && Boolean(c) && !c.parked && (c.kind === 'dropped' || c.kind === 'new'); }", "if (filter === 'maybe') return c.parked === true;", "tabs.push(['worth', '👀 Worth a look'])", "var WORTH_ORDER = ['flyer', 'bear-bar', 'leather-bar', 'adjacent-bar'];", "tabs.push(['maybe', '🤔 Maybes'])", "return postBear(c, 'maybe')", "if (last.parked) { unparkCards(last.parked, last.replaced, last); return; }", "else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); maybeTop(); }", 'history.filter(function (h) { return h.records.length > 0 || h.parked; })']) assert.ok(html.includes(piece), piece);
+  assert.ok(/"parked":false,"worth":\[\],"html":/.test(html), 'each card carries its parked and worth state to the client');
   for (const source of [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1])) {
     assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');
   }
@@ -2201,6 +2240,62 @@ test('review routes: a title the store holds both ways is listed by /review/verd
     assert.equal(undo.restored, true);
     assert.deepEqual(reviewQueue.loadBearVerdicts(verdictsPath), both);
     assert.equal(JSON.parse((await request(state, 'GET', '/review/verdict-conflicts.json')).body).count, 1);
+  } finally {
+    if (previous === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR; else process.env.CHUNKY_SHARED_STORAGE_DIR = previous;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('review routes: Maybe through /review/bear parks a not-bear card — off the pile and its counts, onto the page as parked; a firm verdict replaces the maybe and its undo restores it; a clear ends it', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-maybe-'));
+  fs.mkdirSync(path.join(dir, 'runs'));
+  const place = { bar: 'Dallas Eagle', address: '525 S Riverfront Blvd, Dallas, TX 75207', location: '32.7693483, -96.8112576', city: 'dallas' };
+  const event = { title: 'Disco Inferno', ...place, timezone: 'America/Chicago', startDate: '2030-10-04T02:00:00.000Z', endDate: '2030-10-04T05:00:00.000Z', url: 'https://dallaseagle.com/events', source: 'ai-web' };
+  const run = reviewRunFixture('20300101-051500');
+  run.bearDroppedEvents = [{ title: event.title, startDate: event.startDate, venue: event.bar, reason: 'ai: no bear language', host: 'dallaseagle.com', event }];
+  fs.writeFileSync(path.join(dir, 'runs', '20300101-051500.json'), JSON.stringify(run));
+  const verdictsPath = reviewQueue.getBearVerdictsPath(dir);
+  const previous = process.env.CHUNKY_SHARED_STORAGE_DIR;
+  process.env.CHUNKY_SHARED_STORAGE_DIR = dir;
+  try {
+    const state = createServerState();
+    const deckNow = async () => JSON.parse((await request(state, 'GET', '/review/deck.json')).body);
+    const before = await deckNow();
+    const card = before.cards.find((entry) => entry.kind === 'dropped');
+    assert.ok(card && !card.parked);
+    assert.equal(before.counts.dropped, 1);
+    assert.equal(before.counts.maybe, 0);
+    const bearBody = (verdict, extra = {}) => JSON.stringify({ verdict, event: card.display.bearIdentity || card.proposal, key: card.key, ...extra });
+
+    const park = JSON.parse((await request(state, 'POST', '/review/bear', bearBody('maybe'))).body);
+    assert.equal(park.ok, true);
+    assert.equal(park.entry.verdict, 'maybe');
+    assert.equal(park.replaced, null);
+    const parked = await deckNow();
+    assert.equal(parked.counts.dropped, 0, 'off the not-bear pile');
+    assert.equal(parked.counts.maybe, 1);
+    assert.equal(parked.cards.find((entry) => entry.key === card.key).parked, true, 'still a card, parked');
+    assert.ok(!parked.decided.some((entry) => entry.key === card.key), 'a maybe is not a decision');
+    const page = (await request(state, 'GET', '/review')).body;
+    assert.ok(page.includes('you parked this as a maybe') && page.includes('"parked":true'));
+    assert.ok(!(await request(state, 'GET', '/review/rejections')).body.includes('Disco Inferno'), 'and never a rejection');
+
+    // A firm answer takes the maybe's place; its undo puts the maybe back.
+    const notBear = JSON.parse((await request(state, 'POST', '/review/bear', bearBody('not_bear'))).body);
+    assert.equal(notBear.replaced.verdict, 'maybe');
+    assert.deepEqual(reviewQueue.loadBearVerdicts(verdictsPath).map((entry) => entry.verdict), ['not_bear']);
+    assert.equal((await deckNow()).counts.maybe, 0);
+    const undo = JSON.parse((await request(state, 'POST', '/review/bear', bearBody('clear', { restore: notBear.replaced }))).body);
+    assert.equal(undo.restored, true);
+    assert.deepEqual(reviewQueue.loadBearVerdicts(verdictsPath).map((entry) => entry.verdict), ['maybe']);
+    assert.equal((await deckNow()).counts.maybe, 1);
+
+    // Un-park: the entry goes and the card is an ordinary not-bear card again.
+    await request(state, 'POST', '/review/bear', bearBody('clear'));
+    assert.deepEqual(reviewQueue.loadBearVerdicts(verdictsPath), []);
+    const after = await deckNow();
+    assert.equal(after.counts.maybe, 0);
+    assert.equal(after.counts.dropped, 1);
   } finally {
     if (previous === undefined) delete process.env.CHUNKY_SHARED_STORAGE_DIR; else process.env.CHUNKY_SHARED_STORAGE_DIR = previous;
     fs.rmSync(dir, { recursive: true, force: true });

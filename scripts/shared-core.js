@@ -1509,6 +1509,18 @@ class SharedCore {
         return value === 'bear' || value === 'tagged' || value === 'not_bear';
     }
 
+    // Every value the verdict store may hold: the three firm verdicts above
+    // plus `maybe` — the owner's "not now, show me again later" (2026-11-10:
+    // "allow me to mark some events as maybes to revisit later? And for now
+    // we don't show"). A maybe is NOT a verdict: it never joins the firm
+    // matching, the both-ways conflict check or the learned per-night
+    // markers, and it is read only where no firm verdict speaks
+    // (findStoredMaybeVerdictMatch). The party stays out of the calendar
+    // until he answers it for real.
+    static isStoredBearVerdictValue(value) {
+        return SharedCore.isBearVerdictValue(value) || value === 'maybe';
+    }
+
     // Automatic bearSource for an event kept on its tags: `tagged (keyword:
     // leather)` / `tagged (ai: <reason>)` — ranks with keyword/ai
     // (PROVENANCE_TRUST_TIERS), so an owner verdict still outranks it.
@@ -2013,8 +2025,28 @@ class SharedCore {
         return null;
     }
 
+    // Firm verdicts only: a maybe beside a bear is not "both ways".
     static bearVerdictsDisagree(entries) {
-        return new Set((Array.isArray(entries) ? entries : []).map(entry => entry && entry.verdict)).size > 1;
+        return new Set((Array.isArray(entries) ? entries : []).map(entry => entry && entry.verdict)
+            .filter(value => SharedCore.isBearVerdictValue(value))).size > 1;
+    }
+
+    // The owner's stored MAYBE for this event — { entry, matchedBy } or null.
+    // Same identity as a firm verdict (the exact title at this place, else
+    // the party behind it; dates never compared, so one maybe covers every
+    // night). A firm verdict always outranks it: any firm entry that speaks
+    // to this event — even two that disagree — means the maybe says nothing,
+    // because a phone tap after the maybe is the newer word and a both-ways
+    // store is the deck's to settle.
+    findStoredMaybeVerdictMatch(event) {
+        const firm = this.collectStoredBearVerdictHits(event);
+        if (firm && (firm.title.length > 0 || firm.party.length > 0)) return null;
+        const hits = this.collectStoredBearVerdictHits(event, { maybe: true });
+        if (!hits) return null;
+        if (hits.exact.length > 0) return { entry: hits.exact[0], matchedBy: 'title' };
+        if (hits.party.length === 0) return null;
+        const newest = hits.party.reduce((latest, entry) => (String(entry.stampedAt || '') > String(latest.stampedAt || '') ? entry : latest), hits.party[0]);
+        return { entry: newest, matchedBy: 'party' };
     }
 
     // A title key with its bare year tokens taken out: "underwear night
@@ -2036,7 +2068,12 @@ class SharedCore {
     //   party — the party-key fold (getBearVerdictPartyKey), read only when
     //           there is no exact hit, as before.
     // null when nothing could apply (no store, no title identity).
-    collectStoredBearVerdictHits(event) {
+    // options.maybe reads the store's `maybe` entries instead of its firm
+    // verdicts, through the very same identity (findStoredMaybeVerdictMatch).
+    collectStoredBearVerdictHits(event, options = {}) {
+        const wanted = options && options.maybe === true
+            ? (value) => value === 'maybe'
+            : SharedCore.isBearVerdictValue;
         const store = Array.isArray(this.bearVerdicts) ? this.bearVerdicts : [];
         if (store.length === 0 || !event || typeof event !== 'object') return null;
         const eventKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar]);
@@ -2052,7 +2089,7 @@ class SharedCore {
             return keys;
         };
         const usable = store.filter(entry => entry && typeof entry === 'object'
-            && SharedCore.isBearVerdictValue(entry.verdict));
+            && wanted(entry.verdict));
         const exact = [];
         const siblings = [];
         for (const entry of usable) {
@@ -7314,6 +7351,114 @@ class SharedCore {
         this.ocrImageTextLookup = typeof lookup === 'function' ? lookup : null;
     }
 
+    // ── The flyer look (owner 2026-11-09: "does the image have a fat man on
+    // it?"; 2026-11-10: "keep some type of ... fat picture notices") ───────
+    // One question to the vision model per dropped event's flyer: who is
+    // PICTURED. The answer is a notice on the not-bear card and nothing
+    // else — it never keeps, drops or tags an event. Measured on 2026-11-09
+    // against the owner's own verdicts: a flyer the model calls heavyset was
+    // a bear event 96% of the time, and it only says so for 23% of them, so
+    // its silence means nothing and is never shown.
+    // The prompt is frozen: the cache is keyed by it, and the numbers above
+    // were measured with these exact words.
+    static get FLYER_LOOK_PROMPT() {
+        return `Look at this image and describe ONLY what is visibly pictured. Do not guess what kind of event it is. Judge people from the picture itself, never from the words printed on it (only the last field is about the words).
+
+Return JSON only, with exactly these fields, in this order:
+{
+  "people_description": "one short sentence saying who is pictured and what their bodies, facial hair and clothing look like, or 'no people' if nobody is pictured",
+  "people_visible": true | false,
+  "people_count": number of people pictured, photographed or drawn (0 if none; use 6 for six or more or a crowd),
+  "men_count": number of adult men pictured (0 if none; use 6 for six or more),
+  "people_are": "photographed" | "drawn" | "none",
+  "any_fat": true if at least one pictured person is clearly fat or heavyset (large round belly, heavy soft body), else false,
+  "any_big_burly": true if at least one pictured person has a big, broad, thick, beefy or stocky frame (fat OR heavily built), else false,
+  "any_slim_or_lean": true if at least one pictured person is slim, slender or lean-athletic, else false,
+  "any_full_beard": true if at least one pictured person has a full beard covering chin and cheeks, else false,
+  "any_body_hair": true if chest, belly, arm or back hair is visible on at least one person (head hair and beards do not count), else false,
+  "any_shirtless": true if at least one person is shirtless or in underwear or swimwear, else false,
+  "any_drag_or_feminine": true if at least one person is a woman, in drag, a wig, stage makeup or a gown, else false,
+  "any_leather_gear": true if at least one person wears a harness, leather, rubber or a pup hood, else false,
+  "bear_animal_or_paw": true if a bear (the animal), a teddy bear or a paw print is pictured as a drawing, logo or photo, else false,
+  "text_or_logo_only": true if the image is only words, graphics, objects or a logo with no person pictured, else false,
+  "theme_words": [up to 5 words or short phrases printed on the image that name its theme or title]
+}
+
+Rules:
+- Small faces in circles, DJ headshots, drawn or cartoon humans and crowds all count as people.
+- A cartoon animal, mascot or object is not a person.
+- If nobody is pictured: people_visible is false, both counts are 0, people_are is "none" and every "any_" field is false.
+- Answer false when you cannot see it clearly.`;
+    }
+
+    // Injected like the OCR lookup: the ai-web parser owns the image fetch,
+    // the vision call and the disk cache; shared-core stays platform-pure.
+    // reader(imageUrl, httpAdapter) → { text, cached } | null.
+    setFlyerLookReader(reader) {
+        this.flyerLookReader = typeof reader === 'function' ? reader : null;
+    }
+
+    // The model's answer → the three facts a card shows, or null when the
+    // answer is unusable. "Big bearded" needs both words from the model: a
+    // broad frame alone is every gym flyer, a beard alone is every flyer.
+    static readFlyerLook(rawText) {
+        let parsed = null;
+        try { parsed = JSON.parse(String(rawText || '').slice(String(rawText || '').indexOf('{'))); } catch (_) { return null; }
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+        if (typeof parsed.people_visible !== 'boolean' && typeof parsed.any_fat !== 'boolean') return null;
+        const people = parsed.people_visible === true;
+        const description = typeof parsed.people_description === 'string' ? parsed.people_description.replace(/\s+/g, ' ').trim() : '';
+        return {
+            people,
+            heavyset: people && parsed.any_fat === true,
+            bigBearded: people && parsed.any_big_burly === true && parsed.any_full_beard === true,
+            description: people ? description.slice(0, 240) : ''
+        };
+    }
+
+    // Looks at the flyer of every dropped event the owner may still be asked
+    // about: upcoming, with a picture, and not already answered "not bear"
+    // in the verdict store. One look per picture however many nights share
+    // it; the parser's cache answers on every later run. A look that fails
+    // leaves the row as it was — an absent notice, never a wrong one.
+    async lookAtDroppedFlyers(droppedEntries, httpAdapter = null, options = {}) {
+        const counts = { looked: 0, cached: 0, bigMan: 0, failed: 0, rows: 0 };
+        if (typeof this.flyerLookReader !== 'function' || !Array.isArray(droppedEntries)) return counts;
+        const now = Number.isFinite(Number(options.now)) ? Number(options.now) : Date.now();
+        const byImage = new Map();
+        for (const entry of droppedEntries) {
+            const event = entry && entry.event;
+            const image = event && typeof event.image === 'string' ? event.image.trim() : '';
+            if (!image || !/^https?:\/\//i.test(image)) continue;
+            if (/^manual store: not_bear\b/.test(String(entry.reason || ''))) continue;
+            const startMs = SharedCore.toEpochMillis(event.startDate);
+            if (startMs === null || startMs === undefined || !Number.isFinite(startMs) || startMs < now - 24 * 60 * 60 * 1000) continue;
+            if (!byImage.has(image)) byImage.set(image, []);
+            byImage.get(image).push(entry);
+        }
+        for (const [image, entries] of byImage) {
+            let answer = null;
+            try { answer = await this.flyerLookReader(image, httpAdapter); } catch (_) { answer = null; }
+            const look = answer && typeof answer.text === 'string' ? SharedCore.readFlyerLook(answer.text) : null;
+            if (!look) { counts.failed += 1; continue; }
+            counts.looked += 1;
+            if (answer.cached) counts.cached += 1;
+            const bigMan = look.heavyset || look.bigBearded;
+            if (bigMan) counts.bigMan += 1;
+            for (const entry of entries) {
+                entry.flyerLook = { image, ...look };
+                counts.rows += 1;
+            }
+            if (bigMan && !answer.cached) {
+                console.log(`🧔 FLYER LOOK: "${entries[0].title || (entries[0].event && entries[0].event.title) || 'event'}" — ${look.heavyset ? 'a heavyset man' : 'a big bearded man'} on the flyer (${look.description || 'no description'}) — a notice on its not-bear card, nothing else`);
+            }
+        }
+        if (byImage.size > 0) {
+            console.log(`🧔 FLYER LOOK: ${counts.looked} of ${byImage.size} dropped-event flyer(s) looked at (${counts.cached} from the cache) — ${counts.bigMan} show a big man${counts.failed > 0 ? `, ${counts.failed} could not be read (no notice for those)` : ''}`);
+        }
+        return counts;
+    }
+
     // Reads the OCR text of BOTH records' primary images before the sync
     // arbitration ladder runs. Only differing http(s) image pairs are looked
     // up; unreadable sides simply stay absent from the map (the rung
@@ -9350,6 +9495,14 @@ class SharedCore {
                     await displayAdapter.logError(`SYSTEM: Stack trace for ${parserConfig.name}: ${error.stack}`);
                 }
             }
+        }
+
+        // What the flyers of the dropped events show — a notice for the
+        // owner's not-bear pile, read once per picture. Never a run error.
+        try {
+            results.flyerLook = await this.lookAtDroppedFlyers(results.bearDroppedEvents, httpAdapter);
+        } catch (error) {
+            console.log(`🧔 FLYER LOOK: skipped (${error && error.message ? error.message : 'unknown error'})`);
         }
 
         if (disabledParsers.length > 0) {
@@ -15436,7 +15589,7 @@ class SharedCore {
         if (mode === 'off') return legacyFilter();
 
         const tag = mode === 'report' ? ' [report]' : '';
-        const counts = { bear: 0, keyword: 0, ai: 0, tagged: 0, flagged: 0, dropped: 0 };
+        const counts = { bear: 0, keyword: 0, ai: 0, tagged: 0, flagged: 0, dropped: 0, maybe: 0 };
         const kept = [];
         // A venue's own standing lines (dress code, shop notice, sponsor
         // credit) are marked on these records before any of them is judged:
@@ -15490,6 +15643,26 @@ class SharedCore {
                     : decision.bearRun ? `tagged (bear-run: ${String(decision.bearRun).slice(0, 60)})`
                         : SharedCore.buildTaggedBearSource(decision.provenance);
                 kept.push({...event, isBearEvent: true, bearSource, ...this.buildEventTagsPatch(decision)});
+            } else if (decision.result === 'maybe') {
+                // The owner's stored maybe: held back from the calendar on
+                // every source, trusted ones too, exactly like his stored
+                // not-bear — and kept on the dropped list so the deck can
+                // show it under Maybes with this run's dates and flyer.
+                counts.maybe++;
+                console.log(`🤔 BEAR CHECK${tag}: "${title}" → HOLD (${decision.provenance}) — waiting on the owner's Maybes list, not written`);
+                pendingDrops.push({
+                    event,
+                    title,
+                    manualStore: true,
+                    entry: {
+                        title,
+                        startDate: event.startDate || event.date || null,
+                        venue: event.bar || event.venue || '',
+                        reason: decision.provenance,
+                        host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
+                        event: { ...event }
+                    }
+                });
             } else if ((decision.result === 'not_bear' && (!trusted || decision.manualStore === true))
                 || this.isAggregatorShrug(decision, trusted, parserConfig)) {
                 // A stored manual not_bear drops even TRUSTED (alwaysBear /
@@ -15589,7 +15762,8 @@ class SharedCore {
 
         const flagLabel = mode === 'report' ? 'would-flag' : 'flagged';
         const dropLabel = mode === 'report' ? 'would-drop' : 'dropped';
-        console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.tagged} tagged (kept, not bear), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}`);
+        const maybeNote = counts.maybe > 0 ? `, ${counts.maybe} held as the owner's maybe` : '';
+        console.log(`🐻 BEAR CHECK${tag}: ${counts.bear} bear (${counts.keyword} keyword, ${counts.ai} ai), ${counts.tagged} tagged (kept, not bear), ${counts.flagged} ${flagLabel}, ${counts.dropped} ${dropLabel}${maybeNote}`);
 
         return mode === 'report' ? legacyFilter() : kept;
     }
@@ -15808,6 +15982,20 @@ class SharedCore {
                 provenance: `manual store: ${storedVerdict.verdict}${stamp ? ` (verdict stamped ${stamp})` : ''}${sameParty}`,
                 manualStore: true,
                 storedVerdictEntry: storedVerdict
+            };
+        }
+        // The owner parked this party as a maybe: nothing re-judges it (no
+        // AI call, no tags) and it stays out of the calendar until he
+        // answers it on the deck's Maybes list. See isStoredBearVerdictValue.
+        const maybeMatch = this.findStoredMaybeVerdictMatch(event);
+        if (maybeMatch) {
+            const stamp = String(maybeMatch.entry.stampedAt || '').slice(0, 10);
+            const sameParty = maybeMatch.matchedBy === 'party' ? ` — same party as "${maybeMatch.entry.title}"` : '';
+            return {
+                result: 'maybe',
+                provenance: `manual store: maybe${stamp ? ` (parked ${stamp})` : ''}${sameParty}`,
+                manualStore: true,
+                storedVerdictEntry: maybeMatch.entry
             };
         }
 

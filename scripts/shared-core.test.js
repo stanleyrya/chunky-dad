@@ -20866,6 +20866,125 @@ const JOCKSTRAP_DECORATED = [
   '🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ SAM GEE | $20 CASH COVER'
 ];
 
+// ---------------------------------------------------------------------------
+// MAYBE (owner, 2026-11-10: "allow me to mark some events as maybes to
+// revisit later? And for now we don't show"). A maybe lives in the same
+// store as a verdict and holds the party out of the calendar on every
+// night, without ever counting as a verdict.
+// ---------------------------------------------------------------------------
+
+test('maybe: a parked party is held out on every source, with no AI call, and is not a verdict', async () => {
+  const cubscout = buildMeatRackEvent({ title: 'CUBSCOUT', description: '' });
+  const maybe = buildMeatRackVerdictEntry({ verdict: 'maybe', title: 'CUBSCOUT', stampedAt: '2026-11-10T22:00:00.000Z' });
+
+  const core = createCore();
+  core.bearVerdicts = [maybe];
+  const adapter = buildBearVerdictAdapter({ verdict: 'bear', reason: 'cub' });
+  const drops = [];
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (line) => logs.push(String(line));
+  let kept;
+  try {
+    kept = await core.filterBearEvents(
+      [cubscout, buildMeatRackEvent({ title: 'CUBSCOUT', description: '', startDate: new Date('2026-09-20T03:00:00.000Z') })],
+      bearCheckConfig('enforce', { alwaysBear: true }), adapter, drops);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(adapter.calls.length, 0, 'a parked party is not re-judged');
+  assert.equal(kept.length, 0, 'held out even on a trusted source and past the title keyword');
+  assert.equal(drops.length, 2, 'every night is held, and each is surfaced for the deck');
+  assert.match(drops[0].reason, /^manual store: maybe \(parked 2026-11-10\)$/);
+  assert.ok(logs.some((line) => line.includes('🤔 BEAR CHECK: "CUBSCOUT" → HOLD (manual store: maybe')), logs.join('\n'));
+  assert.ok(logs.some((line) => line.includes("2 held as the owner's maybe")), logs.join('\n'));
+
+  // Not a verdict: the firm readers never see it.
+  assert.equal(core.findStoredBearVerdict(cubscout), null);
+  assert.equal(core.findStoredBearVerdictConflict(cubscout), null);
+  assert.equal(SharedCore.isBearVerdictValue('maybe'), false);
+  assert.equal(SharedCore.isStoredBearVerdictValue('maybe'), true);
+  assert.equal(SharedCore.isStoredBearVerdictValue('perhaps'), false);
+});
+
+test('maybe: a firm verdict on the same party always outranks it, and a maybe never makes a conflict', async () => {
+  const cubscout = buildMeatRackEvent({ title: 'CUBSCOUT', description: '' });
+  const core = createCore();
+  // A phone tap after the maybe: the store holds both, the firm one speaks.
+  core.bearVerdicts = [
+    buildMeatRackVerdictEntry({ verdict: 'maybe', title: 'CUBSCOUT' }),
+    buildMeatRackVerdictEntry({ verdict: 'bear', title: 'CUBSCOUT', stampedAt: '2026-11-11T09:00:00.000Z' })
+  ];
+  assert.equal(core.findStoredMaybeVerdictMatch(cubscout), null);
+  assert.equal(core.findStoredBearVerdictConflict(cubscout), null, 'bear + maybe is not "both ways"');
+  const drops = [];
+  const kept = await core.filterBearEvents([cubscout], bearCheckConfig('enforce'), null, drops);
+  assert.equal(kept.length, 1);
+  assert.equal(kept[0].bearSource, 'manual-bear (verdict store 2026-11-11)');
+  assert.equal(drops.length, 0);
+});
+
+test('maybe: it covers the party behind a decorated title, and never another party or another venue', () => {
+  const core = createCore();
+  core.bearVerdicts = [eagleNycVerdict('🩲 JOCKSTRAP WEDNESDAY | 🎧 DJ MITCH FERRINO | $20 CASH COVER', { verdict: 'maybe' })];
+  const plain = core.findStoredMaybeVerdictMatch(eagleNycEvent('Jockstrap Wednesday'));
+  assert.ok(plain, 'the plain spelling of the same party is covered');
+  assert.equal(plain.matchedBy, 'party');
+  assert.equal(core.findStoredMaybeVerdictMatch(eagleNycEvent('Leather Wednesday')), null);
+  assert.equal(core.findStoredMaybeVerdictMatch({ title: 'Jockstrap Wednesday', bar: 'The Bullet Bar', address: '10522 Burbank Blvd, North Hollywood, CA', city: 'los angeles' }), null);
+});
+
+
+test('flyer look: the model\'s answer becomes three facts — heavyset, big AND bearded, the description — and an unusable answer is no look', () => {
+  const answer = (fields) => JSON.stringify({ people_description: 'A  shirtless heavyset man\nwith a beard', people_visible: true, any_fat: false, any_big_burly: false, any_full_beard: false, ...fields });
+  assert.deepEqual(SharedCore.readFlyerLook(answer({ any_fat: true })), { people: true, heavyset: true, bigBearded: false, description: 'A shirtless heavyset man with a beard' });
+  assert.equal(SharedCore.readFlyerLook(answer({ any_big_burly: true })).bigBearded, false, 'a broad frame alone is every gym flyer');
+  assert.equal(SharedCore.readFlyerLook(answer({ any_full_beard: true })).bigBearded, false, 'a beard alone is every flyer');
+  assert.equal(SharedCore.readFlyerLook(answer({ any_big_burly: true, any_full_beard: true })).bigBearded, true);
+  // Nobody pictured: whatever else the model ticked, nothing is claimed.
+  assert.deepEqual(SharedCore.readFlyerLook(answer({ people_visible: false, any_fat: true })), { people: false, heavyset: false, bigBearded: false, description: '' });
+  assert.equal(SharedCore.readFlyerLook('Here you go: ' + answer({ any_fat: true })).heavyset, true, 'words before the object are skipped');
+  for (const bad of ['', 'no json here', '[]', '{"theme_words": ["x"]}', '{"people_visible": true']) assert.equal(SharedCore.readFlyerLook(bad), null, bad);
+  assert.ok(SharedCore.FLYER_LOOK_PROMPT.includes('"any_fat"') && SharedCore.FLYER_LOOK_PROMPT.includes('"any_full_beard"'), 'the frozen prompt asks for the fields the reader uses');
+});
+
+test('flyer look: one look per picture, only for upcoming dropped events the owner has not already called not bear; a failed look leaves the row alone', async () => {
+  const core = createCore();
+  const now = Date.parse('2030-06-01T00:00:00.000Z');
+  const row = (title, startDate, image, reason = 'ai: no bear language') => ({ title, startDate, reason, event: { title, startDate, image } });
+  const heavy = JSON.stringify({ people_description: 'A heavyset man', people_visible: true, any_fat: true, any_big_burly: true, any_full_beard: true });
+  const nobody = JSON.stringify({ people_description: 'no people', people_visible: false, any_fat: false });
+  const rows = [
+    row('Beef Night', '2030-06-05T02:00:00.000Z', 'https://cdn.example/beef.jpg'),
+    row('Beef Night', '2030-06-12T02:00:00.000Z', 'https://cdn.example/beef.jpg'),
+    row('Text Only', '2030-06-06T02:00:00.000Z', 'https://cdn.example/text.jpg'),
+    row('Parked Party', '2030-06-07T02:00:00.000Z', 'https://cdn.example/parked.jpg', 'manual store: maybe (parked 2030-05-01)'),
+    row('Already No', '2030-06-07T02:00:00.000Z', 'https://cdn.example/no.jpg', 'manual store: not_bear (verdict stamped 2030-05-01)'),
+    row('Last Month', '2030-05-01T02:00:00.000Z', 'https://cdn.example/old.jpg'),
+    row('No Picture', '2030-06-07T02:00:00.000Z', ''),
+    row('Broken', '2030-06-08T02:00:00.000Z', 'https://cdn.example/broken.jpg'),
+    row('Mumble', '2030-06-08T02:00:00.000Z', 'https://cdn.example/mumble.jpg')
+  ];
+  // No reader wired (a test, a platform without the parser): nothing happens.
+  assert.deepEqual(await core.lookAtDroppedFlyers(rows, null, { now }), { looked: 0, cached: 0, bigMan: 0, failed: 0, rows: 0 });
+  const asked = [];
+  core.setFlyerLookReader(async (image) => {
+    asked.push(image);
+    if (image.endsWith('broken.jpg')) throw new Error('HTTP 404');
+    if (image.endsWith('mumble.jpg')) return { text: 'I cannot help with that', cached: false };
+    if (image.endsWith('text.jpg')) return { text: nobody, cached: true };
+    return { text: heavy, cached: false };
+  });
+  const counts = await core.lookAtDroppedFlyers(rows, null, { now });
+  assert.deepEqual(asked, ['https://cdn.example/beef.jpg', 'https://cdn.example/text.jpg', 'https://cdn.example/parked.jpg', 'https://cdn.example/broken.jpg', 'https://cdn.example/mumble.jpg']);
+  assert.deepEqual(counts, { looked: 3, cached: 1, bigMan: 2, failed: 2, rows: 4 });
+  assert.deepEqual(rows[0].flyerLook, { image: 'https://cdn.example/beef.jpg', people: true, heavyset: true, bigBearded: true, description: 'A heavyset man' });
+  assert.deepEqual(rows[1].flyerLook, rows[0].flyerLook, 'every night that shares the picture carries the look');
+  assert.equal(rows[2].flyerLook.heavyset, false);
+  assert.equal(rows[3].flyerLook.heavyset, true, 'a parked party is still the owner\'s to answer');
+  for (const index of [4, 5, 6, 7, 8]) assert.equal(rows[index].flyerLook, undefined, rows[index].title);
+});
+
 test('bear verdict party fold: a verdict on the decorated title covers the plain one, and the plain one covers the decorated', () => {
   const core = createCore();
   core.bearVerdicts = JOCKSTRAP_DECORATED.map((title) => eagleNycVerdict(title));

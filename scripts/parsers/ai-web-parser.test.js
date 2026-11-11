@@ -17319,6 +17319,54 @@ const TOCKIFY_FEED_PAYLOAD = {
   metaData: {}
 };
 
+test('getFlyerLookResponse: one download and one vision call per picture, then the disk cache answers; a dead download or OCR switched off is no look', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'flyer-look-cache-test-'));
+  try {
+    const parser = new AiWebParser({ normalizeUrl, aiResponseCacheDir: cacheDir });
+    parser.core = new SharedCore({}, { eventSchema: EventSchema });
+    const answer = '{"people_description":"A heavyset man","people_visible":true,"any_fat":true}';
+    const calls = { images: [], posts: [] };
+    const adapter = {
+      fetchImageAsBase64: async (url) => {
+        calls.images.push(url);
+        if (url.includes('gone')) throw new Error('HTTP 404');
+        return 'iVBORw0KGgo=';
+      },
+      postJson: async (endpoint, payload) => {
+        calls.posts.push(payload);
+        return { ok: true, status: 200, text: JSON.stringify({ choices: [{ message: { content: answer } }] }) };
+      }
+    };
+    const first = await parser.getFlyerLookResponse('https://cdn.example/flyer.jpg', adapter);
+    assert.deepEqual(first, { text: answer, cached: false });
+    assert.equal(calls.posts.length, 1);
+    const sent = calls.posts[0].messages[0].content;
+    assert.equal(sent[0].text, SharedCore.FLYER_LOOK_PROMPT, 'the frozen prompt, nothing added');
+    assert.ok(sent[1].image_url.url.endsWith('base64,iVBORw0KGgo='));
+    assert.equal(calls.posts[0].temperature, 0);
+
+    // The same picture again — and with no adapter at all — is the cache's.
+    assert.deepEqual(await parser.getFlyerLookResponse('https://cdn.example/flyer.jpg', adapter), { text: answer, cached: true });
+    assert.deepEqual(await parser.getFlyerLookResponse('https://cdn.example/flyer.jpg'), { text: answer, cached: true });
+    assert.deepEqual(calls.images, ['https://cdn.example/flyer.jpg']);
+    assert.equal(calls.posts.length, 1);
+
+    // Another picture is another entry; without an adapter it is simply unknown.
+    assert.equal(await parser.getFlyerLookResponse('https://cdn.example/other.jpg'), null);
+    // A dead download is no look, and is not tried twice in one run.
+    assert.equal(await parser.getFlyerLookResponse('https://cdn.example/gone.jpg', adapter), null);
+    assert.equal(await parser.getFlyerLookResponse('https://cdn.example/gone.jpg', adapter), null);
+    assert.equal(calls.images.filter((url) => url.includes('gone')).length, 1);
+    assert.equal(calls.posts.length, 1);
+    assert.equal(SharedCore.readFlyerLook(first.text).heavyset, true);
+  } finally {
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});
+
 test('jsonApiObjectLooksEventLike recognizes wrapper + epoch-millis shapes (Tockify) and rich-text titles (WP REST)', () => {
   const parser = createParser();
   assert.equal(parser.jsonApiObjectLooksEventLike(TOCKIFY_FEED_PAYLOAD.events[0]), true,

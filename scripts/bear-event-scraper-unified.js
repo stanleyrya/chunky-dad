@@ -344,6 +344,11 @@ class BearEventScraperOrchestrator {
                         sharedCore.setOcrImageTextLookup(
                             (imageUrl, httpAdapter) => aiParser.getCachedOcrTextForImage(imageUrl, httpAdapter)
                         );
+                        // The flyer look on dropped events (a notice on the
+                        // deck's not-bear cards): same injection, same reason.
+                        sharedCore.setFlyerLookReader(
+                            (imageUrl, httpAdapter) => aiParser.getFlyerLookResponse(imageUrl, httpAdapter)
+                        );
                         parsers[name] = aiParser;
                     } else {
                         parsers[name] = new ParserClass();

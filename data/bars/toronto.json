@@ -16,7 +16,8 @@
     "faviconFg": "#252525",
     "paletteSource": "favicon",
     "palette": "#ffffff:71:0 #000000:16:0 #8b8b8b:3:0",
-    "faviconPlate": "#ffffff"
+    "faviconPlate": "#ffffff",
+    "scene": "leather"
   },
   {
     "name": "El Mocambo",
