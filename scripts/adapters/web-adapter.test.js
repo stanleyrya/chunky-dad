@@ -1832,11 +1832,16 @@ test('published calendar: a city with no file yet is "missing", nothing answerin
   console.warn = (message) => warns.push(String(message));
   try {
     global.fetch = async () => ({ ok: false, status: 404, statusText: 'Not Found', headers: new Map(), text: async () => '' });
-    const fresh = makeAdapter();
+    const cities = {
+      ...CITIES,
+      sydney: { calendar: 'chunky-dad-sydney', timezone: 'Australia/Sydney', patterns: ['sydney'] },
+      nyc: { calendar: 'chunky-dad-nyc', timezone: 'America/New_York', patterns: ['new york'] }
+    };
+    const fresh = makeAdapter({ cities });
     assert.equal(await fresh.getPublishedCalendarEvents('sydney'), null);
     assert.equal(fresh._publishedCalendarSnapshots.sydney.reason, 'missing');
     global.fetch = async () => { throw new TypeError('fetch failed'); };
-    const dark = makeAdapter();
+    const dark = makeAdapter({ cities });
     assert.equal(await dark.getPublishedCalendarEvents('nyc'), null);
     assert.equal(dark._publishedCalendarSnapshots.nyc.reason, 'outage');
     const { SharedCore } = require('../shared-core');
@@ -1847,6 +1852,60 @@ test('published calendar: a city with no file yet is "missing", nothing answerin
     void notFound;
   } finally {
     global.fetch = originalFetch;
+    console.warn = originalWarn;
+  }
+});
+
+// Run 20261110 (first try) was thrown away after 28 minutes: the site
+// answered HTTP 503 once, for unknown.ics, the file of the bucket that events
+// with no resolvable city land in. That file has never existed. Two rules
+// came out of it: a key with no configured calendar is never asked for, and
+// a real city's calendar gets one more try when the site answered "try again".
+test('published calendar: the no-city bucket is never fetched, and a "try again" answer for a real city is asked once more', async () => {
+  const originalFetch = global.fetch;
+  const originalLog = console.log;
+  const originalWarn = console.warn;
+  console.log = () => {};
+  console.warn = () => {};
+  const { SharedCore } = require('../shared-core');
+  const answer = (status, body = '') => ({ ok: status === 200, status, statusText: String(status), headers: new Map(), text: async () => body });
+  try {
+    let calls = 0;
+    global.fetch = async () => { calls += 1; return answer(503); };
+    const bucket = makeAdapter();
+    assert.equal(await bucket.getPublishedCalendarEvents('unknown'), null);
+    assert.equal(calls, 0, 'no request for a calendar that cannot exist');
+    assert.equal(bucket._publishedCalendarSnapshots.unknown.reason, 'missing');
+    assert.equal(SharedCore.describeCalendarReadHealth(bucket._publishedCalendarSnapshots).degraded, false);
+
+    calls = 0;
+    global.fetch = async () => { calls += 1; return calls === 1 ? answer(503) : answer(200, LA_ICS_FIXTURE); };
+    const blip = makeAdapter();
+    blip.calendarReadRetryDelayMs = 0;
+    const read = await blip.getPublishedCalendarEvents('la');
+    assert.equal(calls, 2, 'asked once more after the 503');
+    assert.ok(read && read.records.length > 0, 'and the second answer is the calendar');
+    assert.equal(blip._publishedCalendarSnapshots.la.status, 'ok');
+
+    calls = 0;
+    global.fetch = async () => { calls += 1; return answer(503); };
+    const down = makeAdapter();
+    down.calendarReadRetryDelayMs = 0;
+    assert.equal(await down.getPublishedCalendarEvents('la'), null);
+    assert.equal(calls, 2, 'one more try, not a loop');
+    assert.equal(down._publishedCalendarSnapshots.la.reason, 'unreadable');
+    assert.equal(SharedCore.describeCalendarReadHealth(down._publishedCalendarSnapshots).degraded, true, 'a calendar that stays unreadable still stops the run');
+
+    calls = 0;
+    global.fetch = async () => { calls += 1; throw new TypeError('fetch failed'); };
+    const dark = makeAdapter();
+    dark.calendarReadRetryDelayMs = 0;
+    assert.equal(await dark.getPublishedCalendarEvents('la'), null);
+    assert.equal(calls, 1, 'nothing answering is an outage and is not asked twice');
+    assert.equal(dark._publishedCalendarSnapshots.la.reason, 'outage');
+  } finally {
+    global.fetch = originalFetch;
+    console.log = originalLog;
     console.warn = originalWarn;
   }
 });
