@@ -14,7 +14,8 @@
     "name": "Dust Las Vegas",
     "city": "vegas",
     "address": "855 East Twain Avenue, Winchester, Nevada, 89169",
-    "coordinates": "36.1213962, -115.1450910"
+    "coordinates": "36.1213962, -115.1450910",
+    "scene": "bear"
   },
   {
     "name": "Tuscany Suites & Casino",

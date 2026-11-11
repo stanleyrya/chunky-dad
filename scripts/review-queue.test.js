@@ -1796,12 +1796,13 @@ test('buildDeck: a parked party leaves the stack and every count — the dropped
   assert.equal(answered.decided.find((entry) => entry.kind === 'dropped').decision.bearVerdict, 'not_bear');
 });
 
-test('buildDeck: a dropped card says what speaks for it — the listed bar, the owner\'s mark on it and its record this run, the flyer look when it saw a big man — and a bear bar or a big man makes it worth a look, nothing more', () => {
+test('buildDeck: a dropped card says what speaks for it — the listed bar, the owner\'s mark on it and its record this run, the flyer look when it saw a big man — and a bar he marked or a big man makes it worth a look, nothing more', () => {
   const curatedBars = { nyc: [
     { name: '3 Dollar Bill', address: '260 Meserole St, Brooklyn, NY', website: 'https://www.3dollarbillbk.com/', scene: 'bear' },
     { name: 'Rockbar', address: '185 Christopher St, New York, NY' },
     { name: 'Eagle NYC', address: '554 W 28th St, New York, NY', website: 'https://www.eagle-ny.com/', scene: 'leather' },
     { name: 'Pieces', address: '8 Christopher St, New York, NY', website: 'https://www.piecesbar.com/' },
+    { name: 'Nowhere Bar', address: '322 E 14th St, New York, NY', scene: 'adjacent' },
     { name: 'The Cock', address: '25 Avenue B, New York, NY', scene: 'twink' }
   ] };
   const elsewhereRow = (title, bar, address, host) => ({ title, startDate: iso(FUTURE), venue: bar, reason: 'ai: no bear language', host,
@@ -1815,8 +1816,10 @@ test('buildDeck: a dropped card says what speaks for it — the listed bar, the 
       droppedRow('Charli Party', iso(FUTURE), { flyerLook: { image: 'https://x/y.jpg', people: true, heavyset: false, bigBearded: false, description: 'Two slim dancers.' } }),
       // The same bar, read off an aggregator: not its own site, still his bear bar.
       droppedRow('Drag Brunch', iso(FUTURE), { host: 'aggregator.example' }),
-      // A leather bar and an unmarked bar, each on its own site: a notice, not a maybe.
+      // A leather bar and an adjacent bar are worth a look too, each under
+      // its own reason; an unmarked bar on its own site is a notice, not a maybe.
       elsewhereRow('Jock Night', 'Eagle NYC', '554 W 28th St', 'www.eagle-ny.com'),
+      elsewhereRow('Trivia', 'Nowhere Bar', '322 E 14th St', 'aggregator.example'),
       elsewhereRow('Karaoke', 'Pieces', '8 Christopher St', 'www.piecesbar.com'),
       // A mark the deck does not know is no mark.
       elsewhereRow('Foam Party', 'The Cock', '25 Avenue B', 'aggregator.example'),
@@ -1830,15 +1833,16 @@ test('buildDeck: a dropped card says what speaks for it — the listed bar, the 
   const card = (title) => deck.cards.find((entry) => entry.kind === 'dropped' && entry.proposal.title === title);
   assert.deepEqual(card('Dolly Parton Tribute').display.barNotice, { bar: '3 Dollar Bill', scene: 'bear', ownSite: true, host: 'www.3dollarbillbk.com', kept: 2, dropped: 3 }, 'distinct parties, never rows');
   assert.deepEqual(card('Dolly Parton Tribute').display.flyerNotice, { heavyset: true, bigBearded: false, description: 'A heavyset shirtless man in a cowboy hat.' }, 'a later night\'s flyer speaks for the party');
-  assert.deepEqual(card('Dolly Parton Tribute').worth, ['flyer', 'bar']);
+  assert.deepEqual(card('Dolly Parton Tribute').worth, ['flyer', 'bear-bar']);
   assert.equal(card('Charli Party').display.flyerNotice, undefined, 'a look that saw no big man says nothing');
-  assert.deepEqual(card('Charli Party').worth, ['bar']);
-  assert.deepEqual([card('Drag Brunch').display.barNotice.ownSite, card('Drag Brunch').display.barNotice.host, card('Drag Brunch').worth], [false, '', ['bar']], 'his bear bar, whoever listed the party');
-  assert.deepEqual([card('Jock Night').display.barNotice.scene, card('Jock Night').display.barNotice.ownSite, card('Jock Night').worth], ['leather', true, []]);
+  assert.deepEqual(card('Charli Party').worth, ['bear-bar']);
+  assert.deepEqual([card('Drag Brunch').display.barNotice.ownSite, card('Drag Brunch').display.barNotice.host, card('Drag Brunch').worth], [false, '', ['bear-bar']], 'his bear bar, whoever listed the party');
+  assert.deepEqual([card('Jock Night').display.barNotice.scene, card('Jock Night').display.barNotice.ownSite, card('Jock Night').worth], ['leather', true, ['leather-bar']]);
+  assert.deepEqual([card('Trivia').display.barNotice.scene, card('Trivia').worth], ['adjacent', ['adjacent-bar']]);
   assert.deepEqual([card('Karaoke').display.barNotice.scene, card('Karaoke').display.barNotice.ownSite, card('Karaoke').worth], ['', true, []], 'an unmarked bar\'s own site is not a maybe');
   assert.deepEqual([card('Foam Party').display.barNotice.scene, card('Foam Party').worth], ['', []]);
   assert.equal(card('Elsewhere').display.barNotice, undefined, 'not on the bars list: no bar notice');
   assert.deepEqual(card('Elsewhere').worth, ['flyer']);
-  assert.equal(deck.counts.worth, 5, 'the four cards at his bear bar and the big man elsewhere');
-  assert.equal(deck.counts.dropped, 8, 'worth a look sorts the pile; every dropped card is still in it');
+  assert.equal(deck.counts.worth, 7, 'the four cards at his bear bar, one at his leather bar, one at his adjacent bar and the big man elsewhere');
+  assert.equal(deck.counts.dropped, 9, 'worth a look sorts the pile; every dropped card is still in it');
 });

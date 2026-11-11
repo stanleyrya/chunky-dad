@@ -86,7 +86,8 @@
     "facebook": "https://www.facebook.com/nowherebar",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY",
     "gayCities": "https://newyork.gaycities.com/bars/415-nowhere-bar",
-    "gayCitiesLastScrapedAt": "2026-06-14T16:38:22.742Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T16:38:22.742Z",
+    "scene": "adjacent"
   },
   {
     "name": "Albatross",

@@ -32,7 +32,8 @@
     "palette": "#fefefe:29:0 #9c7a3d:16:9 #010100:12:1 #522d15:11:7 #9b1926:5:16",
     "accent": "#9b1926",
     "faviconPlate": "#010100",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z",
+    "scene": "adjacent"
   },
   {
     "name": "The Cuff Complex",
@@ -78,7 +79,8 @@
     "facebook": "https://www.facebook.com/ccsseattle",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJk-Ws_tFqkFQRc2h8MPRvv5I",
     "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:51.206Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:51.206Z",
+    "scene": "bear"
   },
   {
     "name": "Madison Pub",
@@ -87,7 +89,8 @@
     "coordinates": "47.6133619, -122.3149054",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJB_-ecc5qkFQRS1xH4lgadrg",
     "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:19:20.182Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T15:19:20.182Z",
+    "scene": "adjacent"
   },
   {
     "name": "Pony",

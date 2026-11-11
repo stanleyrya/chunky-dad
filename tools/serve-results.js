@@ -1031,7 +1031,7 @@ function renderReviewBearRow(display = {}, proposal = {}) {
     const bar = display.barNotice && typeof display.barNotice === 'object' ? display.barNotice : null;
     if (bar && bar.bar) {
         const parties = (Number(bar.kept) || 0) + (Number(bar.dropped) || 0);
-        const listed = bar.scene === 'bear' ? 'A bear bar on your list' : bar.scene === 'leather' ? 'A leather bar on your list' : 'On your bars list';
+        const listed = bar.scene === 'bear' ? 'A bear bar on your list' : bar.scene === 'leather' ? 'A leather bar on your list' : bar.scene === 'adjacent' ? 'A bear-adjacent bar on your list' : 'On your bars list';
         notices.push(`🍺 ${listed}: ${bar.bar}.${bar.ownSite ? ' Read from its own site.' : ''}${parties > 0 ? ` This run kept ${Number(bar.kept) || 0} of its ${parties} ${parties === 1 ? 'party' : 'parties'}.` : ''}`);
     }
     const flyer = display.flyerNotice && typeof display.flyerNotice === 'object' ? display.flyerNotice : null;
@@ -2363,9 +2363,15 @@ window.__startDeck = function () {
   // verdict store. Its cards stay on the page with every control, on the
   // Maybes tab only — a later answer is an ordinary swipe there.
   // WORTH A LOOK is a view of the Not-bear pile: the cards with something
-  // speaking for them (card.worth), flyers that show a big man first.
+  // speaking for them (card.worth): flyers that show a big man first, then
+  // his bear bars, his leather bars, his adjacent bars.
   function canPark(c) { return !friendMode && Boolean(c) && !c.parked && (c.kind === 'dropped' || c.kind === 'new'); }
-  function flyerWorth(c) { return (c.worth || []).indexOf('flyer') !== -1; }
+  var WORTH_ORDER = ['flyer', 'bear-bar', 'leather-bar', 'adjacent-bar'];
+  function worthRank(c) {
+    var worth = c.worth || [];
+    for (var i = 0; i < WORTH_ORDER.length; i++) if (worth.indexOf(WORTH_ORDER[i]) !== -1) return i;
+    return WORTH_ORDER.length;
+  }
   function inTab(c) {
     if (filter === 'maybe') return c.parked === true;
     if (c.parked) return false;
@@ -2374,7 +2380,7 @@ window.__startDeck = function () {
   }
   function visible() {
     var list = queue.filter(function (c) { return inTab(c) && matchesWords(c); });
-    if (filter === 'worth') list = list.filter(flyerWorth).concat(list.filter(function (c) { return !flyerWorth(c); }));
+    if (filter === 'worth') list = list.map(function (c, at) { return [worthRank(c), at, c]; }).sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; }).map(function (ranked) { return ranked[2]; });
     return list;
   }
   // The stack shows ITEMS: a card, or every pending night of one party

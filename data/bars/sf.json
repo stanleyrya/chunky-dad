@@ -43,7 +43,8 @@
     "instagram": "https://www.instagram.com/the-hole-in-the-wall-saloon",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJExXNdCh-j4AR6JuGm4ElqcQ",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/40-hole-in-the-wall-saloon",
-    "gayCitiesLastScrapedAt": "2026-06-14T05:42:24.790Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:24.790Z",
+    "scene": "leather"
   },
   {
     "name": "Lone Star Saloon",
@@ -116,7 +117,8 @@
     "faviconFg": "#353535",
     "paletteSource": "favicon",
     "palette": "#fefefe:47:0 #545454:13:0 #727272:9:0",
-    "faviconPlate": "#ffffff"
+    "faviconPlate": "#ffffff",
+    "scene": "leather"
   },
   {
     "name": "Audio Nightclub",

@@ -1300,6 +1300,7 @@ test('renderReviewBearRow: a maybe is said as a hold, never as a verdict; the ba
   assert.ok(elsewhere.includes('🍺 On your bars list: Rockbar. This run kept 0 of its 1 party.') && !elsewhere.includes('own site'));
   const bearBar = renderReviewBearRow({ barNotice: { bar: 'Rockbar', scene: 'bear', ownSite: false, host: '', kept: 0, dropped: 0 } }, dropped('ai: x'));
   assert.ok(bearBar.includes('<div class="bear-notice">🍺 A bear bar on your list: Rockbar.</div>'));
+  assert.ok(renderReviewBearRow({ barNotice: { bar: 'Nowhere Bar', scene: 'adjacent', ownSite: false, host: '', kept: 0, dropped: 0 } }, dropped('ai: x')).includes('<div class="bear-notice">🍺 A bear-adjacent bar on your list: Nowhere Bar.</div>'));
   assert.ok(renderReviewBearRow({ barNotice: { bar: 'Rockbar', scene: '<b>', ownSite: false, host: '', kept: 0, dropped: 0 } }, dropped('ai: x')).includes('🍺 On your bars list: Rockbar.'), 'an unknown mark is no mark');
   assert.ok(elsewhere.includes('🧔 The flyer shows a heavyset, big bearded man (a machine look)'));
   assert.ok(!renderReviewBearRow({}, dropped('ai: x')).includes('bear-notice'), 'no notice without a fact');
@@ -1746,7 +1747,7 @@ test('the review page offers the three left-swipe answers, a one-tap Not bear, a
   assert.ok(html.includes('"waitingGone":[{"key":"event|gone|bar|2030-01-05"'), 'orphaned notes ride into the client');
   assert.ok(!html.includes('id="sheet-reject"'), 'the single Reject button is gone');
   // Maybe (owner 2026-11-10): a sixth control, its key, the two tabs, and no decision record.
-  for (const piece of ['id="btn-maybe"', '· m maybe ·', '.friend-mode #btn-maybe', "function canPark(c) { return !friendMode && Boolean(c) && !c.parked && (c.kind === 'dropped' || c.kind === 'new'); }", "if (filter === 'maybe') return c.parked === true;", "tabs.push(['worth', '👀 Worth a look'])", "tabs.push(['maybe', '🤔 Maybes'])", "return postBear(c, 'maybe')", "if (last.parked) { unparkCards(last.parked, last.replaced, last); return; }", "else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); maybeTop(); }", 'history.filter(function (h) { return h.records.length > 0 || h.parked; })']) assert.ok(html.includes(piece), piece);
+  for (const piece of ['id="btn-maybe"', '· m maybe ·', '.friend-mode #btn-maybe', "function canPark(c) { return !friendMode && Boolean(c) && !c.parked && (c.kind === 'dropped' || c.kind === 'new'); }", "if (filter === 'maybe') return c.parked === true;", "tabs.push(['worth', '👀 Worth a look'])", "var WORTH_ORDER = ['flyer', 'bear-bar', 'leather-bar', 'adjacent-bar'];", "tabs.push(['maybe', '🤔 Maybes'])", "return postBear(c, 'maybe')", "if (last.parked) { unparkCards(last.parked, last.replaced, last); return; }", "else if (e.key === 'm' || e.key === 'M') { e.preventDefault(); maybeTop(); }", 'history.filter(function (h) { return h.records.length > 0 || h.parked; })']) assert.ok(html.includes(piece), piece);
   assert.ok(/"parked":false,"worth":\[\],"html":/.test(html), 'each card carries its parked and worth state to the client');
   for (const source of [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1])) {
     assert.doesNotThrow(() => new (require('node:vm').Script)(source), 'every inline script parses');

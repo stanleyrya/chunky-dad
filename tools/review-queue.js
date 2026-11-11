@@ -80,6 +80,9 @@ const MANUAL_REASON_TAGS = [
 ];
 const MANUAL_ACTIONS = ['remove', 'edit', 'choose'];
 const MANUAL_EDIT_FIELDS = ['title', 'startDate', 'endDate', 'location', 'url', 'notes'];
+// The owner's marks on a bar (data/bars `scene`), in the order the deck
+// shows them.
+const BAR_SCENES = ['bear', 'leather', 'adjacent'];
 
 // MANUAL CARDS: one-offs the assistant writes by hand for the owner to
 // swipe — "this saved event's end runs to Sunday, set it to 22:00", "remove
@@ -2076,9 +2079,9 @@ function buildDeck(runPayload, store, options = {}) {
     // bear bar and fat picture notices/qualifications"). Facts, never a
     // verdict. The bar notice states what is known: the venue is on the
     // list, what the owner marked it as (`scene`: a bear bar, a leather
-    // bar, or nothing), whether this row was read from the venue's own
-    // site, and how many of the venue's parties this run kept and did not
-    // keep (distinct parties, never rows).
+    // bar, a bear-adjacent bar, or nothing), whether this row was read
+    // from the venue's own site, and how many of the venue's parties this
+    // run kept and did not keep (distinct parties, never rows).
     const curatedBarOf = (event) => {
         const cityBars = core.getCuratedCityBars(String(event.city || '').trim().toLowerCase());
         if (!cityBars) return null;
@@ -2106,8 +2109,9 @@ function buildDeck(runPayload, store, options = {}) {
         const cityKey = String(event.city || '').trim().toLowerCase();
         const ownSite = host ? core.getCuratedBarsClaimingWebsiteHost(host).some((claim) => claim && claim.bar && claim.bar.name === bar.name && String(claim.city || '').toLowerCase() === cityKey) : false;
         // `scene` is the owner's own mark on the bar (data/bars): a bear
-        // bar or a leather bar. Any other value is no mark.
-        const scene = bar.scene === 'bear' || bar.scene === 'leather' ? bar.scene : '';
+        // bar, a leather bar, or a bar next door to both ("adjacent").
+        // Any other value is no mark.
+        const scene = BAR_SCENES.includes(bar.scene) ? bar.scene : '';
         return { bar: bar.name, scene, ownSite, host: ownSite ? host : '', kept: tally.kept.size, dropped: [...tally.dropped].filter((key) => !tally.kept.has(key)).length };
     };
     // The flyer look (SharedCore.lookAtDroppedFlyers) speaks only when it
@@ -2182,11 +2186,13 @@ function buildDeck(runPayload, store, options = {}) {
         const flyerNotice = buildFlyerNotice(entry);
         if (flyerNotice) display.flyerNotice = flyerNotice;
         // WORTH A LOOK: what the owner's rubric calls a maybe (a party at a
-        // bar he marked as a bear bar, a flyer with a big man on it). It sorts
-        // the Not-bear pile; it decides nothing and hides nothing.
+        // bar he marked, a flyer with a big man on it). The reason names the
+        // mark, because the deck shows bear bars before leather bars before
+        // adjacent ones (owner 2026-11-10). It sorts the Not-bear pile; it
+        // decides nothing and hides nothing.
         const worth = [];
         if (flyerNotice) worth.push('flyer');
-        if (barNotice && barNotice.scene === 'bear') worth.push('bar');
+        if (barNotice && barNotice.scene) worth.push(`${barNotice.scene}-bar`);
         const card = { id: `d${index}`, kind: 'dropped', key, sourceIndex: index, proposal, display, fixTarget: fixTarget || null, worth };
         droppedByKey.set(key, card);
     });
