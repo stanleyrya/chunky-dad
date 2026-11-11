@@ -20747,6 +20747,25 @@ Rules:
                     }
                     continue;
                 }
+                // A STALE MACHINE SHRUG DOES NOT OUTLIVE THE MACHINE'S ANSWER.
+                //
+                // Owner 2026-11-10: "Beef mince always bear". The saved
+                // "BEEFMINCE: TURKEYMINCE" carried `bearSource: keyword` AND
+                // `bearReview: unsure — ai: …` for 51 runs: the flag was
+                // written once, from a listing stub with no description, and
+                // calendar-wins kept it while every later run said bear on
+                // the event's own words ("TIS' THE SEASON TO BE BEARY"). The
+                // site hides flagged events, so the party never showed.
+                //
+                // Only the machine's own `unsure` leaves, and only when this
+                // run's check kept the event with no flag of its own. The
+                // owner's edit ("confirmed", any other wording) still wins,
+                // and an `unlikely` (a model that said NOT bear) stays for
+                // him: two machine answers that disagree are his call.
+                if (SharedCore.isStaleMachineShrug(calendarValue, scraperObject)) {
+                    console.log(`🐻 MERGE: "${mergeTitle}" saved review flag cleared — this run's bear check says bear (${String(scraperObject.bearSource).trim()}); the flag was the machine's own "unsure" from an earlier run`);
+                    continue;
+                }
                 mergedObject[fieldName] = !this.isEmptyArbitrationValue(calendarValue)
                     ? calendarValue
                     : scraperValue;
@@ -21619,6 +21638,16 @@ Rules:
     // every pre-#1694 calendar record a notes-only rewrite — and, for a
     // series (which the scraper never rewrites), a per-night override
     // proposal on every run (CUBSCOUT, run 20260914-134414).
+    // The saved flag is the bear check's own "unsure — <provenance>"
+    // (filterBearEvents writes exactly that shape) and this run's check kept
+    // the event as bear, or kept for a tag, with no flag of its own.
+    static isStaleMachineShrug(calendarFlag, scraperObject) {
+        if (typeof calendarFlag !== 'string' || !/^unsure\s+—\s/.test(calendarFlag.trim())) return false;
+        if (!scraperObject || scraperObject.isBearEvent !== true) return false;
+        if (typeof scraperObject.bearReview === 'string' && scraperObject.bearReview.trim()) return false;
+        return typeof scraperObject.bearSource === 'string' && scraperObject.bearSource.trim() !== '';
+    }
+
     static foldSoftHyphens(value) {
         return typeof value === 'string' ? value.replace(/\u00ad/g, '-') : value;
     }

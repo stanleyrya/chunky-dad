@@ -6522,6 +6522,36 @@ test('bearReview round-trips notes and an existing calendar value survives merge
   assert.equal(core.parseNotesIntoFields(freshFlag.notes).bearReview, 'unsure — fallback: ai unavailable');
 });
 
+test('a saved machine "unsure" flag leaves when this run says bear; the owner\'s wording and an "unlikely" stay', async () => {
+  const core = createCore();
+  const shrug = 'unsure — ai: The event title \'TURKEYMINCE\' suggests a possible pun on beefmince';
+  const saved = (flag) => buildCalendarEvent({}, ['bar: STATION 4', 'bearSource: keyword', `bearReview: ${flag}`].join('\n'));
+  const flagOf = (event) => core.parseNotesIntoFields(event.notes).bearReview;
+
+  // This run: bear on the event's own words, no flag of its own.
+  const bearNow = await core.createFinalEventObject(saved(shrug), buildScrapedEvent({ isBearEvent: true, bearSource: 'keyword' }), {});
+  assert.equal(bearNow.bearReview, undefined);
+  assert.equal(flagOf(bearNow), undefined, 'the site hides flagged events');
+  assert.equal(core.parseNotesIntoFields(bearNow.notes).bearSource, 'keyword');
+
+  // This run shrugs again: the flag stays.
+  const shrugAgain = await core.createFinalEventObject(saved(shrug), buildScrapedEvent({ bearReview: 'unsure — ai: no description' }), {});
+  assert.equal(flagOf(shrugAgain), shrug);
+
+  // The owner's wording is never the machine's to clear.
+  const confirmed = await core.createFinalEventObject(saved('confirmed'), buildScrapedEvent({ isBearEvent: true, bearSource: 'keyword' }), {});
+  assert.equal(flagOf(confirmed), 'confirmed');
+
+  // A model that said NOT bear against a run that says bear is his call.
+  const unlikely = 'unlikely — ai: drag show';
+  const disagree = await core.createFinalEventObject(saved(unlikely), buildScrapedEvent({ isBearEvent: true, bearSource: 'ai' }), {});
+  assert.equal(flagOf(disagree), unlikely);
+
+  assert.equal(SharedCore.isStaleMachineShrug(shrug, { isBearEvent: true, bearSource: 'tagged (ai: leather)' }), true);
+  assert.equal(SharedCore.isStaleMachineShrug(shrug, { isBearEvent: true }), false, 'no stamp, no answer');
+  assert.equal(SharedCore.isStaleMachineShrug(shrug, { bearSource: 'keyword' }), false);
+});
+
 // ---------------------------------------------------------------------------
 // Manual bear/not-bear overrides: dropped events carried to results,
 // bearSource provenance, and prep-time calendar-record overrides
