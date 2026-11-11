@@ -36,7 +36,6 @@
     "faviconFg": "#ededed",
     "paletteSource": "favicon",
     "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0",
-    "faviconPlate": "#ffffff",
-    "scene": "leather"
+    "faviconPlate": "#ffffff"
   }
 ]

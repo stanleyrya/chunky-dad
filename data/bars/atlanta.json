@@ -10,8 +10,7 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:38:0 #bdbdbc:16:0 #020101:14:1 #710403:5:14 #c10303:4:21",
     "accent": "#c10303",
-    "faviconPlate": "#ffffff",
-    "scene": "leather"
+    "faviconPlate": "#ffffff"
   },
   {
     "name": "Atlanta Eagle",
@@ -23,8 +22,7 @@
     "faviconFg": "#3c3b3f",
     "paletteSource": "favicon",
     "palette": "#ffffff:81:0 #706f73:7:1 #d4d4d5:3:0",
-    "faviconPlate": "#ffffff",
-    "scene": "leather"
+    "faviconPlate": "#ffffff"
   },
   {
     "name": "Woofs Atlanta",
@@ -39,7 +37,6 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:61:0 #040304:19:0 #d91f3c:6:21 #982436:3:15",
     "accent": "#d91f3c",
-    "faviconPlate": "#ffffff",
-    "scene": "adjacent"
+    "faviconPlate": "#ffffff"
   }
 ]
