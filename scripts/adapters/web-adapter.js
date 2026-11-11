@@ -2638,44 +2638,73 @@ async saveFailureNote(url, error, metadata = {}) {
         // no published file yet, 'outage' is nothing answering, 'unreadable'
         // anything else.
         let unavailableReason = 'unreadable';
-        try {
-            const core = this.getSharedCoreRef();
-            const url = `https://chunky.dad/data/calendars/${encodeURIComponent(key)}.ics`;
-            const icsCacheConfig = {
-                enabled: this.getPageCacheConfig().enabled,
-                ttlDays: 0.25
-            };
-            let body = null;
-            let fetchedAt = null;
-            const cached = await this.readCachedPage(url, icsCacheConfig);
-            if (cached && typeof cached.html === 'string') {
-                body = cached.html;
-                fetchedAt = cached.fetchedAt ||
-                    (Number.isFinite(cached.modifiedAtMs) ? new Date(cached.modifiedAtMs).toISOString() : null);
-            } else {
-                const responseData = await this.fetchData(url, {
-                    headers: { Accept: 'text/calendar' },
-                    isCacheableResponse: () => false
-                });
-                if (responseData && typeof responseData.html === 'string') {
-                    body = responseData.html;
-                    fetchedAt = new Date().toISOString();
-                    await this.writeCachedPage(url, responseData, icsCacheConfig);
+        // A city with no configured calendar ("unknown", the bucket events
+        // with no resolvable city land in) has no published file and never
+        // will: nothing is ever written there. It is 'missing' by
+        // definition, without a request. Asking for it anyway is how one
+        // HTTP 503 from the site on unknown.ics discarded a whole 28-minute
+        // run (2026-11-10: "1 saved calendar(s) could not be read (unknown)").
+        const core = this.getSharedCoreRef();
+        const configuredCities = this.cities && typeof this.cities === 'object' ? this.cities : {};
+        if (Object.keys(configuredCities).length > 0
+            && !(configuredCities[key] && configuredCities[key].calendar)) {
+            this._publishedCalendarSnapshots[key] = { status: 'unavailable', fetchedAt: null, reason: 'missing' };
+            this._publishedCalendarByCity[key] = null;
+            return null;
+        }
+        // A real city's calendar gets one more try when the site ANSWERED
+        // with a "try again" status (SharedCore.isRetryableHttpStatus): a
+        // deploy in progress answers 503 for a few seconds, and a run that
+        // cannot read a calendar is thrown away (no partial runs). Nothing
+        // answering at all is an outage and is not asked twice.
+        const attempts = 2;
+        for (let attempt = 1; attempt <= attempts && !entry; attempt++) {
+            let retryableStatus = false;
+            try {
+                const url = `https://chunky.dad/data/calendars/${encodeURIComponent(key)}.ics`;
+                const icsCacheConfig = {
+                    enabled: this.getPageCacheConfig().enabled,
+                    ttlDays: 0.25
+                };
+                let body = null;
+                let fetchedAt = null;
+                const cached = await this.readCachedPage(url, icsCacheConfig);
+                if (cached && typeof cached.html === 'string') {
+                    body = cached.html;
+                    fetchedAt = cached.fetchedAt ||
+                        (Number.isFinite(cached.modifiedAtMs) ? new Date(cached.modifiedAtMs).toISOString() : null);
+                } else {
+                    const responseData = await this.fetchData(url, {
+                        headers: { Accept: 'text/calendar' },
+                        isCacheableResponse: () => false
+                    });
+                    if (responseData && typeof responseData.html === 'string') {
+                        body = responseData.html;
+                        fetchedAt = new Date().toISOString();
+                        await this.writeCachedPage(url, responseData, icsCacheConfig);
+                    }
+                }
+                const records = (body && core) ? core.parsePublishedCalendarIcs(body) : null;
+                if (Array.isArray(records)) {
+                    entry = { records, fetchedAt };
+                }
+            } catch (error) {
+                entry = null;
+                const message = error && typeof error.message === 'string' ? error.message : '';
+                const named = message.match(/HTTP\s+(\d{3})/i);
+                const statusCode = error && Number.isFinite(error.statusCode) ? error.statusCode : (named ? Number(named[1]) : null);
+                unavailableReason = 'unreadable';
+                if (statusCode === 404 || statusCode === 410) unavailableReason = 'missing';
+                else if (statusCode === null && ((core && typeof core.isTransportFailureMessage === 'function' && core.isTransportFailureMessage(message))
+                    || /parked for this run \(no answer/i.test(message))) unavailableReason = 'outage';
+                retryableStatus = statusCode !== null && Boolean(core && typeof core.isRetryableHttpStatus === 'function' && core.isRetryableHttpStatus(statusCode));
+                if (retryableStatus && attempt < attempts) {
+                    const waitMs = Number.isFinite(this.calendarReadRetryDelayMs) ? this.calendarReadRetryDelayMs : 8000;
+                    console.log(`🖥️ WebAdapter: published calendar for ${key} answered HTTP ${statusCode} — asking once more in ${Math.round(waitMs / 1000)}s`);
+                    if (waitMs > 0) await new Promise(resolve => setTimeout(resolve, waitMs));
                 }
             }
-            const records = (body && core) ? core.parsePublishedCalendarIcs(body) : null;
-            if (Array.isArray(records)) {
-                entry = { records, fetchedAt };
-            }
-        } catch (error) {
-            entry = null;
-            const core = this.getSharedCoreRef();
-            const message = error && typeof error.message === 'string' ? error.message : '';
-            const named = message.match(/HTTP\s+(\d{3})/i);
-            const statusCode = error && Number.isFinite(error.statusCode) ? error.statusCode : (named ? Number(named[1]) : null);
-            if (statusCode === 404 || statusCode === 410) unavailableReason = 'missing';
-            else if (statusCode === null && ((core && typeof core.isTransportFailureMessage === 'function' && core.isTransportFailureMessage(message))
-                || /parked for this run \(no answer/i.test(message))) unavailableReason = 'outage';
+            if (!retryableStatus) break;
         }
         if (entry) {
             this._publishedCalendarSnapshots[key] = { status: 'ok', fetchedAt: entry.fetchedAt };
