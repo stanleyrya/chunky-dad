@@ -14,9 +14,9 @@
     "palette": "#f6f6f6:63:0 #e35326:10:19 #858484:6:0 #a94526:2:14",
     "accent": "#e35326",
     "faviconPlate": "#f6f6f6",
+    "scene": "bear",
     "gayCitiesLastScrapedAt": "2026-06-26T17:08:40.863Z",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z",
-    "scene": "bear"
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z"
   },
   {
     "name": "The Lumber Yard Bar",
@@ -32,8 +32,8 @@
     "palette": "#fefefe:29:0 #9c7a3d:16:9 #010100:12:1 #522d15:11:7 #9b1926:5:16",
     "accent": "#9b1926",
     "faviconPlate": "#010100",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z",
-    "scene": "adjacent"
+    "scene": "adjacent",
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z"
   },
   {
     "name": "The Cuff Complex",
@@ -49,8 +49,8 @@
     "paletteSource": "favicon",
     "palette": "#545454:33:0 #3a3a3a:30:0 #787878:17:0",
     "faviconPlate": "#ffffff",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z",
-    "scene": "leather"
+    "scene": "leather",
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z"
   },
   {
     "name": "Seattle Eagle",
@@ -67,9 +67,9 @@
     "palette": "#1a1a1a:68:0 #ada283:8:4 #7f7864:7:3 #e2d7b0:5:5",
     "accent": "#e2d7b0",
     "faviconPlate": "#1a1a1a",
+    "scene": "leather",
     "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z",
-    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z",
-    "scene": "leather"
+    "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z"
   },
   {
     "name": "CC’s Seattle",
@@ -79,8 +79,8 @@
     "facebook": "https://www.facebook.com/ccsseattle",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJk-Ws_tFqkFQRc2h8MPRvv5I",
     "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:14:51.206Z",
-    "scene": "bear"
+    "scene": "bear",
+    "gayCitiesLastScrapedAt": "2026-06-13T15:14:51.206Z"
   },
   {
     "name": "Madison Pub",
@@ -89,8 +89,8 @@
     "coordinates": "47.6133619, -122.3149054",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJB_-ecc5qkFQRS1xH4lgadrg",
     "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub",
-    "gayCitiesLastScrapedAt": "2026-06-13T15:19:20.182Z",
-    "scene": "adjacent"
+    "scene": "adjacent",
+    "gayCitiesLastScrapedAt": "2026-06-13T15:19:20.182Z"
   },
   {
     "name": "Pony",
