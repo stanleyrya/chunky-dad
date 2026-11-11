@@ -56,6 +56,7 @@ const zlib = require('zlib');
 const { spawn, execFileSync } = require('child_process');
 
 const reviewQueue = require('./review-queue');
+const eventShape = require('./event-shape');
 
 const repoRoot = path.resolve(__dirname, '..');
 const serverDir = process.env.CHUNKY_SERVER_DIR && String(process.env.CHUNKY_SERVER_DIR).trim()
@@ -1338,6 +1339,26 @@ function renderReviewTwinCard(entry, ctx = {}) {
 </div>`;
 }
 
+// The shape report on a card (tools/event-shape.js): what failed, in
+// words, and what the flyer's own text confirmed. The run's own flags are
+// badges already, so they are not repeated here. A failed "usual" check is
+// a difference from the nights he approved, not a fault, and reads quieter.
+const SHAPE_ROW_SKIPPED_CHECKS = new Set(['pipeline-flags', 'held-back', 'slot-clash']);
+function renderReviewShapeRow(entry) {
+    const shape = entry && entry.shape;
+    if (!shape || !Array.isArray(shape.checks)) return '';
+    const failed = shape.checks.filter((check) => check.ok === false && check.detail && !SHAPE_ROW_SKIPPED_CHECKS.has(check.code));
+    const faults = failed.filter((check) => !String(check.code).startsWith('usual-'));
+    const unusual = failed.filter((check) => String(check.code).startsWith('usual-'));
+    const agrees = shape.checks.filter((check) => check.ok === true && check.detail && String(check.code).startsWith('flyer-'));
+    const lines = faults.map((check) => `<div class="shape-line warn">⚠️ ${escapeHtmlText(check.detail)}</div>`);
+    if (unusual.length > 0) lines.push(`<div class="shape-line">↔️ not like the nights you approved: ${escapeHtmlText(unusual.map((check) => check.detail).join('; '))}</div>`);
+    if (agrees.length > 0) lines.push(`<div class="shape-line muted">🖼 the flyer text agrees: ${escapeHtmlText(agrees.map((check) => check.detail.replace(/^the flyer (says|prints) /, '')).join(', '))}</div>`);
+    const heldClass = entry.lowRiskHeld && eventShape.LOW_RISK_CLASSES[entry.lowRiskHeld];
+    if (heldClass) lines.push(`<div class="shape-line muted">🟢 low risk (${escapeHtmlText(heldClass.label.toLowerCase())}), pulled out by you</div>`);
+    return lines.length > 0 ? `<div class="shape-row">${lines.join('')}</div>` : '';
+}
+
 function renderReviewCard(entry, ctx = {}) {
     if (entry && entry.kind === 'manual') return renderReviewManualCard(entry, ctx);
     if (entry && entry.kind === 'bar') return renderReviewBarCard(entry, ctx);
@@ -1414,6 +1435,7 @@ function renderReviewCard(entry, ctx = {}) {
   <div class="line">📅 ${isSeries ? 'first night: ' : ''}${escapeHtmlText(dateLine)}</div>
   ${utcLine ? `<div class="utc">${escapeHtmlText(utcLine)}</div>` : ''}
   ${renderReviewRouteLine(ctx, { bar: proposal.bar, address: proposal.address, city: proposal.city, coordinates: proposal.location, barSource: display.barSource })}
+  ${renderReviewShapeRow(entry)}
   <div class="line muted">${escapeHtmlText(sourceBits.join(' · '))}</div>
   ${chips ? `<div class="chips">${chips}</div>` : ''}
   ${renderReviewLinkHistory(entry, proposal, display)}
@@ -1707,6 +1729,11 @@ function renderReviewPage(deck, options = {}) {
         asked: entry.asked || [],
         advice: entry.advice || [],
         picture: entry.picture || null,
+        // Low risk (tools/event-shape.js): the class of a card whose shape
+        // report is clean, or the class it had before the owner pulled it
+        // out to the stack.
+        lowRisk: entry.lowRisk || null,
+        lowRiskHeld: entry.lowRiskHeld || null,
         // Parked as a maybe (the Maybes tab only); what makes a not-bear
         // card worth a look (its tab's order).
         parked: entry.parked === true,
@@ -1732,6 +1759,8 @@ function renderReviewPage(deck, options = {}) {
         asked: entry.asked || [],
         advice: entry.advice || [],
         picture: entry.picture || null,
+        // Approved by the deck under a low-risk switch: its class.
+        auto: eventShape.readLowRiskAutoClass(entry.decision.reason) || (entry.autoApproved && entry.autoApproved.lowRisk) || null,
         html: renderReviewCard(entry, ctx)
     }));
     // The tags a swipe may give (EventSchema.EVENT_TAGS, minus the derived
@@ -1763,6 +1792,8 @@ function renderReviewPage(deck, options = {}) {
         twinTags: reviewQueue.TWIN_REASON_TAGS,
         executeLink: scriptLink,
         friends: Array.isArray(deck.friends) ? deck.friends : [],
+        // The Low risk tab: class labels and which classes are switched on.
+        lowRisk: deck.lowRisk && typeof deck.lowRisk === 'object' ? deck.lowRisk : { classes: eventShape.LOW_RISK_CLASSES, auto: eventShape.emptyDeckSettings().auto, held: 0 },
         adviceBase: deck.adviceBase || reviewQueue.ADVICE_PAGE_DEFAULT_BASE,
         // The friend's copy of this page (renderFriendPage): no server
         // behind it — the cards arrive in the link, the answers leave in one.
@@ -2004,6 +2035,42 @@ body { overscroll-behavior-y:none; }
 .curated { color:var(--ok); font-weight:700; }
 .bear-row { margin:8px 0; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--bg); font-size:13px; }
 .bear-notice { margin-top:5px; padding-top:5px; border-top:1px dashed var(--line); }
+.shape-row { margin:6px 0; font-size:13px; line-height:1.4; }
+.shape-line { padding:1px 0; }
+.shape-line.warn { color:var(--accent-soft); font-weight:600; }
+.shape-line.muted { color:var(--muted); }
+.lowrisk { max-width:720px; margin:10px auto 0; padding:0 14px 8px; }
+.lr-head { display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:var(--card); }
+.lr-say { flex:1 1 220px; min-width:0; font-size:12px; color:var(--muted); line-height:1.4; }
+.lr-say b { display:block; font-size:16px; color:var(--ink); font-variant-numeric:tabular-nums; }
+.lr-approve { font:inherit; font-size:15px; font-weight:700; padding:10px 16px; border-radius:999px; border:none; background:var(--ok); color:#fff; cursor:pointer; white-space:nowrap; }
+.lr-approve:disabled { opacity:.4; cursor:default; }
+.lr-class { margin-top:16px; }
+.lr-class-head { display:flex; gap:10px; align-items:flex-start; justify-content:space-between; }
+.lr-class-head h3 { margin:0; font-size:14px; }
+.lr-class-head h3 b { color:var(--muted); font-weight:600; margin-left:4px; font-variant-numeric:tabular-nums; }
+.lr-class-head p { margin:2px 0 0; font-size:12px; color:var(--muted); line-height:1.35; }
+.lr-switch { flex:none; display:inline-flex; align-items:center; gap:7px; font:inherit; font-size:12px; color:var(--muted); background:none; border:none; padding:2px 0; cursor:pointer; white-space:nowrap; }
+.lr-switch .track { width:34px; height:20px; border-radius:999px; background:var(--line); position:relative; transition:background .15s; flex:none; }
+.lr-switch .track::after { content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--muted); transition:transform .15s, background .15s; }
+.lr-switch.on { color:var(--ink); }
+.lr-switch.on .track { background:var(--ok); }
+.lr-switch.on .track::after { transform:translateX(14px); background:#fff; }
+.lr-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:8px; margin-top:8px; }
+.lr-tile { display:flex; flex-direction:column; text-align:left; font:inherit; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:10px; padding:0; overflow:hidden; cursor:pointer; min-width:0; }
+.lr-tile .pic { width:100%; aspect-ratio:1/1; object-fit:cover; background:var(--line); display:flex; align-items:center; justify-content:center; font-size:26px; }
+.lr-tile .pic.none { font-size:11px; color:var(--muted); }
+.lr-tile .t { font-size:12px; font-weight:600; line-height:1.25; padding:6px 7px 0; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; overflow-wrap:anywhere; }
+.lr-tile .d { font-size:11px; color:var(--muted); padding:2px 7px 0; line-height:1.3; overflow-wrap:anywhere; }
+.lr-tile .d:last-child { padding-bottom:7px; }
+.lr-none, .lr-held { font-size:12px; color:var(--muted); margin-top:8px; }
+.lr-held button, .lr-tile .undo { font:inherit; font-size:12px; font-weight:600; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:999px; padding:4px 10px; cursor:pointer; white-space:nowrap; }
+.lr-held button { margin-left:6px; }
+.lr-tile.done { cursor:default; }
+.lr-tile.done .ok { color:var(--ok); font-weight:600; }
+.lr-tile .undo { align-self:flex-start; margin:6px 7px 7px; }
+.lr-tile:focus-visible, .lr-switch:focus-visible, .lr-approve:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { .lr-switch .track, .lr-switch .track::after { transition:none; } }
 .missing-cal { margin:8px 16px 0; padding:8px 12px; border:1px solid var(--no); border-radius:10px; font-size:13px; background:var(--card); }
 .series { margin:0 0 8px; padding:6px 10px; border:1px solid var(--line); border-radius:10px; font-size:13px; background:var(--bg); }
 .series .nights { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
@@ -2149,6 +2216,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
 .friend-mode #btn-ask, .friend-mode #btn-maybe, .friend-mode #sheet-ask-mode, .friend-mode .sheet-friend, .friend-mode .execute, .friend-mode .snapshot, .friend-mode #waiting-wrap, .friend-mode #friends-wrap, .friend-mode #decided-wrap, .friend-mode .meta .keys { display:none !important; }
 #friend-sms { display:none; }
 .friend-mode #friend-sms { display:inline-flex; }
+.friend-mode #lowrisk { display:none; }
 </style></head>
 <body${options.friendMode === true ? ' class="friend-mode"' : ''}>
 <header class="top">
@@ -2169,6 +2237,7 @@ ${missingCalendarNotice}
 </div>
 <div class="list hidden" id="list"></div>
 <div class="sources hidden" id="sources"></div>
+<div class="lowrisk hidden" id="lowrisk"></div>
 <div class="stage" id="stage"></div>
 <div class="controls">
   <button class="btn-no" id="btn-reject" type="button"><span class="ic">✕</span><span class="lb">Not yet</span></button>
@@ -2372,9 +2441,27 @@ window.__startDeck = function () {
     for (var i = 0; i < WORTH_ORDER.length; i++) if (worth.indexOf(WORTH_ORDER[i]) !== -1) return i;
     return WORTH_ORDER.length;
   }
+  // LOW RISK (owner 2026-11-11: "we need to start automating"): card.lowRisk
+  // is the class the deck gave a card whose shape report is clean
+  // (tools/event-shape.js): another night of a party he approved, one night
+  // of a weekly series, an update that touches neither the name nor the
+  // link. Those cards leave every other tab and wait on their own as a
+  // grid: one button approves them all, a tap pulls one out to the stack.
+  // A class he switches on is approved for him when the deck is built and
+  // listed under "Approved for you" with an undo.
+  var lowRiskInfo = deck.lowRisk || { classes: {}, auto: {} };
+  function isLowRisk(c) { return !friendMode && Boolean(c) && Boolean(c.lowRisk) && !c.parked; }
+  function autoDecided() { return decided.filter(function (d) { return Boolean(d.auto) && d.verdict === 'approve'; }); }
+  function lowRiskTabShown(n) {
+    if (friendMode) return false;
+    var auto = lowRiskInfo.auto || {};
+    return n > 0 || filter === 'lowrisk' || autoDecided().length > 0 || Object.keys(auto).some(function (cls) { return auto[cls] === true; });
+  }
   function inTab(c) {
     if (filter === 'maybe') return c.parked === true;
     if (c.parked) return false;
+    if (filter === 'lowrisk') return isLowRisk(c);
+    if (isLowRisk(c)) return false;
     if (filter === 'worth') return c.kind === 'dropped' && (c.worth || []).length > 0;
     return filter === 'all' ? c.kind !== 'dropped' : tabOf(c.kind) === filter;
   }
@@ -2512,11 +2599,13 @@ window.__startDeck = function () {
     if (join && series) join.onclick = function () { delete solo[series.key]; toast('Folded back — one swipe decides them all'); render(); };
   }
   function counts() {
-    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, gone: 0, dropped: 0, 'verdict-conflict': 0, maybe: 0, worth: 0 };
+    var out = { all: 0, new: 0, merge: 0, series: 0, bar: 0, gone: 0, dropped: 0, 'verdict-conflict': 0, maybe: 0, worth: 0, lowrisk: 0 };
     queue.forEach(function (c) {
       if (!matchesCity(c)) return;
       // A parked card is in the Maybes count and no other.
       if (c.parked) { out.maybe++; return; }
+      // So is a low-risk card in its own.
+      if (isLowRisk(c)) { out.lowrisk++; return; }
       out[tabOf(c.kind)] = (out[tabOf(c.kind)] || 0) + 1;
       if (c.kind !== 'dropped') out.all++;
       else if ((c.worth || []).length > 0) out.worth++;
@@ -2557,6 +2646,7 @@ window.__startDeck = function () {
     // The conflicts tab shows only while there is one — most runs have none.
     var tabs = [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['gone', 'Gone'], ['dropped', 'Not bear']];
     // Shown only while they hold something, like the conflicts tab.
+    if (lowRiskTabShown(c.lowrisk)) tabs.splice(1, 0, ['lowrisk', '🟢 Low risk']);
     if (c.worth > 0 || filter === 'worth') tabs.push(['worth', '👀 Worth a look']);
     if (c.maybe > 0 || filter === 'maybe') tabs.push(['maybe', '🤔 Maybes']);
     if (c['verdict-conflict'] > 0 || filter === 'verdict-conflict') tabs.push(['verdict-conflict', 'Both ways']);
@@ -2813,7 +2903,7 @@ window.__startDeck = function () {
   }
   window.addEventListener('resize', refitIfNewScreen);
   window.addEventListener('orientationchange', function () { fitted = { w: 0, h: 0 }; fitStage(); });
-  function render() { renderCities(); renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderBulk(); renderExecute(); renderOutbox(); renderWaiting(); renderFriends(); renderDecided(); fitStage(); }
+  function render() { renderCities(); renderFilters(); renderViews(); renderStage(); renderList(); renderSources(); renderLowRisk(); renderBulk(); renderExecute(); renderOutbox(); renderWaiting(); renderFriends(); renderDecided(); fitStage(); }
 
   // ---- views: the stack, the same cards as a list, or the sources ----
   function renderViews() {
@@ -2828,15 +2918,127 @@ window.__startDeck = function () {
     var friendsPill = document.getElementById('friends-pill');
     if (friendsPill) friendsPill.onclick = function () { var wrap = document.getElementById('friends-wrap'); wrap.open = true; wrap.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
     Array.prototype.forEach.call(document.querySelectorAll('#views .pill[data-v]'), function (el) {
-      el.onclick = function () { view = el.getAttribute('data-v'); render(); window.scrollTo(0, 0); };
+      // The Low risk tab has one view, its grid: choosing a view leaves it.
+      el.onclick = function () { view = el.getAttribute('data-v'); if (filter === 'lowrisk') filter = 'all'; render(); window.scrollTo(0, 0); };
     });
     var only = document.getElementById('source-only');
     if (only) only.onclick = function () { sourceOnly = ''; render(); };
-    var onStack = view === 'stack';
+    var onLowRisk = filter === 'lowrisk';
+    var onStack = view === 'stack' && !onLowRisk;
     document.getElementById('stage').classList.toggle('hidden', !onStack);
     document.querySelector('.controls').classList.toggle('hidden', !onStack);
-    document.getElementById('list').classList.toggle('hidden', view !== 'list');
-    document.getElementById('sources').classList.toggle('hidden', view !== 'sources');
+    document.getElementById('list').classList.toggle('hidden', view !== 'list' || onLowRisk);
+    document.getElementById('sources').classList.toggle('hidden', view !== 'sources' || onLowRisk);
+  }
+  // ---- the Low risk tab ----
+  function lowRiskLine(c) {
+    var p = c.proposal || {};
+    if (c.kind === 'new') return placeOf(c);
+    var fields = Object.keys(p.changes || {}).map(function (f) { return CHANGE_LABELS[f] || (f === 'startDate' ? 'start' : f === 'endDate' ? 'end' : f); });
+    return fields.length ? 'changes: ' + fields.join(', ') : placeOf(c);
+  }
+  // Pulled out: the card is an ordinary card again, first on the stack, and
+  // the Mac remembers it (deck-settings.json) so no switch approves it.
+  function pullOut(c) {
+    var cls = c.lowRisk;
+    c.lowRisk = null; c.lowRiskHeld = cls;
+    queue = [c].concat(queue.filter(function (x) { return x !== c; }));
+    render();
+    sendTo('/review/low-risk', { hold: c.key })
+      .then(function () { toast('Pulled out. It is first on the stack now'); })
+      .catch(function (error) { toast('Pulled out for this visit only, the Mac did not hear it: ' + error.message); });
+  }
+  function pulledOut() { return queue.filter(function (c) { return Boolean(c.lowRiskHeld) && !c.lowRisk && !c.parked; }); }
+  function putBack() {
+    var held = pulledOut();
+    if (!held.length) return;
+    held.forEach(function (c) { c.lowRisk = c.lowRiskHeld; c.lowRiskHeld = null; });
+    render();
+    sendTo('/review/low-risk', { release: held.map(function (c) { return c.key; }) }).catch(function (error) { toast('Not saved: ' + error.message); });
+  }
+  function setLowRiskAuto(cls, on) {
+    var label = String(((lowRiskInfo.classes || {})[cls] || {}).label || cls).toLowerCase();
+    if (on && !confirm('Approve ' + label + ' for you from now on? Each one is listed here with an undo, and nothing reaches the calendar before you press Execute.')) return;
+    var change = {}; change[cls] = on;
+    sendTo('/review/low-risk', { auto: change })
+      .then(function () { location.reload(); })
+      .catch(function (error) { toast('Not saved: ' + error.message); });
+  }
+  function renderLowRisk() {
+    var root = document.getElementById('lowrisk');
+    if (!root) return;
+    var on = filter === 'lowrisk' && !friendMode;
+    root.classList.toggle('hidden', !on);
+    if (!on) { root.innerHTML = ''; return; }
+    var classes = lowRiskInfo.classes || {}, auto = lowRiskInfo.auto || {};
+    var list = visible();
+    var html = '<div class="lr-head"><div class="lr-say"><b>' + list.length + ' low-risk card' + (list.length === 1 ? '' : 's') + '</b>'
+      + 'Each one passed every shape check, and its flyer text does not disagree with its date. Tap one to pull it out to the stack.</div>'
+      + '<button type="button" class="lr-approve" data-act="approve-all"' + (list.length ? '' : ' disabled') + '>✓ Approve all ' + list.length + '</button></div>';
+    Object.keys(classes).forEach(function (cls) {
+      var mine = list.filter(function (c) { return c.lowRisk === cls; });
+      html += '<section class="lr-class"><div class="lr-class-head"><div><h3>' + escapeHtml(classes[cls].label) + '<b>' + mine.length + '</b></h3><p>' + escapeHtml(classes[cls].blurb) + '</p></div>'
+        + '<button type="button" class="lr-switch' + (auto[cls] ? ' on' : '') + '" role="switch" aria-checked="' + (auto[cls] ? 'true' : 'false') + '" data-act="toggle" data-cls="' + escapeHtml(cls) + '"><span class="track"></span><span>' + (auto[cls] ? 'Approved for you' : 'Approve for me') + '</span></button></div>';
+      if (mine.length) {
+        html += '<div class="lr-grid">';
+        mine.forEach(function (c) {
+          var p = c.proposal || {};
+          var src = p.imageView || p.image || '';
+          html += '<button type="button" class="lr-tile" data-act="pull" data-key="' + escapeHtml(c.key) + '" title="Pull out to the stack">'
+            + (src ? '<img class="pic" src="' + escapeHtml(src) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<span class="pic none">no picture</span>')
+            + '<span class="t">' + escapeHtml(titleOf(c)) + '</span>'
+            + '<span class="d">' + escapeHtml(whenOf(c)) + '</span>'
+            + (lowRiskLine(c) ? '<span class="d">' + escapeHtml(lowRiskLine(c)) + '</span>' : '')
+            + '</button>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="lr-none">' + (auto[cls] ? 'Nothing waiting. New ones are approved as they arrive.' : 'Nothing waiting.') + '</div>';
+      }
+      html += '</section>';
+    });
+    var held = pulledOut();
+    if (held.length) html += '<div class="lr-held">' + held.length + ' pulled out to the stack.<button type="button" data-act="put-back">Put ' + (held.length === 1 ? 'it' : 'them') + ' back</button></div>';
+    var autos = autoDecided();
+    if (autos.length) {
+      html += '<section class="lr-class"><div class="lr-class-head"><div><h3>Approved for you<b>' + autos.length + '</b></h3><p>Approved under a switch above. Undo sends one back to the stack and keeps it there.</p></div></div><div class="lr-grid">';
+      // The same tile as a waiting card: the picture is what he checks.
+      autos.slice().reverse().forEach(function (d) {
+        var label = String(((classes[d.auto] || {}).label) || d.auto);
+        var src = (d.proposal || {}).image || '';
+        html += '<div class="lr-tile done">'
+          + (src ? '<img class="pic" src="' + escapeHtml(src) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<span class="pic none">no picture</span>')
+          + '<span class="t">' + escapeHtml(d.title || d.key) + '</span>'
+          + (whenOf(d) ? '<span class="d">' + escapeHtml(whenOf(d)) + '</span>' : '')
+          + '<span class="d ok">✓ ' + escapeHtml(label) + '</span>'
+          + (d.executed ? '<span class="d">📱 written on the phone</span>' : '<button type="button" class="undo" data-act="undo" data-key="' + escapeHtml(d.key) + '">Undo</button>')
+          + '</div>';
+      });
+      html += '</div></section>';
+    }
+    root.innerHTML = html;
+    root.onclick = function (ev) {
+      var target = ev.target;
+      while (target && target !== root && !target.getAttribute('data-act')) target = target.parentNode;
+      if (!target || target === root) return;
+      var act = target.getAttribute('data-act');
+      var key = target.getAttribute('data-key');
+      if (act === 'approve-all') {
+        var all = visible();
+        if (all.length && confirm('Approve all ' + all.length + ' low-risk cards?')) decideMany(all.map(function (c) { return { key: c.key, cards: [c] }; }), 'approve', null);
+      } else if (act === 'pull') {
+        var card = queue.filter(function (c) { return c.key === key; })[0];
+        if (card) pullOut(card);
+      } else if (act === 'toggle') {
+        var cls = target.getAttribute('data-cls');
+        setLowRiskAuto(cls, !(auto[cls] === true));
+      } else if (act === 'put-back') {
+        putBack();
+      } else if (act === 'undo') {
+        var record = decided.filter(function (d) { return d.key === key; })[0];
+        if (record) undoDecision(record);
+      }
+    };
   }
   var wordInput = document.getElementById('word');
   var wordTimer = null;
@@ -2876,7 +3078,7 @@ window.__startDeck = function () {
     window.scrollTo(0, 0);
   }
   function renderList() {
-    if (view !== 'list') return;
+    if (view !== 'list' || filter === 'lowrisk') return;
     var list = items();
     var html = '';
     if (list.length === 0) html = '<div class="empty">Nothing here' + (words || sourceOnly ? ' for this filter' : '') + '. 🐻</div>';
@@ -3298,10 +3500,15 @@ window.__startDeck = function () {
     // the card comes back to be decided alone (that decision then wins).
     if (record.via) { requeue(record); if (record.series) solo[record.series.key] = true; toast('Back on the stack — decide this night alone'); render(); return; }
     var was = record.replaced || {};
-    var request = record.kind === 'dropped' || isConflict(record)
-      ? postBear(record, 'clear', was.bear).then(function (result) { return record.noteKey ? post({ key: record.noteKey, verdict: 'clear', restore: was.decision || undefined }) : result; })
-      : post({ key: record.key, verdict: 'clear', restore: was.decision || undefined })
-          .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear', was.bear).then(function () { return result; }) : result; });
+    // An approval the deck made under a low-risk switch: the card is held
+    // out first, or the next deck build would approve it again.
+    var held = record.auto && !friendMode ? sendTo('/review/low-risk', { hold: record.key }) : Promise.resolve();
+    var request = held.then(function () {
+      return record.kind === 'dropped' || isConflict(record)
+        ? postBear(record, 'clear', was.bear).then(function (result) { return record.noteKey ? post({ key: record.noteKey, verdict: 'clear', restore: was.decision || undefined }) : result; })
+        : post({ key: record.key, verdict: 'clear', restore: was.decision || undefined })
+            .then(function (result) { return record.notBearVerdict ? postBear(record, 'clear', was.bear).then(function () { return result; }) : result; });
+    });
     return request.then(function (result) {
       // The decision had ended a maybe: the party is parked again.
       return record.clearedMaybe ? postBear(record, 'maybe').then(function () { return result; }) : result;
@@ -3726,6 +3933,8 @@ window.__startDeck = function () {
     if (lightbox.classList.contains('open')) { if (e.key === 'Escape') closeFlyer(); return; }
     if (sheet.classList.contains('open')) { if (e.key === 'Escape') closeSheet(); return; }
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT')) return;
+    // The Low risk grid has no top card for a key to act on.
+    if (filter === 'lowrisk') return;
     if (e.key === 'ArrowRight') { e.preventDefault(); approveTop(); }
     else if (e.key === 'ArrowLeft') { e.preventDefault(); rejectTop(false); }
     else if (e.key === ' ' || e.key === 'ArrowDown') { e.preventDefault(); skipTop(); }
@@ -3920,7 +4129,12 @@ function buildReviewDeckForRun(sharedRoot, run, options = {}) {
     const friendAdvice = reviewQueue.loadFriendAdvice(reviewQueue.getFriendAdvicePath(sharedRoot));
     const publishedPictures = reviewQueue.loadPublishedPictures(sharedRoot).pictures;
     const manualCards = reviewQueue.loadManualCards(reviewQueue.getManualCardsPath(sharedRoot)).cards;
-    const deckOptions = { runId: run.runId, core, bearVerdicts, executions, writtenLedger, friendAdvice, publishedPictures, manualCards, ...(phoneCalendars ? { phoneCalendars } : {}) };
+    // The shape report's two outside readers (tools/event-shape.js): the
+    // flyer text the run already read (storage/ocr) and the owner's
+    // low-risk switches and pulled-out cards (deck-settings.json).
+    const flyerText = eventShape.getFlyerTextIndex(sharedRoot);
+    const deckSettings = eventShape.loadDeckSettings(sharedRoot);
+    const deckOptions = { runId: run.runId, core, bearVerdicts, executions, writtenLedger, friendAdvice, publishedPictures, manualCards, flyerText, deckSettings, ...(phoneCalendars ? { phoneCalendars } : {}) };
     let deck = reviewQueue.buildDeck(run.payload, store, deckOptions);
     // The deck closes its own loops (audit 2026-09-22): notes whose fix is
     // saved or whose night has passed are dropped from the store, and a
@@ -3934,12 +4148,22 @@ function buildReviewDeckForRun(sharedRoot, run, options = {}) {
         let next = store;
         for (const key of answered) next = reviewQueue.clearDecision(next, key).store;
         for (const decision of autoApprovals) {
+            // Two kinds of approval the deck makes itself: a fix that arrived
+            // exactly as asked, and a low-risk card of a class the owner
+            // switched on. The stored words say which.
+            const lowRiskClass = decision.autoApproved && decision.autoApproved.lowRisk;
+            const text = lowRiskClass
+                ? eventShape.lowRiskAutoReasonText(lowRiskClass)
+                : `auto: the fix you asked for arrived (${(decision.autoApproved.fields || []).join(', ')})`;
             next = reviewQueue.upsertDecision(next, reviewQueue.buildDecision({ key: decision.key, kind: decision.kind, verdict: 'approve', runId: run.runId, snapshot: decision.snapshot,
-                reason: { tags: [], text: `auto: the fix you asked for arrived (${decision.autoApproved.fields.join(', ')})`, mode: '' } }));
+                reason: { tags: [], text, mode: '' } }));
         }
         const saved = reviewQueue.saveDecisions(reviewQueue.getDecisionsPath(sharedRoot), next);
         if (answered.length > 0) console.log(`Review: dropped ${answered.length} answered "needs a fix" note(s): ${answered.join(', ')}`);
-        if (autoApprovals.length > 0) console.log(`Review: auto-approved ${autoApprovals.length} card(s) whose fix arrived as asked: ${autoApprovals.map((d) => d.key).join(', ')}`);
+        const fixArrived = autoApprovals.filter((d) => !(d.autoApproved && d.autoApproved.lowRisk));
+        const lowRiskApproved = autoApprovals.filter((d) => d.autoApproved && d.autoApproved.lowRisk);
+        if (fixArrived.length > 0) console.log(`Review: auto-approved ${fixArrived.length} card(s) whose fix arrived as asked: ${fixArrived.map((d) => d.key).join(', ')}`);
+        if (lowRiskApproved.length > 0) console.log(`Review: approved ${lowRiskApproved.length} low-risk card(s) under the owner's switches: ${lowRiskApproved.map((d) => `${d.key} (${d.autoApproved.lowRisk})`).join(', ')}`);
         deck = reviewQueue.buildDeck(run.payload, saved, deckOptions);
     }
     // Inbox pictures: a push that failed at approve time is tried again
@@ -4302,6 +4526,48 @@ async function handleRequest(state, req, res) {
         try {
             const { deck } = buildReviewDeckForRun(sharedRoot, run, { publicOrigin: state.publicOrigin });
             return sendJson(res, 200, { ok: true, ...deck });
+        } catch (error) {
+            return sendJson(res, 500, { ok: false, error: error.message });
+        }
+    }
+
+    // The shape report of every card on the deck (tools/event-shape.js):
+    // one row per card with its failed checks in words, and the totals.
+    if (pathname === '/review/shape.json' && req.method === 'GET') {
+        const { sharedRoot, run } = resolveReviewRun(query);
+        if (!run) return sendJson(res, 404, { ok: false, error: 'no run' });
+        try {
+            const { deck } = buildReviewDeckForRun(sharedRoot, run, { publicOrigin: state.publicOrigin });
+            return sendJson(res, 200, { ok: true, ...eventShape.buildShapeReport(deck) });
+        } catch (error) {
+            return sendJson(res, 500, { ok: false, error: error.message });
+        }
+    }
+
+    // The Low risk tab's three taps: a class switched on or off
+    // ({ auto: { <class>: bool } }), a card pulled out to the stack
+    // ({ hold: key }) and put back ({ release: key }). Written to
+    // <sharedRoot>/deck-settings.json; the next deck build reads it.
+    if (pathname === '/review/low-risk' && req.method === 'POST') {
+        const raw = await readRequestBody(req);
+        let body;
+        try {
+            body = JSON.parse(raw || '{}');
+        } catch (error) {
+            return sendJson(res, 400, { ok: false, error: 'body must be JSON' });
+        }
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        let next;
+        try {
+            next = eventShape.applyDeckSettingsChange(eventShape.loadDeckSettings(sharedRoot), body);
+        } catch (error) {
+            return sendJson(res, 400, { ok: false, error: error.message });
+        }
+        try {
+            const saved = eventShape.saveDeckSettings(sharedRoot, next);
+            const switchedOn = Object.keys(saved.auto).filter((cls) => saved.auto[cls]);
+            console.log(`Review: low-risk settings saved — approved for the owner: ${switchedOn.length ? switchedOn.join(', ') : 'nothing'}; ${Object.keys(saved.held).length} card(s) pulled out`);
+            return sendJson(res, 200, { ok: true, auto: saved.auto, held: Object.keys(saved.held).length });
         } catch (error) {
             return sendJson(res, 500, { ok: false, error: error.message });
         }

@@ -32,6 +32,7 @@ const os = require('os');
 const path = require('path');
 
 const repoRoot = path.resolve(__dirname, '..');
+const eventShape = require('./event-shape');
 
 // Same default the launchd installer uses (tools/schedule-mac-run.sh): the
 // data folder in iCloud Drive (chunky-dad-data — where the phone's
@@ -1879,7 +1880,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, manual: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0, 'verdict-conflict': 0, verdictConflictsInStore: 0, maybe: 0, worth: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, manual: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0, 'verdict-conflict': 0, verdictConflictsInStore: 0, maybe: 0, worth: 0, lowRisk: 0, shapeFlagged: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
     // its fresh action; the run file's executions[] dates it. Executions
@@ -1961,6 +1962,30 @@ function buildDeck(runPayload, store, options = {}) {
 
     const extras = { parserNamesByKey: buildParserNamesByKey(payload), imageUseCounts: buildImageUseCounts(payload) };
     const analyzed = Array.isArray(payload.analyzedEvents) ? payload.analyzedEvents : [];
+    // SHAPE + LOW RISK (tools/event-shape.js). Every event card carries one
+    // report of what was checked about its shape: is it well formed, does
+    // its flyer agree with it (options.flyerText — the pipeline's OCR
+    // answers by image address), does it look like the nights of this
+    // party the owner approved. A card with a clean report in one of the
+    // three classes he approved every time leaves the stack for the Low
+    // risk tab; with that class's toggle on (options.deckSettings.auto) it
+    // is approved on his behalf, unless he pulled it out (held).
+    const partyHistory = eventShape.buildPartyHistory(decisions);
+    const flyerText = options.flyerText && typeof options.flyerText.lookup === 'function' ? options.flyerText : null;
+    const deckSettings = eventShape.normalizeDeckSettings(options.deckSettings);
+    const assessCard = (proposal, display) => eventShape.assessShape({
+        proposal,
+        sanityCodes: display.sanityCodes,
+        flags: [display.bigDrift && 'a big change', display.aggregatorUnbacked && 'a listing nothing backs', display.loneCrawl && 'a lone page', display.imageReusedFrom && 'a reused picture'].filter(Boolean),
+        clashes: [
+            Array.isArray(display.venueOverlaps) && display.venueOverlaps.length > 0 && `overlaps ${display.venueOverlaps.join(', ')} at the venue`,
+            Array.isArray(display.slotWins) && display.slotWins.length > 0 && `takes the slot from ${display.slotWins.join(', ')}`,
+            display.slotTakeover && display.slotTakeover.from && `takes the slot of the saved ${display.slotTakeover.from}`
+        ].filter(Boolean),
+        flyer: flyerText && proposal.image ? flyerText.lookup(proposal.image) : null,
+        history: eventShape.historyFor(partyHistory, proposal.key),
+        now
+    });
     // One series, one card: a run can list the same stated series on
     // several rows (one per page it appeared on); the first row carries
     // the card, the rest are the same decision.
@@ -2013,21 +2038,33 @@ function buildDeck(runPayload, store, options = {}) {
                 { key: proposal.key, kind: proposal.kind, verdict: 'approve', stampedAt: new Date(now).toISOString(), reason: null, snapshot: proposal, autoApproved: fixed });
             return;
         }
-        file(
-            {
-                id: `e${index}`,
-                kind: proposal.kind,
-                key: proposal.key,
-                sourceIndex: index,
-                proposal,
-                display: buildReviewDisplayContext(event, payload, core, extras),
-                ...(prior ? { prior } : {})
-            },
-            decision
-        );
+        const display = buildReviewDisplayContext(event, payload, core, extras);
+        const shape = assessCard(proposal, display);
+        const entry = { id: `e${index}`, kind: proposal.kind, key: proposal.key, sourceIndex: index, proposal, display, shape, ...(prior ? { prior } : {}) };
+        if (!decision && !display.maybe) {
+            const held = Object.prototype.hasOwnProperty.call(deckSettings.held, proposal.key);
+            const lowRisk = eventShape.classifyLowRisk({ proposal, shape, history: eventShape.historyFor(partyHistory, proposal.key), prior });
+            if (lowRisk && held) entry.lowRiskHeld = lowRisk;
+            // An approved inbox picture is pushed to the site's repo: that
+            // stays behind his own tap, whatever the switch says.
+            else if (lowRisk && deckSettings.auto[lowRisk] === true && !SharedCore.isSharedInboxUrl(String(proposal.image || ''))) {
+                const autoApproved = { lowRisk };
+                file({ ...entry, autoApproved },
+                    { key: proposal.key, kind: proposal.kind, verdict: 'approve', stampedAt: new Date(now).toISOString(), reason: null, snapshot: proposal, autoApproved });
+                return;
+            } else if (lowRisk) {
+                entry.lowRisk = lowRisk;
+                counts.lowRisk++;
+            }
+            if (!shape.ok) counts.shapeFlagged++;
+        }
+        file(entry, decision);
     });
-    stampSeries(cards, SharedCore);
-    stampSameChange(cards);
+    // A low-risk card is never folded into a party's stack item: it waits
+    // on its own tab, one tile each.
+    const stacked = cards.filter((card) => !card.lowRisk);
+    stampSeries(stacked, SharedCore);
+    stampSameChange(stacked);
 
     const candidates = Array.isArray(payload.newVenueCandidates) ? payload.newVenueCandidates : [];
     candidates.forEach((candidate, index) => {
@@ -2411,6 +2448,9 @@ function buildDeck(runPayload, store, options = {}) {
         // not yet in the store; the server writes them at deck build so the
         // phone's execute sees them like any swipe.
         autoApprovals: decided.filter((entry) => entry.autoApproved).map((entry) => ({ ...entry.decision, autoApproved: entry.autoApproved })),
+        // The Low risk tab: the classes, which of them the owner has the
+        // deck approve for him, and how many cards he pulled out.
+        lowRisk: { classes: eventShape.LOW_RISK_CLASSES, auto: deckSettings.auto, held: Object.keys(deckSettings.held).length },
         savedAt: (payload.summary && payload.summary.timestamp) || null,
         environment: (payload.runContext && payload.runContext.environment) || null,
         runShape: describeRunShape(payload),

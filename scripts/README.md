@@ -334,6 +334,21 @@ housekeeping merges), and record the run file / log / metrics — no results
 sheet. If the script is named differently on the phone, start the server with
 `CHUNKY_REVIEW_SCRIPT_NAME=<name>`. Approved bars are promoted into
 `data/bars/<city>.json` with `npm run apply-bar-approvals`.
+
+**Low risk tab.** Every event card gets a shape report (`tools/event-shape.js`):
+name, dates, timezone, place, links, the pipeline's own flags, two events in one
+room, what the flyer's text says about the date, and how the night compares with
+the party's nights the owner approved before. A card that passes every check and
+is one of three classes (a repeat night of an approved party, one night of a
+series, an update that touches neither name nor link) leaves the stack for the
+**🟢 Low risk** tab: a grid of flyer, name and date with one "Approve all", and a
+tap pulls a tile back out to the stack. Each class has a switch, off by default,
+in `chunky-dad-scraper/deck-settings.json` (written by the Mac only, on his tap;
+the phone never reads it). A switch that is on approves that class for him as an
+ordinary decision whose reason reads `auto: low risk (<class>)`, listed under
+"Approved for you" with an undo. A card whose picture is an inbox upload is never
+approved for him. `GET /review/shape.json` serves every card's report as JSON for
+a second reader. Nothing reaches the calendar before Execute on the phone.
 - Send the full set of params every time; empty values clear fields.
 
 Supported fields (aliases accepted): title/name/summary, startDate/start/date, endDate/end,
