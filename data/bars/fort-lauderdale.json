@@ -14,8 +14,7 @@
     "paletteSource": "favicon",
     "palette": "#fefefe:43:0 #010101:34:0 #130b0c:10:1",
     "faviconPlate": "#ffffff",
-    "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z",
-    "scene": "leather"
+    "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z"
   },
   {
     "name": "Gym Sports Bar",
@@ -53,8 +52,7 @@
     "facebook": "https://www.facebook.com/scandalsfla",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJK4HWoYMB2YgRf442vxEUrM8",
     "gayCities": "https://fortlauderdale.gaycities.com/bars/256-scandals-saloon",
-    "gayCitiesLastScrapedAt": "2026-06-14T03:19:30.718Z",
-    "scene": "adjacent"
+    "gayCitiesLastScrapedAt": "2026-06-14T03:19:30.718Z"
   },
   {
     "name": "The Westin Fort Lauderdale",
@@ -66,7 +64,6 @@
     "name": "Ramrod",
     "city": "fort-lauderdale",
     "address": "Northeast 4th Avenue, Fort Lauderdale, Florida",
-    "coordinates": "26.1462600, -80.1403612",
-    "scene": "leather"
+    "coordinates": "26.1462600, -80.1403612"
   }
 ]
