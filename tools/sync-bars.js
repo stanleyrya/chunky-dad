@@ -365,6 +365,12 @@ function cleanBarObject(bar) {
         'palette',
         'accent',
         'faviconPlate',
+        // The owner's scene mark (bear / leather / adjacent). Local-only as
+        // well: the 2026-11-11 sync dropped all 66 marks the day after they
+        // were added, because this list did not name the field. A test
+        // (shared-core.test.js, "bars sync keeps every field") now runs
+        // every curated record through this function.
+        'scene',
         'wikipediaExtractionFailureAt',
         'wikipediaExtractionFailureMessage',
         'gayCitiesExtractionFailureAt',
@@ -919,5 +925,9 @@ function convertDMSToDecimal(dms) {
     return `${latDecimal}, ${lonDecimal}`;
 }
 
-// Run the sync
-syncBars();
+// Run the sync (not when a test loads this file for cleanBarObject)
+if (require.main === module) {
+    syncBars();
+}
+
+module.exports = { cleanBarObject };

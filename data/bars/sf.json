@@ -15,7 +15,8 @@
     "palette": "#fefefe:62:0 #616375:10:3 #d5d5d5:8:0 #435287:4:9",
     "accent": "#435287",
     "faviconPlate": "#ffffff",
-    "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z",
+    "scene": "leather"
   },
   {
     "name": "Powerhouse",
@@ -31,7 +32,8 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:51:0 #131719:42:1 #dbdcdc:2:0",
     "faviconPlate": "#ffffff",
-    "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z",
+    "scene": "leather"
   },
   {
     "name": "Hole in the Wall Saloon",
@@ -41,7 +43,8 @@
     "instagram": "https://www.instagram.com/the-hole-in-the-wall-saloon",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJExXNdCh-j4AR6JuGm4ElqcQ",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/40-hole-in-the-wall-saloon",
-    "gayCitiesLastScrapedAt": "2026-06-14T05:42:24.790Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:24.790Z",
+    "scene": "leather"
   },
   {
     "name": "Lone Star Saloon",
@@ -58,7 +61,8 @@
     "palette": "#000000:73:0 #c51a20:13:20 #612826:9:8 #922223:2:15 #3e080a:2:8",
     "accent": "#c51a20",
     "faviconPlate": "#000000",
-    "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z",
+    "scene": "bear"
   },
   {
     "name": "440 Castro",
@@ -69,7 +73,8 @@
     "facebook": "https://www.facebook.com/440Castro",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlYxnqhx-j4ARE6-6BQBetEI",
     "gayCities": "https://sanfrancisco.gaycities.com/bars/3-castro",
-    "gayCitiesLastScrapedAt": "2026-06-14T05:42:29.719Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T05:42:29.719Z",
+    "scene": "bear"
   },
   {
     "name": "Public Works",
@@ -112,7 +117,8 @@
     "faviconFg": "#353535",
     "paletteSource": "favicon",
     "palette": "#fefefe:47:0 #545454:13:0 #727272:9:0",
-    "faviconPlate": "#ffffff"
+    "faviconPlate": "#ffffff",
+    "scene": "leather"
   },
   {
     "name": "Audio Nightclub",

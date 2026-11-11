@@ -240,6 +240,10 @@ const EVENT_TAGS = Object.freeze({
     'drag': Object.freeze({ label: 'Drag', shown: true, who: 'machine', hint: 'a drag show, brunch, competition or drag-race viewing — not a bar night that merely has a drag host' }),
     'pup': Object.freeze({ label: 'Pup', shown: true, who: 'machine', hint: 'a pup or pet play night, mosh or pup social — not an event that merely welcomes pups' }),
     'underwear': Object.freeze({ label: 'Underwear', shown: true, who: 'machine', hint: 'an underwear, jockstrap or singlet night or party — not a night where underwear is merely allowed' }),
+    'sportswear': Object.freeze({ label: 'Sportswear', shown: true, who: 'machine', hint: 'a sportswear, sports-kit, sneaker or lycra night or party — not a sports league, a match screening or a team social' }),
+    'country': Object.freeze({ label: 'Country', shown: true, who: 'machine', hint: 'a country-western night: line dancing, two-step, a rodeo or a honky tonk — not a country as in a nation, not a cowboy costume aside' }),
+    'naked': Object.freeze({ label: 'Naked', shown: true, who: 'machine', hint: 'a night, party, pool or retreat where the guests themselves are naked or clothing is optional — not nude performers, models, art or photos, not a clothes check that is merely on offer, not a show or performer name' }),
+    'sex-party': Object.freeze({ label: 'Sex party', shown: true, who: 'machine', hint: 'a sex party or play party: sex on the premises is the point of the event — not a dance night that merely has a dark room or play space, not a boat cruise' }),
     'bear-crowd': Object.freeze({ label: 'Bear crowd', shown: false, who: 'owner', keeps: true }),
     'bear-run': Object.freeze({ label: 'Bear run', shown: false, who: 'derived', keeps: true })
 });

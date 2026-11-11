@@ -617,13 +617,24 @@ class SharedCore {
         // CUBHOUSE, BEEFWITCH, Bearracuda); common words that misfire as
         // substrings ("fatal", "furniture", "update", "puppet") require word
         // boundaries.
+        // 'jock', 'pup' and 'furry' left these lists on 2026-11-10 (owner:
+        // "I agree with your choices"). Measured over 51 saved runs: 35
+        // parties passed on one of the three alone, the owner had marked 21
+        // of them not bear and none bear (Jockstrap Wednesday, Pup Night,
+        // FURRYRAVE, a DJ called Pup). With the words gone the AI tier reads
+        // those events like any other: it dropped 22, 17 of them his own
+        // not-bears and none a party he had approved, and kept the bear
+        // promoters' nights (SWEAT, Concours PUP, Mass Bears and Cubs'
+        // Jocks). 'daddy'/'dad'/'dads' stay: the AI dropped eight parties he
+        // had approved. 'beef', 'chunk', 'chub', 'fat', 'thick' stay: zero
+        // not-bear verdicts in 58 parties.
         this.bearSubstringKeywords = [
-            'bear', 'woof', 'grr', 'furry', 'hairy', 'daddy', 'cub', 'otter',
+            'bear', 'woof', 'grr', 'hairy', 'daddy', 'cub', 'otter',
             'bearracuda', 'furball', 'megawoof', 'grizzly', 'chunk',
-            'chub', 'beef', 'scruff', 'jock'
+            'chub', 'beef', 'scruff'
         ];
         this.bearWordBoundaryKeywords = [
-            'dad', 'dads', 'fat', 'fur', 'pup', 'pig', 'wolf', 'wolves',
+            'dad', 'dads', 'fat', 'fur', 'pig', 'wolf', 'wolves',
             'thick', 'burly', 'stocky', 'husky', 'beard', 'bearded'
         ];
         // Tag vocabulary is TAG evidence, not bear evidence (owner ruling
@@ -655,7 +666,11 @@ class SharedCore {
             diaper: { substring: ['diaper', 'abdl'], word: ['nappy', 'nappies'] },
             drag: { substring: ['dragula'], word: ['drag'] },
             pup: { substring: ['puppy', 'puppies'], word: ['pup', 'pups', 'mosh', 'pet night', 'pet play'] },
-            underwear: { substring: ['underwear', 'jockstrap'], word: ['undies', 'jocks', 'singlet', 'singlets'] }
+            underwear: { substring: ['underwear', 'jockstrap'], word: ['undies', 'jocks', 'singlet', 'singlets'] },
+            sportswear: { substring: ['sportswear', 'sneaker', 'lycra', 'spandex', 'tracksuit', 'trackies', 'sports gear', 'sport gear', 'sports kit', 'sport kit', 'locker room', 'gym gear'], word: ['sneaks', 'sneax', 'scally'] },
+            country: { substring: ['line danc', 'two-step', 'two step', 'honky tonk', 'honky-tonk', 'hoedown', 'square danc'], word: ['country', 'western', 'rodeo', 'cowboy', 'cowboys'] },
+            naked: { substring: ['naked', 'nudist', 'naturist', 'clothing optional', 'clothing-optional', 'clothes optional'], word: ['nude', 'nudity'] },
+            'sex-party': { substring: ['sex party', 'sex-party', 'play party', 'sex club', 'jack off', 'jack-off', 'jackoff', 'circle jerk', 'gang bang', 'gangbang', 'fisting', 'bathhouse'], word: ['sex', 'orgy', 'j/o'] }
         };
 
         
@@ -20743,6 +20758,25 @@ Rules:
                     }
                     continue;
                 }
+                // A STALE MACHINE SHRUG DOES NOT OUTLIVE THE MACHINE'S ANSWER.
+                //
+                // Owner 2026-11-10: "Beef mince always bear". The saved
+                // "BEEFMINCE: TURKEYMINCE" carried `bearSource: keyword` AND
+                // `bearReview: unsure — ai: …` for 51 runs: the flag was
+                // written once, from a listing stub with no description, and
+                // calendar-wins kept it while every later run said bear on
+                // the event's own words ("TIS' THE SEASON TO BE BEARY"). The
+                // site hides flagged events, so the party never showed.
+                //
+                // Only the machine's own `unsure` leaves, and only when this
+                // run's check kept the event with no flag of its own. The
+                // owner's edit ("confirmed", any other wording) still wins,
+                // and an `unlikely` (a model that said NOT bear) stays for
+                // him: two machine answers that disagree are his call.
+                if (SharedCore.isStaleMachineShrug(calendarValue, scraperObject)) {
+                    console.log(`🐻 MERGE: "${mergeTitle}" saved review flag cleared — this run's bear check says bear (${String(scraperObject.bearSource).trim()}); the flag was the machine's own "unsure" from an earlier run`);
+                    continue;
+                }
                 mergedObject[fieldName] = !this.isEmptyArbitrationValue(calendarValue)
                     ? calendarValue
                     : scraperValue;
@@ -21615,6 +21649,16 @@ Rules:
     // every pre-#1694 calendar record a notes-only rewrite — and, for a
     // series (which the scraper never rewrites), a per-night override
     // proposal on every run (CUBSCOUT, run 20260914-134414).
+    // The saved flag is the bear check's own "unsure — <provenance>"
+    // (filterBearEvents writes exactly that shape) and this run's check kept
+    // the event as bear, or kept for a tag, with no flag of its own.
+    static isStaleMachineShrug(calendarFlag, scraperObject) {
+        if (typeof calendarFlag !== 'string' || !/^unsure\s+—\s/.test(calendarFlag.trim())) return false;
+        if (!scraperObject || scraperObject.isBearEvent !== true) return false;
+        if (typeof scraperObject.bearReview === 'string' && scraperObject.bearReview.trim()) return false;
+        return typeof scraperObject.bearSource === 'string' && scraperObject.bearSource.trim() !== '';
+    }
+
     static foldSoftHyphens(value) {
         return typeof value === 'string' ? value.replace(/\u00ad/g, '-') : value;
     }
