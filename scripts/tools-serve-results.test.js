@@ -1209,6 +1209,17 @@ test('renderReviewCard (big drift): a warn badge and a facts block — what move
   assert.ok(html.includes('<span class="fact-k">still agrees on</span><span class="fact-v">same night (2030-10-10) · same bar (Massive) · same ticket page (sickening.events/e/x/tickets)</span>'));
   assert.ok(html.includes('<span class="fact-k">scraped from</span>') && html.includes('href="https://sickening.events/e/bearracuda-treasure-trail-october"'));
   assert.ok(html.includes('<span class="fact-k">calendar link</span>') && html.includes('href="https://bearracuda.com/events/ttoct/"'));
+  // The second reader's words are on the card as the model's, apart from
+  // the fixed checks' warnings.
+  const read = renderReviewCard({ ...entry, display: { parserName: 'Bearracuda' }, shape: { ok: false, failed: ['name', 'reader-time'], checks: [
+    { code: 'name', ok: false, detail: 'the name is a single character' },
+    { code: 'reader', ok: true, detail: '' },
+    { code: 'reader-time', ok: false, detail: 'The flyer says doors at 9pm. — "DOORS 9PM"' }
+  ] } }, ctx);
+  assert.ok(read.includes('<div class="shape-line warn">⚠️ the name is a single character</div>'));
+  assert.ok(read.includes('<div class="shape-line">🤖 a second reader (AI, can be wrong): The flyer says doors at 9pm. — &quot;DOORS 9PM&quot;</div>')
+    || read.includes('<div class="shape-line">🤖 a second reader (AI, can be wrong): The flyer says doors at 9pm. — "DOORS 9PM"</div>'));
+  assert.ok(!renderReviewCard({ ...entry, display: { parserName: 'Bearracuda' } }, ctx).includes('a second reader'));
   const plain = renderReviewCard({ ...entry, display: { parserName: 'Bearracuda' } }, ctx);
   assert.ok(!plain.includes('big drift') && !plain.includes('class="drift"'), 'an ordinary merge card is unchanged');
   const nothing = renderReviewCard({ ...entry, display: { bigDrift: { reason: 'title and venue changed', fields: [], matchedBy: '', agree: [], sourcePageUrl: '', calendarUrl: '' } } }, ctx);

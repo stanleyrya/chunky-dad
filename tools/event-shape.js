@@ -25,6 +25,10 @@
 // flyer that prints another date or another weekday is either stale artwork
 // or a wrong event date, and both are worth his eyes.
 //
+// A second reader — the local text model, tools/shape-reader.js — proofreads
+// the same record; what it names with the record's own words joins the
+// report as `reader-*` checks.
+//
 // classifyLowRisk names the class of a card whose report is clean. The deck
 // (review-queue.js buildDeck) shows those on their own tab as a grid, and —
 // only for a class whose toggle the owner turned on (deck-settings.json) —
@@ -330,7 +334,10 @@ function historyFor(partyHistory, key) {
 // ---------------------------------------------------------------------------
 
 // input: { proposal, sanityCodes, flags: [words], clashes: [words], flyer: { text, classification } | null,
-//          history: { approved: [snapshots] }, now }
+//          history: { approved: [snapshots] }, now,
+//          reader: { problems: [{ field, problem, quote }] } | null | undefined }
+// `reader` is the second reader's answer (tools/shape-reader.js): undefined
+// when nobody asked it, null when it has not read this record yet.
 function assessShape(input = {}) {
     const proposal = input.proposal && typeof input.proposal === 'object' ? input.proposal : {};
     const kind = String(proposal.kind || '');
@@ -498,8 +505,25 @@ function assessShape(input = {}) {
         }
     }
 
+    // -- the second reader ------------------------------------------------
+    // One failed check per problem it named with the record's own words;
+    // `reader` alone says whether it has read the record at all.
+    if (input.reader === null) add('reader', null, '');
+    else if (input.reader && Array.isArray(input.reader.problems)) {
+        add('reader', true, '');
+        for (const problem of input.reader.problems) {
+            add(`reader-${problem.field}`, false, `${problem.problem}${problem.quote ? ` — "${problem.quote}"` : ''}`);
+        }
+    }
+
     const failed = checks.filter((check) => check.ok === false).map((check) => check.code);
     return { ok: failed.length === 0, failed, checks };
+}
+
+// True while the second reader was asked about this card and has not
+// answered: nothing is approved under a switch before it has.
+function isReaderWaiting(shape) {
+    return Boolean(shape) && Array.isArray(shape.checks) && shape.checks.some((check) => check.code === 'reader' && check.ok === null);
 }
 
 // The lines a card shows: what failed, in words.
@@ -710,6 +734,7 @@ function applyDeckSettingsChange(settings, change, now = Date.now()) {
 }
 
 module.exports = {
+    isReaderWaiting,
     DECK_SETTINGS_FILE_NAME,
     LOW_RISK_CLASSES,
     USUAL_START_TOLERANCE_MINUTES,

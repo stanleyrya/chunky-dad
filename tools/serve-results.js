@@ -57,12 +57,35 @@ const { spawn, execFileSync } = require('child_process');
 
 const reviewQueue = require('./review-queue');
 const eventShape = require('./event-shape');
+const shapeReaderModule = require('./shape-reader');
 
 const repoRoot = path.resolve(__dirname, '..');
 const serverDir = process.env.CHUNKY_SERVER_DIR && String(process.env.CHUNKY_SERVER_DIR).trim()
     ? path.resolve(String(process.env.CHUNKY_SERVER_DIR).trim())
     : path.join(os.homedir(), '.chunky-dad-scraper', 'server');
 const latestRunPath = path.join(serverDir, 'latest-run.json');
+// The second reader of deck cards (tools/shape-reader.js): one for the life
+// of the server, its answers kept beside the server's other local state.
+// It is on only in a started server (startServer), never when this file is
+// loaded as a module; CHUNKY_SHAPE_READER=off keeps it off there too.
+let shapeReaderEnabled = false;
+let shapeReaderInstance = null;
+let shapeReadAheadRunId = null;
+function getShapeReader(payload) {
+    if (!shapeReaderEnabled) return null;
+    const ai = shapeReaderModule.resolveReaderAi(payload);
+    if (!shapeReaderInstance) {
+        if (!ai) return null;
+        shapeReaderInstance = shapeReaderModule.createShapeReader({
+            cachePath: path.join(serverDir, shapeReaderModule.READER_CACHE_FILE_NAME),
+            ai,
+            log: (line) => console.log(line)
+        });
+    } else {
+        shapeReaderInstance.setAi(ai);
+    }
+    return shapeReaderInstance;
+}
 // What the phone tells this server (POST /review/phone-note): executes it
 // finished, alerts it showed. Local to the Mac — iCloud's sync of the phone's
 // logs/ ran hours behind on 2026-10-30, which is the point of the file.
@@ -1348,10 +1371,15 @@ function renderReviewShapeRow(entry) {
     const shape = entry && entry.shape;
     if (!shape || !Array.isArray(shape.checks)) return '';
     const failed = shape.checks.filter((check) => check.ok === false && check.detail && !SHAPE_ROW_SKIPPED_CHECKS.has(check.code));
-    const faults = failed.filter((check) => !String(check.code).startsWith('usual-'));
+    const faults = failed.filter((check) => !String(check.code).startsWith('usual-') && !String(check.code).startsWith('reader-'));
     const unusual = failed.filter((check) => String(check.code).startsWith('usual-'));
+    // The second reader's lines are the model's, and it is wrong often
+    // enough (a third to half of its flags, measured 2026-11-11) that the
+    // card says whose they are.
+    const readerLines = failed.filter((check) => String(check.code).startsWith('reader-'));
     const agrees = shape.checks.filter((check) => check.ok === true && check.detail && String(check.code).startsWith('flyer-'));
     const lines = faults.map((check) => `<div class="shape-line warn">⚠️ ${escapeHtmlText(check.detail)}</div>`);
+    for (const check of readerLines) lines.push(`<div class="shape-line">🤖 a second reader (AI, can be wrong): ${escapeHtmlText(check.detail)}</div>`);
     if (unusual.length > 0) lines.push(`<div class="shape-line">↔️ not like the nights you approved: ${escapeHtmlText(unusual.map((check) => check.detail).join('; '))}</div>`);
     if (agrees.length > 0) lines.push(`<div class="shape-line muted">🖼 the flyer text agrees: ${escapeHtmlText(agrees.map((check) => check.detail.replace(/^the flyer (says|prints) /, '')).join(', '))}</div>`);
     const heldClass = entry.lowRiskHeld && eventShape.LOW_RISK_CLASSES[entry.lowRiskHeld];
@@ -4134,8 +4162,16 @@ function buildReviewDeckForRun(sharedRoot, run, options = {}) {
     // low-risk switches and pulled-out cards (deck-settings.json).
     const flyerText = eventShape.getFlyerTextIndex(sharedRoot);
     const deckSettings = eventShape.loadDeckSettings(sharedRoot);
-    const deckOptions = { runId: run.runId, core, bearVerdicts, executions, writtenLedger, friendAdvice, publishedPictures, manualCards, flyerText, deckSettings, ...(phoneCalendars ? { phoneCalendars } : {}) };
+    // ...and a third: the local model's proofread of each undecided card.
+    // A card it has not read is queued by the build and read right after,
+    // in the background; the answer is on the card at the next view.
+    const shapeReader = getShapeReader(run.payload);
+    const deckOptions = { runId: run.runId, core, bearVerdicts, executions, writtenLedger, friendAdvice, publishedPictures, manualCards, flyerText, deckSettings, ...(shapeReader ? { shapeReader } : {}), ...(phoneCalendars ? { phoneCalendars } : {}) };
     let deck = reviewQueue.buildDeck(run.payload, store, deckOptions);
+    if (shapeReader && shapeReader.pending() > 0) shapeReader.drain().catch((error) => console.log(`Shape reader: ${error.message}`));
+    // Reading ahead (startServer's timer) stops here: nothing is stored,
+    // nothing is published.
+    if (options.readAhead) return { deck, ctx: null };
     // The deck closes its own loops (audit 2026-09-22): notes whose fix is
     // saved or whose night has passed are dropped from the store, and a
     // card that came back changed in exactly the fields a note named is
@@ -4923,8 +4959,33 @@ function parsePortFromArgv(argv) {
     return DEFAULT_PORT;
 }
 
+// The second reader reads ahead: a few seconds after start and every ten
+// minutes, the newest run's undecided cards are looked up (which queues the
+// unread ones) so the answers are on the cards when the deck is opened.
+// A run already read ahead with nothing left to read costs one directory
+// listing.
+function readAheadShape() {
+    try {
+        const sharedRoot = reviewQueue.resolveSharedRoot();
+        const runId = reviewQueue.pickLatestRunId(sharedRoot);
+        if (!runId) return;
+        if (runId === shapeReadAheadRunId && shapeReaderInstance && shapeReaderInstance.pending() === 0) return;
+        const run = reviewQueue.loadRun(sharedRoot, runId);
+        if (!run) return;
+        buildReviewDeckForRun(sharedRoot, run, { readAhead: true });
+        shapeReadAheadRunId = runId;
+    } catch (error) {
+        console.log(`Shape reader: could not read ahead (${error.message})`);
+    }
+}
+
 function startServer(port = DEFAULT_PORT) {
     fs.mkdirSync(serverDir, { recursive: true });
+    shapeReaderEnabled = String(process.env.CHUNKY_SHAPE_READER || '').trim().toLowerCase() !== 'off';
+    if (shapeReaderEnabled) {
+        setTimeout(readAheadShape, 5000).unref();
+        setInterval(readAheadShape, 10 * 60 * 1000).unref();
+    }
     const publicOrigin = resolvePublicOrigin();
     const state = createServerState({ publicOrigin });
     const server = http.createServer((req, res) => {

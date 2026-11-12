@@ -1954,6 +1954,42 @@ test('low risk: a failed check keeps the card in the stack — a flyer that prin
   assert.equal(again.cards[0].lowRisk, undefined);
 });
 
+test('low risk: the second reader — a card it flagged stays in the stack with its words; a card it has not read is shown but never approved under a switch; a decided card is not read', () => {
+  const store = approvedFirstNight();
+  const events = [furballNight(7), furballNight(14), furballNight(21)];
+  const asked = [];
+  // Week 7: flagged. Week 14: not read yet. Week 21: read, nothing found.
+  const shapeReader = { lookup: (proposal) => {
+    asked.push(proposal.key);
+    if (/week-7/.test(proposal.image)) return { problems: [{ field: 'time', problem: 'The flyer says doors at 9pm.', quote: 'DOORS 9PM' }] };
+    if (/week-14/.test(proposal.image)) return null;
+    return { problems: [] };
+  } };
+  const off = deckOf(runPayload({ analyzedEvents: events }), store, { shapeReader });
+  const [flagged, unread, clean] = off.cards;
+  assert.deepEqual(flagged.shape.failed, ['reader-time']);
+  assert.equal(flagged.shape.checks.find((check) => check.code === 'reader-time').detail, 'The flyer says doors at 9pm. — "DOORS 9PM"');
+  assert.equal(flagged.lowRisk, undefined);
+  assert.equal(unread.lowRisk, 'repeat', 'unread is not a failure: the card is still on the Low risk tab');
+  assert.equal(clean.lowRisk, 'repeat');
+  assert.equal(off.counts.shapeFlagged, 1);
+
+  const on = deckOf(runPayload({ analyzedEvents: events }), store, { shapeReader, deckSettings: { auto: { repeat: true } } });
+  assert.deepEqual(on.autoApprovals.map((decision) => decision.key), [clean.key], 'only the card the reader has read and passed');
+  assert.deepEqual(on.cards.map((card) => [card.key, card.lowRisk || null]), [[flagged.key, null], [unread.key, 'repeat']]);
+
+  // His own decision closes the card: nobody reads it again.
+  asked.length = 0;
+  const decided = rq.upsertDecision(store, rq.buildDecision({ key: clean.key, kind: 'new', verdict: 'approve', snapshot: clean.proposal }));
+  deckOf(runPayload({ analyzedEvents: events }), decided, { shapeReader });
+  assert.ok(!asked.includes(clean.key));
+  assert.ok(asked.includes(flagged.key) && asked.includes(unread.key));
+
+  // No reader handed in: the report carries no reader check at all.
+  const without = deckOf(runPayload({ analyzedEvents: events }), store);
+  assert.ok(without.cards.every((card) => !card.shape.checks.some((check) => String(check.code).startsWith('reader'))));
+});
+
 test('low risk: a switch turned on approves the class for him (and only that class); a card he pulled out stays in the stack; an inbox picture is never approved for him', () => {
   const store = approvedFirstNight();
   const events = [furballNight(7), furballNight(14), quietMerge()];

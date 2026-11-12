@@ -349,6 +349,27 @@ ordinary decision whose reason reads `auto: low risk (<class>)`, listed under
 "Approved for you" with an undo. A card whose picture is an inbox upload is never
 approved for him. `GET /review/shape.json` serves every card's report as JSON for
 a second reader. Nothing reaches the calendar before Execute on the phone.
+
+**Second reader.** The server also has the run's own text model proofread every
+undecided event card (`tools/shape-reader.js`): a name that is a button, a page
+heading or a cut-off word, a flyer or description that states another date,
+time or place, an update that swaps a real name for a worse one. The model may
+name a problem only with words copied from the record; anything else is thrown
+away. What it finds is one line on the card, marked "a second reader (AI, can
+be wrong)", and the card is not low risk. A card it has not read yet is never
+approved under a switch. It never blocks, drops or changes a record. Answers
+are kept by the record's text in `~/.chunky-dad-scraper/server/shape-reader.json`
+(the Mac only), so a card is asked once; the server reads ahead every ten
+minutes. `CHUNKY_SHAPE_READER=off` turns it off.
+
+**Links are decided by rule.** When the saved link and the scraped link differ,
+the merge no longer asks the model and no longer makes a card for the link
+alone (`🔗 LINK RULE` in the log): the same page with another night's date
+marker keeps the link that names this event's own night; an organizer's page
+beats a venue's, a venue's beats a platform's; on a tie the single event page
+this run read the event from replaces another page of the same site; otherwise
+the saved link stays. A card raised by another field still shows the link
+change.
 - Send the full set of params every time; empty values clear fields.
 
 Supported fields (aliases accepted): title/name/summary, startDate/start/date, endDate/end,

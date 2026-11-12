@@ -1973,7 +1973,11 @@ function buildDeck(runPayload, store, options = {}) {
     const partyHistory = eventShape.buildPartyHistory(decisions);
     const flyerText = options.flyerText && typeof options.flyerText.lookup === 'function' ? options.flyerText : null;
     const deckSettings = eventShape.normalizeDeckSettings(options.deckSettings);
-    const assessCard = (proposal, display) => eventShape.assessShape({
+    // The second reader (options.shapeReader, tools/shape-reader.js): the
+    // local model's proofread of the card, looked up by the record's text.
+    // Only an undecided card is read; a miss queues it for the server.
+    const shapeReader = options.shapeReader && typeof options.shapeReader.lookup === 'function' ? options.shapeReader : null;
+    const assessCard = (proposal, display, undecided) => eventShape.assessShape({
         proposal,
         sanityCodes: display.sanityCodes,
         flags: [display.bigDrift && 'a big change', display.aggregatorUnbacked && 'a listing nothing backs', display.loneCrawl && 'a lone page', display.imageReusedFrom && 'a reused picture'].filter(Boolean),
@@ -1984,6 +1988,7 @@ function buildDeck(runPayload, store, options = {}) {
         ].filter(Boolean),
         flyer: flyerText && proposal.image ? flyerText.lookup(proposal.image) : null,
         history: eventShape.historyFor(partyHistory, proposal.key),
+        ...(shapeReader && undecided ? { reader: shapeReader.lookup(proposal, flyerText && proposal.image ? flyerText.lookup(proposal.image) : null) } : {}),
         now
     });
     // One series, one card: a run can list the same stated series on
@@ -2039,7 +2044,7 @@ function buildDeck(runPayload, store, options = {}) {
             return;
         }
         const display = buildReviewDisplayContext(event, payload, core, extras);
-        const shape = assessCard(proposal, display);
+        const shape = assessCard(proposal, display, !decision && !display.maybe);
         const entry = { id: `e${index}`, kind: proposal.kind, key: proposal.key, sourceIndex: index, proposal, display, shape, ...(prior ? { prior } : {}) };
         if (!decision && !display.maybe) {
             const held = Object.prototype.hasOwnProperty.call(deckSettings.held, proposal.key);
@@ -2047,7 +2052,8 @@ function buildDeck(runPayload, store, options = {}) {
             if (lowRisk && held) entry.lowRiskHeld = lowRisk;
             // An approved inbox picture is pushed to the site's repo: that
             // stays behind his own tap, whatever the switch says.
-            else if (lowRisk && deckSettings.auto[lowRisk] === true && !SharedCore.isSharedInboxUrl(String(proposal.image || ''))) {
+            // ...and so does a card the second reader has not read yet.
+            else if (lowRisk && deckSettings.auto[lowRisk] === true && !SharedCore.isSharedInboxUrl(String(proposal.image || '')) && !eventShape.isReaderWaiting(shape)) {
                 const autoApproved = { lowRisk };
                 file({ ...entry, autoApproved },
                     { key: proposal.key, kind: proposal.kind, verdict: 'approve', stampedAt: new Date(now).toISOString(), reason: null, snapshot: proposal, autoApproved });
