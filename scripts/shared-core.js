@@ -205,6 +205,15 @@ const TICKETING_PLATFORM_HOSTS = [
     'ticketleap.com', 'dice.fm', 'eventeny.com', 'showclix.com'
 ];
 
+// What a saved night hands to the party that takes its slot (slot rule):
+// the slot itself — where and when — and nothing that describes the party
+// that held it. See createFinalEventObject's `slotTakeover` option.
+const SLOT_TAKEOVER_KEPT_FIELDS = new Set([
+    'startDate', 'endDate', 'timezone', 'city',
+    'location', 'bar', 'address', 'gmaps', 'pinSource', 'addressSource', 'barSource',
+    'notes', 'url'
+]);
+
 // Multi-orientation image slots. `image` stays the primary (unchanged
 // semantics); imageVertical/imageHorizontal are the best PORTRAIT and
 // LANDSCAPE candidates so different surfaces can pick the right shape. The
@@ -2060,6 +2069,65 @@ class SharedCore {
         return null;
     }
 
+    // ---------------------------------------------------------------------
+    // A NOT-BEAR VERDICT AND A BEAR RUN. The owner's not-bear on a party is
+    // a verdict about its ordinary nights: the store keeps no date, so one
+    // tap covers every night the party is ever listed. A bear run in a
+    // destination town changes who is in the room on those days — the same
+    // tea dance is a bear event for the week (owner 2026-11-12: "I want
+    // boatslip during bear week and spooky bear"; his not-bear on the
+    // Boatslip teas dropped nine Bear Week 2027 teas every run). So inside a
+    // run the run speaks, not the stored not-bear — UNLESS that not-bear was
+    // itself given on a night inside this run, which is the owner saying
+    // "not even then". Each writer records that as the run's key on the
+    // entry (`bearRuns`), read off the event's own day and town when the
+    // verdict is given; festivals carry only their next edition, so it
+    // cannot be worked out afterwards. A key is the run, not the year: said
+    // once, it holds for every edition.
+    // ---------------------------------------------------------------------
+
+    // The key of the bear run this event falls inside (EventSchema
+    // .findBearRunForEvent: the town, the dates, the run's reach), or ''.
+    getBearRunKeyForEvent(event, festivals = this.festivals) {
+        const schema = this.eventSchema;
+        const run = schema && typeof schema.findBearRunForEvent === 'function'
+            ? schema.findBearRunForEvent(event, Array.isArray(festivals) ? festivals : [], { destinations: this.cities || {} })
+            : null;
+        return run ? String(run.key || run.name || '').trim() : '';
+    }
+
+    // The runs a stored not-bear was given inside. Only a not-bear carries
+    // them: nothing else is ever outranked by a run.
+    static getBearVerdictRunMarks(entry) {
+        if (!entry || typeof entry !== 'object' || entry.verdict !== 'not_bear' || !Array.isArray(entry.bearRuns)) return [];
+        return [...new Set(entry.bearRuns.filter(key => typeof key === 'string' && key.trim()).map(key => key.trim()))];
+    }
+
+    // `entry` as it should be stored: a not-bear keeps the marks of every
+    // not-bear it replaces (a later tap on an ordinary night must not
+    // forget "not even during the run") and gains `runKey` when it is
+    // given on a night inside a run. Any other verdict carries none.
+    static withBearVerdictRunMarks(entry, runKey = '', replaced = []) {
+        if (!entry || typeof entry !== 'object') return entry;
+        const { bearRuns: _omit, ...rest } = entry;
+        if (rest.verdict !== 'not_bear') return rest;
+        const marks = [];
+        for (const previous of Array.isArray(replaced) ? replaced : []) marks.push(...SharedCore.getBearVerdictRunMarks(previous));
+        if (typeof runKey === 'string' && runKey.trim()) marks.push(runKey.trim());
+        const unique = [...new Set(marks)];
+        return unique.length > 0 ? { ...rest, bearRuns: unique } : rest;
+    }
+
+    // The stored not-bear that was given on a night inside this run and
+    // speaks to this event (any tier: the title, a year-blind sibling, the
+    // party), or null.
+    findRunNightNotBearVerdict(event, runKey) {
+        if (!runKey) return null;
+        const hits = this.collectStoredBearVerdictHits(event);
+        if (!hits) return null;
+        return hits.title.concat(hits.party).find(entry => SharedCore.getBearVerdictRunMarks(entry).includes(runKey)) || null;
+    }
+
     // Firm verdicts only: a maybe beside a bear is not "both ways".
     static bearVerdictsDisagree(entries) {
         return new Set((Array.isArray(entries) ? entries : []).map(entry => entry && entry.verdict)
@@ -2095,6 +2163,29 @@ class SharedCore {
         return String(titleKey || '').split(' ').filter(token => token && !/^(?:19|20)\d{2}$/.test(token)).join(' ');
     }
 
+    // THE NAMES A RECORD ANSWERS TO in the verdict store: the title it wears
+    // now, the name the page gave it before the pipeline put a brand in
+    // front (_titleBeforeBrandPrefix), and the fuller names the page stated
+    // (_statedTitles). The owner judges the name on the card in front of
+    // him; a later run that learns the page's brand, or trims the title,
+    // renames the record and his verdict stopped being found. Montreal
+    // 2026-10-16: "FURRY TAKEOVER" stored not bear twice; from the run that
+    // read the promoter off the page the record was "Bear it MTL: FURRY
+    // TAKEOVER", the store was silent, and the prefix's own "bear" kept it
+    // as a keyword hit. A name is never invented here: each one was read off
+    // the page or is the saved title. When two of a record's names were
+    // judged differently the store disagrees with itself and decides
+    // nothing, exactly like two spellings of one title.
+    getBearVerdictEventNames(event) {
+        if (!event || typeof event !== 'object') return [];
+        const names = [];
+        for (const candidate of [event.title || event.name, event._titleBeforeBrandPrefix].concat(this.getStatedTitles(event))) {
+            const name = typeof candidate === 'string' ? candidate.trim() : '';
+            if (name && !names.some(known => known.toLowerCase() === name.toLowerCase())) names.push(name);
+        }
+        return names;
+    }
+
     // Every usable stored verdict that speaks to this event, in the tiers
     // findStoredBearVerdictMatch reads them:
     //   exact — the same title tokens at this place, in store order;
@@ -2105,15 +2196,19 @@ class SharedCore {
     // null when nothing could apply (no store, no title identity).
     // options.maybe reads the store's `maybe` entries instead of its firm
     // verdicts, through the very same identity (findStoredMaybeVerdictMatch).
+    // Every tier is read under EVERY name the record answers to
+    // (getBearVerdictEventNames), so a verdict given on one of them is found
+    // whichever of them the record wears today.
     collectStoredBearVerdictHits(event, options = {}) {
         const wanted = options && options.maybe === true
             ? (value) => value === 'maybe'
             : SharedCore.isBearVerdictValue;
         const store = Array.isArray(this.bearVerdicts) ? this.bearVerdicts : [];
         if (store.length === 0 || !event || typeof event !== 'object') return null;
-        const eventKey = this.getBearVerdictTitleKey(event.title || event.name, [event.bar]);
-        if (!eventKey) return null;
-        const eventBlindKey = SharedCore.getBearVerdictYearBlindKey(eventKey);
+        const names = this.getBearVerdictEventNames(event);
+        const eventKeys = new Set(names.map(name => this.getBearVerdictTitleKey(name, [event.bar])).filter(Boolean));
+        if (eventKeys.size === 0) return null;
+        const eventBlindKeys = new Set([...eventKeys].map(key => SharedCore.getBearVerdictYearBlindKey(key)).filter(Boolean));
         const index = this.getBearVerdictStoreIndex();
         const keysOf = (entry) => {
             let keys = index.keys.get(entry);
@@ -2130,24 +2225,24 @@ class SharedCore {
         for (const entry of usable) {
             const entryKey = keysOf(entry).title;
             if (!entryKey) continue;
-            if (entryKey === eventKey) {
+            if (eventKeys.has(entryKey)) {
                 if (this.bearVerdictPlaceMatches(event, entry)) exact.push(entry);
-            } else if (eventBlindKey && SharedCore.getBearVerdictYearBlindKey(entryKey) === eventBlindKey) {
+            } else if (eventBlindKeys.has(SharedCore.getBearVerdictYearBlindKey(entryKey))) {
                 if (this.bearVerdictPlaceMatches(event, entry)) siblings.push(entry);
             }
         }
         const party = [];
         if (exact.length === 0) {
-            const partyKey = this.getBearVerdictPartyKey(event.title || event.name, [event.bar],
-                this.getBearVerdictLearnedMarkers(event, index));
-            if (partyKey) {
+            const partyKeys = new Set(names.map(name => this.getBearVerdictPartyKey(name, [event.bar],
+                this.getBearVerdictLearnedMarkers({ ...event, title: name }, index))).filter(Boolean));
+            if (partyKeys.size > 0) {
                 for (const entry of usable) {
                     const keys = keysOf(entry);
                     if (keys.party === null) {
                         keys.party = this.getBearVerdictPartyKey(entry.title, [entry.venue],
                             this.getBearVerdictLearnedMarkers({ title: entry.title, bar: entry.venue, address: entry.address, location: entry.location, city: entry.city }, index));
                     }
-                    if (!keys.party || keys.party !== partyKey) continue;
+                    if (!keys.party || !partyKeys.has(keys.party)) continue;
                     if (!this.bearVerdictPlaceMatches(event, entry)) continue;
                     party.push(entry);
                 }
@@ -5679,6 +5774,23 @@ class SharedCore {
             }
         }
 
+        // 10a. picture-other-scene — the event was kept on a bear word
+        //      another scene also uses, and its own flyer shows that other
+        //      scene (lookAtSharedWordFlyers; "FURRY TAKEOVER", a fursuit
+        //      rave kept on "furry"). Report-only: the event stays kept and
+        //      the owner sees why it is doubted. His stored verdict and an
+        //      AI verdict outrank the look, so the flag needs the keyword
+        //      tier to still be what keeps the event.
+        const pictureScene = event._pictureScene;
+        if (pictureScene && typeof pictureScene === 'object' && event.bearSource === 'keyword'
+            && typeof pictureScene.shows === 'string' && pictureScene.shows) {
+            const words = Array.isArray(pictureScene.words) ? pictureScene.words.filter(Boolean).join(', ') : '';
+            flags.push({
+                code: 'picture-other-scene',
+                detail: `its only bear word is ${words || 'one another scene shares'}; the flyer shows ${pictureScene.shows}`
+            });
+        }
+
         // 10b. weekday-derived-date / card-weekday-conflict — a listing card
         //      that prints only a weekday ("WEDNESDAY / 10pm-3am", a venue's
         //      "this week" board) was dated by the parser to that weekday's
@@ -7436,7 +7548,9 @@ Rules:
 
     // Injected like the OCR lookup: the ai-web parser owns the image fetch,
     // the vision call and the disk cache; shared-core stays platform-pure.
-    // reader(imageUrl, httpAdapter) → { text, cached } | null.
+    // reader(imageUrl, httpAdapter, options) → { text, cached } | null.
+    // options.prompt asks a different question of the same picture (see
+    // PICTURE_SCENE_CHECKS); without it the reader asks FLYER_LOOK_PROMPT.
     setFlyerLookReader(reader) {
         this.flyerLookReader = typeof reader === 'function' ? reader : null;
     }
@@ -7459,8 +7573,148 @@ Rules:
         };
     }
 
+    // ── A WORD TWO SCENES SHARE IS SETTLED BY THE PICTURE (owner 2026-11-11:
+    // "should we also do an image check for fursuits? In case we can't tell
+    // by words alone ... Happy to do something similar with leather, etc.") ─
+    // "Furry" is a hairy man on a bear flyer and a fursuit on a fandom
+    // flyer. The words rule (furryFandomPattern) only helps when the page
+    // SAYS which; "FURRY TAKEOVER" says nothing. So an event kept on such a
+    // word ALONE has its flyer looked at, and what the picture shows is put
+    // on the owner's card. It is a notice and a flag, never a verdict: the
+    // event stays kept, nothing is dropped, and a look that fails or sees
+    // nothing says nothing.
+    // The table is the whole rule. A row names the bear words another scene
+    // also uses, the answer field that marks that other scene, and the words
+    // the card shows. A new shared word is a new row (and, when the frozen
+    // prompt has no field for it, its own `prompt`) — no new code.
+    // Measured 2026-11-11 with these exact words on the local vision model:
+    // 0 false alarms on 13 bear flyers kept on "fur" (Furball, Furry Friday,
+    // Fursdays, Furassic Park); 6 of the 7 open-web furry-rave flyers that
+    // picture characters. `animal_characters` is asked but never read: every
+    // bear flyer draws a bear.
+    static get PICTURE_SCENE_CHECKS() {
+        return [
+            {
+                key: 'furry-fandom',
+                words: ['fur', 'furry'],
+                field: 'fursuits',
+                shows: 'fursuit characters, the furry fandom’s art'
+            }
+        ];
+    }
+
+    // Frozen like FLYER_LOOK_PROMPT: the cache is keyed by it and the numbers
+    // above were measured with it.
+    static get PICTURE_SCENE_PROMPT() {
+        return `Look at this event flyer and report only what the picture shows. Answer with one JSON object and nothing else:
+{"people": "photo" | "drawing" | "none",
+ "animal_characters": [species of any animal drawn or costumed as a character, e.g. "wolf", "fox", "bear"; empty list if none],
+ "fursuits": true if anyone wears a full animal mascot costume or the art is cartoon animal-people in the furry fandom style, else false,
+ "leather_gear": true if people wear leather gear (harness, leather cap, chaps, leather uniform, leather jacket and boots), else false,
+ "pup_gear": true if anyone wears a puppy hood or mask, else false,
+ "seen": "one short sentence on what is pictured"}`;
+    }
+
+    // The model's answer to a row's question: { shown, seen }, or null when
+    // the answer is unusable. Only a literal `true` counts as shown.
+    static readPictureScene(rawText, check) {
+        if (!check || typeof check.field !== 'string' || !check.field) return null;
+        const raw = String(rawText || '');
+        const open = raw.indexOf('{');
+        const close = raw.lastIndexOf('}');
+        if (open < 0 || close <= open) return null;
+        let parsed = null;
+        try { parsed = JSON.parse(raw.slice(open, close + 1)); } catch (_) { return null; }
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+        if (typeof parsed[check.field] !== 'boolean') return null;
+        const seen = typeof parsed.seen === 'string' ? parsed.seen.replace(/\s+/g, ' ').trim().slice(0, 240) : '';
+        return { shown: parsed[check.field] === true, seen };
+    }
+
+    // The bear words the PAGE gave an event: the words the keyword tier
+    // kept it on, less any that sit only in the brand the pipeline put in
+    // front of its title (_titleBeforeBrandPrefix — the page named the
+    // party "FURRY TAKEOVER"; "Bear it MTL: " is ours, and its "bear" says
+    // where the event was found, not what the event is).
+    getPageBearKeywords(event) {
+        const kept = event && Array.isArray(event._bearKeywords)
+            ? [...new Set(event._bearKeywords.map(word => String(word || '').toLowerCase()).filter(Boolean))]
+            : [];
+        const before = event && typeof event._titleBeforeBrandPrefix === 'string' ? event._titleBeforeBrandPrefix.trim() : '';
+        const title = String((event && event.title) || '').trim();
+        if (kept.length === 0 || !before || before === title) return kept;
+        const stated = this.getStatedTitles(event).filter(name => name.toLowerCase() !== title.toLowerCase());
+        const own = this.matchBearKeywords(`${before} ${stated.join(' ')} ${event.description || ''} ${event.bar || ''}`);
+        return kept.filter(word => own.includes(word));
+    }
+
+    // The row an event's flyer should be asked about, or null. Asked only
+    // when the keyword tier kept the event and EVERY bear word the page
+    // gave it belongs to one row: "Furry Bear Night" has "bear" to stand on
+    // and is never asked. The owner's stored verdict and the AI tier are
+    // other judges with other evidence; neither is second-guessed here.
+    getPictureSceneCheck(event) {
+        if (!event || typeof event !== 'object' || event.bearSource !== 'keyword') return null;
+        const keywords = this.getPageBearKeywords(event);
+        if (keywords.length === 0) return null;
+        return SharedCore.PICTURE_SCENE_CHECKS.find(check => keywords.every(word => check.words.includes(word))) || null;
+    }
+
+    // One look per (row, picture) however many nights share the flyer; the
+    // parser's cache answers on every later run. Stamps _pictureScene on the
+    // events whose flyer shows the other scene (see getEventSanityFlags and
+    // the deck's notice line).
+    async lookAtSharedWordFlyers(events, httpAdapter = null, options = {}) {
+        const counts = { asked: 0, cached: 0, shown: 0, failed: 0, rows: 0 };
+        if (typeof this.flyerLookReader !== 'function' || !Array.isArray(events)) return counts;
+        const now = Number.isFinite(Number(options.now)) ? Number(options.now) : Date.now();
+        const groups = new Map();
+        for (const event of events) {
+            const check = this.getPictureSceneCheck(event);
+            if (!check) continue;
+            const image = typeof event.image === 'string' ? event.image.trim() : '';
+            if (!image || !/^https?:\/\//i.test(image)) continue;
+            const startMs = SharedCore.toEpochMillis(event.startDate);
+            if (startMs === null || startMs === undefined || !Number.isFinite(startMs) || startMs < now - 24 * 60 * 60 * 1000) continue;
+            const groupKey = `${check.key}\n${image}`;
+            if (!groups.has(groupKey)) groups.set(groupKey, { check, image, events: [] });
+            groups.get(groupKey).events.push(event);
+        }
+        for (const group of groups.values()) {
+            const { check, image } = group;
+            let answer = null;
+            try {
+                answer = await this.flyerLookReader(image, httpAdapter, { prompt: check.prompt || SharedCore.PICTURE_SCENE_PROMPT, label: 'picture-scene' });
+            } catch (_) { answer = null; }
+            const look = answer && typeof answer.text === 'string' ? SharedCore.readPictureScene(answer.text, check) : null;
+            if (!look) { counts.failed += 1; continue; }
+            counts.asked += 1;
+            if (answer.cached) counts.cached += 1;
+            if (!look.shown) continue;
+            counts.shown += 1;
+            for (const event of group.events) {
+                event._pictureScene = {
+                    key: check.key,
+                    words: this.getPageBearKeywords(event),
+                    shows: check.shows,
+                    seen: look.seen,
+                    image
+                };
+                counts.rows += 1;
+            }
+            if (!answer.cached) {
+                const first = group.events[0];
+                console.log(`🎭 PICTURE CHECK: "${first.title || 'event'}" has one bear word of its own, ${first._pictureScene.words.join(', ')}, and its flyer shows ${check.shows}${look.seen ? ` (${look.seen})` : ''} — kept, flagged for the owner`);
+            }
+        }
+        if (groups.size > 0) {
+            console.log(`🎭 PICTURE CHECK: ${counts.asked} of ${groups.size} flyer(s) of events kept on a shared word looked at (${counts.cached} from the cache) — ${counts.shown} show the other scene${counts.failed > 0 ? `, ${counts.failed} could not be read` : ''}`);
+        }
+        return counts;
+    }
+
     // Looks at the flyer of every dropped event the owner may still be asked
-    // about: upcoming, with a picture, and not already answered "not bear"
+    // about: upcoming, with a picture, and not already answered "not bear\"
     // in the verdict store. One look per picture however many nights share
     // it; the parser's cache answers on every later run. A look that fails
     // leaves the row as it was — an absent notice, never a wrong one.
@@ -9659,6 +9913,13 @@ Rules:
             results.flyerLook = await this.lookAtDroppedFlyers(results.bearDroppedEvents, httpAdapter);
         } catch (error) {
             console.log(`🧔 FLYER LOOK: skipped (${error && error.message ? error.message : 'unknown error'})`);
+        }
+        // …and what the flyers of events kept on a word two scenes share
+        // show (PICTURE_SCENE_CHECKS). A notice and a flag, never a drop.
+        try {
+            results.pictureScene = await this.lookAtSharedWordFlyers(results.allProcessedEvents, httpAdapter);
+        } catch (error) {
+            console.log(`🎭 PICTURE CHECK: skipped (${error && error.message ? error.message : 'unknown error'})`);
         }
 
         if (disabledParsers.length > 0) {
@@ -15784,8 +16045,14 @@ Rules:
                         : decision.provenance.startsWith('ai:') ? 'ai'
                             : decision.provenance.startsWith('config:') ? 'config'
                                 : '';
+                // The words a keyword verdict stood on travel with the event:
+                // a word two scenes share is later settled by the picture
+                // (see PICTURE_SCENE_CHECKS).
+                const keywordStamp = bearSource === 'keyword' && Array.isArray(decision.keywords) && decision.keywords.length > 0
+                    ? { _bearKeywords: decision.keywords.slice() }
+                    : {};
                 kept.push(bearSource
-                    ? {...event, isBearEvent: true, bearSource, ...this.buildEventTagsPatch(decision)}
+                    ? {...event, isBearEvent: true, bearSource, ...keywordStamp, ...this.buildEventTagsPatch(decision)}
                     : {...event, isBearEvent: true, ...this.buildEventTagsPatch(decision)});
             } else if (decision.result === 'tagged') {
                 // Not bear, kept for its tags (see attachEventTagsToBearDecision).
@@ -16030,6 +16297,32 @@ Rules:
         if (decision.manualStore === true) {
             const entry = decision.storedVerdictEntry || {};
             const ownerTags = schema.normalizeEventTags(entry.tags);
+            // A stored not-bear inside a bear run: the run keeps the event
+            // unless the not-bear was given on a night inside that very run
+            // (see getBearRunKeyForEvent). The verdict is not touched and
+            // still drops the party on every ordinary night.
+            if (decision.result === 'not_bear') {
+                const bearRun = typeof schema.findBearRunForEvent === 'function'
+                    ? schema.findBearRunForEvent(event, this.festivals, { destinations: this.cities || {} })
+                    : null;
+                const runKey = bearRun ? String(bearRun.key || bearRun.name || '').trim() : '';
+                const runName = bearRun ? (bearRun.name || bearRun.key || '') : '';
+                const said = `your not bear on "${entry.title || title}"${entry.stampedAt ? ` (${String(entry.stampedAt).slice(0, 10)})` : ''}`;
+                const during = runKey ? this.findRunNightNotBearVerdict(event, runKey) : null;
+                if (runKey && during) {
+                    console.log(`🏕️ BEAR RUN: "${title}" is inside ${runName} and stays not bear — ${said} was given on a night inside this run`);
+                } else if (runKey) {
+                    const window = bearRun.nextDates || {};
+                    console.log(`🏕️ BEAR RUN: "${title}" kept — inside ${runName} (${event.city}, ${window.start}–${window.end || window.start}); ${said} was given outside the run and still holds on ordinary nights`);
+                    decision.result = 'tagged';
+                    decision.bearRun = runName;
+                    decision.manualStore = false;
+                    decision.overruledStoredVerdict = entry;
+                    decision.tags = [];
+                    decision.provenance = `tagged: bear-run (${runName}) — over ${said}, given outside the run`;
+                    return decision;
+                }
+            }
             if (decision.result !== 'bear' || ownerTags.length > 0) {
                 decision.tags = ownerTags;
                 return decision;
@@ -16214,9 +16507,9 @@ Rules:
         if (matched.length > 0 && keywordTier.shortCircuit) {
             if (keywordTier.source === 'stated-title') {
                 console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — keyword ${matched.join(', ')} is in the name the page stated, "${keywordTier.stated}"`);
-                return { result: 'bear', provenance: `keyword: ${matched.join(', ')} (the page's own name: "${keywordTier.stated}")` };
+                return { result: 'bear', provenance: `keyword: ${matched.join(', ')} (the page's own name: "${keywordTier.stated}")`, keywords: matched.slice() };
             }
-            return { result: 'bear', provenance: `keyword: ${matched.join(', ')}` };
+            return { result: 'bear', provenance: `keyword: ${matched.join(', ')}`, keywords: matched.slice() };
         }
         if (matched.length > 0) {
             console.log(`🐻 BEAR CHECK: keyword ${matched.join(', ')} appears only in the description of "${event.title || 'Unknown'}" and names no registry brand — deferring to the AI tier`);
@@ -16237,7 +16530,7 @@ Rules:
         // decision to a better judge — it never drops a bear event when that
         // judge is unavailable.
         if (matched.length > 0) {
-            return { result: 'bear', provenance: `keyword: ${matched.join(', ')} (ai unavailable)` };
+            return { result: 'bear', provenance: `keyword: ${matched.join(', ')} (ai unavailable)`, keywords: matched.slice() };
         }
 
         if (trust.affinity === 'always') {
@@ -20484,6 +20777,23 @@ Rules:
             }
             if (unique.length > 0) mergedEvent._statedTitles = unique.slice(0, 3);
             else delete mergedEvent._statedTitles;
+            // Same for the bear words each side was kept on: a party one
+            // source lists as "Furry Friday" and another as "Bear Night" was
+            // not kept on "furry" alone (see getPictureSceneCheck).
+            const pooledKeywords = [];
+            for (const side of [existingEvent, newEvent]) {
+                for (const word of (Array.isArray(side && side._bearKeywords) ? side._bearKeywords : [])) {
+                    if (typeof word === 'string' && word && !pooledKeywords.includes(word)) pooledKeywords.push(word);
+                }
+            }
+            if (pooledKeywords.length > 0) mergedEvent._bearKeywords = pooledKeywords;
+            else delete mergedEvent._bearKeywords;
+            // …and what a flyer showed stays only while every pooled word
+            // is still one that scene shares.
+            const sceneStamp = [newEvent, existingEvent].map(side => side && side._pictureScene).find(stamp => stamp && typeof stamp === 'object');
+            const sceneCheck = sceneStamp ? SharedCore.PICTURE_SCENE_CHECKS.find(check => check.key === sceneStamp.key) : null;
+            if (sceneCheck && pooledKeywords.length > 0 && pooledKeywords.every(word => sceneCheck.words.includes(word))) mergedEvent._pictureScene = sceneStamp;
+            else delete mergedEvent._pictureScene;
             const keptTitle = pageTitleOf(mergedEvent);
             for (const side of [existingEvent, newEvent]) {
                 const added = this.noteStatedTitle(mergedEvent, pageTitleOf(side), keptTitle);
@@ -20611,6 +20921,27 @@ Rules:
         const hygieneLabel = scraperObject.title || calendarObject.title || 'event';
         this.clearNonIdentityLinkFields(scraperObject, hygieneLabel);
         this.clearNonIdentityLinkFields(calendarObject, hygieneLabel);
+
+        // SLOT TAKEOVER: a different party takes this saved night's slot.
+        // A party is one thing — its name, its link, its picture, its
+        // words, its tags, its cadence and its bear verdict belong together.
+        // Merged field by field, the taker kept whichever of the saved
+        // party's fields its own page happened to leave blank (the weekly's
+        // flyer under the special edition's name) and the saved title could
+        // outlive its own link. So the saved side enters this merge as the
+        // slot alone — where and when (SLOT_TAKEOVER_KEPT_FIELDS) — and
+        // every other field is the taking party's or nothing. The display
+        // and the change list still see the whole saved record: the card
+        // shows everything that is being replaced.
+        const savedCalendarObject = options && options.slotTakeover ? { ...calendarObject } : calendarObject;
+        if (options && options.slotTakeover) {
+            const shed = Object.keys(calendarObject).filter(field => !SLOT_TAKEOVER_KEPT_FIELDS.has(field)
+                && !this.isEmptyArbitrationValue(calendarObject[field]));
+            for (const field of Object.keys(calendarObject)) {
+                if (!SLOT_TAKEOVER_KEPT_FIELDS.has(field)) delete calendarObject[field];
+            }
+            console.log(`🪑 SLOT: "${scraperObject.title || 'Unknown'}" takes the slot whole — the saved "${savedCalendarObject.title || 'Unknown'}" keeps only its place and time${shed.length > 0 ? `; left behind: ${shed.join(', ')}` : ''}`);
+        }
 
         // gmaps candidate hygiene (calendar-as-database: location is always
         // coordinates, and gmaps is rebuilt from verified coords). A scraped
@@ -21650,6 +21981,11 @@ Rules:
         if (newEvent._flyerTimeConflict && typeof newEvent._flyerTimeConflict === 'object') {
             finalEvent._flyerTimeConflict = newEvent._flyerTimeConflict;
         }
+        // …for what the flyer of an event kept on a shared word shows
+        // (lookAtSharedWordFlyers)…
+        if (newEvent._pictureScene && typeof newEvent._pictureScene === 'object') {
+            finalEvent._pictureScene = newEvent._pictureScene;
+        }
         // …and for the weekday-only card stamps (readCardWeekdayDate).
         if (newEvent._weekdayDerivedDate && typeof newEvent._weekdayDerivedDate === 'object') {
             finalEvent._weekdayDerivedDate = newEvent._weekdayDerivedDate;
@@ -21663,7 +21999,7 @@ Rules:
         // Store the three objects for display comparison
         finalEvent._original = {
             scraper: scraperObject,    // What the scraper found
-            calendar: calendarObject,  // What was in the calendar
+            calendar: savedCalendarObject,  // What was in the calendar
             merged: mergedObject       // What the merge logic produced
         };
 
@@ -21678,7 +22014,7 @@ Rules:
         }
         
         // Simple change detection for display
-        finalEvent._changes = this.computeCalendarWriteChanges(finalEvent, existingEvent, calendarObject);
+        finalEvent._changes = this.computeCalendarWriteChanges(finalEvent, existingEvent, savedCalendarObject);
 
         return finalEvent;
     }
@@ -25233,15 +25569,43 @@ Rules:
         };
     }
 
+    // A SLOT IS A PLACE AND A CLOCK. A record that names a day and no time
+    // (a stored all-day record, a "time unknown" night, a date-only listing
+    // row) starts at the day's midnight placeholder — and so does every
+    // other record like it at that bar. Two placeholders are "the same
+    // start" by construction, never because two parties share a door at
+    // 9 PM. Such a record holds no slot: it cannot take one and it cannot
+    // be taken (Eagle LA, 2026-11-20: a date-only "HOT BOOTS GEAR NIGHT"
+    // row took the saved all-day "BLUF LA" and rewrote its link and
+    // picture). `counterpart` lends its zone to a record that states none.
+    holdsClockSlot(record, counterpart = null) {
+        if (!record || typeof record !== 'object') return false;
+        if (this.toEpochMillis(record.startDate) === null) return false;
+        if (record.isAllDay === true || SharedCore.isWholeDayEvent(record) || this.isAllDayShapedRecord(record)) return false;
+        const zone = this.getEventZone(record) || this.getEventZone(counterpart);
+        return !(zone && this.isAllDaySpan(record.startDate, record.endDate, zone));
+    }
+
     // The saved record that already holds this event's slot: same place,
     // start within an hour, a different party (the identity rungs and the
-    // title-subset signal already said "not the same event").
+    // title-subset signal already said "not the same event") — and a
+    // stated clock time on both sides (holdsClockSlot).
     findSlotHost(event, candidates) {
         if (!event || !Array.isArray(candidates) || candidates.length === 0) return null;
         const shape = this.buildIdentityComparisonShape(event);
-        return candidates.find(existing => existing && typeof existing === 'object'
+        const sharing = candidates.filter(existing => existing && typeof existing === 'object'
             && this.areDatesEqual(existing.startDate, event.startDate, 60)
-            && this.areIdentityPlacesSimilar(shape, this.buildIdentityComparisonShape(existing))) || null;
+            && this.areIdentityPlacesSimilar(shape, this.buildIdentityComparisonShape(existing)));
+        if (sharing.length === 0) return null;
+        const host = this.holdsClockSlot(event, sharing[0])
+            ? sharing.find(existing => this.holdsClockSlot(existing, event))
+            : null;
+        if (!host) {
+            const unclocked = this.holdsClockSlot(event, sharing[0]) ? sharing[0] : event;
+            console.log(`🪑 SLOT: "${event.title || 'Unknown'}" and the saved "${sharing[0].title || sharing[0].name || 'Unknown'}" share a place and a day, but "${unclocked.title || unclocked.name || 'Unknown'}" states no clock time — no slot is claimed, each stands on its own`);
+            return null;
+        }
+        return host;
     }
 
     // The slug of an event/ticket link BOTH records carry (the same page,
@@ -27880,7 +28244,7 @@ Rules:
             // Handle merge action by creating complete final event object
             if (analysis.action === 'merge' && analysis.existingEvent) {
                 // Create final merged event that represents exactly what will be saved
-                analyzedEvent = await this.createFinalEventObject(analysis.existingEvent, event, { httpAdapter: calendarAdapter, globalConfig: config });
+                analyzedEvent = await this.createFinalEventObject(analysis.existingEvent, event, { httpAdapter: calendarAdapter, globalConfig: config, slotTakeover: analysis.slotTakeover || null });
                 
                 // Calculate merge diff for display purposes
                 analyzedEvent._mergeDiffBaselineNotes = analysis.existingEvent.notes || '';
@@ -31704,6 +32068,11 @@ Rules:
         if (!this.areDatesEqual(eventA.startDate, eventB.startDate, 60)) return;
         const precedence = this.getSlotPrecedence(eventA, eventB);
         if (!precedence) return;
+        const unclocked = [eventA, eventB].find((record, index) => !this.holdsClockSlot(record, index === 0 ? eventB : eventA));
+        if (unclocked) {
+            console.log(`🪑 SLOT: "${eventA.title || 'Unknown'}" and "${eventB.title || 'Unknown'}" share a place and a day, but "${unclocked.title || 'Unknown'}" states no clock time — no slot is claimed, each stands on its own`);
+            return;
+        }
         const { winner, loser } = precedence;
         loser._slotYield = { to: String(winner.title || ''), toCadence: precedence.winnerCadence, cadence: precedence.loserCadence, source: 'run' };
         if (!Array.isArray(winner._slotWins)) winner._slotWins = [];

@@ -2702,3 +2702,14 @@ test('low risk routes: the tab is on the page; the shape report is served; a hol
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('renderReviewBearRow: a kept card whose only bear word another scene shares says what the flyer shows; a dropped card never does', () => {
+  const pictureNotice = { words: ['furry'], shows: 'fursuit characters', seen: 'Two cartoon wolves <b>' };
+  const kept = renderReviewBearRow({ pictureNotice }, { kind: 'new', title: 'FURRY TAKEOVER' });
+  assert.ok(kept.includes('<div class="bear-notice">🎭 Its only bear word is “furry”, and the flyer shows fursuit characters — “Two cartoon wolves &lt;b&gt;” (a machine look)</div>'), kept);
+  const merge = renderReviewBearRow({ pictureNotice: { words: ['fur', 'furry'], shows: 'fursuit characters', seen: '' } }, { kind: 'merge', title: 'FURRY TAKEOVER' });
+  assert.ok(merge.includes('🎭 Its only bear word is “fur”, “furry”, and the flyer shows fursuit characters (a machine look)'));
+  const dropped = renderReviewBearRow({ pictureNotice }, { kind: 'dropped', title: 'FURRY TAKEOVER', dropReason: 'ai: x' });
+  assert.ok(!dropped.includes('🎭'));
+  assert.ok(!renderReviewBearRow({ pictureNotice: null }, { kind: 'new', title: 'x' }).includes('🎭'));
+});

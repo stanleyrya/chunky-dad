@@ -2048,3 +2048,51 @@ test('low risk: an update that changes neither the name nor the link is a quiet 
   assert.deepEqual(clash.shape.failed, ['slot-clash']);
   assert.equal(clash.lowRisk, undefined);
 });
+
+// ---------------------------------------------------------------------------
+// 2026-11-12: a card inside a bear run says so, and a not-bear swiped on it
+// is remembered as "not even during the run"; the picture notice.
+// ---------------------------------------------------------------------------
+
+test('buildDeck: a card on a night inside a bear run carries the run, and a not-bear given on it keeps the mark through later not-bears', () => {
+  const cities = { ...CITIES, ptown: { timezone: 'America/New_York', patterns: ['provincetown'], destination: true } };
+  const festivals = [{ key: 'spooky-bear', name: 'Spooky Bear', category: 'bear-run', cityKey: 'ptown', nextDates: { start: '2030-10-02', end: '2030-10-05' } }];
+  const tea = (overrides = {}) => newEvent({ title: 'Tea Dance', bar: 'Boatslip', address: '161 Commercial St, Provincetown, MA', city: 'ptown', url: 'https://boatslip.example/tea', ...overrides });
+  const config = { cities, festivals, config: { dryRun: true }, parsers: [] };
+  const deck = deckOf(runPayload({ config, analyzedEvents: [tea(), newEvent()] }));
+  const inRun = deck.cards.find((card) => card.proposal.title === 'Tea Dance');
+  assert.equal(inRun.display.bearIdentity.bearRun, 'spooky-bear');
+  const elsewhere = deck.cards.find((card) => card.proposal.title === 'FURBALL NYC');
+  assert.equal('bearRun' in elsewhere.display.bearIdentity, false, 'another town on the same night is inside no run');
+  // The same party a month later: an ordinary night.
+  const later = deckOf(runPayload({ config, analyzedEvents: [tea({ startDate: iso(FUTURE + 30 * 86400000), endDate: iso(FUTURE + 30 * 86400000 + 4 * 3600000) })] }));
+  const ordinary = later.cards[0].display.bearIdentity;
+  assert.equal('bearRun' in ordinary, false);
+  // Without the run's festivals the deck knows of no run at all.
+  const blind = deckOf(runPayload({ config: { cities, config: { dryRun: true }, parsers: [] }, analyzedEvents: [tea()] }));
+  assert.equal('bearRun' in blind.cards[0].display.bearIdentity, false);
+
+  const core = rq.createDeckCore({ config }, {});
+  const during = rq.upsertBearVerdict([], core, inRun.display.bearIdentity, 'not_bear', { now: new Date('2030-01-02T12:00:00.000Z') });
+  assert.deepEqual(during.verdicts[0].bearRuns, ['spooky-bear']);
+  const again = rq.upsertBearVerdict(during.verdicts, core, ordinary, 'not_bear', { now: new Date('2030-01-03T12:00:00.000Z') });
+  assert.equal(again.verdicts.length, 1);
+  assert.deepEqual(again.verdicts[0].bearRuns, ['spooky-bear'], 'a later not-bear on an ordinary night does not forget the run');
+  const plain = rq.upsertBearVerdict([], core, ordinary, 'not_bear', { now: new Date('2030-01-03T12:00:00.000Z') });
+  assert.equal('bearRuns' in plain.verdicts[0], false, 'a not-bear given on an ordinary night says nothing about a run');
+  const reversed = rq.upsertBearVerdict(during.verdicts, core, inRun.display.bearIdentity, 'bear', { now: new Date('2030-01-04T12:00:00.000Z') });
+  assert.equal('bearRuns' in reversed.verdicts[0], false, 'a bear verdict carries no run mark');
+});
+
+test('buildDeck: the picture notice rides on a card kept on a shared word alone, and only while that word is what keeps it', () => {
+  const scene = { key: 'furry-fandom', words: ['furry'], shows: 'fursuit characters', seen: 'Two cartoon wolves in rave gear', image: 'https://furball.nyc/flyer.jpg' };
+  const deck = deckOf(runPayload({ analyzedEvents: [
+    newEvent({ title: 'FURRY TAKEOVER', bearSource: 'keyword', _pictureScene: scene }),
+    newEvent({ title: 'FURRY NIGHT', url: 'https://furball.nyc/night', bearSource: 'manual-bear (verdict store 2030-01-01)', _pictureScene: scene }),
+    newEvent({ title: 'BEAR NIGHT', url: 'https://furball.nyc/bear', bearSource: 'keyword' })
+  ] }));
+  const byTitle = (title) => deck.cards.find((card) => card.proposal.title === title);
+  assert.deepEqual(byTitle('FURRY TAKEOVER').display.pictureNotice, { words: ['furry'], shows: 'fursuit characters', seen: 'Two cartoon wolves in rave gear' });
+  assert.equal(byTitle('FURRY NIGHT').display.pictureNotice, null, 'his own verdict outranks the machine look');
+  assert.equal(byTitle('BEAR NIGHT').display.pictureNotice, null);
+});

@@ -155,6 +155,32 @@ test('assessShape: the flyer as a witness — a printed day that is not the card
   assert.equal(check(wrongWeekday, 'flyer-weekday').detail, 'the flyer says Saturday; this card is a Thursday');
 });
 
+test('assessShape: a printed day that is the page’s day in look-alike digits is a misread, not a second date; any other one-digit difference still fails', () => {
+  const flyer = (text) => ({ flyer: { text } });
+  // Thursday 2030-10-17, 22:00 in New York.
+  const night = { startDate: '2030-10-18T02:00:00.000Z', endDate: '2030-10-18T06:00:00.000Z' };
+  const misread = assess(night, flyer('FURBALL NYC\nOCT.11,2030 10 PM'));
+  assert.equal(check(misread, 'flyer-date').ok, null);
+  assert.equal(check(misread, 'flyer-date').detail, 'the flyer reads as October 11, which is the page’s 17 with a look-alike digit; the page’s date is kept');
+  assert.equal(misread.ok, true);
+  assert.deepEqual(shape.shapeNotices(misread), []);
+
+  // The flyer's own weekday settles it: the 11th is a Friday, the card a Thursday.
+  const friday = assess(night, flyer('FURBALL NYC\nFRIDAY OCTOBER 11'));
+  assert.equal(check(friday, 'flyer-date').ok, false);
+  assert.equal(check(friday, 'flyer-weekday').ok, false);
+  // Naming the card's own weekday leaves it a misread.
+  assert.equal(check(assess(night, flyer('THURSDAY OCTOBER 11')), 'flyer-date').ok, null);
+
+  // One digit apart is not a look-alike: a card a day off is a real finding.
+  assert.equal(check(assess(night, flyer('OCTOBER 16')), 'flyer-date').ok, false);
+  assert.equal(check(assess(night, flyer('OCTOBER 18')), 'flyer-date').ok, false);
+  // Another month, another year, or a second date beside it is a statement.
+  assert.equal(check(assess(night, flyer('NOVEMBER 11')), 'flyer-date').ok, false);
+  assert.equal(check(assess(night, flyer('OCTOBER 11 2031')), 'flyer-date').ok, false);
+  assert.equal(check(assess(night, flyer('OCTOBER 11 and OCTOBER 30')), 'flyer-date').ok, false);
+});
+
 test('assessShape: a year on a flyer counts only next to a printed day; a month alone must be the card’s month; a nameless flyer proves nothing', () => {
   const flyer = (text) => ({ flyer: { text } });
   // A founding year or a title year alone is not a date.

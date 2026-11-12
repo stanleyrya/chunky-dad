@@ -33636,3 +33636,255 @@ test('owner review: a merge whose only stored change is the link is housekeeping
   assert.equal(core.isOwnerReviewCandidate(renamedToo), true);
   assert.deepEqual(Object.keys(core.buildOwnerReviewProposal(renamedToo).changes).sort(), ['title', 'url']);
 });
+
+// ---------------------------------------------------------------------------
+// 2026-11-12 wave: a verdict follows the names the page used, a bear run
+// outranks an ordinary-night not-bear, a slot is a place AND a clock, and a
+// word two scenes share is settled by the picture.
+// ---------------------------------------------------------------------------
+
+test('stored verdict: found under every name the record answers to — the name before the brand prefix and the names the page stated', () => {
+  const core = createCore();
+  core.bearVerdicts = [eagleNycVerdict('FURRY TAKEOVER')];
+  assert.equal(core.findStoredBearVerdict(eagleNycEvent('FURRY TAKEOVER')).verdict, 'not_bear');
+  assert.equal(core.findStoredBearVerdict(eagleNycEvent('Bear it MTL: FURRY TAKEOVER')), null, 'a renamed record with no trace of the old name is another party');
+  const prefixed = eagleNycEvent('Bear it MTL: FURRY TAKEOVER', { _titleBeforeBrandPrefix: 'FURRY TAKEOVER' });
+  assert.equal(core.findStoredBearVerdict(prefixed).verdict, 'not_bear', 'the name the page gave it before the brand went in front');
+  const stated = eagleNycEvent('Takeover', { _statedTitles: ['FURRY TAKEOVER'] });
+  assert.equal(core.findStoredBearVerdict(stated).verdict, 'not_bear', 'the fuller name the page stated');
+  assert.deepEqual(core.getBearVerdictEventNames(prefixed), ['Bear it MTL: FURRY TAKEOVER', 'FURRY TAKEOVER']);
+  assert.deepEqual(core.getBearVerdictEventNames({ title: 'A', _titleBeforeBrandPrefix: 'a', _statedTitles: ['A', ' B '] }), ['A', 'B'], 'one entry per name, whatever its case');
+
+  // Two of a record's names judged differently: the store disagrees with
+  // itself and decides nothing, exactly like two spellings of one title.
+  core.bearVerdicts = [eagleNycVerdict('FURRY TAKEOVER'), eagleNycVerdict('Bear it MTL: FURRY TAKEOVER', { verdict: 'bear' })];
+  assert.equal(core.findStoredBearVerdict(prefixed), null);
+  assert.equal(core.findStoredBearVerdictConflict(prefixed).hits.length, 2);
+});
+
+const SPOOKY_BEAR = { key: 'spooky-bear', name: 'Spooky Bear', category: 'bear-run', cityKey: 'ptown', nextDates: { start: '2026-10-29', end: '2026-11-01' } };
+const BOATSLIP_PLACE = { address: '161 Commercial St, Provincetown, MA 02657, USA', location: '42.0469, -70.1925', city: 'ptown' };
+const boatslipTea = (overrides = {}) => ({ title: 'Tea Dance', bar: 'Boatslip', timezone: 'America/New_York', startDate: new Date('2026-10-31T20:00:00.000Z'), ...BOATSLIP_PLACE, ...overrides });
+const boatslipVerdict = (overrides = {}) => ({ verdict: 'not_bear', stampedAt: '2026-11-11T18:00:00.000Z', title: 'Tea Dance', venue: 'Boatslip', ...BOATSLIP_PLACE, ...overrides });
+
+test('bear run over a stored not-bear: the run keeps the party on its own nights; a not-bear given inside the run still drops it there', async () => {
+  const run = async (event, verdict) => {
+    const core = createDestinationCore([SPOOKY_BEAR]);
+    core.bearVerdicts = [verdict];
+    const dropped = [];
+    const kept = await core.filterBearEvents([event], bearCheckConfig('enforce'), buildTagAwareAdapter({ verdict: 'not_bear', reason: 'a tea dance' }), dropped);
+    return { kept, dropped, core };
+  };
+  // His not-bear was given on an ordinary night: it holds on ordinary nights…
+  const ordinary = await run(boatslipTea({ startDate: new Date('2026-08-15T20:00:00.000Z') }), boatslipVerdict());
+  assert.equal(ordinary.kept.length, 0);
+  // …and the run speaks during the run.
+  const during = await run(boatslipTea(), boatslipVerdict());
+  assert.equal(during.kept.length, 1);
+  assert.equal(during.kept[0].bearSource, 'tagged (bear-run: Spooky Bear)');
+  assert.equal(during.core.getBearRunKeyForEvent(boatslipTea()), 'spooky-bear');
+  assert.equal(during.core.getBearRunKeyForEvent(boatslipTea({ startDate: new Date('2026-08-15T20:00:00.000Z') })), '');
+  // "Not even then": a not-bear given on a night inside this run.
+  const refused = await run(boatslipTea(), boatslipVerdict({ bearRuns: ['spooky-bear'] }));
+  assert.equal(refused.kept.length, 0);
+  // A mark for another run says nothing about this one.
+  const otherRun = await run(boatslipTea(), boatslipVerdict({ bearRuns: ['bear-week'] }));
+  assert.equal(otherRun.kept.length, 1);
+  // A stored bear or tagged verdict is untouched by any of this.
+  const bear = await run(boatslipTea(), boatslipVerdict({ verdict: 'bear' }));
+  assert.match(bear.kept[0].bearSource, /^manual-bear/);
+});
+
+test('bear run marks: only a not-bear carries them, a replacing not-bear inherits them, any other verdict sheds them', () => {
+  const base = { verdict: 'not_bear', title: 'Tea Dance' };
+  assert.deepEqual(SharedCore.withBearVerdictRunMarks(base, ''), base, 'an ordinary night adds nothing');
+  assert.deepEqual(SharedCore.withBearVerdictRunMarks(base, 'spooky-bear').bearRuns, ['spooky-bear']);
+  const later = SharedCore.withBearVerdictRunMarks(base, '', [{ verdict: 'not_bear', bearRuns: ['spooky-bear', 'spooky-bear', ''] }]);
+  assert.deepEqual(later.bearRuns, ['spooky-bear'], 'a later tap on an ordinary night does not forget "not even during the run"');
+  assert.deepEqual(SharedCore.withBearVerdictRunMarks(base, 'bear-week', [{ verdict: 'not_bear', bearRuns: ['spooky-bear'] }]).bearRuns, ['spooky-bear', 'bear-week']);
+  assert.equal(SharedCore.withBearVerdictRunMarks({ verdict: 'bear', title: 'Tea Dance', bearRuns: ['spooky-bear'] }, 'spooky-bear').bearRuns, undefined);
+  assert.deepEqual(SharedCore.getBearVerdictRunMarks({ verdict: 'bear', bearRuns: ['spooky-bear'] }), [], 'nothing but a not-bear is ever outranked by a run');
+  assert.deepEqual(SharedCore.getBearVerdictRunMarks({ verdict: 'not_bear' }), []);
+});
+
+test('slot rule: a slot is a place and a clock — a date-only row on either side claims nothing, and says so', () => {
+  const core = createCore();
+  const dayStart = new Date('2026-11-26T05:00:00.000Z');
+  const dayEnd = new Date('2026-11-27T04:59:59.000Z');
+  const weekly = ['cadence: FREQ=WEEKLY;BYDAY=TH'];
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (line) => logs.push(String(line));
+  let dateOnlyIncoming;
+  let dateOnlySaved;
+  let timed;
+  try {
+    dateOnlyIncoming = core.analyzeEventAction(buildTysNight({ startDate: dayStart, endDate: dayEnd, isAllDay: true }), [buildSavedTysNight({ startDate: dayStart, endDate: dayEnd, isAllDay: true }, weekly)]);
+    dateOnlySaved = core.analyzeEventAction(buildTysNight({ startDate: dayStart, endDate: new Date('2026-11-26T09:00:00.000Z') }), [buildSavedTysNight({ startDate: dayStart, endDate: dayEnd, isAllDay: true }, weekly)]);
+    timed = core.analyzeEventAction(buildTysNight(), [buildSavedTysNight({}, weekly)]);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(dateOnlyIncoming.slotTakeover, undefined, 'the incoming row states no clock time');
+  assert.equal(dateOnlySaved.slotTakeover, undefined, 'the saved night states no clock time');
+  assert.equal(logs.filter((line) => /🪑 SLOT: .*states no clock time — no slot is claimed/.test(line)).length, 2);
+  assert.equal(timed.action, 'merge', 'two stated clock times at one bar: the slot rule as before');
+  assert.equal(core.holdsClockSlot(buildTysNight()), true);
+  assert.equal(core.holdsClockSlot(buildTysNight({ startDate: dayStart, endDate: dayEnd })), false, 'the first second of a day to its last is a day, not a time');
+  assert.equal(core.holdsClockSlot(buildTysNight({ startDate: dayStart, endDate: new Date('2026-11-26T09:00:00.000Z') })), true, 'a party can start at midnight');
+  assert.equal(core.holdsClockSlot({ title: 'x' }), false);
+
+  // The same on one run: a date-only weekly row does not yield to the party.
+  const beerBust = buildBeerBustEvent({ cadence: 'FREQ=WEEKLY;BYDAY=SU', startDate: new Date('2026-09-13T23:00:00.000Z'), _action: 'new' });
+  const onyx = buildOnyxEvent({ _action: 'new' });
+  const zoneDay = { startDate: new Date('2026-09-13T04:00:00.000Z'), endDate: new Date('2026-09-14T03:59:59.000Z'), isAllDay: true };
+  const dateOnlyBeerBust = { ...beerBust, ...zoneDay };
+  const dateOnlyOnyx = { ...onyx, ...zoneDay };
+  console.log = () => {};
+  try {
+    core.applyVenueOverlapFlags([{ event: dateOnlyBeerBust, existingEvents: [] }, { event: dateOnlyOnyx, existingEvents: [] }]);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(dateOnlyBeerBust._slotYield, undefined);
+  assert.equal(dateOnlyOnyx._slotWins, undefined);
+});
+
+test('slot takeover: the party takes the slot whole — its own title, link and picture; the saved night keeps only its place and time', async () => {
+  const core = createCore();
+  const saved = buildSavedTysNight({}, [
+    'cadence: FREQ=WEEKLY;BYDAY=TH',
+    'image: https://tys.example/fursdays.jpg',
+    'website: https://tys.example/fursdays',
+    'description: Every Thursday, the furriest night in the Village.',
+    'instagram: https://www.instagram.com/tysbarnyc'
+  ]);
+  const party = buildTysNight({ description: 'One night only.', _fieldPriorities: {} });
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (line) => logs.push(String(line));
+  let whole;
+  let ordinary;
+  try {
+    whole = await core.createFinalEventObject(saved, { ...party }, { slotTakeover: { from: 'Fursdays at Ty\'s', fromCadence: 'weekly', cadence: 'one-off' } });
+    ordinary = await core.createFinalEventObject(saved, { ...party }, {});
+  } finally {
+    console.log = originalLog;
+  }
+  const wholeFields = core.parseNotesIntoFields(whole.notes);
+  assert.equal(whole.title, 'Leather Daddy at Ty\'s');
+  assert.equal(wholeFields.image, undefined, 'the weekly night\'s poster does not follow the party');
+  assert.equal(wholeFields.website, undefined, 'nor its link');
+  assert.equal(wholeFields.cadence, undefined, 'nor its weekly cadence');
+  assert.equal(wholeFields.instagram, undefined);
+  assert.equal(wholeFields.description, 'One night only.');
+  assert.equal(wholeFields.bar, 'Ty\'s Bar NYC', 'the place is the slot');
+  assert.equal(whole._original.calendar.image, 'https://tys.example/fursdays.jpg', 'the saved record is still shown whole on the card');
+  assert.equal(whole._original.calendar.cadence, 'FREQ=WEEKLY;BYDAY=TH');
+  assert.ok(logs.some((line) => /🪑 SLOT: "Leather Daddy at Ty's" takes the slot whole/.test(line)));
+  // The same pair as an ordinary merge keeps what the saved record knew.
+  const ordinaryFields = core.parseNotesIntoFields(ordinary.notes);
+  assert.equal(ordinaryFields.image, 'https://tys.example/fursdays.jpg');
+  assert.equal(ordinaryFields.instagram, 'https://www.instagram.com/tysbarnyc');
+});
+
+test('picture scene: readPictureScene reads one row\'s field off the answer; only a literal true is the other scene', () => {
+  const [furry] = SharedCore.PICTURE_SCENE_CHECKS;
+  assert.deepEqual(furry.words, ['fur', 'furry']);
+  const answer = (fields) => JSON.stringify({ people: 'drawing', animal_characters: ['wolf'], fursuits: false, leather_gear: false, pup_gear: false, seen: 'Two  drawn wolves\ndancing', ...fields });
+  assert.deepEqual(SharedCore.readPictureScene(answer({ fursuits: true }), furry), { shown: true, seen: 'Two drawn wolves dancing' });
+  assert.deepEqual(SharedCore.readPictureScene('```json\n' + answer({}) + '\n```', furry), { shown: false, seen: 'Two drawn wolves dancing' }, 'a fenced answer, and a drawn bear alone is every bear flyer');
+  assert.equal(SharedCore.readPictureScene(answer({ fursuits: 'yes' }), furry), null, 'not a boolean, not an answer');
+  assert.equal(SharedCore.readPictureScene(answer({ fursuits: true }), { key: 'pup', words: ['pup'], field: 'pup_gear', shows: 'pup hoods' }).shown, false, 'another row reads its own field');
+  for (const bad of ['', 'I cannot help', '[]', '{"fursuits": true', '{"seen": "x"}']) assert.equal(SharedCore.readPictureScene(bad, furry), null, bad);
+  assert.equal(SharedCore.readPictureScene(answer({ fursuits: true }), null), null);
+  assert.ok(SharedCore.PICTURE_SCENE_PROMPT.includes('"fursuits": true if anyone wears a full animal mascot costume'), 'the measured words');
+});
+
+test('picture scene: only an event kept on a shared word ALONE is asked, once per flyer; the answer is a stamp and a flag, never a drop', async () => {
+  const core = createCore();
+  const now = Date.parse('2030-06-01T00:00:00.000Z');
+  const night = (title, image, overrides = {}) => ({ title, bar: 'Some Club', city: 'nyc', timezone: 'America/New_York', startDate: new Date('2030-06-08T02:00:00.000Z'), image, ...overrides });
+  const kept = await core.filterBearEvents([
+    night('FURRY TAKEOVER', 'https://cdn.example/takeover.jpg'),
+    night('FURRY TAKEOVER', 'https://cdn.example/takeover.jpg', { startDate: new Date('2030-06-15T02:00:00.000Z') }),
+    night('Furry Friday', 'https://cdn.example/friday.jpg'),
+    night('Furry Bear Night', 'https://cdn.example/bears.jpg'),
+    night('Fur Ball', 'https://cdn.example/broken.jpg'),
+    night('Fur Night', ''),
+    night('Fur Reunion', 'https://cdn.example/old.jpg', { startDate: new Date('2030-05-01T02:00:00.000Z') })
+  ], bearCheckConfig('enforce'), buildTagAwareAdapter({ verdict: 'not_bear', reason: 'x' }));
+  assert.equal(kept.length, 7);
+  const byTitle = (title, index = 0) => kept.filter((event) => event.title === title)[index];
+  assert.deepEqual(byTitle('FURRY TAKEOVER')._bearKeywords, ['furry']);
+  assert.deepEqual(byTitle('Furry Bear Night')._bearKeywords.slice().sort(), ['bear', 'furry']);
+  assert.equal(core.getPictureSceneCheck(byTitle('FURRY TAKEOVER')).key, 'furry-fandom');
+  assert.equal(core.getPictureSceneCheck(byTitle('Furry Bear Night')), null, '"bear" is a word to stand on');
+  assert.equal(core.getPictureSceneCheck({ ...byTitle('FURRY TAKEOVER'), bearSource: 'manual-bear (verdict store 2030-01-01)' }), null, 'the owner already answered');
+  assert.equal(core.getPictureSceneCheck({ ...byTitle('FURRY TAKEOVER'), bearSource: 'ai' }), null, 'the AI read the whole page');
+  // The brand the pipeline put in front of the title is not the page's word:
+  // "Bear it MTL: FURRY TAKEOVER" was named "FURRY TAKEOVER" by its page.
+  const branded = { ...byTitle('FURRY TAKEOVER'), title: 'Bear it MTL: FURRY TAKEOVER', _titleBeforeBrandPrefix: 'FURRY TAKEOVER', _bearKeywords: ['bear', 'furry'] };
+  assert.deepEqual(core.getPageBearKeywords(branded), ['furry']);
+  assert.equal(core.getPictureSceneCheck(branded).key, 'furry-fandom');
+  assert.deepEqual(core.getPageBearKeywords({ ...branded, description: 'A night for bears and their admirers' }), ['bear', 'furry'], 'the page says bear in its own words');
+  assert.equal(core.getPictureSceneCheck({ ...branded, description: 'A night for bears and their admirers' }), null);
+  assert.equal(core.getPictureSceneCheck({ ...branded, title: 'Bear it MTL: Soirée', _titleBeforeBrandPrefix: 'Soirée', _bearKeywords: ['bear'] }), null, 'kept on the brand alone: no word of its own to doubt');
+
+  // No reader wired: nothing happens.
+  assert.deepEqual(await core.lookAtSharedWordFlyers(kept, null, { now }), { asked: 0, cached: 0, shown: 0, failed: 0, rows: 0 });
+  const asked = [];
+  core.setFlyerLookReader(async (image, httpAdapter, options) => {
+    asked.push([image, options && options.label, options && options.prompt === SharedCore.PICTURE_SCENE_PROMPT]);
+    if (image.endsWith('broken.jpg')) throw new Error('HTTP 404');
+    if (image.endsWith('takeover.jpg')) return { text: '{"people":"drawing","animal_characters":["fox"],"fursuits":true,"seen":"Cartoon fox people at a rave"}', cached: false };
+    return { text: '{"people":"photo","animal_characters":[],"fursuits":false,"seen":"A hairy shirtless man"}', cached: true };
+  });
+  const originalLog = console.log;
+  const logs = [];
+  console.log = (line) => logs.push(String(line));
+  let counts;
+  try {
+    counts = await core.lookAtSharedWordFlyers(kept, null, { now });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(asked, [
+    ['https://cdn.example/takeover.jpg', 'picture-scene', true],
+    ['https://cdn.example/friday.jpg', 'picture-scene', true],
+    ['https://cdn.example/broken.jpg', 'picture-scene', true]
+  ], 'one look per flyer; "bear" nights, pictureless nights and past nights are never asked');
+  assert.deepEqual(counts, { asked: 2, cached: 1, shown: 1, failed: 1, rows: 2 });
+  const stamp = { key: 'furry-fandom', words: ['furry'], shows: 'fursuit characters, the furry fandom’s art', seen: 'Cartoon fox people at a rave', image: 'https://cdn.example/takeover.jpg' };
+  assert.deepEqual(byTitle('FURRY TAKEOVER')._pictureScene, stamp);
+  assert.deepEqual(byTitle('FURRY TAKEOVER', 1)._pictureScene, stamp, 'every night that shares the flyer');
+  for (const title of ['Furry Friday', 'Furry Bear Night', 'Fur Ball', 'Fur Night', 'Fur Reunion']) assert.equal(byTitle(title)._pictureScene, undefined, title);
+  assert.equal(kept.every((event) => event.isBearEvent === true && event.bearSource === 'keyword'), true, 'nothing is dropped or re-judged');
+  assert.ok(logs.some((line) => /🎭 PICTURE CHECK: "FURRY TAKEOVER" has one bear word of its own, furry, and its flyer shows fursuit characters/.test(line)));
+
+  // The flag the deck and the low-risk gate read; the owner's verdict outranks the look.
+  const flagged = core.getEventSanityFlags(byTitle('FURRY TAKEOVER')).filter((flag) => flag.code === 'picture-other-scene');
+  assert.deepEqual(flagged, [{ code: 'picture-other-scene', detail: 'its only bear word is furry; the flyer shows fursuit characters, the furry fandom’s art' }]);
+  assert.equal(core.getEventSanityFlags({ ...byTitle('FURRY TAKEOVER'), bearSource: 'manual-bear (verdict store 2030-01-01)' }).some((flag) => flag.code === 'picture-other-scene'), false);
+  assert.equal(core.getEventSanityFlags(byTitle('Furry Friday')).some((flag) => flag.code === 'picture-other-scene'), false);
+});
+
+test('picture scene: a parser merge pools both sides\' bear words, and what a flyer showed stays only while every word is a shared one', async () => {
+  const core = createCore();
+  const base = { bar: 'Some Club', address: '1 Nowhere Rd, New York, NY', city: 'nyc', timezone: 'America/New_York', startDate: new Date('2030-06-08T02:00:00.000Z'), endDate: new Date('2030-06-08T06:00:00.000Z'), isBearEvent: true, bearSource: 'keyword' };
+  const scene = { key: 'furry-fandom', words: ['furry'], shows: 'fursuit characters, the furry fandom’s art', seen: '', image: 'https://cdn.example/takeover.jpg' };
+  const originalLog = console.log;
+  console.log = () => {};
+  let same;
+  let other;
+  try {
+    same = await core.mergeParsedEvents({ ...base, title: 'FURRY TAKEOVER', source: 'a', _bearKeywords: ['furry'], _pictureScene: scene }, { ...base, title: 'Furry Takeover', source: 'b', _bearKeywords: ['fur', 'furry'] });
+    other = await core.mergeParsedEvents({ ...base, title: 'FURRY TAKEOVER', source: 'a', _bearKeywords: ['furry'], _pictureScene: scene }, { ...base, title: 'Furry Takeover: Bear Edition', source: 'b', _bearKeywords: ['bear', 'furry'] });
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(same._bearKeywords, ['furry', 'fur']);
+  assert.deepEqual(same._pictureScene, scene, 'carried from the side the spread would have shed');
+  assert.deepEqual(other._bearKeywords, ['furry', 'bear']);
+  assert.equal(other._pictureScene, undefined, 'another source calls it a bear night: no longer kept on "furry" alone');
+});

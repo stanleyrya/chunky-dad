@@ -846,11 +846,66 @@ function readFlyerOcrDates(ocrText) {
     return out;
 }
 
+// Digit pairs a reader takes for each other in a display font. Measured
+// 2026-11-12 over 1,343 read flyers: of 73 flyers whose printed date was
+// not the card's, exactly one was a misread (a 1 read as a 7) and eighteen
+// were one digit away for real, the card a day off (6~7, 8~9, 0~1).
+// "One digit apart" is therefore never enough; only a pair named here is.
+const FLYER_OCR_LOOKALIKE_DIGITS = [['1', '7']];
+const FLYER_OCR_WEEKDAY_PATTERNS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+    .map(name => new RegExp(`\\b${name}s?\\b`, 'i'));
+
+// TRUE when a day number read off a flyer is the page's day with ONE digit
+// swapped for its look-alike: as many digits, one place differs, and the
+// two digits there are a pair in FLYER_OCR_LOOKALIKE_DIGITS.
+function flyerDayLooksLike(readDay, pageDay) {
+    const read = String(readDay);
+    const page = String(pageDay);
+    if (read.length !== page.length || read === page) return false;
+    let swaps = 0;
+    for (let index = 0; index < read.length; index++) {
+        if (read[index] === page[index]) continue;
+        const pair = FLYER_OCR_LOOKALIKE_DIGITS.some(([one, other]) => (read[index] === one && page[index] === other)
+            || (read[index] === other && page[index] === one));
+        if (!pair) return false;
+        swaps++;
+    }
+    return swaps === 1;
+}
+
+// The misread behind a flyer whose printed day is not the page's:
+// { month, read, day } when EVERY day the flyer prints is the page's day in
+// look-alike digits, in the page's month and year; null otherwise. A
+// weekday printed on the flyer settles it the other way: "FRIDAY NOV 27"
+// against a page that says Saturday the 21st is a flyer for the 27th, not
+// a misread. The page's date is what ships either way; this only decides
+// whether the flyer still counts as this event's own.
+function readFlyerDayLookalike(ocrText, localDates) {
+    const text = String(ocrText || '');
+    if (!text.trim() || !Array.isArray(localDates) || localDates.length === 0) return null;
+    const stated = readFlyerOcrDates(text);
+    if (stated.monthDays.length === 0) return null;
+    if (localDates.some(date => stated.monthDays.some(pair => pair.month === date.month && pair.day === date.day))) return null;
+    if (stated.years.length > 0 && !localDates.some(date => stated.years.includes(date.year))) return null;
+    let found = null;
+    for (const pair of stated.monthDays) {
+        const date = localDates.find(candidate => candidate.month === pair.month && flyerDayLooksLike(pair.day, candidate.day));
+        if (!date) return null;
+        if (!found) found = { month: pair.month, read: pair.day, day: date.day, year: date.year };
+    }
+    const weekdayOf = (day) => new Date(Date.UTC(found.year, found.month - 1, day)).getUTCDay();
+    const printed = (index) => FLYER_OCR_WEEKDAY_PATTERNS[index].test(text);
+    if (Number.isFinite(found.year) && printed(weekdayOf(found.read)) && !printed(weekdayOf(found.day))) return null;
+    return { month: found.month, read: found.read, day: found.day };
+}
+
 // TRUE when the flyer's OCR text names a date that cannot be this event's
 // local start date (or the previous day — an after-midnight start belongs
 // to the prior night's flyer). Absent date tokens are never a
 // contradiction; only positively mismatched years, months, or month+day
-// pairs veto (the flyer is then likely another occurrence's artwork).
+// pairs veto (the flyer is then likely another occurrence's artwork). A
+// printed day that is the page's day in look-alike digits is a misread,
+// not another date (readFlyerDayLookalike).
 function flyerOcrContradictsEventDate(ocrText, localDates) {
     const text = String(ocrText || '');
     if (!text.trim() || !Array.isArray(localDates) || localDates.length === 0) return false;
@@ -860,7 +915,7 @@ function flyerOcrContradictsEventDate(ocrText, localDates) {
     if (monthsFound.size > 0 && !localDates.some(date => monthsFound.has(date.month))) return true;
     if (stated.monthDays.length > 0
         && !localDates.some(date => stated.monthDays.some(pair => pair.month === date.month && pair.day === date.day))) {
-        return true;
+        return !readFlyerDayLookalike(text, localDates);
     }
     return false;
 }
@@ -31386,16 +31441,22 @@ TEXT:
     // bypass that cache inside callAiGenerate (the prompt alone does not
     // identify them), so the entry is keyed here by prompt + image address.
     // null = no look (OCR off, no adapter, a dead download, an empty answer).
-    async getFlyerLookResponse(imageUrl, httpAdapter = null) {
+    // options.prompt asks another question of the same picture (shared-core's
+    // PICTURE_SCENE_CHECKS); each question has its own cache entry because
+    // the key holds the prompt. options.label names it in the AI log.
+    async getFlyerLookResponse(imageUrl, httpAdapter = null, options = {}) {
         const ocrConfig = this.getOcrConfig({});
         if (!ocrConfig || !ocrConfig.enabled || !this.core) return null;
         const rawUrl = this.upgradeCdnThumbnailUrl(String(imageUrl || '').trim());
         const url = this.normalizeHttpUrlValue(this.unwrapImageProxyUrl(rawUrl) || rawUrl);
         if (!url) return null;
-        const prompt = this.core.constructor.FLYER_LOOK_PROMPT;
+        const prompt = options && typeof options.prompt === 'string' && options.prompt.trim()
+            ? options.prompt
+            : this.core.constructor.FLYER_LOOK_PROMPT;
+        const label = options && typeof options.label === 'string' && options.label.trim() ? options.label.trim() : 'flyer-look';
         const lookConfig = { ...ocrConfig, prompt, temperature: 0, numPredict: 400 };
         const cacheKey = `${prompt}\n\nIMAGE: ${this.canonicalizeImageUrlForComparison(url) || url}`;
-        const cached = await this.readCachedAiResponseInternal(lookConfig, cacheKey, 'flyer-look', false);
+        const cached = await this.readCachedAiResponseInternal(lookConfig, cacheKey, label, false);
         if (cached) return { text: cached, cached: true };
         if (!httpAdapter || typeof httpAdapter.fetchImageAsBase64 !== 'function') return null;
         // A picture whose download already failed this run is not asked again.
@@ -31408,9 +31469,9 @@ TEXT:
             this.failedImageDownloadUrls.set(url, error && error.message ? error.message : 'image download failed');
             return null;
         }
-        const text = await this.core.callAiGenerate(lookConfig, prompt, 'flyer-look', httpAdapter, this.recordAiPrompt.bind(this), base64Image);
+        const text = await this.core.callAiGenerate(lookConfig, prompt, label, httpAdapter, this.recordAiPrompt.bind(this), base64Image);
         if (!text) return null;
-        await this.writeCachedAiResponse(lookConfig, cacheKey, 'flyer-look', text);
+        await this.writeCachedAiResponse(lookConfig, cacheKey, label, text);
         return { text, cached: false };
     }
 
@@ -35401,7 +35462,7 @@ TEXT:
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { AiWebParser, normalizeCityValue, normalizeStartTimeValue, combineDateAndTime, readFlyerStartTimeFromOcrText, readFlyerOcrDates, flyerOcrContradictsEventDate };
+    module.exports = { AiWebParser, normalizeCityValue, normalizeStartTimeValue, combineDateAndTime, readFlyerStartTimeFromOcrText, readFlyerOcrDates, readFlyerDayLookalike, flyerOcrContradictsEventDate };
 } else if (typeof window !== 'undefined') {
     window.AiWebParser = AiWebParser;
     window.normalizeCityValue = normalizeCityValue;

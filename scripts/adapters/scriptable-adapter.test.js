@@ -12448,3 +12448,30 @@ test('run save: the slimmed parser config keeps the source\'s siteRole', () => {
   const plain = JSON.parse(JSON.stringify(adapter.sanitizeEventForRunSave({ title: 'x', _parserConfig: { name: 'Rockbar', parser: 'ai-web' } })));
   assert.equal('siteRole' in plain._parserConfig, false);
 });
+
+test('bear verdict store: a not-bear tapped on a night inside a bear run is stored with the run, and a later tap keeps it', async () => {
+  const adapter = new ScriptableAdapter({ cities: { ptown: { timezone: 'America/New_York', patterns: ['provincetown'], destination: true } } });
+  adapter.fm = createBearVerdictFmStub();
+  const festivals = [{ key: 'spooky-bear', name: 'Spooky Bear', category: 'bear-run', cityKey: 'ptown', nextDates: { start: '2026-10-29', end: '2026-11-01' } }];
+  const tea = (startDate) => ({ title: 'Tea Dance', bar: 'Boatslip', address: '161 Commercial St, Provincetown, MA 02657', city: 'ptown', timezone: 'America/New_York', startDate });
+
+  await adapter.persistBearVerdictTap(tea('2026-10-31T20:00:00.000Z'), 'not_bear', [], festivals);
+  let stored = await adapter.loadBearVerdicts();
+  assert.equal(stored.length, 1);
+  assert.deepEqual(stored[0].bearRuns, ['spooky-bear']);
+
+  // The same party tapped again on an ordinary night: one entry, mark kept.
+  await adapter.persistBearVerdictTap(tea('2026-08-15T20:00:00.000Z'), 'not_bear', [], festivals);
+  stored = await adapter.loadBearVerdicts();
+  assert.equal(stored.length, 1);
+  assert.deepEqual(stored[0].bearRuns, ['spooky-bear']);
+
+  // A bear tap carries no mark; a not-bear with no festivals in hand adds none.
+  await adapter.persistBearVerdictTap(tea('2026-10-31T20:00:00.000Z'), 'bear', [], festivals);
+  stored = await adapter.loadBearVerdicts();
+  assert.equal('bearRuns' in stored[0], false);
+  await adapter.persistBearVerdictTap(tea('2026-10-31T20:00:00.000Z'), 'not_bear');
+  stored = await adapter.loadBearVerdicts();
+  assert.equal(stored[0].verdict, 'not_bear');
+  assert.equal('bearRuns' in stored[0], false);
+});

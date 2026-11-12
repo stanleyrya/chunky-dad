@@ -629,8 +629,20 @@ function buildBearIdentity(event) {
         bar: String((event && (event.bar || event.venue)) || ''),
         address: typeof (event && event.address) === 'string' ? event.address : '',
         location: typeof (event && event.location) === 'string' ? event.location : '',
-        city: typeof (event && event.city) === 'string' ? event.city : ''
+        city: typeof (event && event.city) === 'string' ? event.city : '',
+        // The bear run the card's night falls inside (buildBearCardIdentity):
+        // a not-bear given on it is remembered as "not even during the run".
+        ...(event && typeof event.bearRun === 'string' && event.bearRun.trim() ? { bearRun: event.bearRun.trim() } : {})
     };
+}
+
+// A card's identity: the event's, plus the bear run its night is inside —
+// worked out here, from the event's own day and town against the run's
+// festivals, because the verdict store keeps no date (SharedCore
+// .getBearRunKeyForEvent).
+function buildBearCardIdentity(event, core) {
+    const runKey = core && typeof core.getBearRunKeyForEvent === 'function' ? core.getBearRunKeyForEvent(event) : '';
+    return buildBearIdentity(runKey ? { ...event, bearRun: runKey } : { ...event, bearRun: '' });
 }
 
 // SharedCore reads the verdict store it was handed at construction; the
@@ -697,9 +709,13 @@ function upsertBearVerdict(verdicts, core, identity, verdict, options = {}) {
     const tags = verdict === 'not_bear' || verdict === 'maybe' ? [] : normalizeVerdictTags(options.tags);
     if (verdict === 'tagged' && tags.length === 0) throw new Error('a tagged verdict needs at least one tag');
     const now = options.now instanceof Date ? options.now : new Date();
-    const entry = { verdict, stampedAt: now.toISOString(), title: id.title, venue: id.bar, address: id.address, location: id.location, city: id.city, ...(tags.length > 0 ? { tags } : {}) };
     const list = normalizeBearVerdicts(verdicts).slice();
     const covered = coveredBearVerdicts(list, core, id, verdict);
+    // A not-bear given on a night inside a bear run says "not even then",
+    // and keeps saying it when a later not-bear replaces it.
+    const entry = SharedCore.withBearVerdictRunMarks(
+        { verdict, stampedAt: now.toISOString(), title: id.title, venue: id.bar, address: id.address, location: id.location, city: id.city, ...(tags.length > 0 ? { tags } : {}) },
+        id.bearRun || '', covered);
     const index = covered.length > 0 ? list.indexOf(covered[0]) : -1;
     const kept = list.filter((existing) => !covered.includes(existing));
     if (index >= 0) kept.splice(Math.min(index, kept.length), 0, entry);
@@ -836,9 +852,13 @@ function createDeckCore(runPayload, options = {}) {
     if (options.core) return options.core;
     const SharedCore = loadSharedCore();
     const cities = (runPayload && runPayload.config && runPayload.config.cities) || {};
+    // The run's own festivals: a card inside a bear run says so, and a
+    // not-bear swiped on it is stored as given during the run.
+    const festivals = runPayload && runPayload.config && Array.isArray(runPayload.config.festivals) ? runPayload.config.festivals : [];
     return new SharedCore(cities, {
         eventSchema: loadEventSchema(),
-        bars: options.curatedBars || {}
+        bars: options.curatedBars || {},
+        festivals
     });
 }
 
@@ -1001,7 +1021,7 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
             stampedAt: maybeMatch.entry.stampedAt || null,
             on: maybeMatch.matchedBy === 'party' ? String(maybeMatch.entry.title || '') : ''
         } : null,
-        bearIdentity: buildBearIdentity(event),
+        bearIdentity: buildBearCardIdentity(event, core),
         isBearEvent: event.isBearEvent === true,
         barSource: typeof event.barSource === 'string' ? event.barSource : '',
         favicon: typeof event.favicon === 'string' ? event.favicon : '',
@@ -1021,6 +1041,16 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         recurring: SharedCore.isRecurringSeriesEvent(event),
         seriesMatchTitle: seriesMatch ? String(seriesMatch.title || '') : '',
         sanityCodes: Array.isArray(event._sanityFlags) ? event._sanityFlags.map((flag) => flag && flag.code).filter(Boolean) : [],
+        // What the flyer of an event kept on a word two scenes share shows
+        // (SharedCore.PICTURE_SCENE_CHECKS). Shown only while that word is
+        // still what keeps the event: the owner's own verdict outranks it.
+        pictureNotice: event._pictureScene && typeof event._pictureScene === 'object' && event.bearSource === 'keyword' && typeof event._pictureScene.shows === 'string' && event._pictureScene.shows
+            ? {
+                words: Array.isArray(event._pictureScene.words) ? event._pictureScene.words.filter((word) => typeof word === 'string' && word).slice(0, 4) : [],
+                shows: event._pictureScene.shows.slice(0, 120),
+                seen: String(event._pictureScene.seen || '').trim().slice(0, 240)
+            }
+            : null,
         slotWins: Array.isArray(event._slotWins) ? event._slotWins.map((entry) => entry && entry.from ? `${entry.from} (${entry.fromCadence || 'unknown'})` : '').filter(Boolean).slice(0, 3) : [],
         slotTakeover: event._slotTakeover && typeof event._slotTakeover === 'object' ? { from: String(event._slotTakeover.from || ''), fromCadence: String(event._slotTakeover.fromCadence || '') } : null,
         venueOverlaps: Array.isArray(event._venueOverlap) ? event._venueOverlap.map((entry) => entry && (entry.withTitle || entry.title)).filter(Boolean).slice(0, 3) : [],

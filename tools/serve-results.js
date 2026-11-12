@@ -1063,6 +1063,14 @@ function renderReviewBearRow(display = {}, proposal = {}) {
         const who = flyer.heavyset && flyer.bigBearded ? 'a heavyset, big bearded man' : flyer.heavyset ? 'a heavyset man' : 'a big bearded man';
         notices.push(`🧔 The flyer shows ${who}${flyer.description ? ` — “${flyer.description}”` : ''} (a machine look)`);
     }
+    // A kept card whose only bear word is one another scene also uses, and
+    // whose flyer shows that other scene. Says what the machine saw; the
+    // card stays an ordinary kept card and the swipe is still his.
+    const picture = proposal.kind !== 'dropped' && display.pictureNotice && typeof display.pictureNotice === 'object' ? display.pictureNotice : null;
+    if (picture && picture.shows) {
+        const words = Array.isArray(picture.words) && picture.words.length > 0 ? `“${picture.words.join('”, “')}”` : 'one word';
+        notices.push(`🎭 Its only bear word is ${words}, and the flyer shows ${picture.shows}${picture.seen ? ` — “${picture.seen}”` : ''} (a machine look)`);
+    }
     const noticeHtml = notices.map((line) => `<div class="bear-notice">${escapeHtmlText(line)}</div>`).join('');
     return `<div class="bear-row"><div class="bear-state">${escapeHtmlText(state)}${tagText ? ` ${tagText}` : ''}${storedText ? ` ${storedText}` : ''}${maybeText ? ` ${maybeText}` : ''}</div>${noticeHtml}</div>`;
 }

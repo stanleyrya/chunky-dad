@@ -80,6 +80,16 @@ function getFlyerDateReader() {
     return flyerDateReader;
 }
 
+// The parser's own test for a printed day that is the page's day in
+// look-alike digits (a 1 read as a 7), so the deck and the run agree.
+let flyerLookalikeReader = null;
+function getFlyerLookalikeReader() {
+    if (!flyerLookalikeReader) {
+        flyerLookalikeReader = require(path.join(repoRoot, 'scripts', 'parsers', 'ai-web-parser')).readFlyerDayLookalike;
+    }
+    return flyerLookalikeReader;
+}
+
 // ---------------------------------------------------------------------------
 // Small readers
 // ---------------------------------------------------------------------------
@@ -421,7 +431,12 @@ function assessShape(input = {}) {
         const printed = stated.monthDays.map(ordinal);
         const spansThisDay = printed.length >= 2 && Math.max(...printed) - Math.min(...printed) <= 14
             && days.some((day) => ordinal(day) >= Math.min(...printed) && ordinal(day) <= Math.max(...printed));
-        if (stated.monthDays.length > 0 && !printsThisDay && !spansThisDay) {
+        // A stylised 1 reads as a 7: the picture was not a witness either
+        // way, and the page's date stands.
+        const misread = stated.monthDays.length > 0 && !printsThisDay && !spansThisDay ? getFlyerLookalikeReader()(flyerText, days) : null;
+        if (misread) {
+            add('flyer-date', null, `the flyer reads as ${MONTH_NAMES[misread.month - 1]} ${misread.read}, which is the page’s ${misread.day} with a look-alike digit; the page’s date is kept`);
+        } else if (stated.monthDays.length > 0 && !printsThisDay && !spansThisDay) {
             add('flyer-date', false, `the flyer says ${pairText()}; this card is ${dayText}`);
         } else if (stated.monthDays.length === 0 && months.length > 0 && !days.some((day) => months.some((entry) => entry.month === day.month))) {
             add('flyer-date', false, `the flyer says ${Array.from(new Set(months.map((entry) => MONTH_NAMES[entry.month - 1]))).slice(0, 3).join(', ')}; this card is ${dayText}`);

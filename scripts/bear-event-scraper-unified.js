@@ -346,8 +346,10 @@ class BearEventScraperOrchestrator {
                         );
                         // The flyer look on dropped events (a notice on the
                         // deck's not-bear cards): same injection, same reason.
+                        // The third argument carries another question for the
+                        // same picture (shared-core's PICTURE_SCENE_CHECKS).
                         sharedCore.setFlyerLookReader(
-                            (imageUrl, httpAdapter) => aiParser.getFlyerLookResponse(imageUrl, httpAdapter)
+                            (imageUrl, httpAdapter, options) => aiParser.getFlyerLookResponse(imageUrl, httpAdapter, options)
                         );
                         parsers[name] = aiParser;
                     } else {

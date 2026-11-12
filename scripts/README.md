@@ -370,6 +370,42 @@ beats a venue's, a venue's beats a platform's; on a tie the single event page
 this run read the event from replaces another page of the same site; otherwise
 the saved link stays. A card raised by another field still shows the link
 change.
+
+**A stored verdict is looked up under every name the record answers to.** The
+pipeline may put a promoter's brand in front of a title; the verdict store is
+asked for the title as shown and for the title the page itself used
+(`SharedCore.getStatedTitles`), so a verdict given before the rename still
+applies.
+
+**Bear runs in destination towns.** A not-bear tapped on a night inside a bear
+run is stored with that run (`bearRuns` on the verdict). During a run in a
+destination town a party with a stored not-bear is still kept, tagged
+`bear-run`, unless the not-bear was given on a night of that run
+(`🏕️ BEAR RUN` in the log). An ordinary-night no never hides the week's programme.
+
+**One room, one clock.** A slot at a venue is claimed only by a record whose
+page states a clock time; a date-only row claims nothing. When a one-off takes
+a weekly night's slot, title, link and picture move together (`🪑 SLOT`); a
+merge never mixes one party's name with the other's flyer.
+
+**Picture check for a shared word.** Some bear words belong to another scene
+too (`SharedCore.PICTURE_SCENE_CHECKS`: today "fur" and "furry", which the furry
+fandom also uses). When such a word is the ONLY bear word the page gave an
+event, the vision model is asked one yes/no question about the flyer (fursuits
+or cartoon animal characters?). A yes puts a flag and a line on the owner's
+card (`🎭 PICTURE CHECK`); it never drops the event. A word that sits only in
+the brand prefix the pipeline added is not page evidence
+(`getPageBearKeywords`). A new scene is one more row in the table.
+
+**The page's date wins; a look-alike digit is a misread.** The flyer's text is
+a witness, never the source: the page's date is what ships. When the day read
+off a flyer is the page's day with one digit swapped for its look-alike
+(`FLYER_OCR_LOOKALIKE_DIGITS` in the parser, today 1 and 7), the flyer is not
+counted against the card and stays the event's own (`readFlyerDayLookalike`);
+the shape report says so and reports the check as not judged. A weekday on the
+flyer that fits the read date and not the page's makes it a real disagreement
+again. Any other one-digit difference is a real finding (measured: 18 of 19
+were cards a day off), so a pair joins the table only when a misread is seen.
 - Send the full set of params every time; empty values clear fields.
 
 Supported fields (aliases accepted): title/name/summary, startDate/start/date, endDate/end,
