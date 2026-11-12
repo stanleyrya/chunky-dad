@@ -9,7 +9,7 @@ const rq = require('../tools/review-queue');
 const ICS = [
   'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//test//EN',
   'BEGIN:VEVENT', 'UID:AAAA-1111', 'DTSTAMP:20300101T000000Z', 'DTSTART:20301016T080000Z', 'DTEND:20301018T050000Z', 'SUMMARY:Furry Friday', 'LOCATION:-33.87\\, 151.22',
-  'DESCRIPTION:bar: Kings Cross Hotel\\naddress: 244 William St\\, Sydney', 'END:VEVENT',
+  'DESCRIPTION:bar: Kings Cross Hotel\\naddress: 244 William St\\, Sydney\\nimage: https://furry.example/flyer.jpg', 'URL:https://furry.example/friday', 'END:VEVENT',
   'END:VCALENDAR'
 ].join('\r\n');
 
@@ -30,8 +30,15 @@ test('add-deck-card: an edit card reads the saved record from the published cale
     assert.equal(edit.startDate, '2030-10-16T08:00:00.000Z');
     assert.deepEqual(edit.changes, { endDate: { from: '2030-10-18T05:00:00.000Z', to: '2030-10-16T11:00:00.000Z' } });
     assert.equal(edit.key, 'manual|edit-sydney-furry-friday-2030-10-16');
+    assert.equal(edit.url, 'https://furry.example/friday', 'the saved record\'s page rides on the card');
+    assert.equal(edit.image, 'https://furry.example/flyer.jpg', 'and its flyer');
     const choose = cli.main(['choose', '--title', 'A or B?', '--why', 'both saved', '--option', 'Keep A', '--option', 'Keep B'], { repoRoot, sharedRoot, log }).card;
     assert.deepEqual(choose.options, ['Keep A', 'Keep B']);
+    assert.equal('url' in choose, false, 'no page given, none shown');
+    const shown = cli.main(['choose', '--title', 'Bear or not?', '--why', 'asked again', '--option', 'Keep it', '--option', 'Not bear', '--url', 'https://bar.example/night', '--image', 'https://bar.example/flyer.jpg'], { repoRoot, sharedRoot, log }).card;
+    assert.equal(shown.url, 'https://bar.example/night');
+    assert.equal(shown.image, 'https://bar.example/flyer.jpg');
+    assert.equal(cli.main(['drop', '--key', shown.key], { repoRoot, sharedRoot, log }).removed, true);
     const listed = cli.main(['list'], { repoRoot, sharedRoot, log }).cards;
     assert.deepEqual(listed.map((c) => c.action).sort(), ['choose', 'edit']);
     assert.equal(rq.loadManualCards(rq.getManualCardsPath(sharedRoot)).cards.length, 2, 'written to the shared dir');

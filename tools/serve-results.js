@@ -1307,13 +1307,16 @@ function renderReviewManualCard(entry, ctx = {}) {
     const record = p.uid || p.bar || p.address
         ? `<div class="line muted">${calendarName ? `📱 ${escapeHtmlText(calendarName)} · ` : ''}${p.uid ? `saved event ${escapeHtmlText(String(p.uid).slice(0, 8))}… · ` : ''}${escapeHtmlText(p.city || '')}</div>`
         : '';
+    const pageChip = reviewChip(ctx, 'website', '🔗', p.url);
     return `<div class="card-body manual">
   <div class="manual-band">✍️ Manual card · a one-off from the assistant${p.createdAt ? ` · ${escapeHtmlText(String(p.createdAt).slice(0, 10))}` : ''}</div>
+  ${renderReviewThumb({}, p.image)}
   <div class="kind-row"><span class="kind kind-manual">✍️ ${action}</span><span class="muted reason">${hint}</span></div>
   <h2>${escapeHtmlText(p.title)}</h2>
   ${dateLine ? `<div class="line">📅 ${escapeHtmlText(dateLine)}</div>` : ''}
   ${p.bar || p.address ? renderReviewRouteLine(ctx, { bar: p.bar, address: p.address, city: p.city, coordinates: '' }) : ''}
   ${record}
+  ${pageChip ? `<div class="chips">${pageChip}</div>` : ''}
   <div class="line manual-why">${escapeHtmlText(p.why || '')}</div>
   ${changes}
   ${options}
@@ -2030,6 +2033,7 @@ body { overscroll-behavior-y:none; }
 .card:has(> .card-body.manual) { box-shadow:0 0 0 2px rgba(0,140,140,.6), var(--shadow); }
 .manual-band { margin:-14px -16px 10px; padding:7px 16px; background:#0a7f7f; color:#fff; font-size:12px; font-weight:700; letter-spacing:.03em; }
 .manual-why { font-size:15px; margin:8px 0; }
+.manual-band + .thumb { margin-top:-10px; }
 .manual-changes { border-collapse:collapse; width:100%; margin:8px 0; font-size:13px; }
 .manual-changes th { text-align:left; font-weight:600; padding:4px 6px 4px 0; white-space:nowrap; vertical-align:top; }
 .manual-changes td { padding:4px 4px; vertical-align:top; overflow-wrap:anywhere; }
@@ -2683,6 +2687,9 @@ window.__startDeck = function () {
     var tabs = [['all', 'All'], ['new', 'New'], ['merge', 'Updates'], ['series', 'Series'], ['bar', 'Bars'], ['gone', 'Gone'], ['dropped', 'Not bear']];
     // Shown only while they hold something, like the conflicts tab.
     if (lowRiskTabShown(c.lowrisk)) tabs.splice(1, 0, ['lowrisk', '🟢 Low risk']);
+    // The assistant's one-offs sit at the end of the stack; their tab comes
+    // first so a question waiting on the owner is one tap away.
+    if (c.manual > 0 || filter === 'manual') tabs.splice(1, 0, ['manual', '✍️ Manual']);
     if (c.worth > 0 || filter === 'worth') tabs.push(['worth', '👀 Worth a look']);
     if (c.maybe > 0 || filter === 'maybe') tabs.push(['maybe', '🤔 Maybes']);
     if (c['verdict-conflict'] > 0 || filter === 'verdict-conflict') tabs.push(['verdict-conflict', 'Both ways']);
