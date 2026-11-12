@@ -3414,7 +3414,15 @@ class SharedCore {
         if (event._action === 'new') return true;
         // A big-drift merge is ALWAYS a card — it is withheld from every
         // automatic write precisely so the owner sees its data.
-        if (event._action === 'merge') return this.getOwnerReviewChangedFields(event).length > 0 || Boolean(this.getOwnerReviewBarChange(event)) || Boolean(event._bigDriftWithheld);
+        // A merge whose only stored change is the LINK is not a card
+        // (owner, 2026-11-11): links are decided by the merge rules, not by
+        // swipes — 85 of his 197 merge approvals were link-only and every
+        // link rejection became a rule. The link still shows, and is still
+        // covered by the decision, on a card raised for another field.
+        if (event._action === 'merge') {
+            return this.getOwnerReviewChangedFields(event).some(field => field !== 'url')
+                || Boolean(this.getOwnerReviewBarChange(event)) || Boolean(event._bigDriftWithheld);
+        }
         return false;
     }
 
@@ -7698,6 +7706,68 @@ Rules:
         return Boolean(keyA) && keyA === keyB;
     }
 
+    // A link's per-night markers: query parameters whose VALUE is a calendar
+    // day (?occurrence=2026-12-03, ?date=20261203, ?start=2026-12-03T21:00).
+    // Returns the page without those parameters and the days they name
+    // (YYYYMMDD, the shape getEventUrlDateTokens speaks), or null for a
+    // value that is not a link. Page-derived: no parameter names are listed.
+    splitLinkNightMarkers(value) {
+        const text = typeof value === 'string' ? value.trim() : '';
+        const match = text.match(/^(https?:\/\/[^?#]+)(?:\?([^#]*))?/i);
+        if (!match) return null;
+        const days = [];
+        const kept = [];
+        for (const pair of String(match[2] || '').split('&')) {
+            if (!pair) continue;
+            const raw = pair.includes('=') ? pair.slice(pair.indexOf('=') + 1) : '';
+            let decoded = raw;
+            try { decoded = decodeURIComponent(raw); } catch (_) { decoded = raw; }
+            const day = decoded.match(/^(20\d{2})-?(\d{2})-?(\d{2})(?!\d)/);
+            if (day && Number(day[2]) >= 1 && Number(day[2]) <= 12 && Number(day[3]) >= 1 && Number(day[3]) <= 31) {
+                days.push(`${day[1]}${day[2]}${day[3]}`);
+                continue;
+            }
+            kept.push(pair);
+        }
+        return { page: `${match[1]}${kept.length > 0 ? `?${kept.join('&')}` : ''}`, days };
+    }
+
+    // THE LINK RULE (owner, 2026-11-11: "use rules to decide what link to
+    // show … instead of following my swipes"). What the ladder in
+    // resolveConflictDeterministically left undecided about a calendar
+    // merge's website is decided here and never by the model: the model
+    // took the scraped link 124 times and kept the saved one 73 times in
+    // fifteen runs, with opposite reasons for the same pair. In order:
+    //   1. what the link IS (rankMergeWebsite) — the scraped link replaces
+    //      the saved one only when it ranks strictly higher;
+    //   2. on a tie, on one site: the single event page this run read the
+    //      record from (same name) replaces another page of that site — a
+    //      saved list view (/events/liste/?currency=CAD) yields to
+    //      /apero-ours/;
+    //   3. otherwise the saved link stays.
+    resolveCalendarWebsiteByRule(calendarValue, scraperValue, context) {
+        const records = context && context.records ? context.records : null;
+        if (!records || !records.b) return { winner: 'a', reason: 'no rule prefers the scraped link — saved link kept' };
+        const byAuthority = this.resolveCalendarMergeByAuthority('website', calendarValue, scraperValue, context);
+        if (byAuthority && byAuthority.winner === 'b') return byAuthority;
+        const scraped = records.b;
+        const partsA = this.getUrlRuleParts(calendarValue);
+        const partsB = this.getUrlRuleParts(scraperValue);
+        const promoterSite = scraped._staticFields && typeof scraped._staticFields.website === 'string' ? scraped._staticFields.website : '';
+        const promoterHost = this.getHostFromUrl(promoterSite).toLowerCase().replace(/^www\./, '');
+        const tie = this.rankMergeWebsite(calendarValue, scraped, promoterHost) === this.rankMergeWebsite(scraperValue, scraped, promoterHost);
+        if (tie && partsA && partsB && this.areUrlHostsSameSite(partsA.host, partsB.host)
+            && scraped._pageClassification === 'event-page'
+            && this.isSameLinkTarget(String(scraped._sourcePageUrl || ''), scraperValue)) {
+            const savedTitle = records.a && typeof records.a.title === 'string' ? records.a.title.trim() : '';
+            const scrapedTitle = typeof scraped.title === 'string' ? scraped.title.trim() : '';
+            if (savedTitle && scrapedTitle && this.titlesShareIdentity(savedTitle, scrapedTitle, scraped.bar || (records.a && records.a.bar) || '')) {
+                return { winner: 'b', reason: 'the single event page this run read the event from replaces another page of the same site' };
+            }
+        }
+        return { winner: 'a', reason: byAuthority && byAuthority.reason ? `${byAuthority.reason} — saved link kept` : 'no rule prefers the scraped link — saved link kept' };
+    }
+
     // What a website link IS: the promoter's registry site (4), an event
     // page on the event's own site (3), an event page elsewhere (2), a
     // ticketing/social platform link or a bare site root (1).
@@ -7951,6 +8021,22 @@ Rules:
             const ownA = SharedCore.isSameEventPage(valueA, ownPage);
             const ownB = SharedCore.isSameEventPage(valueB, ownPage);
             if (siblingA && ownB) {
+                // The scraped page is only "this event's own" when the
+                // scraped record IS this event. A record carrying another
+                // party's name that was folded into the saved night (run
+                // 20261111-052828, Eagle LA 2026-11-20: HOT BOOTS GEAR NIGHT
+                // matched into the saved BLUF LA, the title stayed BLUF LA
+                // and the link moved to /events/calf-bb-event/) brings its
+                // own page along — the saved link stays with the saved name.
+                // Calendar merges only; once a rename is approved the names
+                // agree and the link follows on the next run.
+                const calendarMerge = context.sideLabels && context.sideLabels.a === 'calendar' && context.sideLabels.b === 'scraped';
+                const savedTitle = context.records.a && typeof context.records.a.title === 'string' ? context.records.a.title.trim() : '';
+                const scrapedTitle = typeof context.records.b.title === 'string' ? context.records.b.title.trim() : '';
+                if (calendarMerge && savedTitle && scrapedTitle
+                    && !this.titlesShareIdentity(savedTitle, scrapedTitle, context.records.b.bar || context.records.a.bar || '')) {
+                    return { winner: 'a', reason: `the scraped record carries another name ("${scrapedTitle.slice(0, 60)}") — its page is not this event's link, saved link kept` };
+                }
                 return { winner: 'b', reason: 'the other link is another event\'s page on this site (same section, different slug) — this event\'s own page wins' };
             }
             if (siblingB && ownA) {
@@ -8000,6 +8086,41 @@ Rules:
         // image slots keep their query-bearing crops arbitrating below.
         if (LINK_IDENTITY_MERGE_FIELDS.has(fieldName) && this.isSameLinkTarget(valueA, valueB)) {
             return { winner: 'a', reason: 'same link, different spelling (scheme/www/trailing slash) — no change' };
+        }
+        // SAME PAGE, A PER-NIGHT MARKER. A recurring night's page is often
+        // addressed with the night in the query (/events/cub-scout-3/ and
+        // /events/cub-scout-3/?occurrence=2026-12-04 — MEC, Tribe, Wix
+        // repeat the pattern). That is one page, not two, and it was the
+        // largest single source of link arbitration: 174 of the 197 website
+        // conflicts the model decided in the 15 runs to 2026-11-11, picking
+        // "the cleaner link" and "the more specific link" for the same pair
+        // inside one run. Decided here by what the marker says: a link that
+        // names THIS event's night beats a bare one, a bare one beats a link
+        // that names another night, and anything else is no change.
+        if ((fieldName === 'website' || fieldName === 'url') && urlA && urlB) {
+            const nightA = this.splitLinkNightMarkers(valueA);
+            const nightB = this.splitLinkNightMarkers(valueB);
+            if (nightA && nightB && (nightA.days.length > 0 || nightB.days.length > 0)
+                && this.isSameLinkTarget(nightA.page, nightB.page)) {
+                const ownDays = this.getEventUrlDateTokens(context);
+                const rank = (night) => (night.days.length === 0 ? 1 : (night.days.some(day => ownDays.includes(day)) ? 2 : 0));
+                const rankA = rank(nightA);
+                const rankB = rank(nightB);
+                if (rankB > rankA) {
+                    return {
+                        winner: 'b',
+                        reason: rankB === 2
+                            ? "same page — the link that names this event's own night wins"
+                            : "same page — the other link names another night's date"
+                    };
+                }
+                return {
+                    winner: 'a',
+                    reason: rankA > rankB
+                        ? (rankA === 2 ? "same page — the link that names this event's own night wins" : "same page — the other link names another night's date")
+                        : 'same page, only the per-night date marker differs — no change'
+                };
+            }
         }
         // Hub rung: a page 3+ differently titled events of the batch share
         // (stampBatchHubLinks — the stamp rides on the scraped record) is
@@ -20557,6 +20678,26 @@ Rules:
                         chosenValue: calendarValue,
                         reason: 'calendar stickiness (binding) — saved value kept without AI arbitration',
                         source: 'sticky'
+                    });
+                    return;
+                }
+                // THE LINK RULE: an undecided website is decided by rule
+                // (resolveCalendarWebsiteByRule), never by the model.
+                if (fieldName === 'website') {
+                    const ruled = this.resolveCalendarWebsiteByRule(calendarValue, scraperValue, mergeContext);
+                    const ruledValue = ruled.winner === 'b' ? scraperValue : calendarValue;
+                    mergedObject[fieldName] = ruledValue;
+                    if (ruled.winner === 'b' && !this.mergeValuesEqualForTracking(scraperValue, calendarValue)) {
+                        clobberedFields.push(fieldName);
+                    }
+                    console.log(`🔗 LINK RULE: "${mergeTitle}" website ${ruled.winner === 'b' ? `"${calendarValue}" → "${scraperValue}"` : `kept "${calendarValue}" over "${scraperValue}"`} — ${ruled.reason}`);
+                    aiDecisionRecords.push({
+                        field: fieldName,
+                        existingValue: calendarValue,
+                        newValue: scraperValue,
+                        chosenValue: ruledValue,
+                        reason: ruled.reason,
+                        source: 'deterministic'
                     });
                     return;
                 }

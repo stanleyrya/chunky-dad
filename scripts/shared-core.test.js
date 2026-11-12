@@ -33449,3 +33449,149 @@ test('invisible marks: a saved title that carries them yields to the clean name 
   assert.ok(!asked.some(prompt => prompt.includes('\u200e')), 'no model is asked to pick between the two');
   assert.ok(logs.some(line => line.includes('field=title resolved deterministically') && line.includes('only adds invisible marks')), logs.filter(line => /MERGE/.test(line)).join('\n'));
 });
+
+// ── THE LINK RULE (owner, 2026-11-11) ───────────────────────────────────────
+// "We'll probably want to use rules to decide what link to show … instead of
+// following my swipes." 85 of 197 merge approvals were link-only; the model
+// decided 197 website conflicts in fifteen runs (took 124, kept 73), 174 of
+// them one page told apart by ?occurrence=<night> only.
+const CUB_SCOUT_PAGE = 'https://eaglela.com/events/cub-scout-3/';
+const CUB_SCOUT_NIGHT = `${CUB_SCOUT_PAGE}?occurrence=2026-12-04`;
+
+function eagleLaLinkContext(overrides = {}) {
+  const start = '2026-12-05T05:00:00.000Z'; // Friday 2026-12-04, 9pm in Los Angeles
+  return {
+    sideLabels: { a: 'calendar', b: 'scraped' },
+    records: {
+      a: { title: 'CUBSCOUT', startDate: start, timezone: 'America/Los_Angeles', ...(overrides.a || {}) },
+      b: { title: 'CUBSCOUT', startDate: start, timezone: 'America/Los_Angeles', bar: 'Eagle LA', ...(overrides.b || {}) }
+    }
+  };
+}
+
+test('splitLinkNightMarkers: a query value that is a calendar day is a night marker, whatever the parameter is called', () => {
+  const core = createCore();
+  assert.deepEqual(core.splitLinkNightMarkers(CUB_SCOUT_NIGHT), { page: CUB_SCOUT_PAGE, days: ['20261204'] });
+  assert.deepEqual(core.splitLinkNightMarkers('https://venue.example/night?date=20261204&tab=tickets'), { page: 'https://venue.example/night?tab=tickets', days: ['20261204'] });
+  assert.deepEqual(core.splitLinkNightMarkers('https://venue.example/night?start=2026-12-04T21%3A00'), { page: 'https://venue.example/night', days: ['20261204'] });
+  assert.deepEqual(core.splitLinkNightMarkers('https://tickets.example/e/?id=20269945&ref=x'), { page: 'https://tickets.example/e/?id=20269945&ref=x', days: [] }, 'an id is not a day');
+  assert.deepEqual(core.splitLinkNightMarkers(CUB_SCOUT_PAGE), { page: CUB_SCOUT_PAGE, days: [] });
+  assert.equal(core.splitLinkNightMarkers('@eaglela'), null);
+});
+
+test('link rule: one page told apart by a per-night marker is decided by the marker, in both directions', () => {
+  const core = createCore();
+  const context = eagleLaLinkContext();
+  const own = "same page — the link that names this event's own night wins";
+  assert.deepEqual(core.resolveConflictDeterministically('website', CUB_SCOUT_NIGHT, CUB_SCOUT_PAGE, context), { winner: 'a', reason: own });
+  assert.deepEqual(core.resolveConflictDeterministically('website', CUB_SCOUT_PAGE, CUB_SCOUT_NIGHT, context), { winner: 'b', reason: own });
+  const otherNight = `${CUB_SCOUT_PAGE}?occurrence=2026-11-06`;
+  const stale = "same page — the other link names another night's date";
+  assert.deepEqual(core.resolveConflictDeterministically('website', otherNight, CUB_SCOUT_PAGE, context), { winner: 'b', reason: stale }, 'a saved link naming another night yields to the bare page');
+  assert.deepEqual(core.resolveConflictDeterministically('website', CUB_SCOUT_PAGE, otherNight, context), { winner: 'a', reason: stale });
+  assert.deepEqual(core.resolveConflictDeterministically('website', otherNight, CUB_SCOUT_NIGHT, context), { winner: 'b', reason: own });
+  assert.deepEqual(core.resolveConflictDeterministically('website', otherNight, `${CUB_SCOUT_PAGE}?occurrence=2026-10-02`, context),
+    { winner: 'a', reason: 'same page, only the per-night date marker differs — no change' });
+  // Another page is not this rung's business.
+  const sibling = core.resolveConflictDeterministically('website', CUB_SCOUT_NIGHT, 'https://venue.example/other/?occurrence=2026-12-04', context);
+  assert.ok(!sibling || !/same page/.test(sibling.reason));
+});
+
+test('link rule: a scraped record carrying another name does not bring its page into the saved night', () => {
+  const core = createCore();
+  const bluf = 'https://eaglela.com/events/bluf/?occurrence=2026-11-20';
+  const calf = 'https://eaglela.com/events/calf-bb-event/?occurrence=2026-11-20';
+  const folded = { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: { title: 'BLUF LA' }, b: { title: 'HOT BOOTS GEAR NIGHT', url: calf, bar: 'Eagle LA' } } };
+  const kept = core.resolveConflictDeterministically('website', bluf, calf, folded);
+  assert.equal(kept.winner, 'a');
+  assert.match(kept.reason, /carries another name \("HOT BOOTS GEAR NIGHT"\)/);
+  // The same name still takes its own page (the rung's first job).
+  const same = { sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: { title: 'BLUF LA' }, b: { title: 'BLUF LA', url: bluf } } };
+  assert.equal(core.resolveConflictDeterministically('website', calf, bluf, same).winner, 'b');
+  // Parser-to-parser merges are untouched.
+  const parserMerge = { sideLabels: { a: 'existing', b: 'incoming' }, records: folded.records };
+  assert.match(core.resolveConflictDeterministically('website', bluf, calf, parserMerge).reason, /this event's own page wins/);
+});
+
+test('link rule: what the ladder leaves open is decided by rank, then by the page the run read, else the saved link stays', () => {
+  const core = createCore();
+  const listView = 'https://www.bearitmtl.com/events/liste/?currency=CAD';
+  const page = 'https://www.bearitmtl.com/apero-ours/';
+  const read = { title: 'Bear it MTL: APÉRO OURS', _sourcePageUrl: page, _pageClassification: 'event-page', _venueSitePageHost: 'bearitmtl.com' };
+  const context = (b, a = {}) => ({ sideLabels: { a: 'calendar', b: 'scraped' }, records: { a: { title: 'Bear it MTL: APÉRO OURS', ...a }, b } });
+  assert.deepEqual(core.resolveCalendarWebsiteByRule(listView, page, context(read)),
+    { winner: 'b', reason: 'the single event page this run read the event from replaces another page of the same site' });
+  assert.equal(core.resolveCalendarWebsiteByRule(listView, page, context({ ...read, _sourcePageUrl: 'https://www.bearitmtl.com/jim-queen-cinematheque/' })).winner, 'a', 'read off another page: no evidence');
+  assert.equal(core.resolveCalendarWebsiteByRule(listView, page, context({ ...read, _pageClassification: 'multi-event-page' })).winner, 'a');
+  assert.equal(core.resolveCalendarWebsiteByRule(listView, page, context(read, { title: 'JIM QUEEN CINEMATHEQUE' })).winner, 'a', 'another name');
+  // Rank: a ticket platform never replaces a page of the event's own site…
+  const platform = core.resolveCalendarWebsiteByRule(page, 'https://www.eventbrite.com/e/apero-ours-tickets-1', context(read));
+  assert.equal(platform.winner, 'a');
+  assert.match(platform.reason, /saved link kept$/);
+  // …and the promoter's registry site replaces a platform link.
+  const registry = { title: 'Bear it MTL: APÉRO OURS', _staticFields: { website: 'https://www.bearitmtl.com' } };
+  assert.equal(core.resolveCalendarWebsiteByRule('https://www.eventbrite.com/e/apero-ours-tickets-1', page, context(registry)).winner, 'b');
+});
+
+function buildCubScoutPair(core, storedWebsite, scrapedWebsite, scrapedExtras = {}) {
+  const start = new Date('2026-12-05T05:00:00.000Z');
+  const scraped = {
+    title: 'CUBSCOUT', startDate: start, endDate: new Date('2026-12-05T10:00:00.000Z'), source: 'ai-web', city: 'la', bar: 'Eagle LA',
+    timezone: 'America/Los_Angeles', website: scrapedWebsite, url: scrapedWebsite,
+    _parserConfig: { name: 'Eagle LA' },
+    _fieldPriorities: { ...core.getResolvedFieldPriorities({}), website: { priority: ['ai-web'], merge: 'ai' } },
+    ...scrapedExtras
+  };
+  const existing = {
+    title: 'CUBSCOUT', startDate: start, endDate: new Date('2026-12-05T10:00:00.000Z'), location: '34.0906, -118.2796', url: '',
+    notes: ['bar: Eagle LA', 'timezone: America/Los_Angeles', `website: ${storedWebsite}`].join('\n')
+  };
+  return { scraped, existing };
+}
+
+test('calendar merge: a per-night marker on the saved link never reaches the model and never changes the link', async () => {
+  const core = createCore();
+  const { scraped, existing } = buildCubScoutPair(core, CUB_SCOUT_NIGHT, CUB_SCOUT_PAGE);
+  const adapter = buildArbitrationAdapter({ website: { pick: 'scraped', value: CUB_SCOUT_PAGE, reason: 'cleaner' } });
+  const merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  assert.equal(merged.website, CUB_SCOUT_NIGHT);
+  const decision = merged._mergeDecisions.find(d => d.field === 'website');
+  assert.equal(decision.source, 'deterministic');
+  assert.equal(decision.reason, "same page — the link that names this event's own night wins");
+  assert.ok(!adapter.calls.some(call => JSON.stringify(call).includes('cub-scout-3')), 'the model is never shown the pair');
+});
+
+test('calendar merge: a website no rung decides is ruled, logged as a link rule and never sent to the model', async () => {
+  const core = createCore();
+  const other = 'https://eaglela.com/calendar/cubscout-december/';
+  const { scraped, existing } = buildCubScoutPair(core, 'https://eaglela.com/nights/cubscout/', other);
+  const adapter = buildArbitrationAdapter({ website: { pick: 'scraped', value: other, reason: 'newer' } });
+  const lines = [];
+  const restore = captureFinalBuildLogs(lines);
+  let merged;
+  try {
+    merged = await core.createFinalEventObject(existing, scraped, { httpAdapter: adapter });
+  } finally {
+    restore();
+  }
+  assert.equal(merged.website, 'https://eaglela.com/nights/cubscout/', 'no rule prefers the scraped link: the saved one stays');
+  const decision = merged._mergeDecisions.find(d => d.field === 'website');
+  assert.equal(decision.source, 'deterministic');
+  assert.ok(lines.some(line => line.startsWith('🔗 LINK RULE: "CUBSCOUT" website kept "https://eaglela.com/nights/cubscout/"')),
+    `got: ${JSON.stringify(lines.filter(l => l.includes('website')))}`);
+  assert.ok(!adapter.calls.some(call => JSON.stringify(call).includes('cubscout-december')), 'the model is never shown the pair');
+});
+
+test('owner review: a merge whose only stored change is the link is housekeeping; with another field it is a card that still shows the link', () => {
+  const core = createCore();
+  const linkOnly = reviewMergeEvent({ title: 'BEEFMINCE Brief Encounter', url: 'https://beefmince.co.uk/events/rvt', _changes: ['url', 'notes'] });
+  linkOnly._existingEvent = { ...linkOnly._existingEvent, url: 'https://beefmince.co.uk/' };
+  assert.deepEqual(core.getOwnerReviewChangedFields(linkOnly), ['url']);
+  assert.equal(core.isOwnerReviewCandidate(linkOnly), false, 'not a card');
+  assert.equal(core.applyOwnerDecisions([linkOnly], []).housekeeping, 1, 'and it writes without a decision');
+  assert.equal(linkOnly._ownerReviewWithheld, undefined);
+  const renamedToo = reviewMergeEvent({ url: 'https://beefmince.co.uk/events/rvt', _changes: ['title', 'url', 'notes'] });
+  renamedToo._existingEvent = { ...renamedToo._existingEvent, url: 'https://beefmince.co.uk/' };
+  assert.equal(core.isOwnerReviewCandidate(renamedToo), true);
+  assert.deepEqual(Object.keys(core.buildOwnerReviewProposal(renamedToo).changes).sort(), ['title', 'url']);
+});

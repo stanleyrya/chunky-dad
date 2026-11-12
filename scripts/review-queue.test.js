@@ -992,7 +992,9 @@ test('bear verdicts: the upsert hands back the verdict it overwrote, and an undo
 
 // ---------------------------------------------------------------------------
 // The same change on different events is one card (owner, 2026-09-29: six
-// BeefDip parties each carried "beefdip.com/tags/ → beefdip.com").
+// BeefDip parties each carried "beefdip.com/tags/ → beefdip.com"). Since
+// 2026-11-11 a link-only change is not a card at all (the merge rules
+// decide links), so the fold is shown on a pin every party shares.
 // ---------------------------------------------------------------------------
 function beefDipLinkFix(title, days, overrides = {}) {
   const start = iso(FUTURE + days * 86400000);
@@ -1009,7 +1011,28 @@ function beefDipLinkFix(title, days, overrides = {}) {
   });
 }
 
+function beefDipPinFix(title, days, overrides = {}) {
+  const event = beefDipLinkFix(title, days);
+  event._existingEvent.notes = 'bar: Hotel Delfin\nwebsite: https://beefdip.com';
+  event._existingEvent.location = '20.61, -105.21';
+  event._original.calendar.url = 'https://beefdip.com';
+  event._original.calendar.website = 'https://beefdip.com';
+  event._original.calendar.location = '20.61, -105.21';
+  event._changes = ['location', 'notes'];
+  return Object.assign(event, overrides);
+}
+
+test('buildDeck: a merge whose only stored change is the link is not a card; with another field the link rides on that card', () => {
+  const renamed = beefDipLinkFix('PRE WELCOME PARTY', 3);
+  renamed._existingEvent.title = 'PRE-WELCOME';
+  renamed._original.calendar.title = 'PRE-WELCOME';
+  const deck = deckOf(runPayload({ analyzedEvents: [beefDipLinkFix('WELCOME PARTY', 0), beefDipLinkFix('TIDAL WAVE', 1), renamed] }));
+  assert.deepEqual(deck.cards.map((card) => card.proposal.title), ['PRE WELCOME PARTY'], 'the two link-only merges are housekeeping');
+  assert.deepEqual(Object.keys(deck.cards[0].proposal.changes).sort(), ['title', 'url'], 'the link change is still on the card that another field raised');
+});
+
 test('buildDeck: the same change on different events of one source folds into one item; another change, another source or a date change stays apart', () => {
+  const beefDipLinkFix = beefDipPinFix;
   const renamed = beefDipLinkFix('PRE WELCOME PARTY', 3);
   renamed._existingEvent.title = 'PRE-WELCOME';
   renamed._original.calendar.title = 'PRE-WELCOME';
@@ -1026,7 +1049,7 @@ test('buildDeck: the same change on different events of one source folds into on
   assert.deepEqual(folded.map((card) => card.series && card.series.type), ['change', 'change', 'change']);
   assert.equal(new Set(folded.map((card) => card.series.key)).size, 1, 'one item');
   assert.equal(folded[0].series.size, 3);
-  assert.deepEqual(folded[0].series.change, [{ field: 'url', from: 'https://beefdip.com/tags/', to: 'https://beefdip.com' }]);
+  assert.deepEqual(folded[0].series.change, [{ field: 'location', from: '20.61, -105.21', to: '20.6, -105.2' }]);
   assert.deepEqual(folded[0].series.nights.map((night) => night.key), folded.map((card) => card.key), 'each event keeps its own key');
   assert.ok(folded[0].series.nights[1].label.startsWith('TIDAL WAVE · '), 'a member is named by its title and its day');
   assert.equal(new Set(folded.map((card) => card.key)).size, 3);
