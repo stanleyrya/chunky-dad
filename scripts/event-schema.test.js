@@ -1003,9 +1003,10 @@ test('bear runs: a destination town implies city reach; a big city implies none;
 
   assert.deepEqual(EventSchema.keepingEventTags('drag, kink, pup, underwear, rubber, diaper'), []);
   assert.deepEqual(EventSchema.keepingEventTags('kink, leather'), ['leather']);
+  assert.deepEqual(EventSchema.keepingEventTags('gainer, naked'), ['gainer']);
   assert.deepEqual(EventSchema.keepingEventTags(['bear-crowd', 'drag']), ['bear-crowd']);
   for (const [tag, entry] of Object.entries(EventSchema.EVENT_TAGS)) {
-    assert.equal(Boolean(entry.keeps), ['leather', 'bear-crowd', 'bear-run'].includes(tag), `${tag} keeps flag`);
+    assert.equal(Boolean(entry.keeps), ['leather', 'gainer', 'bear-crowd', 'bear-run'].includes(tag), `${tag} keeps flag`);
   }
 });
 

@@ -633,10 +633,16 @@ class SharedCore {
             'bearracuda', 'furball', 'megawoof', 'grizzly', 'chunk',
             'chub', 'beef', 'scruff'
         ];
+        // 'furry' came back on 2026-11-11 (owner: "Fur or furry -> bear
+        // (unless furry like the fetish)"): the word passes, and so does
+        // 'fur', unless the same text speaks the fandom's own vocabulary
+        // (furryFandomPattern) — then neither counts and the AI tier reads
+        // the event on the rest of its words.
         this.bearWordBoundaryKeywords = [
-            'dad', 'dads', 'fat', 'fur', 'pig', 'wolf', 'wolves',
+            'dad', 'dads', 'fat', 'fur', 'furry', 'pig', 'wolf', 'wolves',
             'thick', 'burly', 'stocky', 'husky', 'beard', 'bearded'
         ];
+        this.furryFandomPattern = /\b(?:fursuit(?:s|er|ers|ing)?|fursona(?:s)?|murrsuit(?:s)?|furries|furcon|furmeet(?:s)?|anthro|anthropomorphic|kemono|pawpet|furry (?:fandom|convention|con|community|rave|meet|meetup)|fandom)\b/i;
         // Tag vocabulary is TAG evidence, not bear evidence (owner ruling
         // 2026-11-05: a leather night is on the calendar because it is
         // leather, and whether it is also bear is the AI's call on the rest
@@ -657,10 +663,24 @@ class SharedCore {
             // confirmed as leather on 2026-11-09); there the description has
             // to say the night is about it ("GEAR IS REQUIRED", "a gear night").
             leather: {
+                // BLUF (owner, 2026-11-11: "bluf -> leather"): the Breeches
+                // and Leather Uniform Fanclub's nights carry the club's name
+                // and often nothing else ("BLUF NEW YORK", "BLUFSF:HARD",
+                // "BLUF25"). A word START, never followed by a second f:
+                // "Bluff City Bears Bowling" is a town.
                 substring: ['leather', 'bootblack'],
+                // `means` is said to the tag check only when the event's
+                // own words carry the name, so every other leather question
+                // stays the same question.
+                pattern: [{ name: 'bluf', test: /\bbluf(?!f)/i, means: 'BLUF is the Breeches and Leather Uniform Fanclub; a night held under its name is a leather night' }],
                 word: ['harness', 'harnesses', 'flw', 'gear night', 'gear party', 'gear required', 'gear is required', 'gear only', 'gear mandatory', 'full gear'],
                 titleWord: ['gear']
             },
+            // Gaining as the point of the night (owner, 2026-11-11: Growth at
+            // Eagle Portland, "should be its own tag, counts as bear
+            // website"). 'feeder' alone is a bird table and a supply line —
+            // the AI confirms every hit.
+            gainer: { substring: ['gainer', 'feederism', 'feedee'], word: ['feeder', 'feeders', 'encourager', 'encouragers', 'gaining', 'belly play'] },
             kink: { substring: ['kink', 'fetish', 'bdsm', 'dungeon'], word: ['play party', 'cbt'] },
             rubber: { substring: ['rubber', 'latex'], word: [] },
             diaper: { substring: ['diaper', 'abdl'], word: ['nappy', 'nappies'] },
@@ -16356,6 +16376,10 @@ Rules:
             const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             if (new RegExp(`\\b${escaped}\\b`, 'i').test(source)) matched.push(keyword);
         }
+        // Fur as in a hairy man, not as in a fursuit: see the constructor.
+        if ((matched.includes('fur') || matched.includes('furry')) && this.furryFandomPattern.test(source)) {
+            return matched.filter(keyword => keyword !== 'fur' && keyword !== 'furry');
+        }
         return matched;
     }
 
@@ -16369,6 +16393,9 @@ Rules:
         const matched = [];
         for (const keyword of family.substring || []) {
             if (source.includes(keyword)) matched.push(keyword);
+        }
+        for (const entry of family.pattern || []) {
+            if (entry.test.test(source)) matched.push(entry.name);
         }
         const words = (family.word || []).concat(options.title === true ? family.titleWord || [] : []);
         for (const keyword of words) {
@@ -16443,11 +16470,17 @@ Rules:
         const title = String(event.title || '').trim();
         const description = String(event.description || '').trim();
         const bar = String(event.bar || '').trim();
+        // A name the model does not know (an acronym, a club) is explained
+        // only to the event that carries it.
+        const family = (this.tagKeywords && this.tagKeywords[tag]) || {};
+        const named = (family.pattern || [])
+            .filter(item => item.means && item.test.test(`${title}\n${description}`))
+            .map(item => item.means);
         return [
             'You are tagging events on a gay men\'s nightlife calendar. One tag, one event: does the tag apply?',
             '',
             `Tag: ${tag}`,
-            `Meaning: ${entry.hint || entry.label || tag}.`,
+            `Meaning: ${entry.hint || entry.label || tag}.${named.map(text => ` ${text}.`).join('')}`,
             '',
             'Event:',
             `- Title: ${title}`,

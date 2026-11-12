@@ -6027,7 +6027,7 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
 test('tags: every machine tag in the schema has a keyword family; the bear check never hears about tags, the tag check carries the gloss', () => {
   const core = createCore();
   const machineTags = SharedCore.getAiConfirmableTags();
-  assert.deepEqual(machineTags, ['leather', 'kink', 'rubber', 'diaper', 'drag', 'pup', 'underwear', 'sportswear', 'country', 'naked', 'sex-party']);
+  assert.deepEqual(machineTags, ['leather', 'gainer', 'kink', 'rubber', 'diaper', 'drag', 'pup', 'underwear', 'sportswear', 'country', 'naked', 'sex-party']);
   for (const tag of machineTags) {
     assert.ok(core.tagKeywords[tag], `${tag} has a keyword family`);
     assert.ok(core.matchTagKeywords(`${tag} night`, tag).length > 0, `${tag} names itself`);
@@ -6068,6 +6068,47 @@ test('tags: sportswear, country, naked and sex-party families — words that nam
     assert.equal(EventSchema.EVENT_TAGS[tag].who, 'machine');
     assert.ok(!EventSchema.EVENT_TAGS[tag].keeps, `${tag} describes, never keeps`);
   }
+});
+
+test('tags: BLUF is leather, gainer is its own tag and keeps — a food special is not a gainer night', () => {
+  const core = createCore();
+  // Owner 2026-11-11: "bluf -> leather"; "growth -> ... probably gainer
+  // (should be its own tag, counts as bear website)".
+  assert.deepEqual(core.matchTagKeywords('🟦 BLUF NEW YORK', 'leather', { title: true }), ['bluf']);
+  assert.deepEqual(core.matchTagKeywords('BLUFSF:HARD', 'leather', { title: true }), ['bluf']);
+  assert.deepEqual(core.matchTagKeywords('Bluff City Bears Bowling', 'leather', { title: true }), []);
+  // The model does not know the acronym: the event that carries it is told,
+  // and every other leather question stays word for word the same.
+  const meaning = 'Meaning: a leather, gear or harness night, run, contest or club — not a dress-code aside, not gym gear.';
+  assert.ok(core.buildTagCheckPrompt({ title: 'BLUF TORONTO', description: '', bar: '', city: 'toronto' }, 'leather')
+    .includes(`${meaning} BLUF is the Breeches and Leather Uniform Fanclub; a night held under its name is a leather night.\n`));
+  assert.ok(core.buildTagCheckPrompt({ title: 'Leather Night', description: 'On the bluffs.', bar: '', city: 'sf' }, 'leather').includes(`${meaning}\n`));
+  assert.deepEqual(core.matchTagKeywords('Growth: a night for gainers and encouragers', 'gainer'), ['gainer', 'encouragers']);
+  assert.deepEqual(core.matchTagKeywords('A feederism social', 'gainer'), ['feederism']);
+  // Whole words where a fragment lies: a bird feeder drive, "regaining".
+  assert.deepEqual(core.matchTagKeywords('Regaining our stride: a fun run', 'gainer'), []);
+  assert.deepEqual(core.matchTagKeywords('Feederz Arcade Night', 'gainer'), []);
+  assert.equal(EventSchema.EVENT_TAGS.gainer.who, 'machine');
+  assert.equal(EventSchema.EVENT_TAGS.gainer.keeps, true);
+  assert.deepEqual(EventSchema.keepingEventTags('gainer, drag'), ['gainer']);
+  const tagPrompt = core.buildTagCheckPrompt({ title: 'Growth', description: 'A feederism night.', bar: 'Eagle', city: 'portland' }, 'gainer');
+  assert.ok(tagPrompt.includes('Tag: gainer\nMeaning: a gainer, feeder or belly night'), 'gloss from EVENT_TAGS.hint');
+});
+
+test('bear keyword tier: fur and furry are bear words, unless the same text names the furry fandom', () => {
+  const core = createCore();
+  // Owner 2026-11-11: "Fur or furry -> bear (unless furry like the fetish)".
+  assert.deepEqual(core.matchBearKeywords('FURRY TAKEOVER'), ['furry']);
+  assert.deepEqual(core.matchBearKeywords('Fur Friday'), ['fur']);
+  // A whole word: FURRYRAVE and "furniture" name nothing.
+  assert.deepEqual(core.matchBearKeywords('FURRYRAVE Vol.3'), []);
+  assert.deepEqual(core.matchBearKeywords('Furniture swap'), []);
+  // The fandom's own words in the same text take the fur words away...
+  assert.deepEqual(core.matchBearKeywords('Furry night: fursuits welcome'), []);
+  assert.deepEqual(core.matchBearKeywords('FUR BALL — an anthro dance party, fursuit lounge upstairs'), []);
+  assert.deepEqual(core.matchBearKeywords('Furry meetup for the furry community'), []);
+  // ...and only the fur words: a bear night that welcomes suiters is bear.
+  assert.deepEqual(core.matchBearKeywords('Bear night, fursuiters welcome'), ['bear']);
 });
 
 test('bear keyword tier: a description-only hit that NAMES a registry brand keeps its short-circuit', () => {
