@@ -1739,7 +1739,12 @@ class ScriptableAdapter {
   // so a later tap on either card variant updates ONE entry: the opposite
   // direction overwrites (last tap wins), the same direction refreshes the
   // stamp.
-  async persistBearVerdictTap(event, verdict, tags = []) {
+  // festivals: the displayed run's own list (results.config.festivals). A
+  // not-bear tapped on a night inside a bear run is stored with the run's
+  // key, and keeps the keys of the not-bear it replaces (SharedCore
+  // .withBearVerdictRunMarks) — the scraper keeps a party during a run
+  // unless the not-bear was given inside it.
+  async persistBearVerdictTap(event, verdict, tags = [], festivals = []) {
     if (!event || typeof event !== "object") return;
     const core = this.getIdentityCore();
     if (!core) {
@@ -1761,7 +1766,7 @@ class ScriptableAdapter {
     // not_bear verdict carries none.
     const storedTags =
       verdict === "not_bear" ? [] : SharedEventSchema.storableEventTags(tags);
-    const entry = {
+    let entry = {
       verdict,
       stampedAt: new Date().toISOString(),
       title: String(title),
@@ -1780,6 +1785,11 @@ class ScriptableAdapter {
           { title: entry.title, bar: entry.venue, address: entry.address, location: entry.location, city: entry.city },
           existing,
         ),
+    );
+    entry = SharedCore.withBearVerdictRunMarks(
+      entry,
+      core.getBearRunKeyForEvent(event, festivals),
+      index >= 0 ? [verdicts[index]] : [],
     );
     if (index >= 0) {
       verdicts[index] = entry;
@@ -12317,6 +12327,10 @@ class ScriptableAdapter {
       await this.persistBearVerdictTap(
         overrideEvent,
         action === "mark-bear" ? "bear" : "not_bear",
+        [],
+        results && results.config && Array.isArray(results.config.festivals)
+          ? results.config.festivals
+          : [],
       );
       const feedbackJs = `markBearOverrideDone(${JSON.stringify(key)}, ${JSON.stringify(String(action))})`;
       try {

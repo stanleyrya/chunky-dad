@@ -25274,3 +25274,64 @@ test('invisible marks: a model title that copied the marked page title is cleane
     assert.equal(parser.normalizeAiEvent({ title: ' ‎ ', startDate: '2026-12-10', startTime: '17:00' }, {}, { segmentText: 'Thursday, December 10, 2026 5:00 PM', html: '' }, null, null), null);
   } finally { console.log = quiet; }
 });
+
+test('getFlyerLookResponse: another question about the same picture is its own call and its own cache entry', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), 'picture-scene-cache-test-'));
+  try {
+    const parser = new AiWebParser({ normalizeUrl, aiResponseCacheDir: cacheDir });
+    parser.core = new SharedCore({}, { eventSchema: EventSchema });
+    const posts = [];
+    const adapter = {
+      fetchImageAsBase64: async () => 'iVBORw0KGgo=',
+      postJson: async (endpoint, payload) => {
+        posts.push(payload);
+        const asked = payload.messages[0].content[0].text;
+        const content = asked === SharedCore.FLYER_LOOK_PROMPT ? '{"any_fat":true}' : '{"fursuits":true,"seen":"two cartoon wolves"}';
+        return { ok: true, status: 200, text: JSON.stringify({ choices: [{ message: { content } }] }) };
+      }
+    };
+    const image = 'https://cdn.example/flyer.jpg';
+    const look = await parser.getFlyerLookResponse(image, adapter);
+    const scene = await parser.getFlyerLookResponse(image, adapter, { prompt: SharedCore.PICTURE_SCENE_PROMPT, label: 'picture-scene' });
+    assert.deepEqual(look, { text: '{"any_fat":true}', cached: false });
+    assert.deepEqual(scene, { text: '{"fursuits":true,"seen":"two cartoon wolves"}', cached: false });
+    assert.equal(posts.length, 2);
+    assert.equal(posts[1].messages[0].content[0].text, SharedCore.PICTURE_SCENE_PROMPT);
+    // Each question is answered from its own entry afterwards.
+    assert.deepEqual(await parser.getFlyerLookResponse(image), { text: '{"any_fat":true}', cached: true });
+    assert.deepEqual(await parser.getFlyerLookResponse(image, null, { prompt: SharedCore.PICTURE_SCENE_PROMPT, label: 'picture-scene' }), { text: '{"fursuits":true,"seen":"two cartoon wolves"}', cached: true });
+    assert.equal(posts.length, 2);
+    assert.deepEqual(SharedCore.readPictureScene(scene.text, SharedCore.PICTURE_SCENE_CHECKS[0]), { shown: true, seen: 'two cartoon wolves' });
+  } finally {
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+  }
+});
+
+test('flyer date: a day read in look-alike digits is the page’s day misread, so the flyer stays this event’s own; a day off by any other digit is another date', () => {
+  const { readFlyerDayLookalike, flyerOcrContradictsEventDate } = require('./ai-web-parser');
+  // The page says Saturday 2026-11-21; the flyer's display font reads as the 27th.
+  const page = [{ year: 2026, month: 11, day: 21 }];
+  assert.deepEqual(readFlyerDayLookalike('FURRY TAKEOVER\nNOV.27,2026 8 PM', page), { month: 11, read: 27, day: 21 });
+  assert.equal(flyerOcrContradictsEventDate('FURRY TAKEOVER\nNOV.27,2026 8 PM', page), false);
+  // Works both ways round, and on a one-digit day.
+  assert.deepEqual(readFlyerDayLookalike('NOV 21', [{ year: 2026, month: 11, day: 27 }]), { month: 11, read: 21, day: 27 });
+  assert.deepEqual(readFlyerDayLookalike('JAN 7', [{ year: 2027, month: 1, day: 1 }]), { month: 1, read: 7, day: 1 });
+
+  // The flyer's own weekday: 2026-11-27 is a Friday, so this flyer is for the 27th.
+  assert.equal(readFlyerDayLookalike('FRIDAY NOV 27', page), null);
+  assert.equal(flyerOcrContradictsEventDate('FRIDAY NOV 27', page), true);
+  assert.deepEqual(readFlyerDayLookalike('SATURDAY NOV 27', page), { month: 11, read: 27, day: 21 });
+
+  // A neighbouring day, two swapped digits, another month, another year, a second date: all real.
+  for (const text of ['NOV 22', 'NOV 20', 'NOV 11', 'DEC 27', 'NOV 27 2027', 'NOV 27 and DEC 5']) {
+    assert.equal(readFlyerDayLookalike(text, page), null, text);
+  }
+  assert.equal(readFlyerDayLookalike('JAN 77', [{ year: 2027, month: 1, day: 11 }]), null);
+  assert.equal(flyerOcrContradictsEventDate('NOV 22', page), true);
+  // The printed day itself, or no printed day, is no misread at all.
+  assert.equal(readFlyerDayLookalike('NOV 21', page), null);
+  assert.equal(readFlyerDayLookalike('EVERY SATURDAY', page), null);
+});

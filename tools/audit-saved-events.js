@@ -364,7 +364,11 @@ async function runAudit(options = {}) {
                 evidence.note = 'not seen this run, AI off';
                 if (stored && stored.entry) {
                     const verdict = stored.entry.verdict;
-                    if (verdict === 'not_bear') evidence.dropped = { reason: `manual store: not_bear (${stored.matchedBy})` };
+                    // Inside a bear run the run keeps the party unless the
+                    // not-bear was given during it (SharedCore.getBearRunKeyForEvent).
+                    const runKey = verdict === 'not_bear' ? core.getBearRunKeyForEvent(event) : '';
+                    if (runKey && !core.findRunNightNotBearVerdict(event, runKey)) evidence.kept = { bearSource: `tagged (bear-run: ${runKey})` };
+                    else if (verdict === 'not_bear') evidence.dropped = { reason: `manual store: not_bear (${stored.matchedBy})` };
                     else evidence.kept = { bearSource: verdict === 'tagged' ? 'manual-tagged (verdict store)' : 'manual-bear (verdict store)' };
                 }
             } else {

@@ -169,3 +169,40 @@ test('audit: the nights of one party are one row, a series is counted apart', ()
   assert.equal(report.mixedParties, 1);
   assert.match(audit.formatReport(report), /singles: 3 events in 1 parties/);
 });
+
+test('audit: inside a bear run a stored not-bear from an ordinary night does not rule the party out; one given during the run does', async (t) => {
+  // The run is read from the repo's own festivals, as the audit reads it:
+  // the first bear run in a destination town whose stated dates are inside
+  // the window the audit reads (the adapter's own clock, a year ahead).
+  const { WebAdapter } = require('./adapters/web-adapter');
+  const { SharedCore } = require('./shared-core');
+  const { EventSchema } = require('./event-schema');
+  const config = await quietly(() => new WebAdapter({}).loadConfiguration());
+  const core = new SharedCore(config.cities, { eventSchema: EventSchema, festivals: config.festivals || [] });
+  const run = (config.festivals || []).find((festival) => festival && festival.category === 'bear-run' && festival.nextDates
+    && /^\d{4}-\d{2}-\d{2}$/.test(String(festival.nextDates.start || ''))
+    && Date.parse(`${festival.nextDates.start}T20:00:00Z`) > Date.now() + 2 * DAY
+    && Date.parse(`${festival.nextDates.start}T20:00:00Z`) < Date.now() + 390 * DAY
+    && core.getBearRunKeyForEvent({ city: festival.cityKey, startDate: `${festival.nextDates.start}T20:00:00Z`, timezone: 'UTC' }) !== '');
+  if (!run) { t.skip('no bear run in a destination town states dates in the coming year'); return; }
+  const runKey = core.getBearRunKeyForEvent({ city: run.cityKey, startDate: `${run.nextDates.start}T20:00:00Z`, timezone: 'UTC' });
+  const night = Date.parse(`${run.nextDates.start}T20:00:00Z`);
+
+  const auditWith = async (verdict) => {
+    const fixture = buildFixture();
+    fs.writeFileSync(path.join(fixture.calendarsDir, `${run.cityKey}.ics`), calendar([
+      vevent({ uid: 'tea@test', title: 'Zzz Afternoon Social', startMs: night, notes: 'bar: Zzz Test Deck' })
+    ]));
+    fs.writeFileSync(path.join(fixture.sharedRoot, 'bear-verdicts.json'), JSON.stringify({ verdicts: [verdict] }));
+    const report = await quietly(() => audit.runAudit({
+      sharedRoot: fixture.sharedRoot, calendarsDir: fixture.calendarsDir, city: run.cityKey, ai: false, now: night - 10 * DAY
+    }));
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+    return report.parties.find((party) => party.uids[0] === 'tea@test');
+  };
+  const stored = { verdict: 'not_bear', stampedAt: '2026-01-01T00:00:00.000Z', title: 'Zzz Afternoon Social', venue: 'Zzz Test Deck', address: '', location: '', city: run.cityKey };
+  const ordinary = await auditWith(stored);
+  assert.notEqual(ordinary.class, 'not-bear', `kept by the run, got ${ordinary.class}`);
+  const during = await auditWith({ ...stored, bearRuns: [runKey] });
+  assert.equal(during.class, 'not-bear');
+});

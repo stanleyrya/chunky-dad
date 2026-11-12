@@ -25,6 +25,10 @@
 // flyer that prints another date or another weekday is either stale artwork
 // or a wrong event date, and both are worth his eyes.
 //
+// A second reader — the local text model, tools/shape-reader.js — proofreads
+// the same record; what it names with the record's own words joins the
+// report as `reader-*` checks.
+//
 // classifyLowRisk names the class of a card whose report is clean. The deck
 // (review-queue.js buildDeck) shows those on their own tab as a grid, and —
 // only for a class whose toggle the owner turned on (deck-settings.json) —
@@ -74,6 +78,16 @@ function getFlyerDateReader() {
         flyerDateReader = require(path.join(repoRoot, 'scripts', 'parsers', 'ai-web-parser')).readFlyerOcrDates;
     }
     return flyerDateReader;
+}
+
+// The parser's own test for a printed day that is the page's day in
+// look-alike digits (a 1 read as a 7), so the deck and the run agree.
+let flyerLookalikeReader = null;
+function getFlyerLookalikeReader() {
+    if (!flyerLookalikeReader) {
+        flyerLookalikeReader = require(path.join(repoRoot, 'scripts', 'parsers', 'ai-web-parser')).readFlyerDayLookalike;
+    }
+    return flyerLookalikeReader;
 }
 
 // ---------------------------------------------------------------------------
@@ -330,7 +344,10 @@ function historyFor(partyHistory, key) {
 // ---------------------------------------------------------------------------
 
 // input: { proposal, sanityCodes, flags: [words], clashes: [words], flyer: { text, classification } | null,
-//          history: { approved: [snapshots] }, now }
+//          history: { approved: [snapshots] }, now,
+//          reader: { problems: [{ field, problem, quote }] } | null | undefined }
+// `reader` is the second reader's answer (tools/shape-reader.js): undefined
+// when nobody asked it, null when it has not read this record yet.
 function assessShape(input = {}) {
     const proposal = input.proposal && typeof input.proposal === 'object' ? input.proposal : {};
     const kind = String(proposal.kind || '');
@@ -414,7 +431,12 @@ function assessShape(input = {}) {
         const printed = stated.monthDays.map(ordinal);
         const spansThisDay = printed.length >= 2 && Math.max(...printed) - Math.min(...printed) <= 14
             && days.some((day) => ordinal(day) >= Math.min(...printed) && ordinal(day) <= Math.max(...printed));
-        if (stated.monthDays.length > 0 && !printsThisDay && !spansThisDay) {
+        // A stylised 1 reads as a 7: the picture was not a witness either
+        // way, and the page's date stands.
+        const misread = stated.monthDays.length > 0 && !printsThisDay && !spansThisDay ? getFlyerLookalikeReader()(flyerText, days) : null;
+        if (misread) {
+            add('flyer-date', null, `the flyer reads as ${MONTH_NAMES[misread.month - 1]} ${misread.read}, which is the page’s ${misread.day} with a look-alike digit; the page’s date is kept`);
+        } else if (stated.monthDays.length > 0 && !printsThisDay && !spansThisDay) {
             add('flyer-date', false, `the flyer says ${pairText()}; this card is ${dayText}`);
         } else if (stated.monthDays.length === 0 && months.length > 0 && !days.some((day) => months.some((entry) => entry.month === day.month))) {
             add('flyer-date', false, `the flyer says ${Array.from(new Set(months.map((entry) => MONTH_NAMES[entry.month - 1]))).slice(0, 3).join(', ')}; this card is ${dayText}`);
@@ -498,8 +520,25 @@ function assessShape(input = {}) {
         }
     }
 
+    // -- the second reader ------------------------------------------------
+    // One failed check per problem it named with the record's own words;
+    // `reader` alone says whether it has read the record at all.
+    if (input.reader === null) add('reader', null, '');
+    else if (input.reader && Array.isArray(input.reader.problems)) {
+        add('reader', true, '');
+        for (const problem of input.reader.problems) {
+            add(`reader-${problem.field}`, false, `${problem.problem}${problem.quote ? ` — "${problem.quote}"` : ''}`);
+        }
+    }
+
     const failed = checks.filter((check) => check.ok === false).map((check) => check.code);
     return { ok: failed.length === 0, failed, checks };
+}
+
+// True while the second reader was asked about this card and has not
+// answered: nothing is approved under a switch before it has.
+function isReaderWaiting(shape) {
+    return Boolean(shape) && Array.isArray(shape.checks) && shape.checks.some((check) => check.code === 'reader' && check.ok === null);
 }
 
 // The lines a card shows: what failed, in words.
@@ -710,6 +749,7 @@ function applyDeckSettingsChange(settings, change, now = Date.now()) {
 }
 
 module.exports = {
+    isReaderWaiting,
     DECK_SETTINGS_FILE_NAME,
     LOW_RISK_CLASSES,
     USUAL_START_TOLERANCE_MINUTES,

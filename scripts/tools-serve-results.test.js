@@ -1209,6 +1209,17 @@ test('renderReviewCard (big drift): a warn badge and a facts block — what move
   assert.ok(html.includes('<span class="fact-k">still agrees on</span><span class="fact-v">same night (2030-10-10) · same bar (Massive) · same ticket page (sickening.events/e/x/tickets)</span>'));
   assert.ok(html.includes('<span class="fact-k">scraped from</span>') && html.includes('href="https://sickening.events/e/bearracuda-treasure-trail-october"'));
   assert.ok(html.includes('<span class="fact-k">calendar link</span>') && html.includes('href="https://bearracuda.com/events/ttoct/"'));
+  // The second reader's words are on the card as the model's, apart from
+  // the fixed checks' warnings.
+  const read = renderReviewCard({ ...entry, display: { parserName: 'Bearracuda' }, shape: { ok: false, failed: ['name', 'reader-time'], checks: [
+    { code: 'name', ok: false, detail: 'the name is a single character' },
+    { code: 'reader', ok: true, detail: '' },
+    { code: 'reader-time', ok: false, detail: 'The flyer says doors at 9pm. — "DOORS 9PM"' }
+  ] } }, ctx);
+  assert.ok(read.includes('<div class="shape-line warn">⚠️ the name is a single character</div>'));
+  assert.ok(read.includes('<div class="shape-line">🤖 a second reader (AI, can be wrong): The flyer says doors at 9pm. — &quot;DOORS 9PM&quot;</div>')
+    || read.includes('<div class="shape-line">🤖 a second reader (AI, can be wrong): The flyer says doors at 9pm. — "DOORS 9PM"</div>'));
+  assert.ok(!renderReviewCard({ ...entry, display: { parserName: 'Bearracuda' } }, ctx).includes('a second reader'));
   const plain = renderReviewCard({ ...entry, display: { parserName: 'Bearracuda' } }, ctx);
   assert.ok(!plain.includes('big drift') && !plain.includes('class="drift"'), 'an ordinary merge card is unchanged');
   const nothing = renderReviewCard({ ...entry, display: { bigDrift: { reason: 'title and venue changed', fields: [], matchedBy: '', agree: [], sourcePageUrl: '', calendarUrl: '' } } }, ctx);
@@ -2690,4 +2701,15 @@ test('low risk routes: the tab is on the page; the shape report is served; a hol
     else process.env.CHUNKY_SHARED_STORAGE_DIR = previousEnv;
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test('renderReviewBearRow: a kept card whose only bear word another scene shares says what the flyer shows; a dropped card never does', () => {
+  const pictureNotice = { words: ['furry'], shows: 'fursuit characters', seen: 'Two cartoon wolves <b>' };
+  const kept = renderReviewBearRow({ pictureNotice }, { kind: 'new', title: 'FURRY TAKEOVER' });
+  assert.ok(kept.includes('<div class="bear-notice">🎭 Its only bear word is “furry”, and the flyer shows fursuit characters — “Two cartoon wolves &lt;b&gt;” (a machine look)</div>'), kept);
+  const merge = renderReviewBearRow({ pictureNotice: { words: ['fur', 'furry'], shows: 'fursuit characters', seen: '' } }, { kind: 'merge', title: 'FURRY TAKEOVER' });
+  assert.ok(merge.includes('🎭 Its only bear word is “fur”, “furry”, and the flyer shows fursuit characters (a machine look)'));
+  const dropped = renderReviewBearRow({ pictureNotice }, { kind: 'dropped', title: 'FURRY TAKEOVER', dropReason: 'ai: x' });
+  assert.ok(!dropped.includes('🎭'));
+  assert.ok(!renderReviewBearRow({ pictureNotice: null }, { kind: 'new', title: 'x' }).includes('🎭'));
 });

@@ -234,6 +234,7 @@ const EVENT_TAGS = Object.freeze({
     //      'derived' — computed at read time, never stored
     // shown: the site draws a chip for it; the rest stay data.
     'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine', keeps: true, hint: 'a leather, gear or harness night, run, contest or club — not a dress-code aside, not gym gear' }),
+    'gainer': Object.freeze({ label: 'Gainer', shown: true, who: 'machine', keeps: true, hint: 'a gainer, feeder or belly night: gaining weight or feeding is the point of the event — not a food special, a buffet or an eating contest' }),
     'kink': Object.freeze({ label: 'Kink', shown: true, who: 'machine', hint: 'a kink, fetish, BDSM or play event — not a DJ or show whose name merely sounds kinky' }),
     'rubber': Object.freeze({ label: 'Rubber', shown: true, who: 'machine', hint: 'a rubber or latex event' }),
     'diaper': Object.freeze({ label: 'Diaper', shown: true, who: 'machine', hint: 'a diaper or ABDL event' }),
