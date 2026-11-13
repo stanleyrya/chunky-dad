@@ -17265,6 +17265,41 @@ test('getCachedOcrTextForImage: verdict store first, then disk cache, on-demand 
   assert.equal(ocrCalls[0].hasAdapter, true);
 });
 
+test('getFlyerEvidenceForImage: the poster text with what the picture was called, and never a download from Instagram or Facebook', async () => {
+  const parser = createParser();
+  parser.recordOcrImageVerdict('https://cdn.example/flyer.jpg', {
+    imageClassification: 'event-flyer',
+    text: 'BEARS CUBS OTTERS\nand OTHER FURRY CRITTERS!'
+  });
+  assert.deepEqual(await parser.getFlyerEvidenceForImage('https://cdn.example/flyer.jpg'),
+    { text: 'BEARS CUBS OTTERS\nand OTHER FURRY CRITTERS!', classification: 'event-flyer' });
+
+  // Nothing has read the picture and there is no adapter: no answer, no request.
+  parser.getOcrTextForImage = async () => { throw new Error('must not OCR without an adapter'); };
+  assert.equal(await parser.getFlyerEvidenceForImage('https://cdn.example/never-seen.jpg'), null);
+
+  // With an adapter one vision call reads it, and the class rides along.
+  const ocrCalls = [];
+  parser.getOcrTextForImage = async (url, cfg, passLabel, adapter) => {
+    ocrCalls.push({ url, passLabel, hasAdapter: Boolean(adapter) });
+    return { text: 'THE WIG OUT PARTY', imageClassification: 'logo' };
+  };
+  const adapter = { fetch: () => {} };
+  assert.deepEqual(await parser.getFlyerEvidenceForImage('https://cdn.example/old-flyer.jpg', adapter),
+    { text: 'THE WIG OUT PARTY', classification: 'logo' });
+  assert.deepEqual(ocrCalls, [{ url: 'https://cdn.example/old-flyer.jpg', passLabel: 'flyer evidence', hasAdapter: true }]);
+
+  // Off-limits hosts: an unread picture there stays unread.
+  for (const url of [
+    'https://scontent-lax3-1.cdninstagram.com/v/t51/123_n.jpg?stp=dst-jpg',
+    'https://scontent.fsea1-1.fna.fbcdn.net/v/t39/456_n.jpg',
+    'https://www.instagram.com/p/abc/media/?size=l'
+  ]) {
+    assert.equal(await parser.getFlyerEvidenceForImage(url, adapter), null, url);
+  }
+  assert.equal(ocrCalls.length, 1, 'no vision call, so no download, for an Instagram or Facebook picture');
+});
+
 // ---------------------------------------------------------------------------
 // JSON-API generic shape extensions: attribute wrappers ({content}/{attributes}),
 // rich-text values ({text}/{rendered}), and epoch-millis when-containers —

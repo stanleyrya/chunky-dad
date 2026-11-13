@@ -2096,3 +2096,15 @@ test('buildDeck: the picture notice rides on a card kept on a shared word alone,
   assert.equal(byTitle('FURRY NIGHT').display.pictureNotice, null, 'his own verdict outranks the machine look');
   assert.equal(byTitle('BEAR NIGHT').display.pictureNotice, null);
 });
+
+test('buildDeck: bear wording found only on the poster rides on the card while the AI verdict is what keeps it', () => {
+  const deck = deckOf(runPayload({ analyzedEvents: [
+    newEvent({ title: 'SATURDAY DANCE PARTY', bearSource: 'ai', _bearFlyerEvidence: ['BEARS CUBS OTTERS\nand OTHER FURRY CRITTERS!', ''] }),
+    newEvent({ title: 'SUNDAY DANCE PARTY', url: 'https://furball.nyc/sunday', bearSource: 'manual-bear (verdict store 2030-01-01)', _bearFlyerEvidence: ['BEARS'] }),
+    newEvent({ title: 'BEAR NIGHT', url: 'https://furball.nyc/bear', bearSource: 'keyword' })
+  ] }));
+  const byTitle = (title) => deck.cards.find((card) => card.proposal.title === title);
+  assert.deepEqual(byTitle('SATURDAY DANCE PARTY').display.flyerWordsNotice, ['BEARS CUBS OTTERS and OTHER FURRY CRITTERS!']);
+  assert.deepEqual(byTitle('SUNDAY DANCE PARTY').display.flyerWordsNotice, [], 'his own verdict keeps it now');
+  assert.deepEqual(byTitle('BEAR NIGHT').display.flyerWordsNotice, []);
+});

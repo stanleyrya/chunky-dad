@@ -33888,3 +33888,268 @@ test('picture scene: a parser merge pools both sides\' bear words, and what a fl
   assert.deepEqual(other._bearKeywords, ['furry', 'bear']);
   assert.equal(other._pictureScene, undefined, 'another source calls it a bear night: no longer kept on "furry" alone');
 });
+
+// ── Flyer text as evidence ─────────────────────────────────────────────────
+// Owner 2026-11-12: "B bar has bears in the ocr. Why was it not bear?" The
+// poster said "BEARS CUBS OTTERS and OTHER FURRY CRITTERS!"; the bear check
+// read the title, a description without that line, and the bar name.
+
+function flyerEvent(overrides = {}) {
+  return {
+    title: 'Saturday Night Dance Party',
+    description: 'DJs all night on the patio. No cover before 10.',
+    bar: 'Some Club',
+    city: 'nyc',
+    startDate: new Date('2030-06-08T02:00:00.000Z'),
+    endDate: new Date('2030-06-08T06:00:00.000Z'),
+    url: 'https://promoter.example/events/dance',
+    image: 'https://cdn.example/dance.jpg',
+    ...overrides
+  };
+}
+
+async function quietly(run) {
+  const lines = [];
+  const originalLog = console.log;
+  console.log = (...args) => lines.push(args.join(' '));
+  try {
+    return { result: await run(), lines };
+  } finally {
+    console.log = originalLog;
+  }
+}
+
+test('flyer evidence: with no poster text the three prompts are what they were, word for word', async () => {
+  const plain = createCore();
+  const wired = createCore();
+  wired.setFlyerEvidenceLookup(() => null);
+  const event = flyerEvent();
+  await quietly(() => wired.applyFlyerTextEvidence([event]));
+  const config = bearCheckConfig('enforce');
+  assert.equal(wired.buildBearCheckPrompt(event, config), plain.buildBearCheckPrompt(event, config));
+  assert.equal(wired.buildTagCheckPrompt(event, 'leather'), plain.buildTagCheckPrompt(event, 'leather'));
+  assert.equal(wired.buildAudienceCheckPrompt(event), plain.buildAudienceCheckPrompt(event));
+  assert.ok(!plain.buildBearCheckPrompt(event, config).includes('Flyer text'));
+  assert.ok(plain.buildBearCheckPrompt(event, config).includes('copied WORD FOR WORD from the Title or the Description.'));
+});
+
+test('flyer evidence: bear wording that is only on the poster is read, quoted and kept', async () => {
+  const flyer = 'SATURDAY NIGHT\nDANCE PARTY\nBEARS CUBS OTTERS\nand OTHER FURRY CRITTERS!\n10PM';
+  const answer = { verdict: 'bear', eventEvidence: ['BEARS CUBS OTTERS'], reason: 'the poster invites bears, cubs and otters' };
+
+  // Before: the same answer has nothing to stand on, the quote is not in the page text.
+  const before = createCore();
+  const beforeAdapter = buildTagAwareAdapter(answer);
+  const { result: keptBefore } = await quietly(() => before.filterBearEvents([flyerEvent()], bearCheckConfig('enforce'), beforeAdapter));
+  assert.equal(keptBefore.some(event => event.bearSource && /^ai/.test(event.bearSource) && event.isBearEvent === true && !event.bearReview), false, 'without the poster the quote fails the evidence gate');
+  assert.ok(!String(beforeAdapter.calls[0].prompt).includes('Flyer text'));
+
+  const core = createCore();
+  const asked = [];
+  core.setFlyerEvidenceLookup((imageUrl) => { asked.push(imageUrl); return { text: flyer, classification: 'event-flyer' }; });
+  const adapter = buildTagAwareAdapter(answer);
+  const event = flyerEvent();
+  const { result: kept, lines } = await quietly(() => core.filterBearEvents([event], bearCheckConfig('enforce'), adapter));
+  assert.deepEqual(asked, ['https://cdn.example/dance.jpg']);
+  // The page text is asked first, with the question it always got; the
+  // poster is the second question.
+  assert.equal(String(adapter.calls[0].prompt), String(beforeAdapter.calls[0].prompt));
+  const prompt = String(adapter.calls[1].prompt);
+  assert.ok(prompt.includes('- Flyer text (read by machine off this event\'s own poster, so a letter may be wrong): SATURDAY NIGHT / DANCE PARTY / BEARS CUBS OTTERS / and OTHER FURRY CRITTERS! / 10PM'));
+  assert.ok(prompt.includes('copied WORD FOR WORD from the Title, the Description or the Flyer text.'));
+  assert.equal(kept.length, 1);
+  assert.equal(kept[0].isBearEvent, true);
+  assert.equal(kept[0].bearSource, 'ai');
+  assert.ok(lines.some(line => line.includes('→ bear (ai: the poster invites bears, cubs and otters [on the flyer: "BEARS CUBS OTTERS"])')));
+  assert.equal(kept[0].bearReview, undefined);
+  assert.ok(lines.some(line => line.includes('🖼️ FLYER TEXT: 1 record(s) judged with their poster\'s words')));
+  assert.ok(lines.some(line => line.includes('keyword') && line.includes('is on the poster of "Saturday Night Dance Party"')));
+  // Held beside the record, never on it.
+  assert.equal(Object.keys(kept[0]).some(key => /flyer/i.test(key) && typeof kept[0][key] === 'string' && kept[0][key].includes('OTTERS')), false);
+  assert.equal(JSON.stringify(kept[0]).includes('FURRY CRITTERS'), false);
+});
+
+test('flyer evidence: a bear word on a poster never decides without the AI', async () => {
+  const core = createCore();
+  core.setFlyerEvidenceLookup(() => ({ text: 'DANCE PARTY\nSPONSORED BY BEAR NAKED VODKA', classification: 'event-flyer' }));
+  const dropped = [];
+  const adapter = buildTagAwareAdapter({ verdict: 'not_bear', eventEvidence: [], reason: 'a sponsor line, not the crowd' });
+  const { result: kept } = await quietly(() => core.filterBearEvents([flyerEvent()], bearCheckConfig('enforce'), adapter, dropped));
+  assert.equal(kept.length, 0, 'the keyword tier did not keep it on the poster word');
+  assert.equal(dropped.length, 1);
+
+  // And with the AI down the poster word is no fallback either.
+  const offline = createCore();
+  offline.setFlyerEvidenceLookup(() => ({ text: 'DANCE PARTY\nSPONSORED BY BEAR NAKED VODKA', classification: 'event-flyer' }));
+  const plain = createCore();
+  const down = () => buildTagAwareAdapter({ verdict: 'not_bear', reason: 'x' }, {}, { fail: true });
+  const { result: withPoster } = await quietly(() => offline.filterBearEvents([flyerEvent()], bearCheckConfig('enforce'), down()));
+  const { result: withoutPoster } = await quietly(() => plain.filterBearEvents([flyerEvent()], bearCheckConfig('enforce'), down()));
+  assert.deepEqual(withPoster.map(event => [event.isBearEvent, event.bearSource]), withoutPoster.map(event => [event.isBearEvent, event.bearSource]));
+});
+
+test('flyer evidence: venue artwork, programmes and posters shared by different parties speak for no event', async () => {
+  const core = createCore();
+  const answers = {
+    'https://cdn.example/logo.png': { text: 'THE BEAR DEN\nA BEAR BAR', classification: 'logo' },
+    'https://cdn.example/week.jpg': { text: 'MON 7PM BINGO\nTUE 8PM TRIVIA\nTHU 9PM BEAR NIGHT\nSAT 10PM DRAG SHOW', classification: 'event-flyer' },
+    'https://cdn.example/programme.jpg': { text: 'THIS MONTH: BEAR NIGHT, TRIVIA, KARAOKE', classification: 'multi-event-flyer' },
+    'https://cdn.example/soon.jpg': { text: 'BEAR WEEKEND\nMORE INFO COMING SOON', classification: 'event-flyer' },
+    'https://cdn.example/weekly.jpg': { text: 'BEEF BUST EVERY SUNDAY\nBEARS AND FRIENDS', classification: 'event-flyer' },
+    'https://cdn.example/noise.jpg': { text: 'm', classification: 'event-flyer' }
+  };
+  core.setFlyerEvidenceLookup((imageUrl) => answers[imageUrl] || null);
+  const day = (n) => new Date(`2030-06-${String(n).padStart(2, '0')}T02:00:00.000Z`);
+  const events = [
+    flyerEvent({ title: 'Trivia Tuesday', image: 'https://cdn.example/logo.png' }),
+    flyerEvent({ title: 'Monday Bingo', image: 'https://cdn.example/week.jpg' }),
+    flyerEvent({ title: 'Karaoke', image: 'https://cdn.example/programme.jpg' }),
+    flyerEvent({ title: 'Thanksgiving Dinner', image: 'https://cdn.example/soon.jpg' }),
+    flyerEvent({ title: 'Christmas Eve Open House', image: 'https://cdn.example/soon.jpg' }),
+    flyerEvent({ title: 'New Year Countdown', image: 'https://cdn.example/soon.jpg' }),
+    flyerEvent({ title: 'Sunday Beef Bust', image: 'https://cdn.example/weekly.jpg', startDate: day(2) }),
+    flyerEvent({ title: 'Sunday Beef Bust', image: 'https://cdn.example/weekly.jpg', startDate: day(9) }),
+    flyerEvent({ title: 'Sunday Beef Bust', image: 'https://cdn.example/weekly.jpg', startDate: day(16) }),
+    flyerEvent({ title: 'Sunday Beef Bust: Pride Edition', image: 'https://cdn.example/weekly.jpg', startDate: day(23) }),
+    flyerEvent({ title: 'Glyph Night', image: 'https://cdn.example/noise.jpg' }),
+    flyerEvent({ title: 'No Picture Night', image: '' }),
+    flyerEvent({ title: 'Local Picture Night', image: 'img/events/local.jpg' })
+  ];
+  const { result: counts, lines } = await quietly(() => core.applyFlyerTextEvidence(events));
+  assert.deepEqual(counts, { read: 4, furniture: 1, programme: 2, shared: 3, unread: 1 });
+  for (const event of events.slice(0, 6)) assert.equal(core.getFlyerTextEvidence(event), '', event.title);
+  for (const event of events.slice(6, 10)) assert.equal(core.getFlyerTextEvidence(event), 'BEEF BUST EVERY SUNDAY\nBEARS AND FRIENDS', `${event.title}: nights of one party keep their poster`);
+  for (const event of events.slice(10)) assert.equal(core.getFlyerTextEvidence(event), '', event.title);
+  assert.ok(lines.some(line => line.includes('one poster sits under 3 different parties') && line.includes('MORE INFO COMING SOON')));
+  assert.ok(lines.some(line => line.includes('4 record(s) judged with their poster\'s words; 6 withheld (1 venue artwork, 2 programmes, 3 shared by 3+ parties)')));
+  for (const event of events) assert.equal(Object.keys(event).some(key => key.startsWith('_')), false, 'nothing is stamped on the record');
+
+  // A record judged alone (the saved-events audit) still knows who else carries its poster.
+  const alone = createCore();
+  alone.setFlyerEvidenceLookup((imageUrl) => answers[imageUrl] || null);
+  const single = flyerEvent({ title: 'Thanksgiving Dinner', image: 'https://cdn.example/soon.jpg' });
+  await quietly(() => alone.applyFlyerTextEvidence([single]));
+  assert.equal(alone.getFlyerTextEvidence(single), 'BEAR WEEKEND\nMORE INFO COMING SOON', 'one carrier in view: its own poster');
+  alone.noteFlyerCarriers(events);
+  await quietly(() => alone.applyFlyerTextEvidence([single]));
+  assert.equal(alone.getFlyerTextEvidence(single), '', 'three parties in view: nobody\'s poster');
+});
+
+test('flyer evidence: a theme named only on the poster becomes a tag question, and a venue slogan the model declines stays off', async () => {
+  const core = createCore();
+  core.setFlyerEvidenceLookup(() => ({ text: 'DANCE PARTY\nLEATHER NIGHT\nDRESS CODE ENFORCED', classification: 'event-flyer' }));
+  const event = flyerEvent();
+  await quietly(() => core.applyFlyerTextEvidence([event]));
+  const machine = core.collectMachineEventTags(event);
+  assert.ok(machine.candidates.includes('leather'));
+  assert.ok(!machine.fromTitle.includes('leather'), 'a poster word is never a title hit');
+  assert.deepEqual(machine.hits.leather, { title: [], description: [], flyer: ['leather'] });
+  const tagPrompt = core.buildTagCheckPrompt(event, 'leather');
+  assert.ok(tagPrompt.includes('- Flyer text (read by machine off this event\'s own poster, so a letter may be wrong): DANCE PARTY / LEATHER NIGHT / DRESS CODE ENFORCED'));
+  assert.ok(tagPrompt.includes('a venue name or slogan printed on it says what the venue is, not what this event is.'));
+  // A tag the poster does not name is asked exactly as before, and who the
+  // night is held for is never asked of the poster.
+  assert.equal(core.buildTagCheckPrompt(event, 'drag'), createCore().buildTagCheckPrompt(flyerEvent(), 'drag'));
+  assert.equal(core.buildAudienceCheckPrompt(event), createCore().buildAudienceCheckPrompt(flyerEvent()));
+  assert.deepEqual(core.verifyBearEvidenceQuotes(['LEATHER NIGHT', 'RUBBER NIGHT'], event), ['LEATHER NIGHT'], 'a quote off the poster verifies, an invented one does not');
+  assert.deepEqual(core.flyerOnlyEvidenceQuotes(['LEATHER NIGHT', 'Dance Party'], event), ['LEATHER NIGHT']);
+
+  // No poster, no candidate, and the hit shape is the old one.
+  const plain = createCore();
+  const titled = flyerEvent({ title: 'Leather Night' });
+  assert.deepEqual(plain.collectMachineEventTags(titled).hits.leather, { title: ['leather'], description: [] });
+  assert.deepEqual(plain.collectMachineEventTags(flyerEvent()).candidates, []);
+});
+
+test('flyer evidence: a tag named only on the poster describes an event and never keeps one', async () => {
+  const poster = { text: 'DANCE PARTY\nPRESENTED BY MR. LEATHER\nUNDERWEAR PARTY', classification: 'event-flyer' };
+  const tagAnswers = {
+    leather: { applies: true, eventEvidence: ['PRESENTED BY MR. LEATHER'], reason: 'a titleholder presents it' },
+    underwear: { applies: true, eventEvidence: ['UNDERWEAR PARTY'], reason: 'the poster calls it one' }
+  };
+
+  // Not bear: the poster's leather is the only thing that would keep it.
+  const core = createCore();
+  core.setFlyerEvidenceLookup(() => poster);
+  const dropped = [];
+  const { result: kept, lines } = await quietly(() => core.filterBearEvents([flyerEvent()], bearCheckConfig('enforce'), buildTagAwareAdapter({ verdict: 'not_bear', eventEvidence: [], reason: 'a dance night' }, tagAnswers), dropped));
+  assert.equal(kept.length, 0);
+  assert.equal(dropped.length, 1);
+  assert.ok(lines.some(line => line.includes('leather is named only on the poster (leather: leather); a poster word alone does not keep a not_bear event')), lines.filter(line => line.includes('TAGS')).join('\n'));
+  assert.ok(JSON.stringify(dropped[0]).includes('leather only on the flyer (leather: leather) — ai: a dance night'), JSON.stringify(dropped[0]).slice(0, 400));
+
+  // The same poster under a party whose page says leather: kept, as before.
+  const paged = createCore();
+  paged.setFlyerEvidenceLookup(() => poster);
+  const { result: keptPaged } = await quietly(() => paged.filterBearEvents([flyerEvent({ description: 'A leather night with DJs on the patio.' })], bearCheckConfig('enforce'), buildTagAwareAdapter({ verdict: 'not_bear', eventEvidence: [], reason: 'a dance night' }, { ...tagAnswers, leather: { applies: true, eventEvidence: ['A leather night'], reason: 'it says so' } })));
+  assert.equal(keptPaged.length, 1);
+  assert.match(String(keptPaged[0].bearSource), /^tagged/);
+
+  // Bear for its own reasons: the poster's words describe it.
+  const bear = createCore();
+  bear.setFlyerEvidenceLookup(() => poster);
+  const { result: keptBear } = await quietly(() => bear.filterBearEvents([flyerEvent({ title: 'Bear Night Dance Party' })], bearCheckConfig('enforce'), buildTagAwareAdapter({ verdict: 'bear', eventEvidence: ['Bear Night'], reason: 'a bear night' }, tagAnswers)));
+  assert.equal(keptBear.length, 1);
+  assert.deepEqual(bear.eventSchema.normalizeEventTags(keptBear[0].tags), ['leather', 'underwear']);
+
+  // The quote has to hold the poster's word: a sponsor line confirmed with
+  // the party's own name is a decline.
+  const loose = createCore();
+  loose.setFlyerEvidenceLookup(() => poster);
+  const looseEvent = flyerEvent({ title: 'Bear Night Dance Party' });
+  await quietly(() => loose.applyFlyerTextEvidence([looseEvent]));
+  const answer = await loose.getAiTagVerdict(looseEvent, 'leather', bearCheckConfig('enforce'), buildTagAwareAdapter({}, { leather: { applies: true, eventEvidence: ['DANCE PARTY'], reason: 'a party at a leather bar' } }));
+  assert.equal(answer.applies, false);
+  assert.match(answer.reason, /^the quoted words do not hold the poster's leather/);
+});
+
+test('flyer evidence: the poster is a second question that can make an event bear and can never take bear away', async () => {
+  const poster = { text: 'SATURDAY NIGHT\nDANCE PARTY\nBEARS CUBS OTTERS\n10PM', classification: 'event-flyer' };
+  // One answer for the page-text question, one for the poster question.
+  const twoAnswers = (page, withPoster) => {
+    const calls = [];
+    return { calls, postJson: async (endpoint, payload) => {
+      calls.push(payload);
+      const body = String(payload.prompt || '').includes('- Flyer text (') ? withPoster : page;
+      return { ok: true, status: 200, text: JSON.stringify({ response: typeof body === 'string' ? body : JSON.stringify(body) }) };
+    } };
+  };
+  const judge = async (event, page, withPoster) => {
+    const core = createCore();
+    core.setFlyerEvidenceLookup(() => poster);
+    const adapter = twoAnswers(page, withPoster);
+    await quietly(() => core.applyFlyerTextEvidence([event]));
+    const { result: decision, lines } = await quietly(() => core.computeBearCheckVerdict(event, bearCheckConfig('enforce'), adapter));
+    return { decision, lines, asked: adapter.calls.length };
+  };
+  const notBear = { verdict: 'not_bear', eventEvidence: [], reason: 'a dance night' };
+  const thin = { verdict: 'unsure', eventEvidence: [], reason: 'too thin' };
+
+  // The page text makes it bear: the poster is never asked, so nothing it says can undo that.
+  const paged = await judge(flyerEvent({ description: 'A night for cubs and otters on the patio.' }),
+    { verdict: 'bear', eventEvidence: ['cubs and otters'], reason: 'it names the crowd' }, notBear);
+  assert.equal(paged.decision.result, 'bear');
+  assert.equal(paged.asked, 1);
+  assert.equal(paged.decision.flyerEvidence, undefined);
+
+  // Not bear on the page, bear on the poster with the poster's own words.
+  const lifted = await judge(flyerEvent(), notBear, { verdict: 'bear', eventEvidence: ['BEARS CUBS OTTERS', 'Dance Party'], reason: 'the poster names the crowd' });
+  assert.equal(lifted.decision.result, 'bear');
+  assert.deepEqual(lifted.decision.flyerEvidence, ['BEARS CUBS OTTERS']);
+  assert.equal(lifted.asked, 2);
+
+  // "Bear" on the second ask with no words off the poster is a second roll of the dice, not evidence.
+  const rolled = await judge(flyerEvent(), notBear, { verdict: 'bear', eventEvidence: ['Dance Party'], reason: 'sounds like one' });
+  assert.equal(rolled.decision.result, 'not_bear');
+  assert.equal(rolled.decision.provenance, 'ai: a dance night');
+
+  // A page verdict of not bear is not softened to unsure, or lost to an unusable answer.
+  assert.equal((await judge(flyerEvent(), notBear, thin)).decision.result, 'not_bear');
+  assert.equal((await judge(flyerEvent(), notBear, '[]')).decision.result, 'not_bear');
+
+  // Too thin on the page: the poster settles it.
+  const settled = await judge(flyerEvent({ description: '' }), thin, { verdict: 'not_bear', eventEvidence: [], reason: 'a techno line-up' });
+  assert.equal(settled.decision.result, 'not_bear');
+  assert.equal(settled.decision.provenance, 'ai: a techno line-up');
+  assert.ok(settled.lines.some(line => line.includes('the page text was too thin to judge; with the poster\'s words it is not bear')));
+});

@@ -2713,3 +2713,11 @@ test('renderReviewBearRow: a kept card whose only bear word another scene shares
   assert.ok(!dropped.includes('🎭'));
   assert.ok(!renderReviewBearRow({ pictureNotice: null }, { kind: 'new', title: 'x' }).includes('🎭'));
 });
+
+test('renderReviewBearRow: a kept card says when its bear wording is only on the flyer', () => {
+  const kept = renderReviewBearRow({ flyerWordsNotice: ['BEARS CUBS <OTTERS>'] }, { kind: 'new', title: 'Saturday Dance Party' });
+  assert.ok(kept.includes('<div class="bear-notice">🖼️ The bear wording is only on the flyer: “BEARS CUBS &lt;OTTERS&gt;” (read off the picture by a machine)</div>'), kept);
+  assert.ok(!renderReviewBearRow({ flyerWordsNotice: ['BEARS'] }, { kind: 'dropped', title: 'x', dropReason: 'ai: x' }).includes('🖼️'));
+  assert.ok(!renderReviewBearRow({ flyerWordsNotice: [] }, { kind: 'new', title: 'x' }).includes('🖼️'));
+  assert.ok(!renderReviewBearRow({}, { kind: 'new', title: 'x' }).includes('🖼️'));
+});
