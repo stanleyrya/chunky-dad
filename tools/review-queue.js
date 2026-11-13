@@ -136,6 +136,12 @@ function normalizeManualCard(input, options = {}) {
         createdBy: String(input.createdBy || 'claude'),
         expiresAt: typeof input.expiresAt === 'string' ? input.expiresAt : null
     };
+    // What the owner judges by: the event's own page and its flyer. Shown on
+    // the card, never executed; anything that is not a web address is left out.
+    ['url', 'image'].forEach((field) => {
+        const value = String(input[field] || '').trim();
+        if (/^https?:\/\/\S+$/i.test(value)) card[field] = value;
+    });
     if (action === 'remove' || action === 'edit') {
         if (!card.city) throw new Error(`a ${action} card needs the city`);
         if (!card.uid) throw new Error(`a ${action} card needs the saved event's uid`);
@@ -2135,8 +2141,12 @@ function buildDeck(runPayload, store, options = {}) {
     // the assistant's one-offs. Exact key; a remove/edit approval waits for
     // the phone like a gone card (the ledger marks it done); a choose card's
     // swipe is the answer itself.
+    // Questions first: a choose card waits on the owner's answer, and what
+    // it answers decides which remove cards come next.
     const manual = Array.isArray(options.manualCards) ? options.manualCards : [];
-    manual.forEach((card, index) => {
+    const manualOrder = manual.map((card, index) => ({ card, index }))
+        .sort((a, b) => Number(!(a.card && a.card.action === 'choose')) - Number(!(b.card && b.card.action === 'choose')) || a.index - b.index);
+    manualOrder.forEach(({ card, index }) => {
         if (!card || typeof card !== 'object' || typeof card.key !== 'string' || !card.key) return;
         if (manualCardExpired(card, now)) { counts.pastSkipped++; return; }
         const decision = decisions.find((entry) => entry && entry.key === card.key && (entry.verdict === 'approve' || entry.verdict === 'reject')) || null;

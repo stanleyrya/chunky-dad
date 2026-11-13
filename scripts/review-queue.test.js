@@ -1725,6 +1725,14 @@ test('manual cards: normalise (actions, required fields, edit changes, two optio
   const filed = deck.cards.find((c) => c.key === edit.key);
   assert.equal(filed.proposal.action, 'edit');
   assert.equal(filed.proposal.changes.endDate.to, iso(FUTURE + 3 * 3600000));
+  assert.deepEqual(deck.cards.filter((c) => c.kind === 'manual').map((c) => c.proposal.action), ['choose', 'edit'], 'a question is filed before a remove or an edit');
+  // The page and the flyer ride on the card when they are web addresses.
+  const shown = rq.normalizeManualCard({ action: 'choose', title: 'Beer Bust', why: 'bear or not?', options: ['Keep it', 'Not bear'], url: ' https://eagle.example/beer-bust ', image: 'https://eagle.example/flyer.jpg' });
+  assert.equal(shown.url, 'https://eagle.example/beer-bust');
+  assert.equal(shown.image, 'https://eagle.example/flyer.jpg');
+  const bare = rq.normalizeManualCard({ action: 'choose', title: 'Beer Bust', why: 'bear or not?', options: ['Keep it', 'Not bear'], url: 'javascript:alert(1)', image: 'flyer.jpg' });
+  assert.equal('url' in bare, false, 'not a web address: left out');
+  assert.equal('image' in bare, false);
 
   const now = new Date(Date.UTC(2030, 0, 2));
   const approved = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: edit.key, kind: 'manual', verdict: 'approve', snapshot: edit }, { now }));

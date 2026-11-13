@@ -6,7 +6,7 @@
 //
 //   node tools/add-deck-card.js remove --city sydney --uid <uid> --why "…"
 //   node tools/add-deck-card.js edit   --city sydney --uid <uid> --why "…" --set endDate=2026-10-16T22:00:00+11:00
-//   node tools/add-deck-card.js choose --title "…" --why "…" --option "Keep A" --option "Keep B" [--city sf --uid <uid>]
+//   node tools/add-deck-card.js choose --title "…" --why "…" --option "Keep A" --option "Keep B" [--city sf --uid <uid>] [--url <page>] [--image <flyer>]
 //   node tools/add-deck-card.js list
 //   node tools/add-deck-card.js drop --key "manual|…"
 //
@@ -52,6 +52,7 @@ function readSavedRecord(repoRoot, city, uid) {
         endDate: hit.endDate instanceof Date ? hit.endDate.toISOString() : null,
         location: String(hit.location || ''),
         url: String(hit.url || ''),
+        image: String(fields.image || ''),
         notes: String(hit.notes || ''),
         bar: String(fields.bar || ''),
         address: String(fields.address || ''),
@@ -90,6 +91,8 @@ function buildCard(args, options = {}) {
         timezone,
         bar: args.bar || (record && record.bar) || '',
         address: args.address || (record && record.address) || '',
+        url: args.url || (record && record.url) || '',
+        image: args.image || (record && record.image) || '',
         createdBy: args.by || 'claude',
         expiresAt: args.expires || null
     };

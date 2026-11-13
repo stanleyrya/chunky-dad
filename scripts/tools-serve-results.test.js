@@ -2415,6 +2415,11 @@ test('manual cards: teal card with band, an edit shows before → after, a choos
   const chooseHtml = renderReviewCard({ kind: 'manual', key: choose.key, proposal: choose }, buildReviewCtx());
   assert.ok(chooseHtml.includes('Your call') && chooseHtml.includes('Keep BLUF SF HARD') && chooseHtml.includes('Keep Bad Boy'));
   assert.ok(chooseHtml.includes('swipe right') && chooseHtml.includes('swipe left'));
+  assert.ok(!chooseHtml.includes('class="thumb') && !chooseHtml.includes('class="chips"'), 'no flyer, no link: neither is drawn');
+  // What the owner judges by rides on the card: the flyer and the page.
+  const shownHtml = renderReviewCard({ kind: 'manual', key: choose.key, proposal: { ...choose, url: 'https://bluf.example/sf-hard', image: 'https://bluf.example/flyer.jpg' } }, buildReviewCtx());
+  assert.ok(shownHtml.includes('class="thumb') && shownHtml.includes('https://bluf.example/flyer.jpg'), 'the flyer');
+  assert.ok(shownHtml.includes('href="https://bluf.example/sf-hard"'), 'the page link');
 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-review-manual-'));
   fs.mkdirSync(path.join(dir, 'runs'));
@@ -2430,6 +2435,8 @@ test('manual cards: teal card with band, an edit shows before → after, a choos
     const page = await request(state, 'GET', '/review');
     assert.ok(page.body.includes('"already done by hand"'), 'the manual keep tags ship with the page');
     assert.ok(page.body.includes('function isChoose('), 'the deck knows a choose card');
+    assert.ok(page.body.includes("['manual', '✍️ Manual']"), 'manual cards have a tab of their own');
+    assert.deepEqual(manual.map((c) => c.proposal.action), ['choose', 'edit'], 'the question is filed before the edit');
     const decided = await request(state, 'POST', '/review/decide', JSON.stringify({ key: edit.key, kind: 'manual', verdict: 'approve', snapshot: edit }));
     assert.equal(decided.status, 200);
     assert.equal(JSON.parse(decided.body).decision.kind, 'manual');
