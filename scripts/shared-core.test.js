@@ -30447,6 +30447,47 @@ test('keeps: the owner\'s stored verdict and a source allowlist are never overru
   assert.equal(bear.bearRun, undefined);
 });
 
+test('keeps: a beer bust at a bar the owner marked bear or leather is kept as bear-crowd; anywhere else it is judged like any night', async () => {
+  const bars = {
+    la: [
+      { name: 'Eagle LA', scene: 'leather', address: '4219 Santa Monica Blvd, Los Angeles, CA 90029' },
+      { name: 'Precinct', scene: 'adjacent' },
+      { name: 'Akbar' }
+    ],
+    sf: [{ name: 'Lone Star Saloon', scene: 'bear' }]
+  };
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, bars });
+  const notBear = { verdict: 'not_bear', reason: 'a generic beer special' };
+  const run = async (event, verdict = notBear) => core.filterBearEvents([event], bearCheckConfig('enforce'), buildTagAwareAdapter(verdict));
+
+  const sunday = await run({ title: 'SUNDAY BEER BUST', description: 'Sunday Beer Bust 2pm $5 domestic drafts', bar: 'Eagle LA', city: 'la' });
+  assert.equal(sunday.length, 1, 'a leather bar');
+  assert.equal(sunday[0].isBearEvent, true);
+  assert.equal(sunday[0].bearSource, 'tagged (bear-crowd: a beer bust at Eagle LA, a leather bar)');
+  assert.equal(sunday[0].tags, 'bear-crowd');
+  assert.equal((await run({ title: 'Most Wanted SFGBAs Beer Bust', bar: 'Lone Star Saloon', city: 'sf' })).length, 1, 'a bear bar');
+  assert.equal((await run({ title: 'MLK BUST – BAR OPENS AT 4PM', bar: 'Eagle LA', city: 'la' })).length, 1, 'a bust by itself');
+  assert.equal((await run({ title: '🍺 BEER BLAST | NO COVER TILL 9PM', bar: 'Eagle LA', city: 'la' })).length, 1, 'a beer blast');
+  assert.equal((await run({ title: 'Beer Bust', bar: 'The Eagle', address: '4219 Santa Monica Blvd, Los Angeles, CA 90029', city: 'la' })).length, 1, 'the curated door, under another name');
+  const unsure = await run({ title: 'Beer Bust', bar: 'Eagle LA', city: 'la' }, { verdict: 'unsure', reason: 'thin' });
+  assert.equal(unsure[0].bearReview, undefined, 'not a maybe either');
+
+  // No mark, an "adjacent" mark, or a bust named only in the description: judged as before.
+  assert.equal((await run({ title: 'Beer Bust', bar: 'Precinct', city: 'la' })).length, 0, 'adjacent');
+  assert.equal((await run({ title: 'Beer Bust', bar: 'Akbar', city: 'la' })).length, 0, 'no mark');
+  assert.equal((await run({ title: 'Beer Bust', bar: 'Stonewall', city: 'nyc' })).length, 0, 'not on the list');
+  assert.equal((await run({ title: 'ONYX', description: 'ONYX BEER BUST 4-8pm', bar: 'Eagle LA', city: 'la' })).length, 0, 'a party with a bust in its description');
+  assert.equal((await run({ title: 'Robust Beats', bar: 'Eagle LA', city: 'la' })).length, 0, 'bust inside a word');
+
+  // The owner's own word and a source's allowlist still stand.
+  const allow = await core.attachEventTagsToBearDecision({ result: 'not_bear', provenance: 'allowlist: not on the list' }, { title: 'Beer Bust', bar: 'Eagle LA', city: 'la' }, bearCheckConfig('enforce'), buildTagAwareAdapter(notBear));
+  assert.equal(allow.result, 'not_bear');
+  const stored = await core.attachEventTagsToBearDecision({ result: 'not_bear', provenance: 'manual store: not_bear', manualStore: true, storedVerdictEntry: { title: 'Beer Bust' } }, { title: 'Beer Bust', bar: 'Eagle LA', city: 'la' }, bearCheckConfig('enforce'), buildTagAwareAdapter(notBear));
+  assert.equal(stored.result, 'not_bear', 'his not bear wins');
+  const bear = await core.attachEventTagsToBearDecision({ result: 'bear', provenance: 'keyword: bear' }, { title: 'Bear Beer Bust', bar: 'Lone Star Saloon', city: 'sf' }, bearCheckConfig('enforce'), buildTagAwareAdapter(notBear));
+  assert.equal(bear.result, 'bear', 'a bear verdict is never re-labelled');
+});
+
 test('tags: the bare word "gear" names leather only in a title; a description has to say the night is about it', async () => {
   const core = createCore();
   assert.deepEqual(core.collectMachineEventTags({ title: 'Fetish Friday: GEAR', description: '' }).fromTitle, ['kink', 'leather']);

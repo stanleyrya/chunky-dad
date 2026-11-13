@@ -16235,7 +16235,8 @@ Rules:
                 const bearSource = decision.manualStore
                     ? SharedCore.buildBearVerdictStoreSource('tagged', decision.storedVerdictEntry && decision.storedVerdictEntry.stampedAt)
                     : decision.bearRun ? `tagged (bear-run: ${String(decision.bearRun).slice(0, 60)})`
-                        : SharedCore.buildTaggedBearSource(decision.provenance);
+                        : decision.keptAs ? `tagged (${decision.keptAs})`
+                            : SharedCore.buildTaggedBearSource(decision.provenance);
                 kept.push({...event, isBearEvent: true, bearSource, ...this.buildEventTagsPatch(decision)});
             } else if (decision.result === 'maybe') {
                 // The owner's stored maybe: held back from the calendar on
@@ -16538,7 +16539,7 @@ Rules:
             console.log(`🏷️ TAGS: "${title}" — candidates ${machine.candidates.map(describe).join('; ')}; ${parts.join('; ')}`);
         }
         decision.tags = tags;
-        // Not bear, but kept — for one of two reasons, and only these
+        // Not bear, but kept — for one of three reasons, and only these
         // (owner, 2026-11-09: "save bear and leather but not a lot of the
         // other events"):
         //   1. a tag that KEEPS (EventSchema.EVENT_TAGS `keeps`: leather).
@@ -16560,6 +16561,21 @@ Rules:
             decision.result = 'tagged';
             decision.bearRun = bearRun.name || bearRun.key || '';
             decision.provenance = `tagged: bear-run (${bearRun.name || bearRun.key}) — ${decision.provenance}`;
+            return decision;
+        }
+        //   3. a beer bust at a bar the owner marked bear or leather
+        //      (data/bars `scene`). Owner, 2026-11-13: "Beer bust at a
+        //      leather or bear bar should go on the site". The bar's regulars
+        //      are the crowd, whatever the page says, so it is kept as
+        //      bear-crowd (his tag for Eagle NYC's Beer Blast, 2026-11-10).
+        //      A bar with no mark, or marked "adjacent", keeps nothing here.
+        const bustBar = this.getBeerBustSceneBar(event);
+        if (bustBar) {
+            console.log(`🍺 BEER BUST: "${title}" kept — a beer bust at ${bustBar.name}, a ${bustBar.scene} bar on your list; was ${decision.result} (${decision.provenance})`);
+            decision.result = 'tagged';
+            decision.tags = schema.normalizeEventTags(tags.concat('bear-crowd'));
+            decision.keptAs = `bear-crowd: a beer bust at ${bustBar.name}, a ${bustBar.scene} bar`;
+            decision.provenance = `tagged: ${decision.keptAs} — ${decision.provenance}`;
             return decision;
         }
         // A poster word counts like a page word — a dress code printed on
@@ -17000,6 +17016,22 @@ Rules:
 
     // A tag whose only witness is the poster: no word for it in the title
     // or the description.
+    // The curated bar a beer bust is held at, when the owner marked that bar
+    // bear or leather; null otherwise. The TITLE has to name the bust ("Beer
+    // Bust", "BEER BLAST", "MLK BUST"): a description that mentions one
+    // ("ONYX BEER BUST 4-8pm" under a party's own name) is a party on the
+    // same afternoon, judged as that party. The bar is found the way the
+    // deck finds it: its curated name, else the curated door at its place.
+    getBeerBustSceneBar(event) {
+        if (!event || typeof event !== 'object') return null;
+        if (!/\bbeer\s*(?:bust|blast)\b|\bbust\b/i.test(String(event.title || ''))) return null;
+        const cityBars = this.getCuratedCityBars(String(event.city || '').trim().toLowerCase());
+        if (!cityBars) return null;
+        const bar = this.findCuratedBarByName(cityBars, event.bar || event.venue || '')
+            || this.findCuratedBarByPlace(cityBars, typeof event.location === 'string' ? event.location : '', typeof event.address === 'string' ? event.address : '');
+        return bar && (bar.scene === 'bear' || bar.scene === 'leather') ? bar : null;
+    }
+
     isPosterOnlyTagHit(hit) {
         return Boolean(hit && Array.isArray(hit.flyer) && hit.flyer.length > 0 && hit.title.length === 0 && hit.description.length === 0);
     }
