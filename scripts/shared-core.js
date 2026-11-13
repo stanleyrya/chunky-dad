@@ -16562,19 +16562,26 @@ Rules:
             decision.provenance = `tagged: bear-run (${bearRun.name || bearRun.key}) — ${decision.provenance}`;
             return decision;
         }
-        // A keeping tag named only on the poster describes, it never keeps:
-        // a leather bar's posters carry a sponsor, a titleholder or a dress
-        // code far more often than a leather night (STUFFED, "Randy:
-        // Unwrapped", 2026-11-12). The drop reason says so, so the card in
-        // the Not-bear pile shows what the poster said.
+        // A poster word counts like a page word — a dress code printed on
+        // the flyer is the same dress code ("Randy: Unwrapped": "ENCOURAGED:
+        // LEATHER, GEAR, HARNESS"; page text with those words is kept). The
+        // one exception is a word that sits only inside a NAME on the
+        // poster: who presents or sponsors the night, not what the night is
+        // (STUFFED: "Mr. Leather & Mr. Rough Trade Gear PRESENT"; AshHole:
+        // "Sponsored by: Mr-S-Leather.com", 2026-11-12). The model says yes
+        // to those names (10 of 12 when asked where the word sits), so the
+        // reading is done here, on the letters. The drop reason says so,
+        // and the card in the Not-bear pile shows what the poster said.
         const keepingTags = typeof schema.keepingEventTags === 'function' ? schema.keepingEventTags(tags) : tags;
-        const posterOnlyKeeps = keepingTags.filter(tag => this.isPosterOnlyTagHit(machine.hits[tag]));
+        const flyerText = this.getFlyerTextEvidence(event);
+        const posterOnlyKeeps = keepingTags.filter(tag => this.isPosterOnlyTagHit(machine.hits[tag])
+            && this.isTagWordOnlyInNames(flyerText, machine.hits[tag].flyer));
         const keeping = keepingTags.filter(tag => !posterOnlyKeeps.includes(tag));
         if (keeping.length === 0) {
             if (posterOnlyKeeps.length > 0) {
                 const words = posterOnlyKeeps.map(tag => `${tag}: ${machine.hits[tag].flyer.join(', ')}`).join('; ');
-                console.log(`🏷️ TAGS: "${title}" — ${posterOnlyKeeps.join(', ')} is named only on the poster (${words}); a poster word alone does not keep a ${decision.result} event`);
-                decision.provenance = `${posterOnlyKeeps.join(', ')} only on the flyer (${words}) — ${decision.provenance}`;
+                console.log(`🏷️ TAGS: "${title}" — ${posterOnlyKeeps.join(', ')} is only in a name on the poster (${words}); who presents a night does not keep a ${decision.result} event`);
+                decision.provenance = `${posterOnlyKeeps.join(', ')} only in a name on the flyer (${words}) — ${decision.provenance}`;
                 decision.posterOnlyTags = posterOnlyKeeps;
             } else if (tags.length > 0) console.log(`🏷️ TAGS: "${title}" — ${tags.join(', ')} describe it but do not keep a ${decision.result} event`);
             return decision;
@@ -16995,6 +17002,57 @@ Rules:
     // or the description.
     isPosterOnlyTagHit(hit) {
         return Boolean(hit && Array.isArray(hit.flyer) && hit.flyer.length > 0 && hit.title.length === 0 && hit.description.length === 0);
+    }
+
+    // Is the word at [start, end) part of a NAME — who presents, hosts or
+    // sponsors the night — rather than a description of it? Three shapes,
+    // all read off the text itself:
+    //   a title-holder   "Mr. Leather", "Mr. SF Eagle Leather 2027", "MR-S-LEATHER"
+    //   a web address    "Mr-S-Leather.com", "@leatherdaddy"
+    //   a credit         "Sponsored by: …", "BY: RGV LEATHERMEN", "… PRESENT(S)"
+    // Returns the shape's name, or '' for a plain word.
+    describeNameAroundWord(text, start, end) {
+        const source = String(text || '');
+        const before = source.slice(Math.max(0, start - 48), start);
+        const after = source.slice(end, end + 64);
+        const token = `${(before.match(/\S*$/) || [''])[0]}${source.slice(start, end)}${(after.match(/^\S*/) || [''])[0]}`;
+        if (/^@\w|\bwww\.|\.[a-z]{2,}(\/|$|[^a-z])/i.test(token)) return 'web address';
+        // A title and its holder share a line ("Mr. Leather PRESENTS" above
+        // "LEATHER NIGHT" names the first, not the second).
+        const sameLine = before.split('\n').pop();
+        if (/(^|[^a-z])(mr|ms|mx|miss|mister)[ \t.\-]+(?:[\w'’&]+[ \t.\-]+){0,3}$/i.test(sameLine)) return 'title-holder';
+        // A credit and its name share a line too, or the credit ends its
+        // line and the name starts the next ("BY:" above "RGV LEATHERMEN").
+        const lead = before.split('\n').slice(-2).join('\n');
+        const credit = '(?:\\b(?:sponsored|hosted|presented|produced|powered|brought to you)\\s+by\\b|(?:^|\\s)by\\s*:)';
+        if (new RegExp(`${credit}[^\\n.!?]{0,40}$`, 'i').test(sameLine)
+            || new RegExp(`${credit}[ \\t:]*\\n[^\\n.!?]{0,40}$`, 'i').test(lead)) return 'credit';
+        const tail = after.split('\n')[0];
+        if (/^[^.!?•|]{0,60}?\bpresents?\b/i.test(tail)) return 'credit';
+        return '';
+    }
+
+    // True when the poster has the tag's words and EVERY one of them sits
+    // inside a name. A word that cannot be found in the text proves nothing
+    // and counts as plain.
+    isTagWordOnlyInNames(text, words) {
+        const source = String(text || '');
+        const list = (Array.isArray(words) ? words : []).map(word => String(word || '').trim()).filter(Boolean);
+        if (!source || list.length === 0) return false;
+        let found = 0;
+        for (const word of list) {
+            const pattern = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'gi');
+            let match;
+            let seen = 0;
+            while ((match = pattern.exec(source))) {
+                seen += 1;
+                if (!this.describeNameAroundWord(source, match.index, match.index + match[0].length)) return false;
+                if (match[0].length === 0) pattern.lastIndex += 1;
+            }
+            if (seen === 0) return false;
+            found += seen;
+        }
+        return found > 0;
     }
 
     // Tags the AI may CONFIRM (never originate): the machine-assignable

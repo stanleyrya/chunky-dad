@@ -34061,22 +34061,65 @@ test('flyer evidence: a theme named only on the poster becomes a tag question, a
   assert.deepEqual(plain.collectMachineEventTags(flyerEvent()).candidates, []);
 });
 
-test('flyer evidence: a tag named only on the poster describes an event and never keeps one', async () => {
+test('flyer evidence: a word inside a title-holder, a web address or a credit is a name, not a description', () => {
+  const core = createCore();
+  const shape = (text, word) => { const at = text.toLowerCase().indexOf(word.toLowerCase()); return core.describeNameAroundWord(text, at, at + word.length); };
+  // Names, as real posters print them.
+  assert.equal(shape('Eagle LA Mr. Leather & Mr. Rough Trade Gear PRESENT STUFFED', 'Leather'), 'title-holder');
+  assert.equal(shape('AKA Mr. SF Eagle Leather 2027 Ariel Sky', 'Leather'), 'title-holder');
+  assert.equal(shape('THE EAGLE\nFOLSOM STREET\nMR-S-LEATHER\n\nFILTH', 'LEATHER'), 'title-holder');
+  assert.equal(shape('ASHKOLE Sponsored by: Mr-S-Leather.com - OnGuardSalon.com', 'Leather'), 'web address');
+  assert.equal(shape('Tickets: www.leatherweekend.com', 'leather'), 'web address');
+  assert.equal(shape('VAQUEROS DJ JOZE\nBY: RGV LEATHERMEN\nDALLAS EAGLE', 'LEATHER'), 'credit');
+  assert.equal(shape('Hosted by the Leathermen of the valley', 'Leather'), 'credit');
+  assert.equal(shape('ONYX LEATHER CLUB PRESENTS\nFALL BALL', 'LEATHER'), 'credit');
+  // Plain words: a dress code, a theme, a list.
+  assert.equal(shape('*ENCOURAGED:\nLEATHER, JOCKS, GEAR, HARNESS', 'LEATHER'), '');
+  assert.equal(shape('LEATHER NIGHT\nJOE FIORE PRESENTS FURBALL', 'LEATHER'), '');
+  assert.equal(shape('Hosted by Daddy Mike\nLEATHER NIGHT', 'LEATHER'), '');
+  assert.equal(shape('Sponsored by:\nMr. S\nLEATHER NIGHT', 'LEATHER'), '');
+  assert.equal(shape('PRESENTED BY:\nLEATHERMEN OF THE VALLEY', 'LEATHER'), 'credit');
+  assert.equal(shape('MUSIC LEATHER TOYS TATTOOS', 'LEATHER'), '');
+  assert.equal(shape('Strict dress code. Leather or rubber.', 'Leather'), '');
+  assert.equal(shape('The leather-and-muscle party from New York', 'leather'), '');
+
+  // Every occurrence has to be a name; one plain use is enough to count.
+  assert.equal(core.isTagWordOnlyInNames('Mr. Leather PRESENTS\nSTUFFED', ['leather']), true);
+  assert.equal(core.isTagWordOnlyInNames('Mr. Leather PRESENTS\nLEATHER NIGHT', ['leather']), false);
+  assert.equal(core.isTagWordOnlyInNames('Sponsored by Mr-S-Leather.com\nHARNESS UP', ['leather', 'harness']), false);
+  // A word the text does not hold proves nothing.
+  assert.equal(core.isTagWordOnlyInNames('DANCE PARTY', ['leather']), false);
+  assert.equal(core.isTagWordOnlyInNames('', ['leather']), false);
+});
+
+test('flyer evidence: a poster word keeps like a page word, unless it sits only inside a name', async () => {
   const poster = { text: 'DANCE PARTY\nPRESENTED BY MR. LEATHER\nUNDERWEAR PARTY', classification: 'event-flyer' };
   const tagAnswers = {
     leather: { applies: true, eventEvidence: ['PRESENTED BY MR. LEATHER'], reason: 'a titleholder presents it' },
     underwear: { applies: true, eventEvidence: ['UNDERWEAR PARTY'], reason: 'the poster calls it one' }
   };
 
-  // Not bear: the poster's leather is the only thing that would keep it.
+  // Not bear, and the poster's only leather is the title-holder who
+  // presents it: who presents a night is not what the night is.
   const core = createCore();
   core.setFlyerEvidenceLookup(() => poster);
   const dropped = [];
   const { result: kept, lines } = await quietly(() => core.filterBearEvents([flyerEvent()], bearCheckConfig('enforce'), buildTagAwareAdapter({ verdict: 'not_bear', eventEvidence: [], reason: 'a dance night' }, tagAnswers), dropped));
   assert.equal(kept.length, 0);
   assert.equal(dropped.length, 1);
-  assert.ok(lines.some(line => line.includes('leather is named only on the poster (leather: leather); a poster word alone does not keep a not_bear event')), lines.filter(line => line.includes('TAGS')).join('\n'));
-  assert.ok(JSON.stringify(dropped[0]).includes('leather only on the flyer (leather: leather) — ai: a dance night'), JSON.stringify(dropped[0]).slice(0, 400));
+  assert.ok(lines.some(line => line.includes('leather is only in a name on the poster (leather: leather); who presents a night does not keep a not_bear event')), lines.filter(line => line.includes('TAGS')).join('\n'));
+  assert.ok(JSON.stringify(dropped[0]).includes('leather only in a name on the flyer (leather: leather) — ai: a dance night'), JSON.stringify(dropped[0]).slice(0, 400));
+
+  // A dress code printed on the poster is the same dress code a page
+  // would state: the night is kept for it ("Randy: Unwrapped").
+  const dressed = createCore();
+  dressed.setFlyerEvidenceLookup(() => ({ text: 'SAT DEC 5 10P-3A\nUNWRAPPED\n*ENCOURAGED:\nLEATHER, JOCKS, GEAR, HARNESS\n*FREE CLOTHES CHECK', classification: 'event-flyer' }));
+  const droppedDressed = [];
+  const { result: keptDressed, lines: dressedLines } = await quietly(() => dressed.filterBearEvents([flyerEvent()], bearCheckConfig('enforce'), buildTagAwareAdapter({ verdict: 'not_bear', eventEvidence: [], reason: 'a dance night' }, { leather: { applies: true, eventEvidence: ['*ENCOURAGED:\nLEATHER, JOCKS, GEAR, HARNESS'], reason: 'the poster asks for leather' } }), droppedDressed));
+  assert.equal(keptDressed.length, 1, dressedLines.filter(line => line.includes('TAGS')).join('\n'));
+  assert.equal(droppedDressed.length, 0);
+  assert.match(String(keptDressed[0].bearSource), /^tagged/);
+  assert.deepEqual(dressed.eventSchema.normalizeEventTags(keptDressed[0].tags), ['leather']);
 
   // The same poster under a party whose page says leather: kept, as before.
   const paged = createCore();
