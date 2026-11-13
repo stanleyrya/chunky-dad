@@ -1071,6 +1071,13 @@ function renderReviewBearRow(display = {}, proposal = {}) {
         const words = Array.isArray(picture.words) && picture.words.length > 0 ? `“${picture.words.join('”, “')}”` : 'one word';
         notices.push(`🎭 Its only bear word is ${words}, and the flyer shows ${picture.shows}${picture.seen ? ` — “${picture.seen}”` : ''} (a machine look)`);
     }
+    // A kept card whose bear wording is on the poster only: the page text
+    // never said it, a machine read it off the picture. The flyer is on the
+    // card, so he can check the words against it.
+    const flyerWords = proposal.kind !== 'dropped' && Array.isArray(display.flyerWordsNotice) ? display.flyerWordsNotice.filter(Boolean) : [];
+    if (flyerWords.length > 0) {
+        notices.push(`🖼️ The bear wording is only on the flyer: “${flyerWords.join('”, “')}” (read off the picture by a machine)`);
+    }
     const noticeHtml = notices.map((line) => `<div class="bear-notice">${escapeHtmlText(line)}</div>`).join('');
     return `<div class="bear-row"><div class="bear-state">${escapeHtmlText(state)}${tagText ? ` ${tagText}` : ''}${storedText ? ` ${storedText}` : ''}${maybeText ? ` ${maybeText}` : ''}</div>${noticeHtml}</div>`;
 }

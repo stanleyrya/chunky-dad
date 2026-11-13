@@ -31504,6 +31504,37 @@ TEXT:
         }
     }
 
+    // What an event's poster says and what the vision model called the
+    // picture, for shared-core's flyer evidence (applyFlyerTextEvidence):
+    // { text, classification } or null. Same three sources as the merge
+    // lookup above — this run's verdict store, the disk cache, then one
+    // vision call for a picture nothing has read yet (cached like any other).
+    // A picture hosted by Instagram or Facebook is never downloaded for this:
+    // those hosts are off limits, and a missing poster only means the check
+    // reads the page text as it always did.
+    async getFlyerEvidenceForImage(imageUrl, httpAdapter = null) {
+        const verdict = this.getOcrImageVerdict(imageUrl);
+        if (verdict && typeof verdict.text === 'string' && verdict.text.trim()) {
+            return { text: verdict.text, classification: String(verdict.classification || '') };
+        }
+        try {
+            const ocrConfig = this.getOcrConfig({});
+            if (!ocrConfig) return null;
+            const shaped = (result) => {
+                const text = result && typeof result.text === 'string' ? result.text.trim() : '';
+                return text ? { text, classification: String(result.imageClassification || '') } : null;
+            };
+            if (ocrConfig.cacheEnabled) {
+                const cached = await this.readCachedOcrResult(this.upgradeCdnThumbnailUrl(imageUrl), ocrConfig);
+                if (cached) return cached.failureKind ? null : shaped(cached);
+            }
+            if (!httpAdapter || /^https?:\/\/[^/?#]*(?:cdninstagram\.com|fbcdn\.net|instagram\.com|facebook\.com)(?:[:/?#]|$)/i.test(String(imageUrl || ''))) return null;
+            return shaped(await this.getOcrTextForImage(imageUrl, ocrConfig, 'flyer evidence', httpAdapter));
+        } catch (_) {
+            return null;
+        }
+    }
+
     /**
      * Why the vision pass says this URL is not an event's artwork ('' when it
      * doesn't say so). TWO conditions, both required, because either alone

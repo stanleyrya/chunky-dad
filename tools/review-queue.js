@@ -1057,6 +1057,12 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
                 seen: String(event._pictureScene.seen || '').trim().slice(0, 240)
             }
             : null,
+        // The bear wording was on the poster and nowhere in the page text
+        // (SharedCore.applyFlyerTextEvidence). Shown while the AI verdict is
+        // still what keeps the event.
+        flyerWordsNotice: Array.isArray(event._bearFlyerEvidence) && event.bearSource === 'ai'
+            ? event._bearFlyerEvidence.filter((quote) => typeof quote === 'string' && quote.trim()).map((quote) => quote.replace(/\s+/g, ' ').trim().slice(0, 120)).slice(0, 2)
+            : [],
         slotWins: Array.isArray(event._slotWins) ? event._slotWins.map((entry) => entry && entry.from ? `${entry.from} (${entry.fromCadence || 'unknown'})` : '').filter(Boolean).slice(0, 3) : [],
         slotTakeover: event._slotTakeover && typeof event._slotTakeover === 'object' ? { from: String(event._slotTakeover.from || ''), fromCadence: String(event._slotTakeover.fromCadence || '') } : null,
         venueOverlaps: Array.isArray(event._venueOverlap) ? event._venueOverlap.map((entry) => entry && (entry.withTitle || entry.title)).filter(Boolean).slice(0, 3) : [],

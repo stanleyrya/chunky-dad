@@ -28,6 +28,7 @@
 const fs = require('fs');
 const path = require('path');
 const queue = require('./review-queue');
+const eventShape = require('./event-shape');
 
 const repoRoot = path.join(__dirname, '..');
 const { SharedCore } = require(path.join(repoRoot, 'scripts', 'shared-core'));
@@ -327,6 +328,14 @@ async function runAudit(options = {}) {
         festivals: Array.isArray(config.festivals) ? config.festivals : []
     });
     core.bearVerdicts = queue.loadBearVerdicts(queue.getBearVerdictsPath(sharedRoot));
+    // A re-ask reads each party's poster as a run does (SharedCore.
+    // applyFlyerTextEvidence): the vision model's stored reading, nothing is
+    // downloaded here.
+    const flyerIndex = eventShape.getFlyerTextIndex(sharedRoot);
+    core.setFlyerEvidenceLookup((imageUrl) => {
+        const hit = flyerIndex.lookup(imageUrl);
+        return hit && hit.text ? { text: hit.text, classification: hit.classification || '' } : null;
+    });
     const adapter = createAuditAdapter({ cities: config.cities, calendarsDir: options.calendarsDir });
     const parserConfigs = (Array.isArray(config.parsers) ? config.parsers : []).map((parser) => core.resolveEffectiveParserConfig(parser, config));
     // Never the run's answer cache: an audit question is asked fresh and
@@ -342,6 +351,10 @@ async function runAudit(options = {}) {
     const kept = collectKeptEvidence(run);
     const keptSeries = collectSeriesEvidence(core, run);
     const dropped = await matchDroppedToSaved(core, adapter, run, now);
+
+    // Records are re-asked one at a time; whether a poster is one party's
+    // needs every saved record that carries it in view.
+    core.noteFlyerCarriers(saved.map(record => savedRecordAsEvent(core, record)));
 
     const judged = [];
     let asked = 0;

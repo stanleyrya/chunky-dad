@@ -119,6 +119,13 @@ const PIN_MOVED_THRESHOLD_KM = 0.4;
 // artwork and starts being a programme — see countDistinctFlyerClockTimes for
 // the corpus census that picked 4.
 const MULTI_EVENT_SCHEDULE_CLOCK_TIMES = 4;
+// Flyer text as evidence (applyFlyerTextEvidence). How much of a poster the
+// bear, tag and audience questions are shown, and the vision model's own
+// classes that mean "not one party's poster": page furniture (the same three
+// the ai-web parser rejects as artwork) and a programme of several events.
+const FLYER_EVIDENCE_MAX_CHARS = 600;
+const FLYER_EVIDENCE_FURNITURE_CLASSES = new Set(['logo', 'thumbnail', 'hero-banner']);
+const FLYER_EVIDENCE_PROGRAMME_CLASSES = new Set(['multi-event-flyer']);
 
 // New-venue-candidate detection (gathering-only growth loop): barSource
 // stamps that positively corroborate an extracted bar name without meaning
@@ -7544,6 +7551,161 @@ Rules:
 - A cartoon animal, mascot or object is not a person.
 - If nobody is pictured: people_visible is false, both counts are 0, people_are is "none" and every "any_" field is false.
 - Answer false when you cannot see it clearly.`;
+    }
+
+    // ── Flyer text as evidence (owner 2026-11-12: "B bar has bears in the
+    // ocr. Why was it not bear?") ─────────────────────────────────────────
+    // The bear check read the title, the description and the bar name. The
+    // poster was read by the vision model weeks earlier ("BEARS CUBS OTTERS
+    // and OTHER FURRY CRITTERS!"), the page reader saw that text and wrote a
+    // description without the line, and the bear check never saw it at all.
+    // An event's own poster is the event's own words: the bear check, the
+    // tag check and the audience check now read it beside the description,
+    // and a quote from it passes the evidence gate.
+    //
+    // It is evidence for the AI tiers only. A bear word on a poster never
+    // decides by itself the way a bear word in the title does: the letters
+    // are machine-read, and a poster carries sponsor lines and venue slogans
+    // that a title never does.
+    //
+    // lookup(imageUrl, httpAdapter) → { text, classification } | string | null.
+    // Injected like the OCR text lookup; without one nothing changes.
+    setFlyerEvidenceLookup(lookup) {
+        this.flyerEvidenceLookup = typeof lookup === 'function' ? lookup : null;
+    }
+
+    // The poster text the checks may read for this event ('' when none).
+    getFlyerTextEvidence(event) {
+        if (!event || typeof event !== 'object' || !this._flyerEvidenceByEvent) return '';
+        return this._flyerEvidenceByEvent.get(event) || '';
+    }
+
+    // One prompt line for the poster, or none. The line breaks of a poster
+    // become " / " so the event block stays one field per line.
+    buildFlyerTextPromptLines(event) {
+        const flyerText = this.getFlyerTextEvidence(event);
+        if (!flyerText) return [];
+        return [`- Flyer text (read by machine off this event's own poster, so a letter may be wrong): ${flyerText.replace(/\s*\n+\s*/g, ' / ')}`];
+    }
+
+    flyerEvidenceImageKey(imageUrl) {
+        const url = typeof imageUrl === 'string' ? imageUrl.trim() : '';
+        return /^https?:\/\//i.test(url) ? url.replace(/#.*$/, '') : '';
+    }
+
+    flyerEvidenceTitleKey(event) {
+        const tokens = this.getSourceCorpusTitleTokens(event);
+        return tokens.length > 0 ? tokens : String((event && event.title) || '').toLowerCase().split(/\s+/).filter(Boolean);
+    }
+
+    // Tell the reuse rule about posters carried by records that are judged
+    // one at a time (the saved-events audit): the count of parties under one
+    // picture needs them all in view.
+    noteFlyerCarriers(events) {
+        if (!this._flyerCarriersByImage) this._flyerCarriersByImage = new Map();
+        for (const event of Array.isArray(events) ? events : []) {
+            const key = this.flyerEvidenceImageKey(event && event.image);
+            if (!key) continue;
+            const tokens = this.flyerEvidenceTitleKey(event);
+            if (tokens.length === 0) continue;
+            if (!this._flyerCarriersByImage.has(key)) this._flyerCarriersByImage.set(key, new Map());
+            this._flyerCarriersByImage.get(key).set(tokens.join(' '), tokens);
+        }
+    }
+
+    // Reads each record's poster before the records are judged, and decides
+    // whether it speaks for THIS party. Withheld, each with its own count in
+    // the log line:
+    //   furniture  — the vision model called the picture a logo, a thumbnail
+    //                or a hero banner: the venue's artwork, not a party's.
+    //   programme  — a multi-event flyer, or MULTI_EVENT_SCHEDULE_CLOCK_TIMES
+    //                clock times: it names every night on it, so "bear night"
+    //                printed for Thursday would speak for Tuesday's bingo.
+    //   shared     — the same picture, or the same words, under
+    //                TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES or more different
+    //                parties (parties, not rows — twelve nights of one weekly
+    //                party are one). A placeholder ("MORE INFO COMING SOON"
+    //                sat on four Eagle LA holiday cards) or a house poster.
+    //                Parties that all share a title word are one family and
+    //                keep their poster, as with a venue's standing lines.
+    // The text is held beside the record, never on it: nothing is added to
+    // the saved run or the calendar.
+    async applyFlyerTextEvidence(events, httpAdapter = null) {
+        const counts = { read: 0, furniture: 0, programme: 0, shared: 0, unread: 0 };
+        if (typeof this.flyerEvidenceLookup !== 'function' || !Array.isArray(events) || events.length === 0) return counts;
+        if (!this._flyerEvidenceByEvent) this._flyerEvidenceByEvent = new WeakMap();
+        const byImage = new Map();
+        const answers = new Map();
+        const readable = [];
+        const carriers = new Map();
+        const carry = (key, tokens) => {
+            if (!carriers.has(key)) carriers.set(key, new Map());
+            carriers.get(key).set(tokens.join(' '), tokens);
+        };
+        for (const [key, titles] of this._flyerCarriersByImage || []) {
+            for (const tokens of titles.values()) carry(`image ${key}`, tokens);
+        }
+        for (const event of events) {
+            if (!event || typeof event !== 'object') continue;
+            this._flyerEvidenceByEvent.delete(event);
+            const imageKey = this.flyerEvidenceImageKey(event.image);
+            if (!imageKey) continue;
+            if (!answers.has(imageKey)) {
+                let answer = null;
+                try { answer = await this.flyerEvidenceLookup(event.image.trim(), httpAdapter); } catch (_) { answer = null; }
+                if (typeof answer === 'string') answer = { text: answer, classification: '' };
+                answers.set(imageKey, answer && typeof answer === 'object' ? answer : null);
+            }
+            const answer = answers.get(imageKey);
+            const text = answer && typeof answer.text === 'string' ? answer.text.trim() : '';
+            if (!text || !/[\p{L}\p{N}]{3,}/u.test(text)) { counts.unread += 1; continue; }
+            const classification = String(answer.classification || '').trim().toLowerCase();
+            if (FLYER_EVIDENCE_FURNITURE_CLASSES.has(classification)) { counts.furniture += 1; continue; }
+            if (FLYER_EVIDENCE_PROGRAMME_CLASSES.has(classification)
+                || this.countDistinctFlyerClockTimes(text) >= MULTI_EVENT_SCHEDULE_CLOCK_TIMES) { counts.programme += 1; continue; }
+            const tokens = this.flyerEvidenceTitleKey(event);
+            const textKey = this.normalizeBearEvidenceText(text);
+            carry(`image ${imageKey}`, tokens);
+            carry(`text ${textKey}`, tokens);
+            readable.push({ event, text, imageKey, textKey });
+        }
+        const isShared = (key) => {
+            const titles = carriers.get(key);
+            if (!titles || titles.size < TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES) return false;
+            const lists = [...titles.values()];
+            return !lists[0].some(token => lists.every(list => list.includes(token)));
+        };
+        const sharedPosters = new Map();
+        for (const entry of readable) {
+            const sharedKey = [`image ${entry.imageKey}`, `text ${entry.textKey}`].find(isShared);
+            if (sharedKey) {
+                counts.shared += 1;
+                if (!sharedPosters.has(sharedKey)) sharedPosters.set(sharedKey, { titles: carriers.get(sharedKey).size, text: entry.text });
+                continue;
+            }
+            counts.read += 1;
+            this._flyerEvidenceByEvent.set(entry.event, entry.text.slice(0, FLYER_EVIDENCE_MAX_CHARS));
+        }
+        for (const poster of sharedPosters.values()) {
+            console.log(`🖼️ FLYER TEXT: one poster sits under ${poster.titles} different parties and speaks for none of them ("${poster.text.replace(/\s+/g, ' ').slice(0, 80)}")`);
+        }
+        const withheld = counts.furniture + counts.programme + counts.shared;
+        if (counts.read > 0 || withheld > 0) {
+            console.log(`🖼️ FLYER TEXT: ${counts.read} record(s) judged with their poster's words; ${withheld} withheld (${counts.furniture} venue artwork, ${counts.programme} programmes, ${counts.shared} shared by ${TITLE_TOKEN_CORPUS_GENERIC_MIN_TITLES}+ parties)`);
+        }
+        return counts;
+    }
+
+    // The quotes that are on the poster and nowhere in the title or the
+    // description — what a card says the verdict rests on.
+    flyerOnlyEvidenceQuotes(quotes, event) {
+        const flyer = this.normalizeBearEvidenceText(this.getFlyerTextEvidence(event));
+        if (!flyer || !Array.isArray(quotes)) return [];
+        const page = this.normalizeBearEvidenceText(`${(event && event.title) || ''} ${(event && event.description) || ''}`);
+        return quotes.filter(quote => {
+            const normalized = this.normalizeBearEvidenceText(quote);
+            return normalized.length >= 3 && flyer.includes(normalized) && !page.includes(normalized);
+        });
     }
 
     // Injected like the OCR lookup: the ai-web parser owns the image fetch,
@@ -16013,6 +16175,10 @@ Rules:
         // "how many different parties carry this sentence" needs them all in
         // view. See applyDescriptionChromeFlags.
         this.applyDescriptionChromeFlags(events);
+        // Each record's own poster is read here for the same reason: whether
+        // a picture is one party's needs every carrier of it in view. See
+        // applyFlyerTextEvidence.
+        await this.applyFlyerTextEvidence(events, httpAdapter);
         // Drops are decided per record here but FINALISED after the loop, once
         // every record's verdict exists — see the twin sweep below.
         const pendingDrops = [];
@@ -16051,8 +16217,13 @@ Rules:
                 const keywordStamp = bearSource === 'keyword' && Array.isArray(decision.keywords) && decision.keywords.length > 0
                     ? { _bearKeywords: decision.keywords.slice() }
                     : {};
+                // …and so do the poster's words when they are all the AI
+                // verdict stood on: the deck says so on the card.
+                const flyerStamp = bearSource === 'ai' && Array.isArray(decision.flyerEvidence) && decision.flyerEvidence.length > 0
+                    ? { _bearFlyerEvidence: decision.flyerEvidence.slice(0, 3) }
+                    : {};
                 kept.push(bearSource
-                    ? {...event, isBearEvent: true, bearSource, ...keywordStamp, ...this.buildEventTagsPatch(decision)}
+                    ? {...event, isBearEvent: true, bearSource, ...keywordStamp, ...flyerStamp, ...this.buildEventTagsPatch(decision)}
                     : {...event, isBearEvent: true, ...this.buildEventTagsPatch(decision)});
             } else if (decision.result === 'tagged') {
                 // Not bear, kept for its tags (see attachEventTagsToBearDecision).
@@ -16342,6 +16513,7 @@ Rules:
         if (machine.candidates.length > 0) {
             const describe = tag => {
                 const hit = machine.hits[tag] || { title: [], description: [] };
+                if (hit.title.length === 0 && hit.description.length === 0 && hit.flyer) return `${tag} (flyer: ${hit.flyer.join(', ')})`;
                 return `${tag} (${hit.title.length > 0 ? `title: ${hit.title.join(', ')}` : `description: ${hit.description.join(', ')}`})`;
             };
             // One focused call per candidate tag (memoized per event+tag,
@@ -16390,9 +16562,28 @@ Rules:
             decision.provenance = `tagged: bear-run (${bearRun.name || bearRun.key}) — ${decision.provenance}`;
             return decision;
         }
-        const keeping = typeof schema.keepingEventTags === 'function' ? schema.keepingEventTags(tags) : tags;
+        // A poster word counts like a page word — a dress code printed on
+        // the flyer is the same dress code ("Randy: Unwrapped": "ENCOURAGED:
+        // LEATHER, GEAR, HARNESS"; page text with those words is kept). The
+        // one exception is a word that sits only inside a NAME on the
+        // poster: who presents or sponsors the night, not what the night is
+        // (STUFFED: "Mr. Leather & Mr. Rough Trade Gear PRESENT"; AshHole:
+        // "Sponsored by: Mr-S-Leather.com", 2026-11-12). The model says yes
+        // to those names (10 of 12 when asked where the word sits), so the
+        // reading is done here, on the letters. The drop reason says so,
+        // and the card in the Not-bear pile shows what the poster said.
+        const keepingTags = typeof schema.keepingEventTags === 'function' ? schema.keepingEventTags(tags) : tags;
+        const flyerText = this.getFlyerTextEvidence(event);
+        const posterOnlyKeeps = keepingTags.filter(tag => this.isPosterOnlyTagHit(machine.hits[tag])
+            && this.isTagWordOnlyInNames(flyerText, machine.hits[tag].flyer));
+        const keeping = keepingTags.filter(tag => !posterOnlyKeeps.includes(tag));
         if (keeping.length === 0) {
-            if (tags.length > 0) console.log(`🏷️ TAGS: "${title}" — ${tags.join(', ')} describe it but do not keep a ${decision.result} event`);
+            if (posterOnlyKeeps.length > 0) {
+                const words = posterOnlyKeeps.map(tag => `${tag}: ${machine.hits[tag].flyer.join(', ')}`).join('; ');
+                console.log(`🏷️ TAGS: "${title}" — ${posterOnlyKeeps.join(', ')} is only in a name on the poster (${words}); who presents a night does not keep a ${decision.result} event`);
+                decision.provenance = `${posterOnlyKeeps.join(', ')} only in a name on the flyer (${words}) — ${decision.provenance}`;
+                decision.posterOnlyTags = posterOnlyKeeps;
+            } else if (tags.length > 0) console.log(`🏷️ TAGS: "${title}" — ${tags.join(', ')} describe it but do not keep a ${decision.result} event`);
             return decision;
         }
         // A leather night held for another crowd is not this calendar's
@@ -16514,13 +16705,58 @@ Rules:
         if (matched.length > 0) {
             console.log(`🐻 BEAR CHECK: keyword ${matched.join(', ')} appears only in the description of "${event.title || 'Unknown'}" and names no registry brand — deferring to the AI tier`);
         }
+        // A bear word on the poster is never a keyword verdict (see
+        // setFlyerEvidenceLookup): the AI tier reads the poster and must
+        // quote it.
+        const flyerMatched = this.matchBearKeywords(this.getFlyerTextEvidence(event)).filter(keyword => !matched.includes(keyword));
+        if (flyerMatched.length > 0) {
+            console.log(`🐻 BEAR CHECK: keyword ${flyerMatched.join(', ')} is on the poster of "${event.title || 'Unknown'}" and not in its page text — the AI tier reads the poster`);
+        }
 
-        const aiVerdict = await this.getAiBearVerdict(event, parserConfig, httpAdapter);
+        // The page text is judged first, with the question that was asked
+        // before posters were read, so a verdict it reaches cannot move.
+        // The poster is a second question, asked only where the page text
+        // did not make the event bear, and its answer counts in two cases:
+        //   - "bear", with words quoted off the poster itself (Bearmania's
+        //     "Hot For You", The Urban Bear's VIP party, 2026-11-12);
+        //   - any answer, where the page text was too thin to judge
+        //     (54 title-only listings settled as not bear the same day).
+        // It never takes a bear verdict away: one question holding both
+        // texts lost "UNSHAVED Winter Edition" to a poster that only
+        // repeated its date.
+        const pageVerdict = await this.getAiBearVerdict(event, parserConfig, httpAdapter, { flyer: false });
+        let aiVerdict = pageVerdict;
+        let onFlyer = [];
+        // "Bear" on the page text stands on words that are in the page text.
+        const pageQuotes = pageVerdict && pageVerdict.verdict === 'bear' ? this.verifyBearEvidenceQuotes(pageVerdict.evidence, event) : [];
+        const pageMakesItBear = Boolean(pageVerdict) && pageVerdict.verdict === 'bear'
+            && (this.isBearCheckCurated(event, parserConfig) || pageQuotes.length > this.flyerOnlyEvidenceQuotes(pageQuotes, event).length);
+        if (!pageMakesItBear && this.getFlyerTextEvidence(event)) {
+            const posterVerdict = await this.getAiBearVerdict(event, parserConfig, httpAdapter);
+            const posterQuotes = posterVerdict && posterVerdict.verdict === 'bear'
+                ? this.flyerOnlyEvidenceQuotes(this.verifyBearEvidenceQuotes(posterVerdict.evidence, event), event)
+                : [];
+            if (posterQuotes.length > 0) {
+                aiVerdict = posterVerdict;
+                onFlyer = posterQuotes;
+            } else if (posterVerdict && posterVerdict.verdict !== 'bear' && (!pageVerdict || pageVerdict.verdict === 'unsure')) {
+                if (pageVerdict && posterVerdict.verdict === 'not_bear') {
+                    console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — the page text was too thin to judge; with the poster's words it is not bear`);
+                }
+                aiVerdict = posterVerdict;
+            }
+        }
         if (aiVerdict) {
             // aiAnswer = what the MODEL said, before the evidence gate or the
             // usually-bear hold rewrite the result. filterBearEvents reads it
             // to tell "the model saw nothing" from "something was held".
             const aiDecision = { result: aiVerdict.verdict, aiAnswer: aiVerdict.verdict, provenance: `ai: ${aiVerdict.reason || 'no reason given'}` };
+            // A bear verdict that rests on the poster says so, with the words.
+            if (onFlyer.length > 0) {
+                aiDecision.provenance = `${aiDecision.provenance} [on the flyer: "${onFlyer[0].replace(/\s+/g, ' ').slice(0, 80)}"]`;
+                aiDecision.flyerEvidence = onFlyer.slice();
+                console.log(`🐻 BEAR CHECK: "${event.title || 'Unknown'}" — the bear wording is on the poster, not in the page text: "${onFlyer[0].replace(/\s+/g, ' ').slice(0, 80)}"`);
+            }
             return this.holdUsuallyBearSeriesFromDrop(
                 this.applyBearEvidenceGate(aiDecision, event, parserConfig, aiVerdict.evidence), event, trust);
         }
@@ -16738,14 +16974,85 @@ Rules:
                     result.siteLineHits[tag] = { keywords: inSiteLines, line };
                 }
             }
-            if (title.length === 0 && description.length === 0) continue;
+            // The event's own poster names a theme as the description does
+            // (applyFlyerTextEvidence). Only present when the poster hit.
+            const flyer = this.matchTagKeywords(this.getFlyerTextEvidence(event), tag)
+                .filter(keyword => !description.includes(keyword) && !title.includes(keyword));
+            if (title.length === 0 && description.length === 0 && flyer.length === 0) continue;
             result.candidates.push(tag);
             if (title.length > 0) result.fromTitle.push(tag);
-            result.hits[tag] = { title, description };
+            result.hits[tag] = flyer.length > 0 ? { title, description, flyer } : { title, description };
         }
         result.candidates.sort();
         result.fromTitle.sort();
         return result;
+    }
+
+    // The poster joins a tag question only when it names the tag in a word
+    // the page text does not have. Every other tag question is the one that
+    // was asked before posters were read: a poster that says nothing about
+    // the tag still moved 7 answers out of 2,852 records when it rode along
+    // (Unity Night, NOIR, DOG TAG TEA lost their leather, 2026-11-12).
+    getFlyerKeywordsForTag(event, tag) {
+        const hit = this.collectMachineEventTags(event).hits[tag];
+        return hit && Array.isArray(hit.flyer) ? hit.flyer : [];
+    }
+
+    // A tag whose only witness is the poster: no word for it in the title
+    // or the description.
+    isPosterOnlyTagHit(hit) {
+        return Boolean(hit && Array.isArray(hit.flyer) && hit.flyer.length > 0 && hit.title.length === 0 && hit.description.length === 0);
+    }
+
+    // Is the word at [start, end) part of a NAME — who presents, hosts or
+    // sponsors the night — rather than a description of it? Three shapes,
+    // all read off the text itself:
+    //   a title-holder   "Mr. Leather", "Mr. SF Eagle Leather 2027", "MR-S-LEATHER"
+    //   a web address    "Mr-S-Leather.com", "@leatherdaddy"
+    //   a credit         "Sponsored by: …", "BY: RGV LEATHERMEN", "… PRESENT(S)"
+    // Returns the shape's name, or '' for a plain word.
+    describeNameAroundWord(text, start, end) {
+        const source = String(text || '');
+        const before = source.slice(Math.max(0, start - 48), start);
+        const after = source.slice(end, end + 64);
+        const token = `${(before.match(/\S*$/) || [''])[0]}${source.slice(start, end)}${(after.match(/^\S*/) || [''])[0]}`;
+        if (/^@\w|\bwww\.|\.[a-z]{2,}(\/|$|[^a-z])/i.test(token)) return 'web address';
+        // A title and its holder share a line ("Mr. Leather PRESENTS" above
+        // "LEATHER NIGHT" names the first, not the second).
+        const sameLine = before.split('\n').pop();
+        if (/(^|[^a-z])(mr|ms|mx|miss|mister)[ \t.\-]+(?:[\w'’&]+[ \t.\-]+){0,3}$/i.test(sameLine)) return 'title-holder';
+        // A credit and its name share a line too, or the credit ends its
+        // line and the name starts the next ("BY:" above "RGV LEATHERMEN").
+        const lead = before.split('\n').slice(-2).join('\n');
+        const credit = '(?:\\b(?:sponsored|hosted|presented|produced|powered|brought to you)\\s+by\\b|(?:^|\\s)by\\s*:)';
+        if (new RegExp(`${credit}[^\\n.!?]{0,40}$`, 'i').test(sameLine)
+            || new RegExp(`${credit}[ \\t:]*\\n[^\\n.!?]{0,40}$`, 'i').test(lead)) return 'credit';
+        const tail = after.split('\n')[0];
+        if (/^[^.!?•|]{0,60}?\bpresents?\b/i.test(tail)) return 'credit';
+        return '';
+    }
+
+    // True when the poster has the tag's words and EVERY one of them sits
+    // inside a name. A word that cannot be found in the text proves nothing
+    // and counts as plain.
+    isTagWordOnlyInNames(text, words) {
+        const source = String(text || '');
+        const list = (Array.isArray(words) ? words : []).map(word => String(word || '').trim()).filter(Boolean);
+        if (!source || list.length === 0) return false;
+        let found = 0;
+        for (const word of list) {
+            const pattern = new RegExp(word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'gi');
+            let match;
+            let seen = 0;
+            while ((match = pattern.exec(source))) {
+                seen += 1;
+                if (!this.describeNameAroundWord(source, match.index, match.index + match[0].length)) return false;
+                if (match[0].length === 0) pattern.lastIndex += 1;
+            }
+            if (seen === 0) return false;
+            found += seen;
+        }
+        return found > 0;
     }
 
     // Tags the AI may CONFIRM (never originate): the machine-assignable
@@ -16766,8 +17073,11 @@ Rules:
         // A name the model does not know (an acronym, a club) is explained
         // only to the event that carries it.
         const family = (this.tagKeywords && this.tagKeywords[tag]) || {};
+        const flyerNamesTag = this.getFlyerKeywordsForTag(event, tag).length > 0;
+        const flyerLines = flyerNamesTag ? this.buildFlyerTextPromptLines(event) : [];
+        const flyerText = flyerNamesTag ? this.getFlyerTextEvidence(event) : '';
         const named = (family.pattern || [])
-            .filter(item => item.means && item.test.test(`${title}\n${description}`))
+            .filter(item => item.means && item.test.test(`${title}\n${description}${flyerText ? `\n${flyerText}` : ''}`))
             .map(item => item.means);
         return [
             'You are tagging events on a gay men\'s nightlife calendar. One tag, one event: does the tag apply?',
@@ -16780,13 +17090,14 @@ Rules:
             `- Venue: ${bar || 'unknown'}`,
             `- City: ${event.city || 'unknown'}`,
             `- Description: ${description ? description.slice(0, 600) : '(none)'}`,
+            ...flyerLines,
             '',
             'The tag applies only when the EVENT ITSELF is that kind of event. It does not apply because of the venue\'s reputation, a host\'s persona, a dress-code aside ("gear welcome"), a word used in another sense (a DJ called KiNK, gym gear, a Dungeons & Dragons game), or a promoter\'s other parties.',
             '',
             'Respond with ONLY this JSON object (an object, never a bare list), no other text:',
-            `{"tag": "${tag}", "applies": true | false, "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}`,
+            `{"tag": "${tag}", "applies": true | false, "eventEvidence": ["<words copied exactly from the ${flyerLines.length > 0 ? 'Title, Description or Flyer text' : 'Title or Description'}>"], "reason": "<one short sentence>"}`,
             '',
-            'eventEvidence is checked automatically: every string must be copied WORD FOR WORD from the Title or the Description, never from the Venue line. It holds the words that make the tag apply; when it would be empty, applies is false.'
+            `eventEvidence is checked automatically: every string must be copied WORD FOR WORD from ${flyerLines.length > 0 ? 'the Title, the Description or the Flyer text' : 'the Title or the Description'}, never from the Venue line. It holds the words that make the tag apply; when it would be empty, applies is false.${flyerLines.length > 0 ? " The Flyer text is this event's own poster; a venue name or slogan printed on it says what the venue is, not what this event is." : ''}`
         ].join('\n');
     }
 
@@ -16802,7 +17113,11 @@ Rules:
         const title = String(event.title || '').trim();
         const description = String(event.description || '').trim();
         const bar = String(event.bar || '').trim();
-        const memoKey = `${tag}|${title}|${description}|${bar}`;
+        const tagHit = this.collectMachineEventTags(event).hits[tag];
+        const flyerWords = tagHit && Array.isArray(tagHit.flyer) ? tagHit.flyer : [];
+        const posterOnly = this.isPosterOnlyTagHit(tagHit);
+        const memoFlyer = flyerWords.length > 0 ? this.getFlyerTextEvidence(event) : '';
+        const memoKey = `${tag}|${title}|${description}|${bar}${memoFlyer ? `|flyer:${memoFlyer}` : ''}`;
         if (!this._tagVerdictMemo) this._tagVerdictMemo = new Map();
         if (this._tagVerdictMemo.has(memoKey)) return this._tagVerdictMemo.get(memoKey);
         const prompt = this.buildTagCheckPrompt(event, tag);
@@ -16822,6 +17137,17 @@ Rules:
             const reason = typeof parsed.reason === 'string' ? parsed.reason.trim() : '';
             if (parsed.applies && evidence.length === 0) {
                 return { applies: false, evidence: [], reason: `${claimed.length > 0 ? 'quoted words not in the event text' : 'no words quoted'}${reason ? ` — ${reason}` : ''}` };
+            }
+            // The poster is the tag's only witness: the quote has to hold
+            // the poster's word for it. "ASHKOLE" confirmed leather for
+            // AshHole on the strength of a sponsor line (2026-11-12).
+            if (parsed.applies && posterOnly) {
+                const fold = value => String(value || '').toLowerCase().replace(/\s+/g, ' ');
+                const naming = evidence.filter(quote => flyerWords.some(word => fold(quote).includes(fold(word))));
+                if (naming.length === 0) {
+                    return { applies: false, evidence: [], reason: `the quoted words do not hold the poster's ${flyerWords.join(', ')}${reason ? ` — ${reason}` : ''}` };
+                }
+                return { applies: true, evidence: naming, reason };
             }
             return { applies: parsed.applies, evidence, reason };
         })().catch(() => null);
@@ -17112,7 +17438,8 @@ Rules:
     // than 3 normalized characters are dropped as non-evidence.
     verifyBearEvidenceQuotes(quotes, event) {
         if (!Array.isArray(quotes) || !event) return [];
-        const corpus = this.normalizeBearEvidenceText(`${event.title || ''} ${event.description || ''}`);
+        // The event's own poster is its own text too (applyFlyerTextEvidence).
+        const corpus = this.normalizeBearEvidenceText(`${event.title || ''} ${event.description || ''} ${this.getFlyerTextEvidence(event)}`);
         if (!corpus) return [];
         const venue = this.normalizeBearEvidenceText(event.bar || event.venue || '');
         const verified = [];
@@ -17249,10 +17576,17 @@ Rules:
     //
     // Both variants share one output contract so applyBearEvidenceGate always
     // has a structured field to read instead of parsing prose.
-    buildBearCheckPrompt(event, parserConfig, provenance) {
+    buildBearCheckPrompt(event, parserConfig, provenance, options = {}) {
         const title = String(event.title || '').trim();
         const description = String(event.description || '').trim();
         const bar = String(event.bar || '').trim();
+        // With no poster text — or for the page-text question, options.flyer
+        // === false — every line below is byte for byte what it was before
+        // posters were read, so those answers cannot move.
+        const flyerLines = options.flyer === false ? [] : this.buildFlyerTextPromptLines(event);
+        const quotable = flyerLines.length > 0
+            ? { short: 'Title, Description or Flyer text', long: 'the Title, the Description or the Flyer text' }
+            : { short: 'Title or Description', long: 'the Title or the Description' };
 
         const eventBlock = [
             'Event:',
@@ -17260,6 +17594,7 @@ Rules:
             `- Venue: ${bar || 'unknown'}`,
             `- City: ${event.city || 'unknown'}`,
             `- Description: ${description ? description.slice(0, 500) : '(none)'}`,
+            ...flyerLines,
             `- Provenance: ${provenance}`,
             ''
         ];
@@ -17270,12 +17605,15 @@ Rules:
         // candidate — see buildTagCheckPrompt / getAiTagVerdict.
         const outputContract = [
             'Respond with ONLY a JSON object, no other text:',
-            '{"verdict": "bear" | "not_bear" | "unsure", "eventEvidence": ["<words copied exactly from the Title or Description>"], "reason": "<one short sentence>"}',
+            `{"verdict": "bear" | "not_bear" | "unsure", "eventEvidence": ["<words copied exactly from the ${quotable.short}>"], "reason": "<one short sentence>"}`,
             '',
             'eventEvidence is checked automatically against the text above:',
-            '- Every string must be copied WORD FOR WORD from the Title or the Description. Never paraphrase, summarize or invent.',
+            `- Every string must be copied WORD FOR WORD from ${quotable.long}. Never paraphrase, summarize or invent.`,
             '- Never quote the Venue, City or Provenance lines. The venue name is not evidence.',
-            '- Quote only wording that shows the EVENT ITSELF is aimed at the bear community. If there is none, return [].'
+            '- Quote only wording that shows the EVENT ITSELF is aimed at the bear community. If there is none, return [].',
+            ...(flyerLines.length > 0
+                ? ["- The Flyer text is this event's own poster and counts as the event's own content. A venue name, slogan or sponsor printed on it is still context, not evidence."]
+                : [])
         ];
 
         if (this.isBearCheckCurated(event, parserConfig)) {
@@ -17328,7 +17666,7 @@ Rules:
     // AI is unavailable or the response is unusable (caller falls back).
     // Memoized per run by title+description+bar so duplicate records and
     // repeat titles cost one request.
-    async getAiBearVerdict(event, parserConfig, httpAdapter) {
+    async getAiBearVerdict(event, parserConfig, httpAdapter, options = {}) {
         if (!httpAdapter || typeof httpAdapter.postJson !== 'function') return null;
         const rawAi = parserConfig && parserConfig.ai && typeof parserConfig.ai === 'object' ? parserConfig.ai : {};
         if (rawAi.enabled === false) return null;
@@ -17349,7 +17687,10 @@ Rules:
         // sentence differs (title/organizer/legacy stamps keep their key).
         const memoEvidencePart = memoTrust.evidence === 'url' || memoTrust.evidence === 'parser-site' ? `:${memoTrust.evidence}` : '';
         const memoPromoterPart = memoTrust.affinity ? `|promoter:${memoTrust.promoter}:${memoTrust.affinity}${memoEvidencePart}` : '';
-        const memoKey = `${title}|${description}|${bar}|${memoHost}${memoPromoterPart}`;
+        // options.flyer === false asks the page-text question: no poster
+        // line, and the key that question always had.
+        const memoFlyer = options.flyer === false ? '' : this.getFlyerTextEvidence(event);
+        const memoKey = `${title}|${description}|${bar}|${memoHost}${memoPromoterPart}${memoFlyer ? `|flyer:${memoFlyer}` : ''}`;
         if (!this._bearVerdictMemo) {
             this._bearVerdictMemo = new Map();
         }
@@ -17358,7 +17699,7 @@ Rules:
         }
 
         const provenance = this.buildBearCheckProvenance(event, parserConfig);
-        const prompt = this.buildBearCheckPrompt(event, parserConfig, provenance);
+        const prompt = this.buildBearCheckPrompt(event, parserConfig, provenance, options);
 
         // 400 (was 200): the response now carries verbatim evidence quotes on
         // top of the verdict and reason, and a truncated JSON body is unusable.
@@ -20794,6 +21135,11 @@ Rules:
             const sceneCheck = sceneStamp ? SharedCore.PICTURE_SCENE_CHECKS.find(check => check.key === sceneStamp.key) : null;
             if (sceneCheck && pooledKeywords.length > 0 && pooledKeywords.every(word => sceneCheck.words.includes(word))) mergedEvent._pictureScene = sceneStamp;
             else delete mergedEvent._pictureScene;
+            // The poster words an AI bear verdict stood on stay only while
+            // no source's own bear word keeps the party too.
+            const flyerWords = [newEvent, existingEvent].map(side => side && side._bearFlyerEvidence).find(stamp => Array.isArray(stamp) && stamp.length > 0);
+            if (flyerWords && pooledKeywords.length === 0 && mergedEvent.bearSource === 'ai') mergedEvent._bearFlyerEvidence = flyerWords;
+            else delete mergedEvent._bearFlyerEvidence;
             const keptTitle = pageTitleOf(mergedEvent);
             for (const side of [existingEvent, newEvent]) {
                 const added = this.noteStatedTitle(mergedEvent, pageTitleOf(side), keptTitle);
@@ -21985,6 +22331,11 @@ Rules:
         // (lookAtSharedWordFlyers)…
         if (newEvent._pictureScene && typeof newEvent._pictureScene === 'object') {
             finalEvent._pictureScene = newEvent._pictureScene;
+        }
+        // …for the poster words an AI bear verdict stood on
+        // (applyFlyerTextEvidence)…
+        if (Array.isArray(newEvent._bearFlyerEvidence) && newEvent._bearFlyerEvidence.length > 0) {
+            finalEvent._bearFlyerEvidence = newEvent._bearFlyerEvidence;
         }
         // …and for the weekday-only card stamps (readCardWeekdayDate).
         if (newEvent._weekdayDerivedDate && typeof newEvent._weekdayDerivedDate === 'object') {

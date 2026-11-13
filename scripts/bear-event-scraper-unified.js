@@ -344,6 +344,11 @@ class BearEventScraperOrchestrator {
                         sharedCore.setOcrImageTextLookup(
                             (imageUrl, httpAdapter) => aiParser.getCachedOcrTextForImage(imageUrl, httpAdapter)
                         );
+                        // The bear, tag and audience checks read each event's
+                        // own poster beside its description: same injection.
+                        sharedCore.setFlyerEvidenceLookup(
+                            (imageUrl, httpAdapter) => aiParser.getFlyerEvidenceForImage(imageUrl, httpAdapter)
+                        );
                         // The flyer look on dropped events (a notice on the
                         // deck's not-bear cards): same injection, same reason.
                         // The third argument carries another question for the
