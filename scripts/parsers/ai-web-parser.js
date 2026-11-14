@@ -3791,6 +3791,10 @@ class AiWebParser {
             || /^(?:tickets?|karten|entradas|billets|biglietti|kaarten)\s+(?:kaufen|buchen|sichern|holen|bestellen|reservieren|comprar|acheter|aquí|hier|here)\.?!?$/i.test(line))) return 'a call to action';
         // A calendar plugin's view heading: "Events for July 27, 2026", "Events for", "Events in October".
         if (/^events?\s+(?:for|in|on|from|this|next)\b/i.test(line) && !/\b(?:bears?|cubs?|club|bar|party|fest)\b/i.test(line)) return 'a calendar view heading';
+        // A schedule's own heading: "FULL SCHEDULE" over beefdip.com's day
+        // tabs (run 20261113-172540), "View the full calendar", "Lineup".
+        // The whole title names the listing itself, never a party in it.
+        if (words <= 5 && /^(?:(?:view|see|show|browse|check out)\s+)?(?:the\s+|our\s+)?(?:full\s+|complete\s+|entire\s+|whole\s+|weekly\s+|daily\s+|event\s+|events\s+|party\s+)?(?:schedule|programme|program|calendar|line-?up|itinerary|agenda)(?:\s+of\s+events)?(?:\s+here)?\.?!?$/i.test(line)) return 'a schedule heading';
         // A numbered line of instructions ("2. To apply", "3) Bring ID").
         if (/^\d{1,2}[.)]\s+\S/.test(line) && words <= 6) return 'a numbered line';
         // A street line on its own, in the three orders streets are written:
@@ -4363,6 +4367,65 @@ class AiWebParser {
     // signal and it states no clock, else ''. Such a window is the heading's
     // spillover (the previous card's tail under the next section's
     // heading), never a listing of its own.
+    // The owner's fragment rule (2026-09-13): a dated line with a name but
+    // no clock time and no link of its own is a fragment of an announcement,
+    // not a listing — furball.nyc's header ticker "isn't enough info and it
+    // will make the website look terrible". Every route that ADDS a listing
+    // the page's cards did not give asks this same question.
+    statesListingClockTime(text) {
+        return /\b\d{1,2}(?::\d{2})?\s*[ap]\.?m\b|\b\d{1,2}(?::\d{2})?[ap]\b|\b\d{1,2}:\d{2}\b|\b\d{1,2}h\d{2}\b|\b(?:noon|midnight)\b/i.test(String(text || ''));
+    }
+
+    // A link of the listing's own: not the page itself or the site's home
+    // page, not a calendar subscription, not a social profile. "11/25
+    // UNDERBEAR Stuffed Thanksgiving Eve - ROCKBAR" fused with the hero copy
+    // under it links nothing that is the night's.
+    carriesOwnListingLink(markup, sourceUrl = '') {
+        const hrefs = Array.from(String(markup || '').matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"'#][^"']*)["']/gi)).map(match => match[1]);
+        let page = null;
+        try { page = sourceUrl ? new URL(sourceUrl) : null; } catch (_) { page = null; }
+        const pathOf = (url) => url.pathname.replace(/\/+$/, '') || '/';
+        return hrefs.some(href => {
+            if (/^(?:mailto|tel|javascript|sms):/i.test(href)) return false;
+            if (this.isCalendarExportUrl(href)) return false;
+            let url;
+            try { url = new URL(href, page ? page.href : 'https://page.invalid/'); } catch (_) { return false; }
+            const sameSite = page ? url.host.replace(/^www\./, '') === page.host.replace(/^www\./, '') : url.host === 'page.invalid';
+            if (sameSite && !url.search && (pathOf(url) === '/' || (page && pathOf(url) === pathOf(page)))) return false;
+            if (/(^|\.)(?:instagram|facebook|twitter|x|tiktok|youtube|threads)\.(?:com|net)$/i.test(url.host) && !/\/events?\//i.test(url.pathname)) return false;
+            return true;
+        });
+    }
+
+    // Does this one line carry a link of its own — an <a> inside it, or
+    // the <a> it sits in? null when the line cannot be placed in the markup.
+    rowCarriesOwnListingLink(html, row, records = null, sourceUrl = '') {
+        const source = String(html || '');
+        const bounds = this.findMultiEventSegmentTextBounds(source, [row], records);
+        if (!bounds) return null;
+        const inside = source.slice(bounds.rawStart, bounds.rawEnd);
+        if (this.carriesOwnListingLink(inside, sourceUrl)) return true;
+        const before = source.slice(0, bounds.rawStart);
+        const open = before.search(/<a\b[^>]*>(?![\s\S]*<a\b)/i);
+        if (open < 0) return false;
+        if (/<\/a\s*>/i.test(before.slice(open))) return false;
+        const openTag = before.slice(open).match(/^<a\b[^>]*>/i);
+        return Boolean(openTag && this.carriesOwnListingLink(openTag[0], sourceUrl));
+    }
+
+    // A ticker row: one short line that opens with its date and names the
+    // night after it ("11/25 UNDERBEAR Stuffed Thanksgiving Eve - ROCKBAR",
+    // "Sat 12/5 BEAR NIGHT @ The Eagle"). A sentence that mentions a date
+    // somewhere in it ("ROAR brings TIMBER to The Cuff on Saturday,
+    // November 21, …") is prose, not a row.
+    isDateFirstTickerRow(value) {
+        const line = this.normalizeWhitespace(value);
+        if (!this.isCompactEventLine(line) || line.length > 90) return false;
+        const opening = line.split(/\s+/).slice(0, 3).join(' ');
+        return /^(?:(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?(?:\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{2,4})?|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?|\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*)\b/i.test(opening)
+            && /\p{L}{3,}/u.test(line.slice(opening.length));
+    }
+
     windowDatedOnlyByMonthHeading(lines) {
         const list = (Array.isArray(lines) ? lines : []).map(line => this.normalizeWhitespace(String(line || ''))).filter(Boolean);
         const dated = list.filter(line => this.hasMultiEventDateSignal(line));
@@ -5165,7 +5228,7 @@ class AiWebParser {
             if (this.structuredTierUndercoversDatedContent(html, cardSegments, 'JSON-LD card')) {
                 return this.buildTextTierSegments(html, sourceUrl, ocrResults);
             }
-            const covered = this.coverUnclaimedDatedWindows(html, cardSegments);
+            const covered = this.coverUnclaimedDatedWindows(html, cardSegments, sourceUrl);
             return this.finalizeMultiEventSegments(html, covered, sourceUrl, ocrResults);
         }
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
@@ -5173,7 +5236,7 @@ class AiWebParser {
             if (this.structuredTierUndercoversDatedContent(html, structuredSegments, 'structured')) {
                 return this.buildTextTierSegments(html, sourceUrl, ocrResults);
             }
-            const covered = this.coverUnclaimedDatedWindows(html, structuredSegments);
+            const covered = this.coverUnclaimedDatedWindows(html, structuredSegments, sourceUrl);
             return this.finalizeMultiEventSegments(html, covered, sourceUrl, ocrResults);
         }
 
@@ -5427,7 +5490,7 @@ class AiWebParser {
         return segments.length === cards.length ? segments : [];
     }
 
-    coverUnclaimedDatedWindows(html, structuredSegments) {
+    coverUnclaimedDatedWindows(html, structuredSegments, sourceUrl = '') {
         const structured = Array.isArray(structuredSegments) ? structuredSegments : [];
         if (structured.length === 0) return structured;
         const flatSegments = this.buildFlatTextMultiEventSegments(html, { recordStats: false });
@@ -5501,6 +5564,7 @@ class AiWebParser {
             && resolvedCardSpans.some(span => position >= span.start && position < span.end);
 
         const unclaimed = [];
+        const fragmentWindows = new Set();
         const unclaimedCards = [];
         const unclaimedCompact = [];
         let claimedCount = 0;
@@ -5591,6 +5655,26 @@ class AiWebParser {
                 console.log(`🤖 AI Web: Coverage audit: "${this.deriveSegmentListingTitle(window) || lines[0]}" has no card element of its own and its date precedes its title on a title-then-date page — a cut across two cards, not a listing`);
                 continue;
             }
+            // A window dated only by a ticker row ("11/25 UNDERBEAR Stuffed
+            // Thanksgiving Eve - ROCKBAR", furball.nyc's header) is such a
+            // row fused with the prose under it ("where bears dance…"). The
+            // compact route below reads the row on its own, under the
+            // owner's fragment rule (2026-09-13); a window that adds no clock
+            // time and no link of its own to the row is that same fragment,
+            // and is not added here either. It still counts toward the
+            // disagreement gate below, which measures the splitter, not the
+            // listings.
+            const datedLines = lines.filter(line => this.hasMultiEventDateSignal(line));
+            if (datedLines.length === 1 && this.isDateFirstTickerRow(datedLines[0])) {
+                // The link is asked of the row itself: the window's markup
+                // spans the site menu. A row the page's markup cannot place
+                // (its words split across the spans of a linked card) is
+                // never called linkless.
+                const rowLinked = this.rowCarriesOwnListingLink(html, datedLines[0], records, sourceUrl);
+                if (rowLinked === false && !this.statesListingClockTime(lines.join('\n'))) {
+                    fragmentWindows.add(window);
+                }
+            }
             unclaimed.push(window);
         }
         // Compact event lines ("10/3 FURBALL DC - ICON") are self-contained
@@ -5627,9 +5711,7 @@ class AiWebParser {
             // fragment of an announcement, not a listing (owner, 2026-09-13:
             // furball.nyc's ticker "isn't enough info and it will make the
             // website look terrible") — only a timed or linked row is added.
-            const statesTime = /\b\d{1,2}(?::\d{2})?\s*[ap]\.?m\b|\b\d{1,2}:\d{2}\b/i.test(line);
-            const carriesLink = /<a\b[^>]*\bhref=/i.test(rowHtml);
-            if (!statesTime && !carriesLink) continue;
+            if (!this.statesListingClockTime(line) && !/<a\b[^>]*\bhref=/i.test(rowHtml)) continue;
             unclaimedCompact.push({ lines: [line], html: rowHtml });
         }
         if (unclaimed.length === 0 && unclaimedCards.length === 0 && unclaimedCompact.length === 0) return structured;
@@ -5656,7 +5738,10 @@ class AiWebParser {
             if (claimedCount < unclaimed.length || unclaimed.length > additionCap) {
                 console.log(`🤖 AI Web: Coverage audit: the text splitter disagrees with structured segmentation wholesale on this page (${claimedCount} of ${claimedCount + unclaimed.length} dated text windows match a structured window; ${unclaimed.length} unclaimed vs ${structured.length} structured) — adding nothing from it; this page's segmentation needs a look`);
             } else {
-                additions = additions.concat(unclaimed);
+                for (const window of unclaimed.filter(window => fragmentWindows.has(window))) {
+                    console.log(`🧩 FRAGMENT: "${this.deriveSegmentListingTitle(window) || (window.lines && window.lines[0]) || ''}" — a dated row with no clock time and no link of its own, fused with the text under it, is a teaser, not a listing (owner 2026-09-13); not added`);
+                }
+                additions = additions.concat(unclaimed.filter(window => !fragmentWindows.has(window)));
             }
         }
         if (additions.length === 0) return structured;

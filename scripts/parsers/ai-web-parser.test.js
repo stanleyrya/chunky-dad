@@ -18403,6 +18403,45 @@ test('a listing with one JSON-LD Event per card element is segmented by its card
   assert.deepEqual(parser.buildJsonLdCardSegments('<html><body><script type="application/ld+json">[{"@type":"Event","name":"A","startDate":"2026-09-12"},{"@type":"Event","name":"B","startDate":"2026-09-13"}]</script><div class="item">A</div><div class="item">B</div></body></html>'), []);
 });
 
+test('coverage audit: a ticker row fused with the prose under it is added only when it states a time or carries a link (owner 2026-09-13)', () => {
+  const parser = createParser();
+  // furball.nyc, run 20261113-172540: "11/25 UNDERBEAR Stuffed Thanksgiving
+  // Eve - ROCKBAR" in the Wix header, no time, no link; the flat splitter
+  // fused it with the hero copy below and the audit added it as an event.
+  const page = (row) => `<html><body><nav><a href="/">Home</a><a href="/tickets">Tickets</a></nav>
+    <div data-mesh-id="SITE_HEADERinlineContent"><p>UPCOMING EVENTS:</p><p>${row}</p></div>
+    <main><h1>where bears dance</h1><p>Furball, NYC's infamous gay furry dance party.</p><p>Loved by bears and their friends since 2004.</p>
+    <section><div class="card"><h3>FURBALL NOLA</h3><p>September 5, 2026</p><p>10pm - 4am</p><p>Santos Bar - New Orleans, LA</p></div>
+    <div class="card"><h3>FURBALL DC</h3><p>October 3, 2026</p><p>10pm - 3am</p><p>ICON - Washington, DC</p></div></section></main></body></html>`;
+  const structured = [
+    { lines: ['FURBALL NOLA', 'September 5, 2026', '10pm - 4am', 'Santos Bar - New Orleans, LA'], html: '' },
+    { lines: ['FURBALL DC', 'October 3, 2026', '10pm - 3am', 'ICON - Washington, DC'], html: '' }
+  ];
+  const row = '11/25 UNDERBEAR Stuffed Thanksgiving Eve - ROCKBAR';
+  const added = (html) => {
+    const logs = [];
+    const originalLog = console.log;
+    console.log = (...args) => logs.push(args.join(' '));
+    let covered;
+    try { covered = parser.coverUnclaimedDatedWindows(html, structured, 'https://www.furball.example/'); } finally { console.log = originalLog; }
+    return { titles: covered.map(segment => segment.lines[0]).filter(line => /UNDERBEAR/.test(line)), logs };
+  };
+  const bare = added(page(row));
+  assert.deepEqual(bare.titles, [], 'a bare teaser row is not an event');
+  assert.ok(bare.logs.some(line => line.includes('🧩 FRAGMENT') && line.includes('UNDERBEAR')), 'the drop is said out loud');
+  assert.ok(added(page(`${row} 9pm`)).titles.length > 0, 'a row with a clock time is a listing');
+  assert.ok(added(page(`<a href="https://tix.example/e/9">${row}</a>`)).titles.length > 0, 'a row with its own event link is a listing');
+  // Ticker shape: a short line that OPENS with its date. A sentence that
+  // mentions a date is prose.
+  assert.equal(parser.isDateFirstTickerRow(row), true);
+  assert.equal(parser.isDateFirstTickerRow('Sat Dec 5 BEAR NIGHT @ The Eagle'), true);
+  assert.equal(parser.isDateFirstTickerRow('ROAR Events brings TIMBER to The Cuff Complex on Saturday, November 21, a night for bears'), false);
+  assert.equal(parser.isDateFirstTickerRow('Horse Meat Disco Sun 15 Nov'), false);
+  // "6-8P Show" states a clock.
+  assert.equal(parser.statesListingClockTime('5P Doors | 6-8P Show'), true);
+  assert.equal(parser.statesListingClockTime('3 a night to remember'), false);
+});
+
 test('coverage audit: a compact row becomes a window only when it states a time or carries a link', () => {
   const parser = createParser();
   // furball.nyc's header ticker: date + name + venue, nothing else. The
@@ -25181,6 +25220,14 @@ test('byline rows: a compact row that prints its year hands it on as the stated 
 
     // The shape rule, for any route that still produces the fragment.
     assert.equal(AiWebParser.furnitureTitleShape('/ Stud SF'), 'a byline fragment');
+    // beefdip.com/planned-events, run 20261113-172540: the schedule's own
+    // heading read as a party on the first day tab under it.
+    assert.equal(AiWebParser.furnitureTitleShape('FULL SCHEDULE'), 'a schedule heading');
+    assert.equal(AiWebParser.furnitureTitleShape('View the full calendar'), 'a schedule heading');
+    assert.equal(AiWebParser.furnitureTitleShape('Lineup'), 'a schedule heading');
+    assert.equal(AiWebParser.furnitureTitleShape('BEAR CALENDAR LAUNCH'), '');
+    assert.equal(AiWebParser.furnitureTitleShape('Calendar Girls Night'), '');
+    assert.equal(AiWebParser.furnitureTitleShape('The Schedule Party'), '');
     assert.equal(AiWebParser.furnitureTitleShape('AC/DC Night'), '');
     assert.equal(AiWebParser.furnitureTitleShape('Bears / Cubs'), '');
     logs.length = 0;
