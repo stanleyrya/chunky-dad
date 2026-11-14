@@ -8200,6 +8200,49 @@ test('feed clock: a series row whose page prints the NEXT occurrence still decid
   assert.ok(muteLines.some(line => /unconfirmed/.test(line)) && !muteLines.some(line => /agree/.test(line)), muteLines.join('\n'));
 });
 
+test('feed clock: a row whose zone sits at UTC that day decides nothing; a row in another zone whose page prints its local clock keeps the instants', async () => {
+  const parser = createParser();
+  const source = 'https://thebearcalendar.example/feed.json';
+  // Run 20261113-172540: London's Bear Bash is 21:00Z in the feed and 21:00
+  // on its page in November, which reads the same either way; it was taken
+  // as "wall clock" and BearUnion Seattle's 8pm landed at 4am.
+  const london = { title: 'Bear Bash', url: 'https://thebearcalendar.example/events/bear-bash/', start: '2026-11-13T21:00:00+00:00', end: '2026-11-14T04:00:00+00:00', tz: 'Europe/London', city: 'London' };
+  const seattle = { title: 'BearUnion Seattle', url: 'https://thebearcalendar.example/events/bearunion-seattle/', start: '2026-11-14T04:00:00+00:00', end: '2026-11-14T12:00:00+00:00', tz: 'America/Los_Angeles', city: 'Seattle' };
+  const pages = {
+    'https://thebearcalendar.example/events/bear-bash/': '<script type="application/ld+json">{"@type":"Event","startDate":"2026-11-13T21:00:00"}</script>',
+    'https://thebearcalendar.example/events/bearunion-seattle/': '<script type="application/ld+json">{"@type":"Event","startDate":"2026-11-13T20:00:00"}</script>'
+  };
+  const { fetched, httpAdapter } = feedStubAdapter(pages);
+  const originalLog = console.log; const lines = []; console.log = (line) => lines.push(String(line));
+  let payload;
+  try { payload = await parser.reconcileJsonApiUtcLabels({ events: [JSON.parse(JSON.stringify(london)), JSON.parse(JSON.stringify(seattle))] }, source, httpAdapter); } finally { console.log = originalLog; }
+  assert.deepEqual(fetched, ['https://thebearcalendar.example/events/bearunion-seattle/'], 'the London row is never asked');
+  assert.equal(payload.events[1].start, '2026-11-14T04:00:00+00:00', 'Seattle stays 8pm local');
+  assert.equal(payload.events[0].start, '2026-11-13T21:00:00+00:00');
+  assert.ok(lines.some(line => line.includes('agree')), lines.join('\n'));
+
+  // Only rows at UTC that day: nothing is asked and the instants stay.
+  const quiet = feedStubAdapter(pages);
+  const fresh = createParser();
+  console.log = () => {};
+  let onlyLondon;
+  try { onlyLondon = await fresh.reconcileJsonApiUtcLabels({ events: [JSON.parse(JSON.stringify(london))] }, source, quiet.httpAdapter); } finally { console.log = originalLog; }
+  assert.deepEqual(quiet.fetched, []);
+  assert.equal(onlyLondon.events[0].start, '2026-11-13T21:00:00+00:00');
+});
+
+test('expandJsonApiSeriesRow repeats a zoned row on its local day: 2nd Friday 8pm in Los Angeles, not the 2nd Saturday in UTC', () => {
+  const parser = createParser();
+  const realNow = Date.now;
+  Date.now = () => Date.parse('2026-11-10T12:00:00Z');
+  let nights;
+  try {
+    nights = parser.expandJsonApiSeriesRow({ title: 'BearUnion Seattle', startDate: new Date('2026-11-14T04:00:00Z'), endDate: new Date('2026-11-14T12:00:00Z'), timezone: 'America/Los_Angeles', _jsonApiRrule: 'FREQ=MONTHLY;BYDAY=2FR' });
+  } finally { Date.now = realNow; }
+  assert.deepEqual(nights.slice(0, 3).map(night => night.startDate.toISOString()), ['2026-11-14T04:00:00.000Z', '2026-12-12T04:00:00.000Z', '2027-01-09T04:00:00.000Z']);
+  assert.equal(nights[1].endDate.toISOString(), '2026-12-12T12:00:00.000Z', '8pm to 4am');
+});
+
 test('buildEventFromJsonApiObject strips HTML from descriptions and never invents ticket URLs from slugs', () => {
   const parser = createParser();
   const event = parser.buildEventFromJsonApiObject({
@@ -18360,6 +18403,45 @@ test('a listing with one JSON-LD Event per card element is segmented by its card
   assert.deepEqual(parser.buildJsonLdCardSegments('<html><body><script type="application/ld+json">[{"@type":"Event","name":"A","startDate":"2026-09-12"},{"@type":"Event","name":"B","startDate":"2026-09-13"}]</script><div class="item">A</div><div class="item">B</div></body></html>'), []);
 });
 
+test('coverage audit: a ticker row fused with the prose under it is added only when it states a time or carries a link (owner 2026-09-13)', () => {
+  const parser = createParser();
+  // furball.nyc, run 20261113-172540: "11/25 UNDERBEAR Stuffed Thanksgiving
+  // Eve - ROCKBAR" in the Wix header, no time, no link; the flat splitter
+  // fused it with the hero copy below and the audit added it as an event.
+  const page = (row) => `<html><body><nav><a href="/">Home</a><a href="/tickets">Tickets</a></nav>
+    <div data-mesh-id="SITE_HEADERinlineContent"><p>UPCOMING EVENTS:</p><p>${row}</p></div>
+    <main><h1>where bears dance</h1><p>Furball, NYC's infamous gay furry dance party.</p><p>Loved by bears and their friends since 2004.</p>
+    <section><div class="card"><h3>FURBALL NOLA</h3><p>September 5, 2026</p><p>10pm - 4am</p><p>Santos Bar - New Orleans, LA</p></div>
+    <div class="card"><h3>FURBALL DC</h3><p>October 3, 2026</p><p>10pm - 3am</p><p>ICON - Washington, DC</p></div></section></main></body></html>`;
+  const structured = [
+    { lines: ['FURBALL NOLA', 'September 5, 2026', '10pm - 4am', 'Santos Bar - New Orleans, LA'], html: '' },
+    { lines: ['FURBALL DC', 'October 3, 2026', '10pm - 3am', 'ICON - Washington, DC'], html: '' }
+  ];
+  const row = '11/25 UNDERBEAR Stuffed Thanksgiving Eve - ROCKBAR';
+  const added = (html) => {
+    const logs = [];
+    const originalLog = console.log;
+    console.log = (...args) => logs.push(args.join(' '));
+    let covered;
+    try { covered = parser.coverUnclaimedDatedWindows(html, structured, 'https://www.furball.example/'); } finally { console.log = originalLog; }
+    return { titles: covered.map(segment => segment.lines[0]).filter(line => /UNDERBEAR/.test(line)), logs };
+  };
+  const bare = added(page(row));
+  assert.deepEqual(bare.titles, [], 'a bare teaser row is not an event');
+  assert.ok(bare.logs.some(line => line.includes('🧩 FRAGMENT') && line.includes('UNDERBEAR')), 'the drop is said out loud');
+  assert.ok(added(page(`${row} 9pm`)).titles.length > 0, 'a row with a clock time is a listing');
+  assert.ok(added(page(`<a href="https://tix.example/e/9">${row}</a>`)).titles.length > 0, 'a row with its own event link is a listing');
+  // Ticker shape: a short line that OPENS with its date. A sentence that
+  // mentions a date is prose.
+  assert.equal(parser.isDateFirstTickerRow(row), true);
+  assert.equal(parser.isDateFirstTickerRow('Sat Dec 5 BEAR NIGHT @ The Eagle'), true);
+  assert.equal(parser.isDateFirstTickerRow('ROAR Events brings TIMBER to The Cuff Complex on Saturday, November 21, a night for bears'), false);
+  assert.equal(parser.isDateFirstTickerRow('Horse Meat Disco Sun 15 Nov'), false);
+  // "6-8P Show" states a clock.
+  assert.equal(parser.statesListingClockTime('5P Doors | 6-8P Show'), true);
+  assert.equal(parser.statesListingClockTime('3 a night to remember'), false);
+});
+
 test('coverage audit: a compact row becomes a window only when it states a time or carries a link', () => {
   const parser = createParser();
   // furball.nyc's header ticker: date + name + venue, nothing else. The
@@ -23047,6 +23129,35 @@ test('readSingleStartClockFromFlyerText reads poster shorthand ranges like "8P-2
     { start: { hour: 21, minute: 0 }, end: null, text: '9PM' });
 });
 
+test('readSingleStartClockFromFlyerText: a range printing its am/pm once gives the start the same one, or the other when it would pass the end', () => {
+  const parser = createParser();
+  const read = (text) => parser.readSingleStartClockFromFlyerText(text);
+  const clock = (hour, minute = 0) => ({ hour, minute });
+  // Bears LA's Mac and Cheese poster (run 20261113-172540) printed
+  // "NOVEMBER 29TH 4-8PM"; the bare 4 was skipped and 8pm became the start.
+  assert.deepEqual([read('NOVEMBER 29TH 4-8PM').start, read('NOVEMBER 29TH 4-8PM').end], [clock(16), clock(20)]);
+  assert.deepEqual([read('12-6PM').start, read('12-6PM').end], [clock(12), clock(18)]);
+  assert.deepEqual([read('1:30 to 4:30 PM').start, read('1:30 to 4:30 PM').end], [clock(13, 30), clock(16, 30)]);
+  assert.deepEqual([read('Nov 29 4 – 8 pm').start, read('Nov 29 4 – 8 pm').end], [clock(16), clock(20)]);
+  // The start would land after the end with the shared am/pm: it takes the other.
+  assert.deepEqual([read('SATURDAY 11-2am').start, read('SATURDAY 11-2am').end], [clock(23), clock(2)]);
+  assert.deepEqual([read('10-2pm').start, read('10-2pm').end], [clock(10), clock(14)]);
+  // A date or a price before the dash is not the start of a clock range.
+  assert.deepEqual(read('Sep 11 - 10PM'), { start: clock(22), end: null, text: '10PM' });
+  assert.deepEqual(read('11/29 - 8PM'), { start: clock(20), end: null, text: '8PM' });
+  assert.deepEqual(read('$5 - 9PM'), { start: clock(21), end: null, text: '9PM' });
+  // A range already carrying both am/pm reads as before.
+  assert.deepEqual(read('9pm-2am'), { start: clock(21), end: clock(2), text: '9pm – 2am' });
+});
+
+test('adoptFlyerEndForOpenEnds takes the end of a "4-8PM" poster for a row stating 4pm and no end', () => {
+  const parser = createParser();
+  parser.getOcrImageVerdict = () => ({ text: 'BEER BUST\n4-8 PM\nSECOND SUNDAY' });
+  const event = { title: 'Beer Bust', startDate: new Date(Date.UTC(2026, 10, 8, 16, 0)), endDate: null, image: 'https://example.com/bust.jpg' };
+  assert.equal(parser.adoptFlyerEndForOpenEnds([event]), 1);
+  assert.equal(event.endDate.toISOString(), '2026-11-08T20:00:00.000Z');
+});
+
 test('MEC side list: a poster pasted as the whole description keeps its caption, and the caption states the clock', () => {
   const parser = createParser();
   // eaglela.com month feed: each occurrence's JSON-LD description is one
@@ -25109,6 +25220,14 @@ test('byline rows: a compact row that prints its year hands it on as the stated 
 
     // The shape rule, for any route that still produces the fragment.
     assert.equal(AiWebParser.furnitureTitleShape('/ Stud SF'), 'a byline fragment');
+    // beefdip.com/planned-events, run 20261113-172540: the schedule's own
+    // heading read as a party on the first day tab under it.
+    assert.equal(AiWebParser.furnitureTitleShape('FULL SCHEDULE'), 'a schedule heading');
+    assert.equal(AiWebParser.furnitureTitleShape('View the full calendar'), 'a schedule heading');
+    assert.equal(AiWebParser.furnitureTitleShape('Lineup'), 'a schedule heading');
+    assert.equal(AiWebParser.furnitureTitleShape('BEAR CALENDAR LAUNCH'), '');
+    assert.equal(AiWebParser.furnitureTitleShape('Calendar Girls Night'), '');
+    assert.equal(AiWebParser.furnitureTitleShape('The Schedule Party'), '');
     assert.equal(AiWebParser.furnitureTitleShape('AC/DC Night'), '');
     assert.equal(AiWebParser.furnitureTitleShape('Bears / Cubs'), '');
     logs.length = 0;

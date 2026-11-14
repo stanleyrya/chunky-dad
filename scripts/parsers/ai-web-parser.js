@@ -3791,6 +3791,10 @@ class AiWebParser {
             || /^(?:tickets?|karten|entradas|billets|biglietti|kaarten)\s+(?:kaufen|buchen|sichern|holen|bestellen|reservieren|comprar|acheter|aquí|hier|here)\.?!?$/i.test(line))) return 'a call to action';
         // A calendar plugin's view heading: "Events for July 27, 2026", "Events for", "Events in October".
         if (/^events?\s+(?:for|in|on|from|this|next)\b/i.test(line) && !/\b(?:bears?|cubs?|club|bar|party|fest)\b/i.test(line)) return 'a calendar view heading';
+        // A schedule's own heading: "FULL SCHEDULE" over beefdip.com's day
+        // tabs (run 20261113-172540), "View the full calendar", "Lineup".
+        // The whole title names the listing itself, never a party in it.
+        if (words <= 5 && /^(?:(?:view|see|show|browse|check out)\s+)?(?:the\s+|our\s+)?(?:full\s+|complete\s+|entire\s+|whole\s+|weekly\s+|daily\s+|event\s+|events\s+|party\s+)?(?:schedule|programme|program|calendar|line-?up|itinerary|agenda)(?:\s+of\s+events)?(?:\s+here)?\.?!?$/i.test(line)) return 'a schedule heading';
         // A numbered line of instructions ("2. To apply", "3) Bring ID").
         if (/^\d{1,2}[.)]\s+\S/.test(line) && words <= 6) return 'a numbered line';
         // A street line on its own, in the three orders streets are written:
@@ -4363,6 +4367,65 @@ class AiWebParser {
     // signal and it states no clock, else ''. Such a window is the heading's
     // spillover (the previous card's tail under the next section's
     // heading), never a listing of its own.
+    // The owner's fragment rule (2026-09-13): a dated line with a name but
+    // no clock time and no link of its own is a fragment of an announcement,
+    // not a listing — furball.nyc's header ticker "isn't enough info and it
+    // will make the website look terrible". Every route that ADDS a listing
+    // the page's cards did not give asks this same question.
+    statesListingClockTime(text) {
+        return /\b\d{1,2}(?::\d{2})?\s*[ap]\.?m\b|\b\d{1,2}(?::\d{2})?[ap]\b|\b\d{1,2}:\d{2}\b|\b\d{1,2}h\d{2}\b|\b(?:noon|midnight)\b/i.test(String(text || ''));
+    }
+
+    // A link of the listing's own: not the page itself or the site's home
+    // page, not a calendar subscription, not a social profile. "11/25
+    // UNDERBEAR Stuffed Thanksgiving Eve - ROCKBAR" fused with the hero copy
+    // under it links nothing that is the night's.
+    carriesOwnListingLink(markup, sourceUrl = '') {
+        const hrefs = Array.from(String(markup || '').matchAll(/<a\b[^>]*\bhref\s*=\s*["']([^"'#][^"']*)["']/gi)).map(match => match[1]);
+        let page = null;
+        try { page = sourceUrl ? new URL(sourceUrl) : null; } catch (_) { page = null; }
+        const pathOf = (url) => url.pathname.replace(/\/+$/, '') || '/';
+        return hrefs.some(href => {
+            if (/^(?:mailto|tel|javascript|sms):/i.test(href)) return false;
+            if (this.isCalendarExportUrl(href)) return false;
+            let url;
+            try { url = new URL(href, page ? page.href : 'https://page.invalid/'); } catch (_) { return false; }
+            const sameSite = page ? url.host.replace(/^www\./, '') === page.host.replace(/^www\./, '') : url.host === 'page.invalid';
+            if (sameSite && !url.search && (pathOf(url) === '/' || (page && pathOf(url) === pathOf(page)))) return false;
+            if (/(^|\.)(?:instagram|facebook|twitter|x|tiktok|youtube|threads)\.(?:com|net)$/i.test(url.host) && !/\/events?\//i.test(url.pathname)) return false;
+            return true;
+        });
+    }
+
+    // Does this one line carry a link of its own — an <a> inside it, or
+    // the <a> it sits in? null when the line cannot be placed in the markup.
+    rowCarriesOwnListingLink(html, row, records = null, sourceUrl = '') {
+        const source = String(html || '');
+        const bounds = this.findMultiEventSegmentTextBounds(source, [row], records);
+        if (!bounds) return null;
+        const inside = source.slice(bounds.rawStart, bounds.rawEnd);
+        if (this.carriesOwnListingLink(inside, sourceUrl)) return true;
+        const before = source.slice(0, bounds.rawStart);
+        const open = before.search(/<a\b[^>]*>(?![\s\S]*<a\b)/i);
+        if (open < 0) return false;
+        if (/<\/a\s*>/i.test(before.slice(open))) return false;
+        const openTag = before.slice(open).match(/^<a\b[^>]*>/i);
+        return Boolean(openTag && this.carriesOwnListingLink(openTag[0], sourceUrl));
+    }
+
+    // A ticker row: one short line that opens with its date and names the
+    // night after it ("11/25 UNDERBEAR Stuffed Thanksgiving Eve - ROCKBAR",
+    // "Sat 12/5 BEAR NIGHT @ The Eagle"). A sentence that mentions a date
+    // somewhere in it ("ROAR brings TIMBER to The Cuff on Saturday,
+    // November 21, …") is prose, not a row.
+    isDateFirstTickerRow(value) {
+        const line = this.normalizeWhitespace(value);
+        if (!this.isCompactEventLine(line) || line.length > 90) return false;
+        const opening = line.split(/\s+/).slice(0, 3).join(' ');
+        return /^(?:(?:mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?(?:\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{2,4})?|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}(?:st|nd|rd|th)?|\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*)\b/i.test(opening)
+            && /\p{L}{3,}/u.test(line.slice(opening.length));
+    }
+
     windowDatedOnlyByMonthHeading(lines) {
         const list = (Array.isArray(lines) ? lines : []).map(line => this.normalizeWhitespace(String(line || ''))).filter(Boolean);
         const dated = list.filter(line => this.hasMultiEventDateSignal(line));
@@ -5165,7 +5228,7 @@ class AiWebParser {
             if (this.structuredTierUndercoversDatedContent(html, cardSegments, 'JSON-LD card')) {
                 return this.buildTextTierSegments(html, sourceUrl, ocrResults);
             }
-            const covered = this.coverUnclaimedDatedWindows(html, cardSegments);
+            const covered = this.coverUnclaimedDatedWindows(html, cardSegments, sourceUrl);
             return this.finalizeMultiEventSegments(html, covered, sourceUrl, ocrResults);
         }
         const structuredSegments = this.buildStructuredMultiEventSegments(html);
@@ -5173,7 +5236,7 @@ class AiWebParser {
             if (this.structuredTierUndercoversDatedContent(html, structuredSegments, 'structured')) {
                 return this.buildTextTierSegments(html, sourceUrl, ocrResults);
             }
-            const covered = this.coverUnclaimedDatedWindows(html, structuredSegments);
+            const covered = this.coverUnclaimedDatedWindows(html, structuredSegments, sourceUrl);
             return this.finalizeMultiEventSegments(html, covered, sourceUrl, ocrResults);
         }
 
@@ -5427,7 +5490,7 @@ class AiWebParser {
         return segments.length === cards.length ? segments : [];
     }
 
-    coverUnclaimedDatedWindows(html, structuredSegments) {
+    coverUnclaimedDatedWindows(html, structuredSegments, sourceUrl = '') {
         const structured = Array.isArray(structuredSegments) ? structuredSegments : [];
         if (structured.length === 0) return structured;
         const flatSegments = this.buildFlatTextMultiEventSegments(html, { recordStats: false });
@@ -5501,6 +5564,7 @@ class AiWebParser {
             && resolvedCardSpans.some(span => position >= span.start && position < span.end);
 
         const unclaimed = [];
+        const fragmentWindows = new Set();
         const unclaimedCards = [];
         const unclaimedCompact = [];
         let claimedCount = 0;
@@ -5591,6 +5655,26 @@ class AiWebParser {
                 console.log(`🤖 AI Web: Coverage audit: "${this.deriveSegmentListingTitle(window) || lines[0]}" has no card element of its own and its date precedes its title on a title-then-date page — a cut across two cards, not a listing`);
                 continue;
             }
+            // A window dated only by a ticker row ("11/25 UNDERBEAR Stuffed
+            // Thanksgiving Eve - ROCKBAR", furball.nyc's header) is such a
+            // row fused with the prose under it ("where bears dance…"). The
+            // compact route below reads the row on its own, under the
+            // owner's fragment rule (2026-09-13); a window that adds no clock
+            // time and no link of its own to the row is that same fragment,
+            // and is not added here either. It still counts toward the
+            // disagreement gate below, which measures the splitter, not the
+            // listings.
+            const datedLines = lines.filter(line => this.hasMultiEventDateSignal(line));
+            if (datedLines.length === 1 && this.isDateFirstTickerRow(datedLines[0])) {
+                // The link is asked of the row itself: the window's markup
+                // spans the site menu. A row the page's markup cannot place
+                // (its words split across the spans of a linked card) is
+                // never called linkless.
+                const rowLinked = this.rowCarriesOwnListingLink(html, datedLines[0], records, sourceUrl);
+                if (rowLinked === false && !this.statesListingClockTime(lines.join('\n'))) {
+                    fragmentWindows.add(window);
+                }
+            }
             unclaimed.push(window);
         }
         // Compact event lines ("10/3 FURBALL DC - ICON") are self-contained
@@ -5627,9 +5711,7 @@ class AiWebParser {
             // fragment of an announcement, not a listing (owner, 2026-09-13:
             // furball.nyc's ticker "isn't enough info and it will make the
             // website look terrible") — only a timed or linked row is added.
-            const statesTime = /\b\d{1,2}(?::\d{2})?\s*[ap]\.?m\b|\b\d{1,2}:\d{2}\b/i.test(line);
-            const carriesLink = /<a\b[^>]*\bhref=/i.test(rowHtml);
-            if (!statesTime && !carriesLink) continue;
+            if (!this.statesListingClockTime(line) && !/<a\b[^>]*\bhref=/i.test(rowHtml)) continue;
             unclaimedCompact.push({ lines: [line], html: rowHtml });
         }
         if (unclaimed.length === 0 && unclaimedCards.length === 0 && unclaimedCompact.length === 0) return structured;
@@ -5656,7 +5738,10 @@ class AiWebParser {
             if (claimedCount < unclaimed.length || unclaimed.length > additionCap) {
                 console.log(`🤖 AI Web: Coverage audit: the text splitter disagrees with structured segmentation wholesale on this page (${claimedCount} of ${claimedCount + unclaimed.length} dated text windows match a structured window; ${unclaimed.length} unclaimed vs ${structured.length} structured) — adding nothing from it; this page's segmentation needs a look`);
             } else {
-                additions = additions.concat(unclaimed);
+                for (const window of unclaimed.filter(window => fragmentWindows.has(window))) {
+                    console.log(`🧩 FRAGMENT: "${this.deriveSegmentListingTitle(window) || (window.lines && window.lines[0]) || ''}" — a dated row with no clock time and no link of its own, fused with the text under it, is a teaser, not a listing (owner 2026-09-13); not added`);
+                }
+                additions = additions.concat(unclaimed.filter(window => !fragmentWindows.has(window)));
             }
         }
         if (additions.length === 0) return structured;
@@ -16697,9 +16782,31 @@ class AiWebParser {
             return typeof start === 'string' && utcPattern.test(start) && !/T00:00/.test(start) && pageHost && pageHost === sourceHost;
         });
         if (candidates.length === 0) return payload;
-        const samples = candidates.filter(row => !repeats(this.unwrapJsonApiCandidate(row)))
-            .concat(candidates.filter(row => repeats(this.unwrapJsonApiCandidate(row))))
+        // A row's own zone, when the feed names one ("tz": "Europe/London"),
+        // and its offset from UTC at the row's start. A row whose zone sits
+        // at UTC on that date prints the same digits either way, so its page
+        // cannot tell a wall clock from an instant: run 20261113-172540
+        // asked London's "Bear Bash" (21:00Z, 21:00 on the page in
+        // November), read the match as "wall clock" and moved every other
+        // city by its offset (BearUnion Seattle 8pm became 4am). Such a row
+        // is never a sample; a row with no zone (or "UTC") is asked as before.
+        const zoneOfRow = (view) => {
+            const zone = view.tz || view.timezone || view.time_zone;
+            return typeof zone === 'string' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(zone.trim()) ? zone.trim() : '';
+        };
+        const offsetMinutesOf = (view) => {
+            const zone = zoneOfRow(view);
+            const digits = String(startOf(view)).match(utcPattern);
+            if (!zone || !digits) return null;
+            const zoneInstant = this.wallClockInZone(digits[1], digits[2], zone);
+            const utcInstant = Date.parse(`${digits[1]}T${digits[2]}:00Z`);
+            return Number.isFinite(zoneInstant) && Number.isFinite(utcInstant) ? Math.round((utcInstant - zoneInstant) / 60000) : null;
+        };
+        const telling = candidates.filter(row => offsetMinutesOf(this.unwrapJsonApiCandidate(row)) !== 0);
+        const samples = telling.filter(row => !repeats(this.unwrapJsonApiCandidate(row)))
+            .concat(telling.filter(row => repeats(this.unwrapJsonApiCandidate(row))))
             .slice(0, 3);
+        if (samples.length === 0) return payload;
         if (!this.jsonApiUtcLabelVerdicts) this.jsonApiUtcLabelVerdicts = new Map();
         let verdict = this.jsonApiUtcLabelVerdicts.get(sourceHost);
         if (verdict === undefined) {
@@ -16716,8 +16823,20 @@ class AiWebParser {
                     const pageStarts = [...html.matchAll(/"startDate"\s*:\s*"([^"]+)"/g)].map(m => m[1].trim());
                     // The feed's clock, printed as a wall clock (no offset).
                     const wallClock = pageStarts.find(value => new RegExp(`^\\d{4}-\\d{2}-\\d{2}T${digits[2]}(?::\\d{2})?$`).test(value));
-                    // The feed's instant, printed with an explicit offset.
-                    const instant = pageStarts.find(value => /(?:Z|[+-]\d{2}:?\d{2})$/.test(value) && Number.isFinite(feedMillis) && Date.parse(value) === feedMillis);
+                    // The feed's instant, printed with an explicit offset —
+                    // or printed as the row's own zone's wall clock with no
+                    // offset (Bears Go Bowling: 17:00Z in the feed, 18:00 on
+                    // its page in a UTC+1 city).
+                    const rowZone = zoneOfRow(view);
+                    const zonedWall = rowZone && Number.isFinite(feedMillis) ? (() => {
+                        try {
+                            const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: rowZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                .formatToParts(new Date(feedMillis)).map(part => [part.type, part.value]));
+                            return `${parts.year}-${parts.month}-${parts.day}T${String(Number(parts.hour) % 24).padStart(2, '0')}:${parts.minute}`;
+                        } catch (_) { return ''; }
+                    })() : '';
+                    const instant = pageStarts.find(value => /(?:Z|[+-]\d{2}:?\d{2})$/.test(value) && Number.isFinite(feedMillis) && Date.parse(value) === feedMillis)
+                        || (zonedWall ? pageStarts.find(value => new RegExp(`^${zonedWall}(?::00)?$`).test(value)) : undefined);
                     if (wallClock) {
                         verdict = true;
                         decided = true;
@@ -17062,9 +17181,22 @@ class AiWebParser {
         const now = Date.now();
         const windowStart = new Date(now - JSON_API_FEED_WINDOW_PAST_MS);
         const windowEnd = new Date(now + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000);
+        // A row whose start is an instant in a named zone ("2026-11-14T04:00Z",
+        // tz America/Los_Angeles) repeats on its LOCAL day at its local clock:
+        // "2nd Friday" is Friday 8pm in Seattle, which is Saturday in UTC.
+        // Expanding the UTC digits put BearUnion's second-Friday nights on
+        // the wrong week and dropped the real Nov 13 night (run
+        // 20261113-172540). A wall-clock row (no zone, or a zone not yet
+        // resolved) is read as its own digits, as before.
+        const zone = typeof event.timezone === 'string' ? event.timezone.trim() : '';
+        const zonedWall = !event._timezoneUnresolved && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(zone) && this.core && this.core.constructor
+            && typeof this.core.constructor.zonedWallParts === 'function'
+            ? this.core.constructor.zonedWallParts(event.startDate, zone)
+            : null;
+        const seriesStart = zonedWall ? { date: event.startDate, wall: zonedWall, tzid: zone, isDateOnly: false } : event.startDate;
         let occurrences = null;
         try {
-            occurrences = expander(rrule, event.startDate, windowStart, windowEnd);
+            occurrences = expander(rrule, seriesStart, windowStart, windowEnd);
         } catch (_) {
             occurrences = null;
         }
@@ -30338,6 +30470,28 @@ TEXT:
             /\b(\d{1,2})(?::(\d{2}))?\s*([ap])\s*(-|–|—|to|til|till|until)\s*(\d{1,2})(?::(\d{2}))?\s*([ap])\b/gi,
             (whole, h1, m1, a1, sep, h2, m2, a2) => `${h1}${m1 ? ':' + m1 : ''}${a1.toLowerCase()}m ${sep} ${h2}${m2 ? ':' + m2 : ''}${a2.toLowerCase()}m`
         );
+        // A range prints its am/pm once: "4-8PM", "12 – 6 PM", "1:30 to
+        // 4:30PM" (Bears LA's Mac and Cheese poster, run 20261113-172540,
+        // read "8PM" as the start because the bare "4" carried no
+        // meridiem). The first number takes the end's am/pm; when that would
+        // put it at or after the end ("11-2am"), it takes the other one. A
+        // number that is a date ("Sep 11 - 10PM", "11/29 - 8PM", "$5 - 9PM")
+        // is never a clock: one right after a month name, a slash, a dot,
+        // another digit or a currency sign is left alone.
+        const shared = source.replace(
+            /(?<![\d/.$£€:]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)\b(\d{1,2})(?::(\d{2}))?\s*(-|–|—|to|til|till|until)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi,
+            (whole, h1, m1, sep, h2, m2, mer) => {
+                const first = Number(h1);
+                const second = Number(h2);
+                if (first < 1 || first > 12 || second < 1 || second > 12) return whole;
+                const lower = mer.toLowerCase();
+                const toMinutes = (hour, minute, meridiem) => ((hour % 12) + (meridiem === 'pm' ? 12 : 0)) * 60 + minute;
+                const end = toMinutes(second, Number(m2 || 0), lower);
+                let startMeridiem = lower;
+                if (toMinutes(first, Number(m1 || 0), lower) >= end) startMeridiem = lower === 'pm' ? 'am' : 'pm';
+                return `${h1}${m1 ? ':' + m1 : ''}${startMeridiem} ${sep} ${h2}${m2 ? ':' + m2 : ''}${mer}`;
+            }
+        );
         const clockPattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
         const parse = (match) => {
             let hour = Number(match[1]);
@@ -30349,14 +30503,14 @@ TEXT:
         };
         const found = [];
         let match;
-        while ((match = clockPattern.exec(source)) !== null) {
+        while ((match = clockPattern.exec(shared)) !== null) {
             const parsed = parse(match);
             if (parsed) found.push({ ...parsed, index: match.index, text: match[0] });
         }
         if (found.length === 0) return null;
         const starts = [];
         for (let i = 0; i < found.length; i++) {
-            const between = i > 0 ? source.slice(found[i - 1].index + found[i - 1].text.length, found[i].index) : '';
+            const between = i > 0 ? shared.slice(found[i - 1].index + found[i - 1].text.length, found[i].index) : '';
             // The second clock of a "9pm - 2am" / "9pm to 2am" range is an end.
             if (i > 0 && /^\s*(?:-|–|—|to|til|till|until)\s*$/i.test(between)) continue;
             starts.push(i);
@@ -30365,7 +30519,7 @@ TEXT:
         if (distinct.size !== 1) return null;
         const startIndex = starts[0];
         const next = found[startIndex + 1];
-        const betweenNext = next ? source.slice(found[startIndex].index + found[startIndex].text.length, next.index) : '';
+        const betweenNext = next ? shared.slice(found[startIndex].index + found[startIndex].text.length, next.index) : '';
         const end = next && /^\s*(?:-|–|—|to|til|till|until)\s*$/i.test(betweenNext) ? { hour: next.hour, minute: next.minute } : null;
         return { start: { hour: found[startIndex].hour, minute: found[startIndex].minute }, end, text: end ? `${found[startIndex].text} – ${next.text}` : found[startIndex].text };
     }

@@ -1060,6 +1060,12 @@ function buildReviewDisplayContext(event, payload, core, extras = {}) {
         // The bear wording was on the poster and nowhere in the page text
         // (SharedCore.applyFlyerTextEvidence). Shown while the AI verdict is
         // still what keeps the event.
+        // The same bar's other saved nights stand somewhere else (SharedCore
+        // .stampPinsElsewhereForBar): both points, for the owner to judge.
+        pinNotice: event._pinElsewhere && typeof event._pinElsewhere === 'object' && Array.isArray(event._pinElsewhere.others) && event._pinElsewhere.others.length > 0
+            ? { bar: String(event._pinElsewhere.bar || ''), pin: String(event._pinElsewhere.pin || ''), count: Number(event._pinElsewhere.count) || event._pinElsewhere.others.length,
+                others: event._pinElsewhere.others.slice(0, 5).map((other) => ({ title: String(other.title || ''), day: String(other.day || ''), pin: String(other.pin || ''), km: Number(other.km) || 0 })) }
+            : null,
         flyerWordsNotice: Array.isArray(event._bearFlyerEvidence) && event.bearSource === 'ai'
             ? event._bearFlyerEvidence.filter((quote) => typeof quote === 'string' && quote.trim()).map((quote) => quote.replace(/\s+/g, ' ').trim().slice(0, 120)).slice(0, 2)
             : [],

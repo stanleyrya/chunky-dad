@@ -1078,6 +1078,14 @@ function renderReviewBearRow(display = {}, proposal = {}) {
     if (flyerWords.length > 0) {
         notices.push(`🖼️ The bear wording is only on the flyer: “${flyerWords.join('”, “')}” (read off the picture by a machine)`);
     }
+    // A pin far from where the same bar's other saved nights stand: both
+    // points, neither picked (SharedCore.stampPinsElsewhereForBar).
+    const pinElsewhere = proposal.kind !== 'dropped' && display.pinNotice && typeof display.pinNotice === 'object' && Array.isArray(display.pinNotice.others) ? display.pinNotice : null;
+    if (pinElsewhere && pinElsewhere.others.length > 0) {
+        const first = pinElsewhere.others[0];
+        const more = (Number(pinElsewhere.count) || pinElsewhere.others.length) - 1;
+        notices.push(`📍 This map point (${pinElsewhere.pin}) is ${first.km} km from where ${pinElsewhere.bar} stands on your other saved nights: “${first.title}” ${first.day} at ${first.pin}${more > 0 ? `, and ${more} more` : ''}. One of them is off.`);
+    }
     const noticeHtml = notices.map((line) => `<div class="bear-notice">${escapeHtmlText(line)}</div>`).join('');
     return `<div class="bear-row"><div class="bear-state">${escapeHtmlText(state)}${tagText ? ` ${tagText}` : ''}${storedText ? ` ${storedText}` : ''}${maybeText ? ` ${maybeText}` : ''}</div>${noticeHtml}</div>`;
 }

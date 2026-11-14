@@ -1587,6 +1587,29 @@ test('BarDataNormalizer does not stamp curated for a value it did not write', ()
   assert.equal(event.addressSource, 'curated');
 });
 
+test('BarDataNormalizer: a bar name that names no listed bar, at the door of exactly one listed bar, takes the listed name', () => {
+  const kobalt = { name: 'Kobalt', city: 'phoenix', address: '3110 N Central Ave', coordinates: '33.4834859, -112.0757318' };
+  const make = (phoenix) => new BarDataNormalizer(new SharedCore({ phoenix: { timezone: 'America/Phoenix', patterns: ['phoenix'] } }, { eventSchema: EventSchema, bars: { phoenix } }));
+  const normalizer = make([kobalt, { name: 'Royale', city: 'phoenix', address: '1215 W Indian School Rd' }]);
+
+  const megawoof = { title: 'MEGAWOOF PHOENIX - BLACK OUT', city: 'phoenix', bar: 'PARK CENTRAL', address: '3110 N CENTRAL AVE #175 PHOENIX, AZ 85012' };
+  normalizer.normalize(megawoof);
+  assert.equal(megawoof.bar, 'Kobalt', 'the shopping centre in the venue slot yields to the listed bar at that door');
+
+  const nextDoor = { title: 'Other Party', city: 'phoenix', bar: 'Park Central Deli', address: '3112 N Central Ave, Phoenix, AZ' };
+  normalizer.normalize(nextDoor);
+  assert.equal(nextDoor.bar, 'Park Central Deli', 'another street number is another door');
+
+  const listed = { title: 'Royale Night', city: 'phoenix', bar: 'Royale', address: '3110 N Central Ave' };
+  normalizer.normalize(listed);
+  assert.equal(listed.bar, 'Royale', 'a bar name that IS a listed bar is never renamed by the address');
+
+  const shared = make([kobalt, { name: 'Upstairs at Kobalt', city: 'phoenix', address: '3110 N Central Ave' }]);
+  const twoRooms = { title: 'MEGAWOOF', city: 'phoenix', bar: 'PARK CENTRAL', address: '3110 N Central Ave, Phoenix, AZ 85012' };
+  shared.normalize(twoRooms);
+  assert.equal(twoRooms.bar, 'PARK CENTRAL', 'two listed bars behind one door rename nothing');
+});
+
 // ---------------------------------------------------------------------------
 // District-to-curated address upgrade rung (Aqua Emporio / Torremolinos)
 // ---------------------------------------------------------------------------
