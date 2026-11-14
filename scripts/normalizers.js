@@ -428,6 +428,20 @@ class BarDataNormalizer extends BaseNormalizer {
         return normalizedBarName === normalize(label) || normalizedBarName === normalize(host);
     }
 
+    // The one listed bar whose street door is this address (same house
+    // number and street line, SharedCore.isSameStreetAddress), or null when
+    // none or more than one stands there.
+    findOnlyListedBarAtDoor(cityBars, address) {
+        if (!this.core || typeof this.core.parseAddressForComparison !== 'function'
+            || typeof this.core.isSameStreetAddress !== 'function') return null;
+        const parsed = this.core.parseAddressForComparison(address);
+        if (!parsed || !parsed.streetNumber) return null;
+        const atDoor = cityBars.filter(bar => bar && typeof bar.name === 'string' && bar.name.trim() !== ''
+            && typeof bar.address === 'string' && bar.address.trim() !== ''
+            && this.core.isSameStreetAddress(parsed, this.core.parseAddressForComparison(bar.address)));
+        return atDoor.length === 1 ? atDoor[0] : null;
+    }
+
     normalize(event) {
         if (!event || typeof event !== 'object') return event;
 
@@ -511,12 +525,28 @@ class BarDataNormalizer extends BaseNormalizer {
         }
 
         // Try match by event.address or event.location if not matched yet
+        let addressWasVenue = false;
         if (!matchedBar && typeof event.address === 'string' && event.address.trim().length > 0) {
             const lowerAddress = event.address.trim().toLowerCase();
             matchedBar = cityBars.find(b => typeof b.address === 'string' && b.address.toLowerCase() === lowerAddress);
             if (!matchedBar) {
                 matchedBar = cityBars.find(b => typeof b.address === 'string' && lowerAddress.includes(b.address.toLowerCase()));
             }
+            addressWasVenue = Boolean(matchedBar);
+        }
+
+        // A page-given bar name that names no listed bar, at a street door
+        // where exactly ONE listed bar stands: the door is the hard fact, the
+        // name the page put in the venue slot is not ("PARK CENTRAL", the
+        // shopping centre around Kobalt at 3110 N Central Ave — Megawoof
+        // Phoenix, run 20261113-172540). The listed name replaces it. Same
+        // numbered street line only (isSameStreetAddress, never fuzzy), and
+        // two listed bars behind one door rename nothing.
+        let addressNamedBar = null;
+        if (addressWasVenue && typeof event.bar === 'string' && event.bar.trim() !== ''
+            && typeof this.core.findCuratedBarByName === 'function'
+            && !this.core.findCuratedBarByName(cityBars, event.bar)) {
+            addressNamedBar = this.findOnlyListedBarAtDoor(cityBars, event.address);
         }
 
         if (!matchedBar && typeof event.location === 'string' && event.location.trim().length > 0) {
@@ -554,8 +584,24 @@ class BarDataNormalizer extends BaseNormalizer {
             }
         }
 
+        if (!matchedBar && !titleWasVenue && !descriptionWasVenue
+            && typeof event.bar === 'string' && event.bar.trim() !== ''
+            && typeof event.address === 'string' && event.address.trim() !== ''
+            && typeof this.core.findCuratedBarByName === 'function'
+            && !this.core.findCuratedBarByName(cityBars, event.bar)) {
+            addressNamedBar = this.findOnlyListedBarAtDoor(cityBars, event.address);
+            if (addressNamedBar) matchedBar = addressNamedBar;
+        }
+
         if (matchedBar) {
             let modified = false;
+
+            if (addressNamedBar && addressNamedBar === matchedBar && typeof matchedBar.name === 'string'
+                && matchedBar.name.trim() !== '' && event.bar !== matchedBar.name) {
+                console.log(`🚪 BarDataNormalizer: bar "${event.bar}" names no listed bar, and "${event.address}" is the door of listed bar "${matchedBar.name}" (the only one there) — bar := "${matchedBar.name}"`);
+                event.bar = matchedBar.name;
+                modified = true;
+            }
 
             if (barWasSiteHost && typeof matchedBar.name === 'string' && matchedBar.name.trim() !== ''
                 && event.bar !== matchedBar.name) {

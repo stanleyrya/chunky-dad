@@ -2819,6 +2819,95 @@ class SharedCore {
         return drift;
     }
 
+    // A PIN THAT DISAGREES WITH THE BAR'S OTHER NIGHTS. The calendar already
+    // holds other nights at the same bar (same bar name, the identity key
+    // curated matching uses), all standing at ONE place, and that place is
+    // more than PIN_ELSEWHERE_KM from the pin this event would be saved
+    // with: one of them is wrong. Megawoof DC (run 20261113-172540) geocoded
+    // Eventbrite's typo "3001 11th St NW" exactly, 1.2 km from the two saved
+    // Icon DC nights at 2001. Past nights count (where a bar stood in
+    // September is where it stands now): `options.pastByCity` carries the
+    // published calendars' own records ({ city: { records } }, from
+    // parsePublishedCalendarIcs). A bar name whose saved nights already
+    // stand at two places is a chain or a party that moves ("Bears 4
+    // Bareburger", two Bareburgers 2.8 km apart): the name says nothing
+    // about one door, and nothing is flagged. Facts for the deck, never a
+    // choice: the event is stamped `_pinElsewhere` { bar, pin, count,
+    // others: [{ title, day, pin, km }] } and nothing is withheld or
+    // rewritten. The event's own saved record (a merge target) is not
+    // "another night". Returns the stamped count.
+    stampPinsElsewhereForBar(events, savedByCity, options = {}) {
+        const PIN_ELSEWHERE_KM = 0.5;
+        const list = Array.isArray(events) ? events : [];
+        const cities = savedByCity && typeof savedByCity === 'object' ? savedByCity : {};
+        const past = options && options.pastByCity && typeof options.pastByCity === 'object' ? options.pastByCity : {};
+        const uidOf = (identifier) => {
+            const id = String(identifier || '');
+            return typeof this.savedEventUid === 'function' ? String(this.savedEventUid(id) || id) : id;
+        };
+        let stamped = 0;
+        const savedIndex = new Map();
+        const savedOf = (city) => {
+            if (savedIndex.has(city)) return savedIndex.get(city);
+            const pool = [];
+            const upcoming = cities[city];
+            for (const record of (upcoming && Array.isArray(upcoming.events) ? upcoming.events : [])) {
+                if (record) pool.push({ uid: uidOf(record.identifier), title: record.title, startDate: record.startDate, isAllDay: record.isAllDay === true, location: record.location, notes: record.notes });
+            }
+            const published = past[city];
+            for (const record of (published && Array.isArray(published.records) ? published.records : [])) {
+                if (!record || !record.start) continue;
+                pool.push({ uid: uidOf(record.uid), title: record.summary, startDate: record.start.date, isAllDay: record.isAllDay === true, location: record.location, notes: record.description });
+            }
+            const rows = [];
+            const seen = new Set();
+            for (const record of pool) {
+                const location = String(record.location || '').trim();
+                if (!this.isCoordinatePair(location)) continue;
+                const fields = this.parseNotesIntoFields(String(record.notes || ''));
+                const barKey = this.normalizeBarNameKey(String(fields.bar || ''));
+                if (!barKey) continue;
+                const startMs = SharedCore.toEpochMillis(record.startDate);
+                const once = `${record.uid}|${startMs}`;
+                if (seen.has(once)) continue;
+                seen.add(once);
+                rows.push({ record, uid: record.uid, barKey, pin: location });
+            }
+            savedIndex.set(city, rows);
+            return rows;
+        };
+        for (const event of list) {
+            if (!event || typeof event !== 'object') continue;
+            delete event._pinElsewhere;
+            const city = typeof event.city === 'string' ? event.city.trim() : '';
+            const pin = typeof event.location === 'string' ? event.location.trim() : '';
+            const barKey = this.normalizeBarNameKey(String(event.bar || ''));
+            if (!city || !barKey || !this.isCoordinatePair(pin)) continue;
+            const ownUid = event._existingEvent && typeof event._existingEvent === 'object' ? uidOf(event._existingEvent.identifier) : '';
+            const sameBar = savedOf(city).filter((row) => row.barKey === barKey && !(ownUid && row.uid === ownUid));
+            if (sameBar.length === 0) continue;
+            // Every saved night of the bar at one place, or the name roams.
+            const anchor = sameBar[0].pin;
+            if (sameBar.some((row) => {
+                const km = this.coordinatePairDistanceKm(anchor, row.pin);
+                return km === null || km > PIN_ELSEWHERE_KM;
+            })) continue;
+            const km = this.coordinatePairDistanceKm(pin, anchor);
+            if (km === null || km <= PIN_ELSEWHERE_KM) continue;
+            const timezone = event.timezone || this.getCityTimezone(city) || null;
+            const others = sameBar.map((row) => ({
+                title: String(row.record.title || ''),
+                day: row.record.isAllDay ? this.normalizeEventDate(row.record.startDate) : this.normalizeEventDateLocal(row.record.startDate, timezone),
+                pin: row.pin,
+                km: Math.round(this.coordinatePairDistanceKm(pin, row.pin) * 10) / 10
+            })).sort((a, b) => String(a.day || '').localeCompare(String(b.day || '')));
+            event._pinElsewhere = { bar: String(event.bar || ''), pin, others: others.slice(0, 5), count: others.length };
+            stamped++;
+            console.log(`📍 PIN ELSEWHERE: "${event.title}" (${city}) at ${event.bar} would be pinned at ${pin}, but ${others.length} other saved night(s) at ${event.bar} stand elsewhere: ${others.slice(0, 3).map((other) => `"${other.title}" ${other.day || '?'} at ${other.pin} (${other.km} km)`).join('; ')} — flagged on the card, nothing changed`);
+        }
+        return stamped;
+    }
+
     // The ICS uid behind a calendar identifier: the text after the first
     // colon (EventKit's "<calendar>:<uid>"), cut at a recurrence suffix; a
     // bare uid (the published ICS) is itself.
@@ -5169,6 +5258,30 @@ class SharedCore {
         const cleanB = bareB === valueB;
         if (cleanA === cleanB) return null;
         return cleanA ? 'a' : 'b';
+    }
+
+    // A title cut off with an ellipsis ("MEGAWOOF PHOENIX - BLACK OUT...")
+    // against the same title written out in full: the full one is the
+    // title, whichever side carries it. A listing row truncates for its card
+    // width (sometimes with nothing actually cut: Megawoof's Eventbrite row
+    // read "MEGAWOOF PHOENIX - BLACK OUT..." over the page's "MEGAWOOF
+    // PHOENIX - BLACK OUT"); the event page and the saved copy do not. The
+    // cut-off side minus its "..." must open the other title (case and
+    // spacing folded) and leave at least 8 letters, so a bare "..." or a
+    // one-word stem never claims a longer, different name. null when
+    // neither side is cut off, both are, or they do not share the stem.
+    static pickUntruncatedTitle(valueA, valueB) {
+        if (typeof valueA !== 'string' || typeof valueB !== 'string' || valueA === valueB) return null;
+        const ellipsis = /\s*(?:\.{3,}|\u2026)\s*$/u;
+        const cutA = ellipsis.test(valueA);
+        const cutB = ellipsis.test(valueB);
+        if (cutA === cutB) return null;
+        const fold = (text) => text.replace(/\s+/g, ' ').trim().toLowerCase();
+        const stem = fold((cutA ? valueA : valueB).replace(ellipsis, ''));
+        const full = fold(cutA ? valueB : valueA);
+        if (stem.replace(/[^\p{L}\p{N}]/gu, '').length < 8) return null;
+        if (!full.startsWith(stem)) return null;
+        return cutA ? 'b' : 'a';
     }
 
     // Emoji/pictograph-stripped view of a title: pictograph blocks, variation
@@ -8304,6 +8417,10 @@ Rules:
             const unmarked = SharedCore.pickTitleWithoutInvisibleMarks(valueA, valueB);
             if (unmarked) {
                 return { winner: unmarked, reason: 'same title — the other copy only adds invisible marks (and the separator left dangling beside them)' };
+            }
+            const untruncated = SharedCore.pickUntruncatedTitle(valueA, valueB);
+            if (untruncated) {
+                return { winner: untruncated, reason: 'same title — the other copy is cut off with an ellipsis; the full title stands' };
             }
         }
 
@@ -20780,6 +20897,20 @@ Rules:
                     });
                     return;
                 }
+                const untruncated = SharedCore.pickUntruncatedTitle(existingValue, newValue);
+                if (untruncated) {
+                    const chosenValue = untruncated === 'a' ? existingValue : newValue;
+                    mergedEvent[fieldName] = chosenValue;
+                    console.log(`🏷️ MERGE: "${chosenValue}" field=title — the other copy ("${untruncated === 'a' ? newValue : existingValue}") is the same title cut off with an ellipsis; the full title stands`);
+                    mergeDecisions.push({
+                        field: fieldName,
+                        existingValue: existingValue,
+                        newValue: newValue,
+                        chosenValue: chosenValue,
+                        reason: 'same title — the other copy is cut off with an ellipsis'
+                    });
+                    return;
+                }
             }
 
             // LISTING AUTHORITY. An enrich/crawl page — a ticket page an event
@@ -26295,6 +26426,7 @@ Rules:
             '_mergeDiffBaselineNotes',
             '_existingEvent',
             '_existingKey',
+            '_pinElsewhere',
             '_conflicts',
             '_evidenceLines',
             '_sanityFlags',

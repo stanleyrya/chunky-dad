@@ -2721,6 +2721,14 @@ test('renderReviewBearRow: a kept card whose only bear word another scene shares
   assert.ok(!renderReviewBearRow({ pictureNotice: null }, { kind: 'new', title: 'x' }).includes('🎭'));
 });
 
+test('renderReviewBearRow: a card whose pin disagrees with the bar\'s other saved nights names both points', () => {
+  const pinNotice = { bar: 'Icon DC', pin: '38.9277, -77.0272', count: 2, others: [{ title: 'Icon <DC> Saturdays', day: '2030-01-04', pin: '38.9171577, -77.0268211', km: 1.2 }] };
+  const card = renderReviewBearRow({ pinNotice }, { kind: 'new', title: 'MEGAWOOF AMERICA' });
+  assert.ok(card.includes('<div class="bear-notice">📍 This map point (38.9277, -77.0272) is 1.2 km from where Icon DC stands on your other saved nights: “Icon &lt;DC&gt; Saturdays” 2030-01-04 at 38.9171577, -77.0268211, and 1 more. One of them is off.</div>'), card);
+  assert.ok(!renderReviewBearRow({ pinNotice }, { kind: 'dropped', title: 'x', dropReason: 'ai: x' }).includes('📍'));
+  assert.ok(!renderReviewBearRow({ pinNotice: null }, { kind: 'new', title: 'x' }).includes('📍'));
+});
+
 test('renderReviewBearRow: a kept card says when its bear wording is only on the flyer', () => {
   const kept = renderReviewBearRow({ flyerWordsNotice: ['BEARS CUBS <OTTERS>'] }, { kind: 'new', title: 'Saturday Dance Party' });
   assert.ok(kept.includes('<div class="bear-notice">🖼️ The bear wording is only on the flyer: “BEARS CUBS &lt;OTTERS&gt;” (read off the picture by a machine)</div>'), kept);
