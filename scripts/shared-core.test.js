@@ -6003,8 +6003,9 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
     { shortCircuit: false, source: 'none', brand: '' });
   // Leather vocabulary left the bear lists on 2026-11-05 (it is TAG
   // evidence now — see collectMachineEventTags): Gear Night carries no bear
-  // keyword at all; its title names leather and its description rubber,
-  // both candidates for the AI to confirm.
+  // keyword at all; its title names a gear night — the general kink night
+  // (owner, 2026-11-14) — and its description leather and rubber, all three
+  // candidates for the AI to confirm.
   const gearNight = {
     title: 'Gear Night',
     bar: 'Dallas Eagle',
@@ -6012,9 +6013,9 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
   };
   assert.deepEqual(classify(gearNight), { shortCircuit: false, source: 'none', brand: '' });
   assert.deepEqual(core.collectMachineEventTags(gearNight), {
-    candidates: ['leather', 'rubber'],
-    fromTitle: ['leather'],
-    hits: { leather: { title: ['gear night', 'gear'], description: ['leather', 'harnesses', 'gear night'] }, rubber: { title: [], description: ['rubber'] } }
+    candidates: ['kink', 'leather', 'rubber'],
+    fromTitle: ['kink'],
+    hits: { leather: { title: [], description: ['leather', 'harnesses'] }, kink: { title: ['gear night', 'gear'], description: ['gear night'] }, rubber: { title: [], description: ['rubber'] } }
   });
   // The dress-code aside is a candidate too — nothing in the words tells it
   // from a leather night; the AI does.
@@ -6027,10 +6028,13 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
 test('tags: every machine tag in the schema has a keyword family; the bear check never hears about tags, the tag check carries the gloss', () => {
   const core = createCore();
   const machineTags = SharedCore.getAiConfirmableTags();
-  assert.deepEqual(machineTags, ['leather', 'gainer', 'kink', 'rubber', 'diaper', 'drag', 'pup', 'underwear', 'sportswear', 'country', 'naked', 'sex-party']);
+  assert.deepEqual(machineTags, ['leather', 'gainer', 'kink', 'rubber', 'diaper', 'drag', 'pup', 'furry', 'underwear', 'sportswear', 'country', 'naked', 'sex-party']);
   for (const tag of machineTags) {
     assert.ok(core.tagKeywords[tag], `${tag} has a keyword family`);
-    assert.ok(core.matchTagKeywords(`${tag} night`, tag).length > 0, `${tag} names itself`);
+    // "furry night" is a bear night as often as not: the tag's own words
+    // are the fandom's.
+    const named = tag === 'furry' ? 'furry rave' : `${tag} night`;
+    assert.ok(core.matchTagKeywords(named, tag).length > 0, `${tag} names itself`);
   }
   // The bear check never hears about tags (measured 2026-11-06: a tags
   // field in its JSON demoted bear-promoter drag shows); each tag is its
@@ -6079,7 +6083,7 @@ test('tags: BLUF is leather, gainer is its own tag and keeps — a food special 
   assert.deepEqual(core.matchTagKeywords('Bluff City Bears Bowling', 'leather', { title: true }), []);
   // The model does not know the acronym: the event that carries it is told,
   // and every other leather question stays word for word the same.
-  const meaning = 'Meaning: a leather, gear or harness night, run, contest or club — not a dress-code aside, not gym gear.';
+  const meaning = 'Meaning: a leather night, run, contest or club: leather is the point of the event — not a general gear or fetish night that lists leather among other gear, not a dress-code aside, not gym gear.';
   assert.ok(core.buildTagCheckPrompt({ title: 'BLUF TORONTO', description: '', bar: '', city: 'toronto' }, 'leather')
     .includes(`${meaning} BLUF is the Breeches and Leather Uniform Fanclub; a night held under its name is a leather night.\n`));
   assert.ok(core.buildTagCheckPrompt({ title: 'Leather Night', description: 'On the bluffs.', bar: '', city: 'sf' }, 'leather').includes(`${meaning}\n`));
@@ -12477,6 +12481,8 @@ function barsWithoutPresentationFields(bars) {
     delete trimmed.accent;
     delete trimmed.paletteSource;
     delete trimmed.faviconPlate;
+    delete trimmed.faviconBg;
+    delete trimmed.faviconFg;
     return trimmed;
   });
 }
@@ -30488,17 +30494,36 @@ test('keeps: a beer bust at a bar the owner marked bear or leather is kept as be
   assert.equal(bear.result, 'bear', 'a bear verdict is never re-labelled');
 });
 
-test('tags: the bare word "gear" names leather only in a title; a description has to say the night is about it', async () => {
+test('tags: furry is the fandom, never a hairy man — the words that stop "furry" counting as bear are the tag\'s', () => {
   const core = createCore();
-  assert.deepEqual(core.collectMachineEventTags({ title: 'Fetish Friday: GEAR', description: '' }).fromTitle, ['kink', 'leather']);
+  assert.deepEqual(core.matchTagKeywords('Fursuit dance party', 'furry'), ['furry fandom']);
+  assert.deepEqual(core.matchTagKeywords('FURRY RAVE', 'furry'), ['furry fandom']);
+  assert.deepEqual(core.matchTagKeywords('Furry Bear Night', 'furry'), []);
+  assert.deepEqual(core.matchTagKeywords('Fursdays: fur and beer', 'furry'), []);
+});
+
+test('tags: kink is the umbrella — leather, rubber, diaper, pup and furry sit under it, underwear does not', () => {
+  assert.deepEqual(EventSchema.tagsUnderUmbrella('kink'), ['diaper', 'furry', 'kink', 'leather', 'pup', 'rubber']);
+  assert.deepEqual(EventSchema.tagsUnderUmbrella('rubber'), ['rubber']);
+  assert.deepEqual(EventSchema.tagsUnderUmbrella(''), []);
+});
+
+test('tags: the bare word "gear" names kink only in a title; a description has to say the night is about it', async () => {
+  const core = createCore();
+  // A gear night is the general kink night, not a leather one (owner,
+  // 2026-11-14: "gear nights is kink, rubber night is just rubber").
+  assert.deepEqual(core.collectMachineEventTags({ title: 'Fetish Friday: GEAR', description: '' }).fromTitle, ['kink']);
+  assert.deepEqual(core.collectMachineEventTags({ title: 'Rubber Night', description: '' }).fromTitle, ['rubber']);
   for (const description of ['Join Ryan with special guests, surprises and gear!', 'built for pups, handlers, gear lovers, and anyone', 'Jockstraps, Short Shorts, Onesies, and/or Gear are encouraged!']) {
-    assert.ok(!core.collectMachineEventTags({ title: 'Sunday Session', description }).candidates.includes('leather'), description);
+    const { candidates } = core.collectMachineEventTags({ title: 'Sunday Session', description });
+    assert.ok(!candidates.includes('kink') && !candidates.includes('leather'), description);
   }
-  for (const description of ['UPSTAIRS Mondays 9pm-2am $5.00 Cover GEAR IS REQUIRED', 'A gear night at The Eagle NYC hosted by Cadet Kelley', 'An evening of SOCIAL, PLAY AND GEAR NIGHT', 'come in full gear', 'harness up, boys']) {
-    assert.ok(core.collectMachineEventTags({ title: 'Sunday Session', description }).candidates.includes('leather'), description);
+  for (const description of ['UPSTAIRS Mondays 9pm-2am $5.00 Cover GEAR IS REQUIRED', 'A gear night at The Eagle NYC hosted by Cadet Kelley', 'An evening of SOCIAL, PLAY AND GEAR NIGHT', 'come in full gear']) {
+    assert.ok(core.collectMachineEventTags({ title: 'Sunday Session', description }).candidates.includes('kink'), description);
   }
+  assert.ok(core.collectMachineEventTags({ title: 'Sunday Session', description: 'harness up, boys' }).candidates.includes('leather'));
   // An aside nobody can ask the AI about, and one it would have confirmed: neither keeps the event.
-  const adapter = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'a spa afternoon' }, { leather: { applies: true, eventEvidence: ['gear'], reason: 'gear' } });
+  const adapter = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'a spa afternoon' }, { kink: { applies: true, eventEvidence: ['gear'], reason: 'gear' } });
   const result = await core.filterBearEvents([{ title: 'Sunday Session', description: 'special guests, surprises and gear!' }], bearCheckConfig('enforce'), adapter);
   assert.equal(result.length, 0);
   assert.equal(adapter.calls.filter(call => /^Tag: /m.test(call.prompt)).length, 0, 'no candidate, no question');
