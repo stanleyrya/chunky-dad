@@ -689,15 +689,25 @@ class SharedCore {
                 // own words carry the name, so every other leather question
                 // stays the same question.
                 pattern: [{ name: 'bluf', test: /\bbluf(?!f)/i, means: 'BLUF is the Breeches and Leather Uniform Fanclub; a night held under its name is a leather night' }],
-                word: ['harness', 'harnesses', 'flw', 'gear night', 'gear party', 'gear required', 'gear is required', 'gear only', 'gear mandatory', 'full gear'],
-                titleWord: ['gear']
+                word: ['harness', 'harnesses', 'flw']
             },
             // Gaining as the point of the night (owner, 2026-11-11: Growth at
             // Eagle Portland, "should be its own tag, counts as bear
             // website"). 'feeder' alone is a bird table and a supply line —
             // the AI confirms every hit.
             gainer: { substring: ['gainer', 'feederism', 'feedee'], word: ['feeder', 'feeders', 'encourager', 'encouragers', 'gaining', 'belly play'] },
-            kink: { substring: ['kink', 'fetish', 'bdsm', 'dungeon'], word: ['play party', 'cbt'] },
+            // A gear night is the general kink night, not a leather one
+            // (owner, 2026-11-14: "gear nights is kink, rubber night is just
+            // rubber"); the gear words left leather for here. `titleWord`
+            // as leather had it: "gear" alone is an aside in a description.
+            kink: {
+                substring: ['kink', 'fetish', 'bdsm', 'dungeon'],
+                word: ['play party', 'cbt', 'gear night', 'gear party', 'gear required', 'gear is required', 'gear only', 'gear mandatory', 'full gear'],
+                titleWord: ['gear']
+            },
+            // The fandom, never a hairy man: the same words that stop "furry"
+            // counting as a bear word (furryFandomPattern) are the tag's.
+            furry: { substring: [], pattern: [{ name: 'furry fandom', test: this.furryFandomPattern }], word: [] },
             rubber: { substring: ['rubber', 'latex'], word: [] },
             diaper: { substring: ['diaper', 'abdl'], word: ['nappy', 'nappies'] },
             drag: { substring: ['dragula'], word: ['drag'] },
@@ -16372,7 +16382,10 @@ Rules:
                         venue: event.bar || event.venue || '',
                         reason: decision.provenance,
                         host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
-                        event: { ...event }
+                        // The tags it would carry (owner, 2026-11-14: "keep
+                        // track of these events so we can add them later"):
+                        // a kink night off the site today is one switch away.
+                        event: { ...event, ...this.buildEventTagsPatch(decision) }
                     }
                 });
             } else if ((decision.result === 'not_bear' && (!trusted || decision.manualStore === true))
@@ -16401,7 +16414,10 @@ Rules:
                         venue: event.bar || event.venue || '',
                         reason: decision.result === 'unsure' ? `${decision.provenance} [listing site, no bear evidence]` : decision.provenance,
                         host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
-                        event: { ...event }
+                        // The tags it would carry (owner, 2026-11-14: "keep
+                        // track of these events so we can add them later"):
+                        // a kink night off the site today is one switch away.
+                        event: { ...event, ...this.buildEventTagsPatch(decision) }
                     }
                 });
             } else {
