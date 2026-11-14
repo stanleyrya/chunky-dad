@@ -480,6 +480,16 @@
     "accent": "#ee8034"
   },
   {
+    "slug": "the-belly-party-01634f48",
+    "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-hjmr3",
+    "faviconBg": "#533531",
+    "faviconFg": "#d9b596",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#5b3c33:21:5 #7b453a:19:8 #9c6353:17:8",
+    "accent": "#7b453a"
+  },
+  {
     "slug": "the-belly-party-03a64a44",
     "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8",
     "faviconBg": "#533531",
@@ -518,6 +528,13 @@
     "paletteSource": "flyer",
     "palette": "#000000:39:0 #f1f1ee:13:0 #1b1414:11:1 #731d24:4:12",
     "accent": "#731d24"
+  },
+  {
+    "slug": "the-belly-party-spooky-bear-1cad0810",
+    "url": "https://www.massbearsandcubs.org/events/bellyparty1-pl3n8-apggw-tea6t-w9p4h",
+    "paletteSource": "flyer",
+    "palette": "#b21a0f:20:19 #d59b9b:14:7 #881a0b:12:15 #bc5c5a:12:12 #640c0b:12:12",
+    "accent": "#b21a0f"
   },
   {
     "slug": "woof-block-party-39ece189",

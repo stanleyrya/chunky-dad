@@ -20,6 +20,36 @@
     "accent": "#c09262"
   },
   {
+    "slug": "bears-in-excess-0d7f8b41",
+    "url": "https://spaexcess.com/events/bears-in-excess/",
+    "faviconBg": "#d91545",
+    "faviconFg": "#e8174a",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ecd4c3:19:4 #fcf9f7:17:0 #cda996:16:5 #834b52:11:8 #c86744:8:13",
+    "accent": "#c86744"
+  },
+  {
+    "slug": "bears-in-excess-39782db7",
+    "url": "https://spaexcess.com/events/bears-in-excess/",
+    "faviconBg": "#d91545",
+    "faviconFg": "#e8174a",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ecd4c3:19:4 #fcf9f7:17:0 #cda996:16:5 #834b52:11:8 #c86744:8:13",
+    "accent": "#c86744"
+  },
+  {
+    "slug": "bears-in-excess-512f447f",
+    "url": "https://spaexcess.com/events/bears-in-excess/",
+    "faviconBg": "#d91545",
+    "faviconFg": "#e8174a",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ecd4c3:19:4 #fcf9f7:17:0 #cda996:16:5 #834b52:11:8 #c86744:8:13",
+    "accent": "#c86744"
+  },
+  {
     "slug": "bears-in-excess-64a0ef36",
     "url": "https://spaexcess.com/event-organizer/bears-in-excess/",
     "faviconBg": "#d91545",
@@ -105,7 +135,21 @@
     "palette": "#000000:74:0 #080413:7:4 #121a24:5:2"
   },
   {
+    "slug": "chubs-at-the-tubs-21e0f5f5",
+    "url": "https://spaexcess.com/events/chubs-at-the-tubs/",
+    "faviconBg": "#d91545",
+    "faviconFg": "#e8174a",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#d5d4db:23:1 #ad929d:16:3 #fbf7f8:14:0 #3d1634:10:8 #332a85:3:15",
+    "accent": "#332a85"
+  },
+  {
     "slug": "chubs-at-the-tubs-4216de53",
+    "url": "https://spaexcess.com/events/chubs-at-the-tubs/",
+    "faviconBg": "#d91545",
+    "faviconFg": "#e8174a",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#d5d4db:23:1 #ad929d:16:3 #fbf7f8:14:0 #3d1634:10:8 #332a85:3:15",
     "accent": "#332a85"
@@ -132,6 +176,16 @@
   },
   {
     "slug": "northern-bear-bash-1bafd517",
+    "url": "https://www.blackeagletoronto.com",
+    "faviconBg": "#f4f4f4",
+    "faviconFg": "#252525",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#cccccc:32:0 #f6f5f9:19:1 #a4a4a4:17:0 #eb0b85:13:25 #f3a42c:4:15",
+    "accent": "#eb0b85"
+  },
+  {
+    "slug": "northern-bear-bash-2ef55a8a",
     "url": "https://www.blackeagletoronto.com",
     "faviconBg": "#f4f4f4",
     "faviconFg": "#252525",

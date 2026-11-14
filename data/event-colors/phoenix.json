@@ -38,5 +38,35 @@
     "paletteSource": "flyer",
     "palette": "#c85a5b:14:14 #3c292a:14:3 #ddb5b4:14:5 #7b2d23:12:11",
     "accent": "#c85a5b"
+  },
+  {
+    "slug": "megawoof-phoenix-black-out-5030927e",
+    "url": "https://linktr.ee/megawoof_america",
+    "faviconBg": "#575d64",
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#0d1313:28:1 #232c1b:24:3 #3c5223:17:8 #299027:10:17 #8c2a93:6:18",
+    "accent": "#299027"
+  },
+  {
+    "slug": "treasure-trail-phoenix-wish-boned-73e9c798",
+    "url": "https://bearracuda.com/events/phoenixtt/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#fbf5db:42:3 #121e11:12:3 #c3bc7d:12:8 #18a7f3:11:16 #c27b22:8:13",
+    "accent": "#18a7f3"
+  },
+  {
+    "slug": "twisted-bear-phoenix-merry-thickmas-4b9539f1",
+    "url": "https://twisted-bear.com",
+    "faviconBg": "#f7f7f7",
+    "faviconFg": "#101010",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#090708:26:1 #34221c:22:3 #692e22:14:9 #b48470:10:7 #bd172d:5:20",
+    "accent": "#bd172d"
   }
 ]

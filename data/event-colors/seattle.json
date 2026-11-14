@@ -80,7 +80,27 @@
     "accent": "#cc0000"
   },
   {
+    "slug": "game-night-57782f51",
+    "url": "https://xlbears.org",
+    "faviconBg": "#c90d0d",
+    "faviconFg": "#dfdcdc",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:70:0 #cc0000:21:22 #d4d6d6:3:0 #cc6363:2:13",
+    "accent": "#cc0000"
+  },
+  {
     "slug": "game-night-6f4582b4",
+    "url": "https://xlbears.org",
+    "faviconBg": "#c90d0d",
+    "faviconFg": "#dfdcdc",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:70:0 #cc0000:21:22 #d4d6d6:3:0 #cc6363:2:13",
+    "accent": "#cc0000"
+  },
+  {
+    "slug": "game-night-797c120c",
     "url": "https://xlbears.org",
     "faviconBg": "#c90d0d",
     "faviconFg": "#dfdcdc",
@@ -120,6 +140,16 @@
     "accent": "#9b1926"
   },
   {
+    "slug": "roar-presents-timber-bring-back-my-bears-18e1389d",
+    "url": "https://cuffcomplex.com/events/roar-presents-timber-bring-back-my-bears",
+    "faviconBg": "#474747",
+    "faviconFg": "#767676",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#03052b:19:8 #061055:17:12 #2642c5:15:21 #4d66dd:12:18 #16298c:11:16",
+    "accent": "#2642c5"
+  },
+  {
     "slug": "seattle-glow-3b330fb1",
     "paletteSource": "flyer",
     "palette": "#443484:16:13 #cdecfd:15:4 #151b3c:15:6 #7644bd:13:18 #d14ae5:10:24",
@@ -144,6 +174,16 @@
     "paletteSource": "favicon",
     "palette": "#fefefe:29:0 #9c7a3d:16:9 #010100:12:1 #522d15:11:7 #9b1926:5:16",
     "accent": "#9b1926"
+  },
+  {
+    "slug": "south-seattle-bear-social-28729ff7",
+    "url": "https://thelumberyardbar.com/",
+    "faviconBg": "#5d3d25",
+    "faviconFg": "#e9e8e6",
+    "faviconPlate": "#010100",
+    "paletteSource": "flyer",
+    "palette": "#fefefe:23:0 #f6e5bb:17:6 #fedb61:16:14 #d56412:12:16 #5c350c:6:8",
+    "accent": "#d56412"
   },
   {
     "slug": "treasure-trail-seattle-2a543921",

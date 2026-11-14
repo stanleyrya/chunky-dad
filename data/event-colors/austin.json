@@ -10,6 +10,16 @@
     "accent": "#b8150e"
   },
   {
+    "slug": "furball-austin-0235c893",
+    "url": "https://furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#120d09:45:1 #431d12:13:6 #b0afb4:13:1 #623f39:9:5 #d41d29:3:21",
+    "accent": "#d41d29"
+  },
+  {
     "slug": "furball-austin-57e360df",
     "url": "https://www.furball.nyc",
     "faviconBg": "#f6f6f6",

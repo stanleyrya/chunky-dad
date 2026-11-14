@@ -1,5 +1,25 @@
 [
   {
+    "slug": "bear-bash-5a15a0b9",
+    "url": "https://www.eaglelondon.com/event-details/bear-bash-19",
+    "faviconBg": "#060606",
+    "faviconFg": "#787878",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#db8b63:19:11 #923d35:18:12 #6b2325:18:10 #bb5d49:18:13 #f8d668:9:13",
+    "accent": "#bb5d49"
+  },
+  {
+    "slug": "bear-bash-79254960",
+    "url": "https://www.eaglelondon.com/event-details/bear-bash-18",
+    "faviconBg": "#060606",
+    "faviconFg": "#787878",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#541a24:26:9 #762a2e:22:11 #2b121c:17:4 #9b342a:16:14 #dc5a3c:11:17",
+    "accent": "#dc5a3c"
+  },
+  {
     "slug": "beefmince-boatmince-0cb7b5c0",
     "url": "https://beefmince.com",
     "faviconBg": "#060606",
@@ -8,6 +28,16 @@
     "paletteSource": "flyer",
     "palette": "#1bc5ea:57:13 #f5f5ed:14:1 #246af5:13:22 #19748a:2:9",
     "accent": "#1bc5ea"
+  },
+  {
+    "slug": "beefmince-boatmince-7de59dd8",
+    "url": "https://beefmince.com",
+    "faviconBg": "#060606",
+    "faviconFg": "#131313",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#14c2e6:53:13 #282924:23:1 #1d6df4:12:22 #25849a:2:9 #1c4f62:1:6",
+    "accent": "#14c2e6"
   },
   {
     "slug": "beefmince-brief-encounter-174c5642",
@@ -127,5 +157,15 @@
     "paletteSource": "flyer",
     "palette": "#0d100e:43:1 #342c2c:15:1 #5c4a43:9:3 #b59484:9:5 #8c665d:9:5",
     "accent": "#8c665d"
+  },
+  {
+    "slug": "two-tons-of-hallokween-london-3e745a7d",
+    "url": "https://twotonsoffun.co.uk/",
+    "faviconBg": "#fdfaf6",
+    "faviconFg": "#ad6e6d",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:42:0 #df5274:17:18 #f4eca1:16:9 #663c3e:14:6 #ecac8e:1:9",
+    "accent": "#df5274"
   }
 ]

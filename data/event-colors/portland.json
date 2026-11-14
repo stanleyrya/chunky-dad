@@ -132,6 +132,16 @@
     "accent": "#89211b"
   },
   {
+    "slug": "chunk-portland-38e41d11",
+    "url": "https://www.chunk-party.com/event-details/chunk-portland-december-11th",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#feffff",
+    "paletteSource": "flyer",
+    "palette": "#ea831a:27:16 #d95a3a:24:17 #f2ac09:22:16 #bb325c:11:17 #6d1c9c:3:19",
+    "accent": "#ea831a"
+  },
+  {
     "slug": "chunk-portland-523-12aa4185",
     "url": "https://www.chunk-party.com",
     "faviconBg": "#f6f4f5",
@@ -191,7 +201,25 @@
     "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0"
   },
   {
+    "slug": "growth-218376cc",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0"
+  },
+  {
     "slug": "growth-2a3e92d3",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#000000:64:0 #ffffff:31:0 #818181:2:0"
+  },
+  {
+    "slug": "growth-3982b841",
     "url": "https://www.eagleportland.com",
     "faviconBg": "#020202",
     "faviconFg": "#ededed",
@@ -250,6 +278,26 @@
   },
   {
     "slug": "leather-scotch-and-cigar-social-1ff247e8",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0b0c:22:0 #3b3334:19:1 #5c514f:16:1 #cca49b:8:5",
+    "accent": "#cca49b"
+  },
+  {
+    "slug": "leather-scotch-and-cigar-social-28402c4a",
+    "url": "https://www.eagleportland.com",
+    "faviconBg": "#020202",
+    "faviconFg": "#ededed",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0b0b0c:22:0 #3b3334:19:1 #5c514f:16:1 #cca49b:8:5",
+    "accent": "#cca49b"
+  },
+  {
+    "slug": "leather-scotch-and-cigar-social-5075337a",
     "url": "https://www.eagleportland.com",
     "faviconBg": "#020202",
     "faviconFg": "#ededed",
@@ -343,6 +391,16 @@
     "paletteSource": "flyer",
     "palette": "#080702:47:2 #1e210b:30:4 #3a3c14:9:6 #7c6343:4:6",
     "accent": "#3a3c14"
+  },
+  {
+    "slug": "treasure-trail-portland-1e700f57",
+    "url": "https://bearracuda.com/events/treasure-trail-pdx/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#151512:31:1 #963019:17:14 #010101:16:0 #e4c27e:11:9 #5c140c:11:11",
+    "accent": "#963019"
   },
   {
     "slug": "treasure-trail-portland-backcountry-33f45281",

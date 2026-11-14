@@ -1,5 +1,51 @@
 [
   {
+    "slug": "beefcake-leather-sydney-53f88db4",
+    "paletteSource": "flyer",
+    "palette": "#130610:28:3 #7e4d49:15:7 #bd837b:13:7 #171f9e:11:20 #ec1313:6:24",
+    "accent": "#171f9e"
+  },
+  {
+    "slug": "furry-friday-02d2fcac",
+    "url": "https://hcbears.com.au/event-6700980/Registration",
+    "faviconBg": "#f38b00",
+    "faviconFg": "#130b00",
+    "faviconPlate": "#fc8f00",
+    "paletteSource": "flyer",
+    "palette": "#040609:30:1 #ea8f46:24:14 #abaeac:12:0",
+    "accent": "#ea8f46"
+  },
+  {
+    "slug": "furry-friday-36f2c491",
+    "url": "https://hcbears.com.au/event-6700980/Registration",
+    "faviconBg": "#f38b00",
+    "faviconFg": "#130b00",
+    "faviconPlate": "#fc8f00",
+    "paletteSource": "flyer",
+    "palette": "#040609:30:1 #ea8f46:24:14 #abaeac:12:0",
+    "accent": "#ea8f46"
+  },
+  {
+    "slug": "furry-friday-39c44ecf",
+    "url": "https://hcbears.com.au/event-6700980/Registration",
+    "faviconBg": "#f38b00",
+    "faviconFg": "#130b00",
+    "faviconPlate": "#fc8f00",
+    "paletteSource": "flyer",
+    "palette": "#040609:30:1 #ea8f46:24:14 #abaeac:12:0",
+    "accent": "#ea8f46"
+  },
+  {
+    "slug": "furry-friday-6baf4435",
+    "url": "https://hcbears.com.au/event-6700980/Registration",
+    "faviconBg": "#f38b00",
+    "faviconFg": "#130b00",
+    "faviconPlate": "#fc8f00",
+    "paletteSource": "flyer",
+    "palette": "#040609:30:1 #ea8f46:24:14 #abaeac:12:0",
+    "accent": "#ea8f46"
+  },
+  {
     "slug": "thick-n-juicy-sydney-october-long-weekend-628b5e4f",
     "paletteSource": "flyer",
     "palette": "#130d2d:43:6 #541c26:16:8 #c27e73:13:9 #8b4b43:11:9 #e2e505:2:19",

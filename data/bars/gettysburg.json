@@ -4,6 +4,12 @@
     "city": "gettysburg",
     "address": "2634 Emmitsburg Rd, Gettysburg, PA 17325",
     "coordinates": "39.765789, -77.2691996",
-    "website": "https://eisenhower.com"
+    "website": "https://eisenhower.com",
+    "faviconBg": "#edd4ca",
+    "faviconFg": "#a9abbe",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:50:0 #fdc39c:16:8 #dbd4f1:13:4 #91baef:11:9 #83a3cc:3:7",
+    "accent": "#fdc39c"
   }
 ]

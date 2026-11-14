@@ -1,5 +1,35 @@
 [
   {
+    "slug": "bad-boy-476db20e",
+    "url": "https://www.sf-eagle.com/events/big-boy/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#201e47:41:7 #eca1c6:17:10 #ae8d82:11:4 #e4e315:1:19",
+    "accent": "#eca1c6"
+  },
+  {
+    "slug": "bare-maximum-008ebe76",
+    "url": "https://www.lonestarsf.com/new-events-1/2026/11/2/bare-maximum-ysjbk",
+    "faviconBg": "#020000",
+    "faviconFg": "#931d20",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#b68d74:25:6 #736c6b:22:1 #8ebdc3:17:5 #c12e27:3:18 #eeec6b:1:15",
+    "accent": "#c12e27"
+  },
+  {
+    "slug": "bare-maximum-4919947a",
+    "url": "https://www.lonestarsf.com/new-events-1/2026/11/2/bare-maximum",
+    "faviconBg": "#020000",
+    "faviconFg": "#931d20",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#b68d74:25:6 #736c6b:22:1 #8ebdc3:17:5 #c12e27:3:18 #eeec6b:1:15",
+    "accent": "#c12e27"
+  },
+  {
     "slug": "bear-happy-hour-67a521bf",
     "url": "https://linktr.ee/bearhappyhour",
     "faviconBg": "#fbfbf9",
@@ -8,6 +38,16 @@
     "paletteSource": "favicon",
     "palette": "#ffffff:78:0 #010101:5:0 #cdcecf:5:0 #f6e529:1:18 #f2592a:1:20",
     "accent": "#f2592a"
+  },
+  {
+    "slug": "bear-happy-hour-sf--66f6c2e2",
+    "url": "https://linktr.ee/bearhappyhour",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:69:0 #010101:16:0 #e4623b:3:17 #ceb098:3:5 #f2e549:1:17",
+    "accent": "#e4623b"
   },
   {
     "slug": "bear-trap-00e56e09",
@@ -137,6 +177,16 @@
     "accent": "#2a2342"
   },
   {
+    "slug": "beer-bust-247ab282",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025319/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
     "slug": "beer-bust-2da8fe44",
     "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025307/",
     "faviconBg": "#5f6477",
@@ -157,6 +207,16 @@
     "accent": "#2a2342"
   },
   {
+    "slug": "beer-bust-31679f1d",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
     "slug": "beer-bust-32fa7866",
     "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025304/",
     "faviconBg": "#5f6477",
@@ -169,6 +229,16 @@
   {
     "slug": "beer-bust-3ec4e315",
     "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025309/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-417ab371",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025320/",
     "faviconBg": "#5f6477",
     "faviconFg": "#e1e1e1",
     "faviconPlate": "#ffffff",
@@ -207,8 +277,28 @@
     "accent": "#2a2342"
   },
   {
+    "slug": "beer-bust-6120a3be",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025318/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
     "slug": "beer-bust-614e9d66",
     "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025311/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-7424fada",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025316/",
     "faviconBg": "#5f6477",
     "faviconFg": "#e1e1e1",
     "faviconPlate": "#ffffff",
@@ -235,6 +325,36 @@
     "paletteSource": "flyer",
     "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
     "accent": "#2a2342"
+  },
+  {
+    "slug": "beer-bust-7b7e5e74",
+    "url": "https://www.sf-eagle.com/events/beer-bust-3-34-2-10025317/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#998181:16:3 #736461:15:2 #2a2342:15:6",
+    "accent": "#2a2342"
+  },
+  {
+    "slug": "bluf-sf-hard-642d3634",
+    "url": "https://www.sf-eagle.com",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0a0403:42:2 #3f2119:19:5 #8b2d1c:11:13 #b14d2b:6:14",
+    "accent": "#8b2d1c"
+  },
+  {
+    "slug": "blufsfhard-19959ab8",
+    "url": "https://www.sf-eagle.com/events/blufsfhard-10002689/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0a0403:42:2 #3f2119:19:5 #8b2d1c:11:13 #b14d2b:6:14",
+    "accent": "#8b2d1c"
   },
   {
     "slug": "blufsfhard-2e037ab5",
@@ -337,6 +457,16 @@
     "accent": "#d52501"
   },
   {
+    "slug": "chunk-san-francisco-0f69b8fc",
+    "url": "https://www.chunk-party.com/event-details/chunk-san-francisco-01-16",
+    "faviconBg": "#f6f4f5",
+    "faviconFg": "#2e2933",
+    "faviconPlate": "#feffff",
+    "paletteSource": "flyer",
+    "palette": "#12151a:52:1 #342b25:14:2 #f3d5bb:8:5 #e6aa73:7:10 #c17449:6:11",
+    "accent": "#c17449"
+  },
+  {
     "slug": "chunk-san-francisco-227d733c",
     "url": "https://www.chunk-party.com/event-details/chunk-san-francisco-saturday-january-17th",
     "faviconBg": "#f6f4f5",
@@ -377,6 +507,16 @@
     "accent": "#ec6a66"
   },
   {
+    "slug": "coach-after-dark-5f6b50fb",
+    "url": "https://www.sf-eagle.com/events/coach-after-dark/",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:39:0 #f8a29d:12:10 #bb836d:10:8 #946453:10:7 #fd5976:9:20",
+    "accent": "#fd5976"
+  },
+  {
     "slug": "coach-after-dark-sf-20074ac5",
     "url": "https://linktr.ee/bearhappyhour",
     "faviconBg": "#fbfbf9",
@@ -395,6 +535,16 @@
     "paletteSource": "flyer",
     "palette": "#b41b4b:29:19 #bb2c9c:21:21 #644883:12:10 #de71bb:9:16 #8c83aa:7:6",
     "accent": "#bb2c9c"
+  },
+  {
+    "slug": "daniel-franzese-does-grin-and-bear-it-3b5ab492",
+    "url": "https://www.sf-eagle.com/events/daniel-franzese-does-grin-and-bear-it-safe-words-comedy-show/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#1b130c:22:2 #f965be:16:20 #613425:15:7 #cf8c4a:12:12 #ab3d6d:7:15",
+    "accent": "#f965be"
   },
   {
     "slug": "disco-bear-73394f99",
@@ -446,6 +596,16 @@
     "accent": "#ea212a"
   },
   {
+    "slug": "grunt-party-sf-5a7be0ca",
+    "url": "https://gruntparty.monster/grunt-halloween",
+    "faviconBg": "#d02a2a",
+    "faviconFg": "#200d0e",
+    "faviconPlate": "#e32323",
+    "paletteSource": "flyer",
+    "palette": "#141915:36:1 #ea212a:21:23 #7a7e3b:14:9 #655933:11:6 #347fa9:8:10",
+    "accent": "#ea212a"
+  },
+  {
     "slug": "grunt-party-sf-6e1e3ec8",
     "url": "https://gruntparty.monster/",
     "faviconBg": "#d02a2a",
@@ -454,6 +614,16 @@
     "paletteSource": "flyer",
     "palette": "#050608:37:1 #f3e5cc:17:4 #e4acae:12:7 #e55b5b:9:17 #a27a7c:8:5",
     "accent": "#e55b5b"
+  },
+  {
+    "slug": "grunt-season-closer-38e05274",
+    "url": "https://gruntparty.monster/goodbyegrunt",
+    "faviconBg": "#d02a2a",
+    "faviconFg": "#200d0e",
+    "faviconPlate": "#e32323",
+    "paletteSource": "flyer",
+    "palette": "#8b6040:40:7 #f2e91b:23:19 #120d0b:11:1 #5e0bc4:7:24 #e46132:2:17",
+    "accent": "#5e0bc4"
   },
   {
     "slug": "hot-gogo-bears-227d733c",
@@ -500,6 +670,16 @@
     "paletteSource": "flyer",
     "palette": "#130b1c:24:4 #03010b:19:4 #34223b:14:5 #bd5e4a:12:13 #752b32:10:10",
     "accent": "#bd5e4a"
+  },
+  {
+    "slug": "queer-leather-happy-hour-245c047b",
+    "url": "https://www.sf-eagle.com/events/queer-leather-happy-hour-10001133/",
+    "faviconBg": "#5f6477",
+    "faviconFg": "#e1e1e1",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#0c0c0a:54:0 #20201e:13:0 #393936:11:0 #8b0c13:2:16",
+    "accent": "#8b0c13"
   },
   {
     "slug": "queer-leather-happy-hour-37f0d3a3",

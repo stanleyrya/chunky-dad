@@ -10,6 +10,16 @@
     "accent": "#cb2026"
   },
   {
+    "slug": "furball-madbear-21275b04",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#020101:21:0 #140b0b:18:2 #742e1b:16:10 #9c5b44:11:9 #d31b1a:10:21",
+    "accent": "#d31b1a"
+  },
+  {
     "slug": "macho-party-1de2bda2",
     "url": "https://madbear.org/en",
     "faviconBg": "#d12a26",
@@ -18,6 +28,12 @@
     "paletteSource": "flyer",
     "palette": "#0b0b0b:73:0 #1f2022:17:0 #e30404:5:24",
     "accent": "#e30404"
+  },
+  {
+    "slug": "madbear-2026-13a30436",
+    "paletteSource": "flyer",
+    "palette": "#0b0708:46:1 #310907:15:7 #61100c:12:11 #824432:11:9 #d92320:5:21",
+    "accent": "#d92320"
   },
   {
     "slug": "madbear-party-2026-madrid-620cefcf",

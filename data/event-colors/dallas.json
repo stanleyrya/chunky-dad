@@ -18,6 +18,15 @@
     "palette": "#ffffff:100:0"
   },
   {
+    "slug": "beardance-576d8187",
+    "url": "https://www.thedallaseagle.com/events/beardance-2026-11-20/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "favicon",
+    "palette": "#0a0908:76:0 #ffffff:11:0 #010000:6:0"
+  },
+  {
     "slug": "brewery-bears-happy-hour-247d1b27",
     "url": "https://www.thedallaseagle.com/events/brewery-bears-happy-hour-5/",
     "faviconBg": "#ffffff",
@@ -25,6 +34,24 @@
     "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
     "palette": "#ffffff:100:0"
+  },
+  {
+    "slug": "cigar-social-5fdb1642",
+    "url": "https://www.thedallaseagle.com/events/cigar-social-2026-12-04/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "favicon",
+    "palette": "#0a0908:76:0 #ffffff:11:0 #010000:6:0"
+  },
+  {
+    "slug": "dirty-bird-thanksgiving-38c10bd6",
+    "url": "https://www.thedallaseagle.com/events/dirty-bird-thanksgiving-2026-11-26/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "favicon",
+    "palette": "#0a0908:76:0 #ffffff:11:0 #010000:6:0"
   },
   {
     "slug": "furball-442f8415",
@@ -57,6 +84,45 @@
     "accent": "#cac40e"
   },
   {
+    "slug": "gear-night-78259433",
+    "url": "https://www.thedallaseagle.com/events/gear-night-2026-12-05/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "favicon",
+    "palette": "#0a0908:76:0 #ffffff:11:0 #010000:6:0"
+  },
+  {
+    "slug": "gear-night-with-dj-philip-webb-5032ecd9",
+    "url": "https://www.thedallaseagle.com/events/gear-night-with-dj-philip-webb-2026-11-07/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "flyer",
+    "palette": "#1b1b1b:61:0 #ececec:8:0 #b33126:8:17 #c49e8f:5:5",
+    "accent": "#b33126"
+  },
+  {
+    "slug": "gear-night-with-dj-tristan-jaxx-15e79f61",
+    "url": "https://www.thedallaseagle.com/events/gear-night-2026-11-21/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "flyer",
+    "palette": "#1b1b1b:61:0 #ececec:8:0 #b13126:8:17 #c39f8f:5:5",
+    "accent": "#b13126"
+  },
+  {
+    "slug": "gear-night-with-dj-tristan-jaxx-53ef889e",
+    "url": "https://www.thedallaseagle.com/events/gear-night-with-dj-tristan-jaxx-2026-10-10/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "flyer",
+    "palette": "#1a1816:63:1 #413332:9:2 #ececec:8:0 #a92822:8:17 #dc9a8c:3:8",
+    "accent": "#a92822"
+  },
+  {
     "slug": "gear-night-with-dj-woolfie-1810eb9e",
     "url": "https://www.thedallaseagle.com/events/gear-night-2026-10-03/",
     "faviconBg": "#ffffff",
@@ -65,6 +131,44 @@
     "paletteSource": "flyer",
     "palette": "#1a1a1a:60:0 #ececec:9:0 #545454:9:0 #a31d23:4:17",
     "accent": "#a31d23"
+  },
+  {
+    "slug": "lone-star-leather-with-dj-tdon-31f99c63",
+    "url": "https://www.thedallaseagle.com/events/lone-star-leather-with-dj-tdon-2026-11-28/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "favicon",
+    "palette": "#0a0908:76:0 #ffffff:11:0 #010000:6:0"
+  },
+  {
+    "slug": "rgv-bears-presents-morbo-5e70f5b1",
+    "url": "https://www.thedallaseagle.com/events/rgv-bears-presents-morbo-2026-11-12/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "flyer",
+    "palette": "#382714:51:4 #fe312e:22:24 #c4cadf:7:3 #973e31:5:12 #d42f2a:4:20",
+    "accent": "#fe312e"
+  },
+  {
+    "slug": "sunday-funday-rewind-56199400",
+    "url": "https://www.thedallaseagle.com/events/sunday-tea-rewind/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "favicon",
+    "palette": "#0a0908:76:0 #ffffff:11:0 #010000:6:0"
+  },
+  {
+    "slug": "sunday-funday-rewind-with-dj-boost-6dca3ecd",
+    "url": "https://www.thedallaseagle.com/events/sunday-funday-rewind-2026-11-15/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "flyer",
+    "palette": "#232323:64:0 #eaeae7:20:0 #544a4a:6:1 #c3e725:1:20",
+    "accent": "#c3e725"
   },
   {
     "slug": "sunday-tea-disco-with-dj-apthout-61dc7e46",
@@ -85,5 +189,35 @@
     "paletteSource": "flyer",
     "palette": "#dddfe1:26:0 #1c1e21:19:1 #6b8a85:12:4 #11ea5b:7:24",
     "accent": "#11ea5b"
+  },
+  {
+    "slug": "unity-night-discipline-corps-43e83cf3",
+    "url": "https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-10-09/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "flyer",
+    "palette": "#131313:53:0 #3c100f:14:7 #730909:8:14 #c10f10:7:20",
+    "accent": "#c10f10"
+  },
+  {
+    "slug": "unity-night-discipline-corps-with-dj-cvpid-3ea607ea",
+    "url": "https://www.thedallaseagle.com/events/unity-night-discipline-corps-2026-11-06/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "flyer",
+    "palette": "#131313:56:0 #391010:13:7 #f4f4f4:8:0 #9c0505:5:18 #d1100f:4:22",
+    "accent": "#d1100f"
+  },
+  {
+    "slug": "unity-night-with-dj-philip-webb-67751598",
+    "url": "https://www.thedallaseagle.com/events/unity-night-2026-11-13/",
+    "faviconBg": "#0e0d0c",
+    "faviconFg": "#d7d7d7",
+    "faviconPlate": "#0a0908",
+    "paletteSource": "flyer",
+    "palette": "#131313:72:0 #4c3532:7:3 #7a514b:6:6 #9b746d:4:5 #c5938c:4:6",
+    "accent": "#c5938c"
   }
 ]

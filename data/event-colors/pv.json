@@ -10,6 +10,28 @@
     "accent": "#df0209"
   },
   {
+    "slug": "basted-wasted-bearsgiving-pool-party-494630c4",
+    "paletteSource": "flyer",
+    "palette": "#1c263a:25:4 #3c3a43:21:2 #6a5354:17:3 #9a6c63:13:6 #e7298e:7:23",
+    "accent": "#e7298e"
+  },
+  {
+    "slug": "bear-beer-bust-bearsgiving-happy-hour-27f8d7ce",
+    "url": "https://bearadisemx.com/en/festivals/bearsgiving",
+    "faviconBg": "#ec048d",
+    "faviconFg": "#fcd7dc",
+    "faviconPlate": "#ec008c",
+    "paletteSource": "flyer",
+    "palette": "#a23c63:30:14 #bc6b65:19:11 #db328b:15:22 #63325b:14:9 #eb9f4e:8:13",
+    "accent": "#db328b"
+  },
+  {
+    "slug": "bearadise-beach-ibff-bear-week-2027-6e6a27a7",
+    "paletteSource": "flyer",
+    "palette": "#9a8d7b:23:3 #4b3c33:16:3 #72614d:14:4 #c4b495:12:5 #d54e9c:6:19",
+    "accent": "#d54e9c"
+  },
+  {
     "slug": "bearadise-ibff-bear-week-2027-414b6776",
     "paletteSource": "flyer",
     "palette": "#190f16:24:2 #aa9d8a:19:3 #5a4d44:13:2 #c3549a:4:16",
@@ -24,6 +46,18 @@
     "paletteSource": "flyer",
     "palette": "#ea0a8e:20:25 #d3dde5:15:2 #c78674:13:9 #a36363:12:8 #73394f:11:9",
     "accent": "#ea0a8e"
+  },
+  {
+    "slug": "bearadise-love-boat-ibff-bear-week-2027-170a1d4a",
+    "paletteSource": "flyer",
+    "palette": "#2e3135:23:1 #4d5155:22:1 #7a7d84:18:1 #f7a222:5:16 #06eff3:4:15",
+    "accent": "#f7a222"
+  },
+  {
+    "slug": "bearadise-pool-party-halloween-3e25035c",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:35:0 #a4725d:16:7 #db6532:11:16 #bc958a:10:5 #ed5991:5:19",
+    "accent": "#db6532"
   },
   {
     "slug": "bearaoke-0ef1f997",
@@ -132,6 +166,16 @@
     "accent": "#9b755b"
   },
   {
+    "slug": "furball-pool-party-459e3141",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#45dbe8:21:12 #2483ac:19:11 #ee2d2c:13:23 #f5e82b:9:19 #5ead45:8:16",
+    "accent": "#ee2d2c"
+  },
+  {
     "slug": "furball-pool-party-692b7f78",
     "url": "https://beefdip.com/",
     "faviconBg": "#f6f6f6",
@@ -234,6 +278,16 @@
   {
     "slug": "tidal-wave-0b71e4c3",
     "url": "https://beefdip.com/tags/",
+    "faviconBg": "#e30309",
+    "faviconFg": "#fde524",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#3da29e:19:9 #e88459:18:14 #ecc4ab:16:6 #7fceb3:9:9 #db1164:7:23",
+    "accent": "#db1164"
+  },
+  {
+    "slug": "tidal-wave-38b07994",
+    "url": "https://beefdip.com",
     "faviconBg": "#e30309",
     "faviconFg": "#fde524",
     "faviconPlate": "#ffffff",

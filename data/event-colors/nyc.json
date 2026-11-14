@@ -1,5 +1,25 @@
 [
   {
+    "slug": "-bear-happy-hour-3d0d8647",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%90%bb-bear-happy-hour-no-cover-3/",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:78:0 #010101:5:0 #cdcecf:5:0 #f6e529:1:18 #f2592a:1:20",
+    "accent": "#f2592a"
+  },
+  {
+    "slug": "-bear-happy-hour-58cc91f5",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%90%bb-bear-happy-hour-no-cover-4/",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:78:0 #010101:5:0 #cdcecf:5:0 #f6e529:1:18 #f2592a:1:20",
+    "accent": "#f2592a"
+  },
+  {
     "slug": "-beer-blast-dj-cunningham-no-cover-till-9pm-53997136",
     "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-%f0%9f%98%8a-no-cover-till-9pm-%f0%9f%92%b020-cover-at-9pm-15-4/",
     "faviconBg": "#f0f0f0",
@@ -27,6 +47,15 @@
     "palette": "#ffffff:74:0 #656565:5:0 #8a8a8a:5:0"
   },
   {
+    "slug": "-beer-blast-erik-elias-65d87696",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm-2/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
     "slug": "-beer-blast-matthew-j-688dabd0",
     "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-%f0%9f%98%8a-no-cover-till-9pm-%f0%9f%92%b020-cover-at-9pm-14/",
     "faviconBg": "#f0f0f0",
@@ -36,10 +65,148 @@
     "palette": "#ffffff:74:0 #656565:5:0 #8a8a8a:5:0"
   },
   {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-019cde54",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm/2027-01-17/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-10be38ec",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm/2027-01-03/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-1a3e820b",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm-3/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-1d3e2a3d",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm/2026-12-13/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-22de84ee",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm-6/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-2b0f07b7",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm/2026-12-20/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-2fce3913",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm-5/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-4055c59c",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm-4/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-4adba2ae",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm/2026-12-06/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-4b847a70",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm/2027-01-10/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-6a7d7b79",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm/2027-01-24/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-beer-blast-no-cover-till-9pm-20-cover-at-9pm-6b8f02ae",
+    "url": "https://eagle-ny.com/calendarofevents/%f0%9f%8d%ba-beer-blast-no-cover-till-9pm-20-cover-at-9pm/2026-12-27/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-bluf-new-york-65389820",
+    "url": "https://eagle-ny.com/calendarofevents/bluf-new-york-19/2027-01-17/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
+    "slug": "-bluf-new-york-73abb5b5",
+    "url": "https://eagle-ny.com/calendarofevents/bluf-new-york-19/2026-12-20/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
     "slug": "bear-belly-0353b2d4",
     "paletteSource": "flyer",
     "palette": "#131a13:20:2 #99633d:19:9 #5c3c25:19:6 #e3b15c:14:12 #63ccec:9:11",
     "accent": "#e3b15c"
+  },
+  {
+    "slug": "bear-belly-06913bea",
+    "paletteSource": "flyer",
+    "palette": "#131a13:20:2 #99633d:19:9 #5c3c25:19:6 #e3b15c:14:12 #63ccec:9:11",
+    "accent": "#e3b15c"
+  },
+  {
+    "slug": "bear-belly-4e0e7a07",
+    "paletteSource": "flyer",
+    "palette": "#0a0b14:24:2 #43525d:15:3 #181446:14:9 #857a3b:12:8 #e5ba24:9:16",
+    "accent": "#e5ba24"
   },
   {
     "slug": "bear-belly-4f2123da",
@@ -48,7 +215,23 @@
     "accent": "#e3b15c"
   },
   {
+    "slug": "bear-belly-572bb249",
+    "paletteSource": "flyer",
+    "palette": "#131a13:20:2 #99633d:19:9 #5c3c25:19:6 #e3b15c:14:12 #63ccec:9:11",
+    "accent": "#e3b15c"
+  },
+  {
     "slug": "bear-belly-57a8cf68",
+    "paletteSource": "flyer",
+    "palette": "#131a13:20:2 #99633d:19:9 #5c3c25:19:6 #e3b15c:14:12 #63ccec:9:11",
+    "accent": "#e3b15c"
+  },
+  {
+    "slug": "bear-belly-bear-tea-dance-4f2123da",
+    "url": "https://www.cmoneverybody.com/events",
+    "faviconBg": "#f9f7f3",
+    "faviconFg": "#ac7f71",
+    "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#131a13:20:2 #99633d:19:9 #5c3c25:19:6 #e3b15c:14:12 #63ccec:9:11",
     "accent": "#e3b15c"
@@ -109,10 +292,26 @@
     "accent": "#944e3b"
   },
   {
+    "slug": "bear-milk-5bf010e5",
+    "paletteSource": "flyer",
+    "palette": "#35343a:22:1 #5b336c:18:10 #d2855b:17:11 #29bc14:7:22 #ecda16:1:18",
+    "accent": "#29bc14"
+  },
+  {
     "slug": "bear-milk-at-the-deep-end-44ca222f",
     "paletteSource": "flyer",
     "palette": "#1b1b1c:18:0 #3b3b3c:17:0 #040409:14:2 #944e3b:12:10 #b3836c:11:7",
     "accent": "#944e3b"
+  },
+  {
+    "slug": "bear-tea-72b6f194",
+    "url": "https://www.3dollarbillbk.com/rsvp/2026/11/21/bear-tea",
+    "faviconBg": "#4a3f2e",
+    "faviconFg": "#d9b844",
+    "faviconPlate": "#3c3225",
+    "paletteSource": "flyer",
+    "palette": "#131313:42:0 #a48265:13:6 #3b231c:12:4 #8b5b45:10:7 #ebaa15:5:16",
+    "accent": "#ebaa15"
   },
   {
     "slug": "bears-4-bareburger-0dc682ab",
@@ -443,6 +642,21 @@
     "palette": "#ffffff:74:0 #656565:5:0 #8a8a8a:5:0"
   },
   {
+    "slug": "big-boy-lounge-41fa4cfd",
+    "paletteSource": "flyer",
+    "palette": "#0c0b0c:27:0 #644b2d:19:6 #bb8d6a:19:7 #936b4c:15:7 #d5b294:11:6",
+    "accent": "#bb8d6a"
+  },
+  {
+    "slug": "bluf-new-york-5e4966b6",
+    "url": "https://eagle-ny.com/calendarofevents/bluf-new-york-2/2026-12-20/",
+    "faviconBg": "#f0f0f0",
+    "faviconFg": "#565656",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:74:0 #888888:5:0 #bcbcbc:5:0"
+  },
+  {
     "slug": "cake-sunday-tea-1bcaccc6",
     "paletteSource": "flyer",
     "palette": "#432a2e:22:4 #834b3e:18:8 #ddc2be:17:3 #c05742:17:14 #fbd781:3:11",
@@ -468,6 +682,12 @@
   },
   {
     "slug": "cake-sunday-tea-6a45268d",
+    "paletteSource": "flyer",
+    "palette": "#432a2e:22:4 #834b3e:18:8 #ddc2be:17:3 #c05742:17:14 #fbd781:3:11",
+    "accent": "#c05742"
+  },
+  {
+    "slug": "cake-sunday-tea-781a3d05",
     "paletteSource": "flyer",
     "palette": "#432a2e:22:4 #834b3e:18:8 #ddc2be:17:3 #c05742:17:14 #fbd781:3:11",
     "accent": "#c05742"
@@ -559,6 +779,12 @@
     "accent": "#dd3336"
   },
   {
+    "slug": "diva-thicc-7a65d0b6",
+    "paletteSource": "flyer",
+    "palette": "#543225:23:5 #744c3a:19:6 #936c53:15:6 #f5c185:12:10 #c43972:4:18",
+    "accent": "#c43972"
+  },
+  {
     "slug": "fat-bunny-5b4c768d",
     "paletteSource": "flyer",
     "palette": "#15168a:18:18 #13154c:18:10 #121cbb:17:23 #132dea:16:27 #8462cb:12:16",
@@ -581,6 +807,12 @@
     "paletteSource": "flyer",
     "palette": "#2b2b2b:19:0 #cab5b5:19:2 #5a6cbb:15:12 #7e9dd4:11:9 #a77d7e:7:5",
     "accent": "#5a6cbb"
+  },
+  {
+    "slug": "fat-fuc-7c7a5475",
+    "paletteSource": "flyer",
+    "palette": "#2b2b2b:19:0 #c3b5b4:19:2 #5b6ab5:15:12 #729ed3:11:9",
+    "accent": "#5b6ab5"
   },
   {
     "slug": "fat-fuc-at-nowhere-6288d7fb",
@@ -616,7 +848,19 @@
     "accent": "#cd937b"
   },
   {
+    "slug": "fursdays-136530b8",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
     "slug": "fursdays-174f4494",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-18a58682",
     "paletteSource": "flyer",
     "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
     "accent": "#cd937b"
@@ -640,7 +884,31 @@
     "accent": "#cd937b"
   },
   {
+    "slug": "fursdays-2f3813b6",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-2fb5a2fa",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-3292f316",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
     "slug": "fursdays-43d12bf7",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
+    "slug": "fursdays-4581d418",
     "paletteSource": "flyer",
     "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
     "accent": "#cd937b"
@@ -706,6 +974,26 @@
     "accent": "#f3197b"
   },
   {
+    "slug": "goldiloxx-flannel-nite-563f56c2",
+    "url": "https://linktr.ee/goldiloxx",
+    "faviconBg": "#4a3f2e",
+    "faviconFg": "#d9b844",
+    "faviconPlate": "#3c3225",
+    "paletteSource": "flyer",
+    "palette": "#1b1514:32:1 #332924:15:2 #ab8364:12:7 #623732:12:6 #835b43:11:6",
+    "accent": "#ab8364"
+  },
+  {
+    "slug": "goldiloxx-halloween-50e0241d",
+    "url": "https://linktr.ee/goldiloxx",
+    "faviconBg": "#4a3f2e",
+    "faviconFg": "#d9b844",
+    "faviconPlate": "#3c3225",
+    "paletteSource": "flyer",
+    "palette": "#231c19:24:1 #b48051:18:9 #74432a:16:8 #f91c0b:14:25 #fbd534:5:17",
+    "accent": "#f91c0b"
+  },
+  {
     "slug": "goldiloxx-mdw-43e392ec",
     "paletteSource": "flyer",
     "palette": "#2b2324:21:1 #130f10:17:1 #c59066:15:9 #965a3c:14:9 #eecc0d:4:17",
@@ -768,6 +1056,16 @@
     "accent": "#d5ad8c"
   },
   {
+    "slug": "gorditos-4101f10b",
+    "url": "https://www.rockbarnyc.com",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#ebb594:20:8 #cc8e6b:17:9 #7b432c:13:8 #a36344:13:9 #542a1c:11:7",
+    "accent": "#cc8e6b"
+  },
+  {
     "slug": "gorditos-at-rockbar-0f31acb7",
     "paletteSource": "flyer",
     "palette": "#1a1514:24:1 #ebe2bb:14:5 #ac8a7a:13:5 #d5ad8c:12:7 #82644a:10:5",
@@ -808,6 +1106,21 @@
     "accent": "#188218"
   },
   {
+    "slug": "happy-hour-in-leather-3cb00860",
+    "paletteSource": "flyer",
+    "palette": "#060807:26:0 #5a5453:17:1 #3c3c3c:15:0"
+  },
+  {
+    "slug": "hell-yeah-brother-2fb1d77f",
+    "url": "https://www.rockbarnyc.com",
+    "faviconBg": "#030303",
+    "faviconFg": "#7a7a7a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#010000:39:1 #150608:18:3 #451a13:11:7 #ede75b:8:16 #dc1925:5:22",
+    "accent": "#dc1925"
+  },
+  {
     "slug": "hibearnation-body-10f21488",
     "paletteSource": "flyer",
     "palette": "#090c0c:70:0 #dc39b2:11:23 #b2b5b3:6:0",
@@ -815,6 +1128,12 @@
   },
   {
     "slug": "hibearnation-body-290a22b6",
+    "paletteSource": "flyer",
+    "palette": "#090c0c:70:0 #dc39b2:11:23 #b2b5b3:6:0",
+    "accent": "#dc39b2"
+  },
+  {
+    "slug": "hibearnation-body-555016df",
     "paletteSource": "flyer",
     "palette": "#090c0c:70:0 #dc39b2:11:23 #b2b5b3:6:0",
     "accent": "#dc39b2"
@@ -855,12 +1174,22 @@
     "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
   },
   {
+    "slug": "leather-daddy-07390823",
+    "paletteSource": "flyer",
+    "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
+  },
+  {
     "slug": "leather-daddy-19eaa976",
     "paletteSource": "flyer",
     "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
   },
   {
     "slug": "leather-daddy-3568f504",
+    "paletteSource": "flyer",
+    "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
+  },
+  {
+    "slug": "leather-daddy-477296bc",
     "paletteSource": "flyer",
     "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
   },
@@ -875,6 +1204,16 @@
     "palette": "#131313:56:0 #ab948b:12:3 #856b65:12:3"
   },
   {
+    "slug": "lodge-ny-dads-n-lads-00a1e316",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-dads-n-lads-00d91c7c",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -886,6 +1225,16 @@
   },
   {
     "slug": "lodge-ny-dads-n-lads-0102834b",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-dads-n-lads-070f5936",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -916,6 +1265,16 @@
   },
   {
     "slug": "lodge-ny-dads-n-lads-0bb871d0",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-dads-n-lads-18c74e05",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -995,6 +1354,16 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-dads-n-lads-366003a8",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-dads-n-lads-37a418ce",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -1006,6 +1375,26 @@
   },
   {
     "slug": "lodge-ny-dads-n-lads-37b7c86d",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-dads-n-lads-394b4c7c",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-dads-n-lads-4124841c",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -1036,6 +1425,16 @@
   },
   {
     "slug": "lodge-ny-dads-n-lads-4ad5dd9f",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-dads-n-lads-4b50f728",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -1085,6 +1484,26 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-dads-n-lads-5486b5d5",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-dads-n-lads-5768d929",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-dads-n-lads-5a4f8f77",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -1096,6 +1515,16 @@
   },
   {
     "slug": "lodge-ny-dads-n-lads-5a65c55f",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-dads-n-lads-601ee4c2",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -1145,6 +1574,16 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-dads-n-lads-6cf85a19",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-dads-n-lads-6fb38a5c",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -1165,6 +1604,16 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-dads-n-lads-7a70debd",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-dads-n-lads-7cc14249",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -1175,7 +1624,27 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-the-bear-party-04dd4e5a",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-the-bear-party-08b9d4f4",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-0c7fe893",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -1205,6 +1674,16 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-the-bear-party-1047976b",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-the-bear-party-1127818a",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -1225,7 +1704,27 @@
     "accent": "#d05007"
   },
   {
+    "slug": "lodge-ny-the-bear-party-13e81120",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-the-bear-party-1535e6a4",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-174f9039",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -1305,6 +1804,16 @@
     "accent": "#d05007"
   },
   {
+    "slug": "lodge-ny-the-bear-party-299f4fe1",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010001:43:0 #bd8a7b:12:7 #6c483e:11:5 #d05007:9:18 #f6b55b:7:13",
+    "accent": "#d05007"
+  },
+  {
     "slug": "lodge-ny-the-bear-party-2c3febf5",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -1365,6 +1874,16 @@
     "accent": "#d05007"
   },
   {
+    "slug": "lodge-ny-the-bear-party-3a60d222",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-the-bear-party-3bb29f28",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -1386,6 +1905,26 @@
   },
   {
     "slug": "lodge-ny-the-bear-party-42dd0a9b",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010001:43:0 #bd8a7b:12:7 #6c483e:11:5 #d05007:9:18 #f6b55b:7:13",
+    "accent": "#d05007"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-449617a9",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#000000:54:0 #110d0b:36:1 #f78934:6:16 #fbac2d:3:16 #bb702c:1:12",
+    "accent": "#f78934"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-46129ff1",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -1445,7 +1984,37 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-the-bear-party-51f1b311",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010001:43:0 #bd8a7b:12:7 #6c483e:11:5 #d05007:9:18 #f6b55b:7:13",
+    "accent": "#d05007"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-5215ef58",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-the-bear-party-52bde4a4",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-53cf1928",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -1495,6 +2064,26 @@
     "accent": "#d05007"
   },
   {
+    "slug": "lodge-ny-the-bear-party-5b87a8e2",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-5fb79801",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-the-bear-party-63df0aa3",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -1526,6 +2115,26 @@
   },
   {
     "slug": "lodge-ny-the-bear-party-6897a788",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-689bcfd3",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010001:43:0 #bd8a7b:12:7 #6c483e:11:5 #d05007:9:18 #f6b55b:7:13",
+    "accent": "#d05007"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-6cda6874",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",
@@ -1595,6 +2204,16 @@
     "accent": "#d05007"
   },
   {
+    "slug": "lodge-ny-the-bear-party-7fad6f27",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "mega-bear-blast-closing-night-party-435aeee7",
     "url": "https://rockbarnyc.com",
     "faviconBg": "#030303",
@@ -1602,6 +2221,16 @@
     "faviconPlate": "#000000",
     "paletteSource": "favicon",
     "palette": "#000000:87:0 #232323:2:0 #d3d3d3:2:0"
+  },
+  {
+    "slug": "megamilk-megawoof-bearmilk-4d261b28",
+    "url": "https://linktr.ee/megawoof_america",
+    "faviconBg": "#575d64",
+    "faviconFg": "#abb2ba",
+    "faviconPlate": "#acb4bc",
+    "paletteSource": "flyer",
+    "palette": "#4d2213:19:7 #a2654c:18:9 #7d3d2b:15:9 #dbc596:11:7 #fa731c:6:19",
+    "accent": "#fa731c"
   },
   {
     "slug": "megawoof-bearmilk-present-megamilk-42f507f5",
@@ -1718,6 +2347,16 @@
     "accent": "#0b1167"
   },
   {
+    "slug": "underbear-nyc-06425c75",
+    "url": "https://furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#040509:54:1 #1a1c1b:12:0 #4c3c2d:9:3 #c4d9a6:7:7 #ac5935:5:12",
+    "accent": "#ac5935"
+  },
+  {
     "slug": "underbear-party-49848b02",
     "url": "https://theurbanbear.com",
     "faviconBg": "#141414",
@@ -1735,6 +2374,16 @@
   },
   {
     "slug": "underbear-party-5e8d54d4",
+    "url": "https://theurbanbear.com",
+    "faviconBg": "#141414",
+    "faviconFg": "#dcdcdc",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#020202:45:0 #13120d:35:1 #7b3d1b:7:10 #522a0d:4:7 #b56029:2:13",
+    "accent": "#7b3d1b"
+  },
+  {
+    "slug": "underbear-party-77e31bc4",
     "url": "https://theurbanbear.com",
     "faviconBg": "#141414",
     "faviconFg": "#dcdcdc",

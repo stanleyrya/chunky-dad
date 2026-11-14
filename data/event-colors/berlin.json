@@ -16,6 +16,13 @@
     "accent": "#edb412"
   },
   {
+    "slug": "bearhood-monster-bash-4e4e94c4",
+    "url": "https://bearhood.de",
+    "paletteSource": "flyer",
+    "palette": "#23133c:46:8 #3c1373:17:15 #5c2295:14:18 #fdc37b:9:11 #9836ad:4:19",
+    "accent": "#5c2295"
+  },
+  {
     "slug": "festival-folsom-europe-2026",
     "url": "https://folsomeurope.berlin/",
     "faviconBg": "#0b0303",
@@ -88,6 +95,12 @@
     "paletteSource": "flyer",
     "palette": "#0e1113:55:1 #22292d:20:1 #364046:11:2 #0098e4:2:15",
     "accent": "#0098e4"
+  },
+  {
+    "slug": "unshaved-winter-edition-2026-060b1441",
+    "paletteSource": "flyer",
+    "palette": "#4b4a85:21:10 #838cab:17:5 #676a8b:16:5 #c23e34:9:17 #2a254c:7:7",
+    "accent": "#c23e34"
   },
   {
     "slug": "woofs-fetish-beer-garden-street-fair-day-3bf2638d",

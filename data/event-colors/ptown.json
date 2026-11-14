@@ -1,5 +1,69 @@
 [
   {
+    "slug": "a-house-halloween-weekend-02ad6735",
+    "paletteSource": "flyer",
+    "palette": "#fdfdfd:45:0 #0a0a0a:21:0 #9d9996:8:1"
+  },
+  {
+    "slug": "a-house-halloween-weekend-4d19ce64",
+    "paletteSource": "flyer",
+    "palette": "#fdfdfd:45:0 #0a0a0a:21:0 #9d9996:8:1"
+  },
+  {
+    "slug": "a-house-halloween-weekend-62f4399a",
+    "paletteSource": "flyer",
+    "palette": "#fdfdfd:45:0 #0a0a0a:21:0 #9d9996:8:1"
+  },
+  {
+    "slug": "a-house-halloween-weekend-69803252",
+    "paletteSource": "flyer",
+    "palette": "#fdfdfd:45:0 #0a0a0a:21:0 #9d9996:8:1"
+  },
+  {
+    "slug": "bears-in-the-dunes-5e1eb455",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "dark-roomsjackie-cox-717efe20",
+    "url": "https://redroom.club/shows/386124",
+    "paletteSource": "flyer",
+    "palette": "#6b4c0a:36:9 #251a01:24:4 #432f09:14:6 #dd9349:7:13 #b3632b:7:12",
+    "accent": "#6b4c0a"
+  },
+  {
+    "slug": "death-becomes-them-7bb47d4b",
+    "url": "https://tryst.events/e/death-becomes-them-spooky-bear",
+    "paletteSource": "flyer",
+    "palette": "#0b092b:29:7 #01010c:24:4 #221c4c:20:9 #4d426d:11:7 #856a86:7:5",
+    "accent": "#221c4c"
+  },
+  {
+    "slug": "fag-bash-halloween-edition-63c60306",
+    "paletteSource": "flyer",
+    "palette": "#da3906:37:20 #1b130d:18:2 #4c2312:11:7 #a5431b:10:14 #cb8551:8:11",
+    "accent": "#da3906"
+  },
+  {
+    "slug": "fat-slut-spooky-bear-1efd445e",
+    "url": "https://tryst.events/e/fat-slut-spooky-bear",
+    "paletteSource": "flyer",
+    "palette": "#231d1c:22:1 #dc9633:15:14 #834d35:12:8 #a67856:11:8 #ce453b:9:18",
+    "accent": "#ce453b"
+  },
+  {
+    "slug": "first-tea-2027-550e2e44",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fe7c54:18:17 #c29783:14:6 #d4cbc6:14:1 #fabc3c:14:15",
+    "accent": "#fe7c54"
+  },
+  {
     "slug": "furball-3342cdd1",
     "url": "https://www.furball.nyc",
     "faviconBg": "#302f35",
@@ -36,6 +100,587 @@
     "accent": "#1a97b3"
   },
   {
+    "slug": "furballhowl-underwear-and-gear-party-59b3a5be",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#02050a:25:2 #1c1b1c:19:0 #223d6b:13:9 #ec5417:10:20 #1e46e3:2:24",
+    "accent": "#ec5417"
+  },
+  {
+    "slug": "gay-pride-tea-dance-3e81124c",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:67:0 #35323d:7:2 #1b141b:6:2 #fc4361:5:22 #a0336a:4:15",
+    "accent": "#fc4361"
+  },
+  {
+    "slug": "goldiloxx-spooky-bear-daytime-delight-47fb994c",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#1b1412:29:1 #3c231c:19:4 #a33c1c:11:14 #bb6641:10:12 #f7450a:9:22",
+    "accent": "#f7450a"
+  },
+  {
+    "slug": "halloqueen-burner-brunch-4593b653",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "halloqueen-burner-brunch-5a5334c3",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "halloween-uniform-tea-spooky-bear-wknd-218c36f6",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#ebf2e4:27:2 #e4a17d:16:9 #cc8b6c:15:9 #ab735c:12:8 #845a4c:8:6",
+    "accent": "#e4a17d"
+  },
+  {
+    "slug": "halloween-uniform-tea-spooky-bear-wknd-28553d66",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#ebf2e4:27:2 #e4a17d:16:9 #cc8b6c:15:9 #ab735c:12:8 #845a4c:8:6",
+    "accent": "#e4a17d"
+  },
+  {
+    "slug": "heated-rival-tea-03ab27fa",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-150028f2",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-16c77c28",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-2e734e86",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-378cb708",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-3828bdd0",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-3ca8c793",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-3d37347b",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-415eca23",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-4498758f",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-45321055",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-4c0eccfb",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-4e33fcd4",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-5580ab95",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-5e0a28c4",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-6368a83d",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-717e241a",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-7573398d",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-7a91b228",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-7e9afc04",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-7f67fffb",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-7fdaaba2",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "heated-rival-tea-mdw-7e98efc3",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ebcece:18:3 #9b2b27:16:15 #c9856a:14:9 #b2654c:14:11 #d40209:13:22",
+    "accent": "#d40209"
+  },
+  {
+    "slug": "i-love-the-90s-04402aa6",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-06c1622b",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-0dd2c126",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-1395f6d4",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-21243e54",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-235f4ef6",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-26e0ea3b",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-398a695d",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-40427b43",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-4787642d",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-4c1ac91c",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-540837a4",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-61381ccb",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "i-love-the-90s-mdw-1cf2bdfe",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:56:0 #020202:17:0 #e62c2b:9:22",
+    "accent": "#e62c2b"
+  },
+  {
+    "slug": "loving-our-bear-bodies-at-spooky-bear-in-provincetown-047b8a84",
+    "url": "https://www.bearyoursoul.org/events/spookylobb",
+    "paletteSource": "flyer",
+    "palette": "#a48b7e:18:4 #c0b2a7:15:2 #453145:15:4"
+  },
+  {
+    "slug": "loving-our-bear-bodies-at-spooky-bear-in-provincetown-0b58d973",
+    "url": "https://www.bearyoursoul.org/events/spookylobb",
+    "paletteSource": "flyer",
+    "palette": "#a48b7e:18:4 #c0b2a7:15:2 #453145:15:4"
+  },
+  {
+    "slug": "loving-our-bear-bodies-at-spooky-bear-in-provincetown-45e29511",
+    "url": "https://www.bearyoursoul.org/events/spookylobb",
+    "paletteSource": "flyer",
+    "palette": "#a48b7e:18:4 #c0b2a7:15:2 #453145:15:4"
+  },
+  {
+    "slug": "loving-our-bear-bodies-at-spooky-bear-in-provincetown-75b92e1d",
+    "url": "https://www.bearyoursoul.org/events/spookylobb",
+    "paletteSource": "flyer",
+    "palette": "#a48b7e:18:4 #c0b2a7:15:2 #453145:15:4"
+  },
+  {
+    "slug": "motherdisco-5a1935cb",
+    "url": "https://tryst.events/e/mother-disco-spooky-bear",
+    "paletteSource": "flyer",
+    "palette": "#e5e1de:46:1 #37383d:26:1 #a29e9c:9:1"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-04e2434d",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-080d8bd3",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-12823be4",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-19cae879",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-2a10db02",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-4b7133bb",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-4d2f7bb3",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-529a38bd",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-6b9efdc0",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-72caeee9",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-79da86ac",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "mrs-roper-goes-to-tea-7e1a2148",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#fcf6f3:22:1 #f38c2d:22:16 #dd4c37:15:18 #933324:9:13",
+    "accent": "#dd4c37"
+  },
+  {
+    "slug": "possessed-7-halloween-blowout-33dca865",
+    "paletteSource": "flyer",
+    "palette": "#2c3b43:20:2 #131b24:18:2 #02040b:17:2 #ed844a:8:15 #db3211:6:21",
+    "accent": "#db3211"
+  },
+  {
     "slug": "riptide-3342cdd1",
     "url": "https://www.furball.nyc",
     "faviconBg": "#f6f6f6",
@@ -44,6 +689,349 @@
     "paletteSource": "flyer",
     "palette": "#141b1c:28:1 #2aa4db:21:13 #1d6d92:12:9 #eca48b:7:9 #af694e:7:10",
     "accent": "#2aa4db"
+  },
+  {
+    "slug": "saints-sinners-party-6c1412fe",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "sanctum-paranormal-ghost-tour-145e7762",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "sanctum-paranormal-ghost-tour-1d7b42bf",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "solid-gold-52c859e2",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-1e1d75ad",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-1f241c7a",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-215d3599",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-21f306e3",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-22244693",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-2cedced3",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-2dcb47cd",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-381ef928",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-44653d70",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-4725319f",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-48ce3450",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-494ee46d",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-4b146eb9",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-4d098e41",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-4da3c80b",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-5052d188",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-561f1da3",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-573fd0b1",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-5b396056",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-6219cf1a",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-6f671219",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-7286ec1a",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-72d7d995",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-mdw-1ae435fa",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-spooky-bear-wknd-0cbab510",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-spooky-bear-wknd-20bdcce3",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-spooky-bear-wknd-6eb5e545",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "solid-gold-tea-spooky-bear-wknd-779eae80",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "spooky-bear-bingo-0ac9266f",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "spooky-bear-early-bear-meet-up-45a07eb6",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "spooky-bear-marketplace-28f86b6e",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "spooky-tea-4387dbfb",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#0a0a0a:87:0 #a8a6a7:6:0 #42444b:3:1"
+  },
+  {
+    "slug": "spooky-tea-spooky-bear-wknd-36ef28fc",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#0a0a0a:87:0 #a8a6a7:6:0 #42444b:3:1"
+  },
+  {
+    "slug": "tammie-browns-halloween-spooktacular-186ba52e",
+    "paletteSource": "flyer",
+    "palette": "#bf8347:17:11 #332414:16:4 #533a1c:16:6 #816434:13:7 #ecd865:9:14",
+    "accent": "#ecd865"
+  },
+  {
+    "slug": "tammie-browns-halloween-spooktacular-5b744bfc",
+    "paletteSource": "flyer",
+    "palette": "#bf8347:17:11 #332414:16:4 #533a1c:16:6 #816434:13:7 #ecd865:9:14",
+    "accent": "#ecd865"
   },
   {
     "slug": "the-belly-party-bear-week-68204385",
@@ -61,5 +1049,156 @@
     "paletteSource": "flyer",
     "palette": "#b21a0f:20:19 #d59b9b:14:7 #881a0b:12:15 #bc5c5a:12:12 #640c0b:12:12",
     "accent": "#b21a0f"
+  },
+  {
+    "slug": "the-prohibition-pawty-02680aea",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-04f8d0a0",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-0f4d00ef",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-14bb9c9f",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-283afb18",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-3ae25f36",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-3ef1f435",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-4d1a2921",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-576621af",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-59b7a23b",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-real-housewives-of-tea-dance-772fa43d",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#faf5f4:24:1 #93acc2:15:4 #a88357:13:8 #f7cc0e:13:17 #d73c8a:9:20",
+    "accent": "#d73c8a"
+  },
+  {
+    "slug": "the-underwear-party-4a1587b8",
+    "paletteSource": "flyer",
+    "palette": "#be9974:30:7 #645443:26:3 #687669:15:3 #ab7651:12:8",
+    "accent": "#be9974"
+  },
+  {
+    "slug": "the-very-last-dance-2026-01f6debd",
+    "url": "https://theboatslip.com",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#231f20:44:1 #ffffff:43:0 #827e7f:3:1 #ba2129:2:19 #bb9f31:2:13",
+    "accent": "#ba2129"
+  },
+  {
+    "slug": "thirsty-burlington-in-spooky-cher-0f2e7fbb",
+    "url": "https://redroom.club/shows/385716",
+    "paletteSource": "flyer",
+    "palette": "#0b0404:27:2 #944b25:17:11 #24130c:15:3 #ac7343:10:10 #c4ad63:7:10",
+    "accent": "#944b25"
+  },
+  {
+    "slug": "ursamen-meet-greet-30b279d8",
+    "url": "https://www.ursamen.org/spookybear",
+    "paletteSource": "flyer",
+    "palette": "#010001:57:0 #31271b:15:3 #15110d:10:1 #e4611b:2:18 #374d84:1:9",
+    "accent": "#e4611b"
+  },
+  {
+    "slug": "witch-perfect-117cd24d",
+    "url": "https://tryst.events/e/witch-perfect-10-31-2026",
+    "paletteSource": "flyer",
+    "palette": "#14092a:39:6 #3a1553:18:11 #010104:13:2 #978463:7:5 #dbc48d:6:8",
+    "accent": "#3a1553"
+  },
+  {
+    "slug": "witch-perfect-6321d1bb",
+    "url": "https://tryst.events/e/witch-perfect-10-30-2026",
+    "paletteSource": "flyer",
+    "palette": "#130324:25:7 #250943:19:10 #020104:17:2 #451c63:11:12 #dfc99a:6:7",
+    "accent": "#250943"
   }
 ]

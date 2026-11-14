@@ -20,6 +20,16 @@
     "accent": "#22c3fb"
   },
   {
+    "slug": "bearracuda-denver-nye-1c1dda6b",
+    "url": "https://bearracuda.com/events/denver2027/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#1c1b34:20:5 #2d2a1d:16:2 #3c436a:13:7 #5c4524:12:6 #bd9b84:10:5",
+    "accent": "#3c436a"
+  },
+  {
     "slug": "denver-39553322",
     "url": "https://bearracuda.com/events/denverjockstrap/",
     "faviconBg": "#ff1901",

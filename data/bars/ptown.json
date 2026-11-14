@@ -19,7 +19,13 @@
     "instagram": "https://www.instagram.com/boatslipresort",
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ-fvjNIBY-4kRHNO3kg_G5Cc",
     "gayCities": "https://ptown.gaycities.com/hotels/10272-boatslip-resort-beach-club",
-    "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T20:35:01.413Z",
+    "faviconBg": "#302d48",
+    "faviconFg": "#434058",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:58:0 #2f2c47:37:5 #cfced4:2:1",
+    "accent": "#2f2c47"
   },
   {
     "name": "Crown & Anchor",
@@ -30,7 +36,12 @@
     "facebook": "https://www.facebook.com/CrownAnchorProvincetown",
     "googleMaps": "https://www.google.com/maps/place/?q=247+Commercial+St,+Provincetown,+MA+02657",
     "gayCities": "https://ptown.gaycities.com/bars/541-crown-anchor",
-    "gayCitiesLastScrapedAt": "2026-06-13T20:35:03.709Z"
+    "gayCitiesLastScrapedAt": "2026-06-13T20:35:03.709Z",
+    "faviconBg": "#0b101b",
+    "faviconFg": "#0d121e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:32:0 #0c111c:18:2 #202630:11:2"
   },
   {
     "name": "Purgatory Gifford House",
@@ -42,7 +53,12 @@
     "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJE9zxSn6n_IkRbOMJFiVbw_k",
     "gayCities": "https://ptown.gaycities.com/bars/543-purgatory-gifford-house",
     "scene": "adjacent",
-    "gayCitiesLastScrapedAt": "2026-06-14T01:14:29.670Z"
+    "gayCitiesLastScrapedAt": "2026-06-14T01:14:29.670Z",
+    "faviconBg": "#090a0b",
+    "faviconFg": "#d4d4d4",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#050708:46:1 #ffffff:39:0 #000000:5:0"
   },
   {
     "name": "Red Room",

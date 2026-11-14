@@ -40,6 +40,16 @@
     "accent": "#dcac8b"
   },
   {
+    "slug": "b-bar-09f471b7",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2027-01-28",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#323c34:19:2 #525044:18:2 #23221d:14:1 #dcac8b:13:7 #b58671:12:7",
+    "accent": "#dcac8b"
+  },
+  {
     "slug": "b-bar-0c6e30c3",
     "url": "https://eaglela.com/events/b-bar/?occurrence=2026-09-10",
     "faviconBg": "#040404",
@@ -52,6 +62,16 @@
   {
     "slug": "b-bar-0f79c822",
     "url": "https://eaglela.com/events/b-bar/?occurrence=2026-12-24",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#323c34:19:2 #525044:18:2 #23221d:14:1 #dcac8b:13:7 #b58671:12:7",
+    "accent": "#dcac8b"
+  },
+  {
+    "slug": "b-bar-131fa98c",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2027-02-25",
     "faviconBg": "#040404",
     "faviconFg": "#74706a",
     "faviconPlate": "#000000",
@@ -90,6 +110,16 @@
     "accent": "#dcac8b"
   },
   {
+    "slug": "b-bar-2b4b7e0f",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2027-01-07",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#323c34:19:2 #525044:18:2 #23221d:14:1 #dcac8b:13:7 #b58671:12:7",
+    "accent": "#dcac8b"
+  },
+  {
     "slug": "b-bar-3b4d3ae9",
     "url": "https://eaglela.com/events/b-bar/?occurrence=2026-10-22",
     "faviconBg": "#040404",
@@ -100,8 +130,48 @@
     "accent": "#dcac8b"
   },
   {
+    "slug": "b-bar-3d89f7bf",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2027-02-04",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#323c34:19:2 #525044:18:2 #23221d:14:1 #dcac8b:13:7 #b58671:12:7",
+    "accent": "#dcac8b"
+  },
+  {
     "slug": "b-bar-42a57ffb",
     "url": "https://eaglela.com/events/b-bar/?occurrence=2026-10-29",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#323c34:19:2 #525044:18:2 #23221d:14:1 #dcac8b:13:7 #b58671:12:7",
+    "accent": "#dcac8b"
+  },
+  {
+    "slug": "b-bar-4300da09",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2027-03-04",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#323c34:19:2 #525044:18:2 #23221d:14:1 #dcac8b:13:7 #b58671:12:7",
+    "accent": "#dcac8b"
+  },
+  {
+    "slug": "b-bar-4913046f",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2027-02-18",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#323c34:19:2 #525044:18:2 #23221d:14:1 #dcac8b:13:7 #b58671:12:7",
+    "accent": "#dcac8b"
+  },
+  {
+    "slug": "b-bar-4a6153c1",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2027-01-21",
     "faviconBg": "#040404",
     "faviconFg": "#74706a",
     "faviconPlate": "#000000",
@@ -140,6 +210,16 @@
     "accent": "#dcac8b"
   },
   {
+    "slug": "b-bar-657ea457",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2027-02-11",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#323c34:19:2 #525044:18:2 #23221d:14:1 #dcac8b:13:7 #b58671:12:7",
+    "accent": "#dcac8b"
+  },
+  {
     "slug": "b-bar-65edd0d3",
     "url": "https://eaglela.com/events/b-bar/?occurrence=2026-09-03",
     "faviconBg": "#040404",
@@ -162,6 +242,16 @@
   {
     "slug": "b-bar-70254a9d",
     "url": "https://eaglela.com/events/b-bar/?occurrence=2026-11-26",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#323c34:19:2 #525044:18:2 #23221d:14:1 #dcac8b:13:7 #b58671:12:7",
+    "accent": "#dcac8b"
+  },
+  {
+    "slug": "b-bar-79c4b39c",
+    "url": "https://eaglela.com/events/b-bar/?occurrence=2027-01-14",
     "faviconBg": "#040404",
     "faviconFg": "#74706a",
     "faviconPlate": "#000000",
@@ -198,6 +288,16 @@
     "paletteSource": "flyer",
     "palette": "#ffffff:81:0 #000000:11:0 #442e23:3:4 #ed217c:1:24 #f1592a:1:20",
     "accent": "#ed217c"
+  },
+  {
+    "slug": "bear-happy-hour-3011a528",
+    "url": "https://eaglela.com/events/bear-happy-hour-2/?occurrence=2027-02-04",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:79:0 #000000:10:0 #463229:3:3 #ec3985:1:22 #f5ed30:1:19",
+    "accent": "#ec3985"
   },
   {
     "slug": "bear-happy-hour-34511a03",
@@ -260,6 +360,36 @@
     "accent": "#f2592a"
   },
   {
+    "slug": "bear-happy-hour-6e2ee03a",
+    "url": "https://linktr.ee/bearhappyhour",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:79:0 #000000:10:0 #463229:3:3 #ec3985:1:22 #f5ed30:1:19",
+    "accent": "#ec3985"
+  },
+  {
+    "slug": "bear-happy-hour-7e440dda",
+    "url": "https://eaglela.com/events/bear-happy-hour-2/?occurrence=2027-01-07",
+    "faviconBg": "#fbfbf9",
+    "faviconFg": "#6a6661",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:79:0 #000000:10:0 #463229:3:3 #ec3985:1:22 #f5ed30:1:19",
+    "accent": "#ec3985"
+  },
+  {
+    "slug": "bearracuda-375dc2f5",
+    "url": "https://bearracuda.com/events/la7/",
+    "faviconBg": "#ff1901",
+    "faviconFg": "#ff5000",
+    "faviconPlate": "#fffefe",
+    "paletteSource": "flyer",
+    "palette": "#191719:30:0 #44342c:13:3 #f0e7e2:13:1 #d6b89e:12:5 #f79102:11:17",
+    "accent": "#f79102"
+  },
+  {
     "slug": "bears-la-mac-and-cheese-cook-off-3b7f94c9",
     "url": "https://eaglela.com/events/bears-la-mac-and-chees-cook-off/?occurrence=2026-11-29",
     "faviconBg": "#040404",
@@ -298,6 +428,26 @@
     "accent": "#3d6eab"
   },
   {
+    "slug": "bluf-la-540794a5",
+    "url": "https://eaglela.com/events/bluf/?occurrence=2027-02-19",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2c3235:41:1 #121619:24:1 #535a5d:13:1 #3d6eab:3:11",
+    "accent": "#3d6eab"
+  },
+  {
+    "slug": "bluf-la-5bef69da",
+    "url": "https://eaglela.com/events/bluf/?occurrence=2027-01-15",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2c3235:41:1 #121619:24:1 #535a5d:13:1 #3d6eab:3:11",
+    "accent": "#3d6eab"
+  },
+  {
     "slug": "bluf-la-67e83c75",
     "url": "https://eaglela.com/events/bluf/?occurrence=2026-12-18",
     "faviconBg": "#040404",
@@ -318,6 +468,16 @@
     "accent": "#3d6eab"
   },
   {
+    "slug": "bulkgoods-la-1d4404c1",
+    "url": "https://precinctdtla.com",
+    "faviconBg": "#23252b",
+    "faviconFg": "#86878c",
+    "faviconPlate": "#22242a",
+    "paletteSource": "flyer",
+    "palette": "#ffffff:32:0 #c4c0be:25:1 #e4213e:12:22 #1266ad:6:13 #8f5cd4:3:18",
+    "accent": "#e4213e"
+  },
+  {
     "slug": "bulkgoods-la-2099a971",
     "url": "https://precinctdtla.com",
     "faviconBg": "#23252b",
@@ -334,6 +494,16 @@
     "faviconPlate": "#ffffff",
     "paletteSource": "flyer",
     "palette": "#bcc1c6:35:1 #939393:17:0 #dbdbdb:16:0"
+  },
+  {
+    "slug": "club-chub-0831232f",
+    "url": "https://www.clubchubusa.com",
+    "faviconBg": "#e43383",
+    "faviconFg": "#f3368c",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#f38134:22:16 #f5a449:20:14 #d86433:17:16 #935932:10:9 #fae625:5:19",
+    "accent": "#f38134"
   },
   {
     "slug": "club-chub-39a3a8bd",
@@ -446,6 +616,26 @@
     "accent": "#f59d2b"
   },
   {
+    "slug": "cubscout-057a13a0",
+    "url": "https://eaglela.com/events/cub-scout-3/?occurrence=2027-02-05",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#3db2c3:52:10 #b3bb23:12:16 #334c2b:11:6 #a3dae4:5:6 #74602e:5:7",
+    "accent": "#3db2c3"
+  },
+  {
+    "slug": "cubscout-1b9a7529",
+    "url": "https://eaglela.com/events/cub-scout-3/?occurrence=2027-03-05",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#3db2c3:52:10 #b3bb23:12:16 #334c2b:11:6 #a3dae4:5:6 #74602e:5:7",
+    "accent": "#3db2c3"
+  },
+  {
     "slug": "cubscout-23f066df",
     "url": "https://eaglela.com/events/cub-scout-3/?occurrence=2026-11-06",
     "faviconBg": "#040404",
@@ -538,6 +728,34 @@
   {
     "slug": "eagle-la-halloween-party-668d5a73",
     "url": "https://eaglela.com/events/eagle-la-halloween-party/",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#acb1ac:15:1 #6a6e72:14:1 #f9faf5:14:1"
+  },
+  {
+    "slug": "eagle-la-me-leather-2027-fundraiser-222ad898",
+    "url": "https://eaglela.com/events/eagle-la-me-leather-2027-fundraiser/?occurrence=2027-01-29",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#acb1ac:15:1 #6a6e72:14:1 #f9faf5:14:1"
+  },
+  {
+    "slug": "eagle-la-mr-leather-2027-contest-743a4438",
+    "url": "https://eaglela.com/events/agle-la-mr-leather-2027-contest/?occurrence=2027-01-09",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#0c0c0c:31:0 #7a0807:27:14 #311114:16:5 #f3050a:6:25",
+    "accent": "#f3050a"
+  },
+  {
+    "slug": "eagle-la-mr-leather-2027-meet-and-greet-1f82d0e4",
+    "url": "https://eaglela.com/events/eagle-la-mr-leather-2027-meet-and-greet/?occurrence=2027-01-08",
     "faviconBg": "#040404",
     "faviconFg": "#74706a",
     "faviconPlate": "#000000",
@@ -657,6 +875,26 @@
     "accent": "#c82c30"
   },
   {
+    "slug": "meat-rack-3ddfe3eb",
+    "url": "https://eaglela.com/events/meat-rack-8/?occurrence=2027-02-13",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#c38475:21:8 #a44345:16:13 #7b2a2c:15:11 #3b1c22:12:5",
+    "accent": "#a44345"
+  },
+  {
+    "slug": "meat-rack-4faf66d9",
+    "url": "https://eaglela.com/events/meat-rack-8/?occurrence=2027-02-27",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#c38475:21:8 #a44345:16:13 #7b2a2c:15:11 #3b1c22:12:5",
+    "accent": "#a44345"
+  },
+  {
     "slug": "meat-rack-5101313e",
     "url": "https://eaglela.com/events/meat-rack-8/",
     "faviconBg": "#040404",
@@ -675,6 +913,16 @@
     "paletteSource": "flyer",
     "palette": "#6b3514:21:9 #93522b:20:10 #140b03:18:2 #b47343:13:10 #ca9c72:10:8",
     "accent": "#93522b"
+  },
+  {
+    "slug": "meat-rack-5e112aa0",
+    "url": "https://eaglela.com/events/meat-rack-8/?occurrence=2027-01-23",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#c38475:21:8 #a44345:16:13 #7b2a2c:15:11 #3b1c22:12:5",
+    "accent": "#a44345"
   },
   {
     "slug": "meat-rack-inferno-4640259e",
@@ -747,6 +995,24 @@
     "accent": "#e34367"
   },
   {
+    "slug": "mlk-beer-bust-387386ef",
+    "url": "https://eaglela.com/events/mlk-beer-bust-2/",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#acb1ac:15:1 #6a6e72:14:1 #f9faf5:14:1"
+  },
+  {
+    "slug": "mlk-bust-bar-opens-at-4pm-26986fa9",
+    "url": "https://eaglela.com/events/mlk-bust/?occurrence=2027-01-18",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "favicon",
+    "palette": "#010001:80:1 #15120c:6:1 #625d53:4:2"
+  },
+  {
     "slug": "mr-bear-la-2027-victory-party-469adae6",
     "url": "https://eaglela.com/events/mr-bear-la-2027-victory-party/?occurrence=2026-08-16",
     "faviconBg": "#040404",
@@ -763,6 +1029,24 @@
     "faviconPlate": "#000000",
     "paletteSource": "flyer",
     "palette": "#010102:41:0 #0e1014:15:1 #312d2e:10:0"
+  },
+  {
+    "slug": "mr-la-leather-bear-2027-contest-238538d1",
+    "url": "https://eaglela.com/events/mr-la-leather-bear-2027-contest/?occurrence=2027-01-16",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#acb1ac:15:1 #6a6e72:14:1 #f9faf5:14:1"
+  },
+  {
+    "slug": "mr-la-leather-bear-2027-meet-and-greet-2be129a3",
+    "url": "https://eaglela.com/events/mr-la-leather-bear-2027-meet-and-greet/?occurrence=2027-01-14",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#acb1ac:15:1 #6a6e72:14:1 #f9faf5:14:1"
   },
   {
     "slug": "mr-regiment-leather-2027-contest-2d4648a2",
@@ -792,8 +1076,28 @@
     "palette": "#acb2ad:15:1 #6a6e72:14:1 #f9faf5:14:1"
   },
   {
+    "slug": "onyx-0298ceea",
+    "url": "https://eaglela.com/events/onyx-2/?occurrence=2027-02-14",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#1c130b:27:2 #332a1e:19:3 #fefefe:11:0 #ddb296:9:6 #c62a27:7:19",
+    "accent": "#c62a27"
+  },
+  {
     "slug": "onyx-0d938800",
     "url": "https://eaglela.com/events/onyx-2/",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#1c130b:27:2 #332a1e:19:3 #fefefe:11:0 #ddb296:9:6 #c62a27:7:19",
+    "accent": "#c62a27"
+  },
+  {
+    "slug": "onyx-127b7e2c",
+    "url": "https://eaglela.com/events/onyx-2/?occurrence=2027-01-10",
     "faviconBg": "#040404",
     "faviconFg": "#74706a",
     "faviconPlate": "#000000",
@@ -842,6 +1146,26 @@
     "accent": "#c62a27"
   },
   {
+    "slug": "onyx-sensory-overload-0d938800",
+    "url": "https://eaglela.com/events/onyx-sensory-overload/?occurrence=2026-10-11",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#1c130b:27:2 #332a1e:19:3 #fefefe:11:0 #ddb296:9:6 #c62a27:7:19",
+    "accent": "#c62a27"
+  },
+  {
+    "slug": "precinct-leather-contest-274b506c",
+    "url": "https://precinctdtla.com",
+    "faviconBg": "#23252b",
+    "faviconFg": "#86878c",
+    "faviconPlate": "#22242a",
+    "paletteSource": "flyer",
+    "palette": "#131313:61:0 #292525:20:1 #3b3935:12:1 #c59f70:4:8 #87633d:3:7",
+    "accent": "#c59f70"
+  },
+  {
     "slug": "quenchd-21628c63",
     "paletteSource": "flyer",
     "palette": "#e3a59b:17:8 #cd8365:15:10 #222f33:14:2 #ab6141:12:11 #753127:9:10",
@@ -857,6 +1181,36 @@
     "palette": "#242a23:40:1 #334b54:13:3 #bbbdbb:12:0"
   },
   {
+    "slug": "sunday-beer-bust-05715ac6",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-02-07",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2b2a24:39:1 #5c3b32:20:5 #735a55:11:3",
+    "accent": "#5c3b32"
+  },
+  {
+    "slug": "sunday-beer-bust-088e4e8f",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-02-21",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2b2a24:39:1 #5c3b32:20:5 #735a55:11:3",
+    "accent": "#5c3b32"
+  },
+  {
+    "slug": "sunday-beer-bust-0bde8ea1",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-01-24",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2b2a24:39:1 #5c3b32:20:5 #735a55:11:3",
+    "accent": "#5c3b32"
+  },
+  {
     "slug": "sunday-beer-bust-10986cf4",
     "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-11-01",
     "faviconBg": "#040404",
@@ -864,6 +1218,36 @@
     "faviconPlate": "#000000",
     "paletteSource": "flyer",
     "palette": "#242a23:40:1 #334b54:13:3 #bbbdbb:12:0"
+  },
+  {
+    "slug": "sunday-beer-bust-14540445",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-02-14",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2b2a24:39:1 #5c3b32:20:5 #735a55:11:3",
+    "accent": "#5c3b32"
+  },
+  {
+    "slug": "sunday-beer-bust-20e709d2",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-02-28",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2b2a24:39:1 #5c3b32:20:5 #735a55:11:3",
+    "accent": "#5c3b32"
+  },
+  {
+    "slug": "sunday-beer-bust-252c63f4",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-01-10",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2b2a24:39:1 #5c3b32:20:5 #735a55:11:3",
+    "accent": "#5c3b32"
   },
   {
     "slug": "sunday-beer-bust-2a250914",
@@ -921,6 +1305,16 @@
     "palette": "#242a23:40:1 #334b54:13:3 #bbbdbb:12:0"
   },
   {
+    "slug": "sunday-beer-bust-4782106a",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-01-31",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2b2a24:39:1 #5c3b32:20:5 #735a55:11:3",
+    "accent": "#5c3b32"
+  },
+  {
     "slug": "sunday-beer-bust-498d415f",
     "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-09-27",
     "faviconBg": "#040404",
@@ -975,6 +1369,16 @@
     "palette": "#242a23:40:1 #334b54:13:3 #bbbdbb:12:0"
   },
   {
+    "slug": "sunday-beer-bust-60daf3d8",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-01-17",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2b2a24:39:1 #5c3b32:20:5 #735a55:11:3",
+    "accent": "#5c3b32"
+  },
+  {
     "slug": "sunday-beer-bust-64216cca",
     "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2026-08-09",
     "faviconBg": "#040404",
@@ -983,6 +1387,16 @@
     "paletteSource": "flyer",
     "palette": "#1b231c:23:2 #3c332b:18:2 #344a53:13:3 #634835:12:5",
     "accent": "#634835"
+  },
+  {
+    "slug": "sunday-beer-bust-6e1d4806",
+    "url": "https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-01-03",
+    "faviconBg": "#040404",
+    "faviconFg": "#74706a",
+    "faviconPlate": "#000000",
+    "paletteSource": "flyer",
+    "palette": "#2b2a24:39:1 #5c3b32:20:5 #735a55:11:3",
+    "accent": "#5c3b32"
   },
   {
     "slug": "sunday-beer-bust-6eee096a",

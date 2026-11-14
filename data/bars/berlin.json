@@ -12,7 +12,13 @@
     "city": "berlin",
     "address": "Oranienstraße 190, 10999 Berlin",
     "coordinates": "52.5003921, 13.4221017",
-    "website": "https://so36.com"
+    "website": "https://so36.com",
+    "faviconBg": "#0166b0",
+    "faviconFg": "#0f3551",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:36:0 #0a6eb7:29:14 #9aa5ae:9:2 #4b91c4:7:11",
+    "accent": "#0a6eb7"
   },
   {
     "name": "Mikropol",
