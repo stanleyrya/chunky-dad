@@ -1014,6 +1014,44 @@ function renderReviewThumb(display = {}, fallbackImage = '') {
     return `<div class="thumb${orientation ? ` ${orientation}` : ''}${placeholder ? ' placeholder' : ''}"><img src="${escapeHtmlText(image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.style.display='none'"${dims ? ` style="aspect-ratio:${dims.width}/${dims.height}"` : ''}>${placeholder ? `<div class="thumb-badge">🖼️ placeholder ×${repeat}</div>` : ''}</div>`;
 }
 
+// Why an event is on the site, in the owner's words rather than the
+// pipeline's bearSource vocabulary (owner 2026-11-14: "make the tags
+// clearer"). A kept card's swipe never changes this; it is information.
+function describeBearSource(source) {
+    const raw = String(source || '').trim();
+    const inner = (raw.match(/\((.*)\)\s*$/) || [])[1] || '';
+    const stamp = (inner.match(/verdict store (\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+    const when = stamp ? ` on ${new Date(`${stamp}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}` : '';
+    if (/^manual-bear\b/.test(raw)) return `🐻 bear, because you said so${when}`;
+    if (/^manual-tagged\b/.test(raw)) return `🏷 not bear, kept because you tagged it${when}`;
+    if (/^manual-not-bear\b/.test(raw)) return `🚫 not bear, you said so${when}`;
+    if (/^tagged\b/.test(raw)) {
+        const why = inner.replace(/^(?:ai|keyword):\s*/i, '').replace(/^bear-run:\s*/i, 'during a bear run: ').replace(/^bear-crowd:\s*/i, '');
+        return `🏷 not bear, kept for its tags${why ? `: ${escapeHtmlText(why)}` : ''}`;
+    }
+    if (/^keyword\b/.test(raw)) return '🐻 bear: a bear word in its name or description';
+    if (/^ai\b/.test(raw)) return '🐻 bear: the AI read it as bear';
+    if (/^config\b/.test(raw)) return '🐻 bear: every event from this source counts';
+    return `🐻 bear — ${escapeHtmlText(raw)}`;
+}
+
+// The tags line: what approving writes, and which tags keep a not-bear
+// event on the site (EVENT_TAGS `keeps`) versus only describe it.
+function describeEventTags(tags, dropped) {
+    const list = (Array.isArray(tags) ? tags : []).filter(Boolean);
+    if (list.length === 0) return '';
+    let vocabulary = {};
+    try { vocabulary = require(path.join(repoRoot, 'scripts', 'event-schema')).EventSchema.EVENT_TAGS || {}; } catch (_) { vocabulary = {}; }
+    const named = list.map((tag) => {
+        const entry = vocabulary[tag] || {};
+        const label = escapeHtmlText(entry.label || tag);
+        return entry.keeps ? `<b>${label}</b>` : label;
+    });
+    const keeps = list.some((tag) => vocabulary[tag] && vocabulary[tag].keeps);
+    const lead = dropped ? '🏷 Tags it would carry' : '🏷 Approving also saves the tags';
+    return `<span class="bear-tags">${lead}: ${named.join(', ')}${keeps ? ' (bold keeps a not-bear night on the site)' : ''}</span>`;
+}
+
 // The bear check, as information: what the run decided and why, plus any
 // verdict already stored. The verdict itself is a gesture, never a button —
 // on a dropped card the swipe IS the verdict; on a kept card, rejecting with
@@ -1035,12 +1073,12 @@ function renderReviewBearRow(display = {}, proposal = {}) {
     } else if (display.bearReview) {
         state = `🐻 kept, but ${display.bearReview}`;
     } else if (display.bearSource) {
-        state = `🐻 bear — ${display.bearSource}`;
+        state = describeBearSource(display.bearSource);
     } else {
         state = '🐻 bear (no check recorded)';
     }
     const storedLabel = stored === 'bear' ? '🐻 bear' : stored === 'tagged' ? `🏷 kept for ${escapeHtmlText(storedTags.join(', ') || 'its tags')}` : '🚫 not bear';
-    const tagText = eventTags.length > 0 ? `<span class="bear-tags">🏷 ${escapeHtmlText(eventTags.join(', '))}</span>` : '';
+    const tagText = describeEventTags(eventTags, proposal.kind === 'dropped');
     const storedText = stored
         ? `<span class="bear-stored">you said: ${storedLabel}${display.bearVerdictStampedAt ? ` (${escapeHtmlText(String(display.bearVerdictStampedAt).slice(0, 10))})` : ''}${display.bearVerdictOn ? ` — on the same party, listed as “${escapeHtmlText(display.bearVerdictOn)}”` : ''}</span>`
         : '';
@@ -5080,6 +5118,8 @@ module.exports = {
     renderReviewChangeRows,
     renderReviewRouteLine,
     renderReviewBearRow,
+    describeBearSource,
+    describeEventTags,
     reviewUrlLabel,
     renderReviewCard,
     renderReviewVerdictConflictCard,

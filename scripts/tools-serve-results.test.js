@@ -1152,7 +1152,7 @@ test('renderReviewCard (new event): whole flyer with a lightbox, zoned date + UT
   assert.ok(html.includes('💵 $20'));
   assert.ok(html.includes('class="thumb portrait"') && !html.includes('onclick=') && html.includes('src="https://furball.nyc/flyer-portrait.jpg"') && html.includes('aspect-ratio:800/1000'), 'portrait asset, whole, no inline handlers (the page wires taps)');
   assert.ok(!html.includes('class="evidence"') && !html.includes('provenance:'), 'no evidence blurb on the face');
-  assert.ok(html.includes('class="bear-row"') && html.includes('🐻 bear — keyword'), 'the bear check is visible on the card');
+  assert.ok(html.includes('class="bear-row"') && html.includes('🐻 bear: a bear word in its name or description'), 'the bear check is visible on the card, in plain words');
   assert.ok(!html.includes('<button'), 'no buttons on a card — swipes and the reject sheet are the only controls');
   assert.ok(html.includes('📝 Calendar notes (2)') && html.includes('<th>bar</th><td>Rockbar</td>'), 'notes parsed into rows');
   assert.ok(html.includes('Bears &quot;welcome&quot;'));
@@ -1266,7 +1266,7 @@ test('renderReviewCard: the brand site leads the links, a curated bar gets its t
   const pageAt = html.indexOf('>🔗 redeyeny.com/</a>');
   assert.ok(brandAt !== -1 && pageAt !== -1 && brandAt < pageAt, 'the favicon (brand) site leads, the venue page follows');
   assert.ok(html.includes('>Red Eye</a> <span class="curated" title="curated bar">✓</span>'), 'curated bar tick');
-  assert.ok(html.includes('🐻 bear — ai') && html.includes('you said: 🐻 bear (2030-01-02)'), 'run verdict and the stored verdict both visible');
+  assert.ok(html.includes('🐻 bear: the AI read it as bear') && html.includes('you said: 🐻 bear (2030-01-02)'), 'run verdict and the stored verdict both visible');
   const same = renderReviewCard({ kind: 'new', key: 'k', proposal: { title: 'X', timezone: 'UTC', url: 'https://bearracuda.com/', changes: {} }, display: { favicon: 'https://www.bearracuda.com/' } }, ctx);
   assert.ok(!same.includes('🏷'), 'no brand chip when it is the same site as the event page');
 });
@@ -2735,4 +2735,17 @@ test('renderReviewBearRow: a kept card says when its bear wording is only on the
   assert.ok(!renderReviewBearRow({ flyerWordsNotice: ['BEARS'] }, { kind: 'dropped', title: 'x', dropReason: 'ai: x' }).includes('🖼️'));
   assert.ok(!renderReviewBearRow({ flyerWordsNotice: [] }, { kind: 'new', title: 'x' }).includes('🖼️'));
   assert.ok(!renderReviewBearRow({}, { kind: 'new', title: 'x' }).includes('🖼️'));
+});
+
+test('describeBearSource / describeEventTags: why it is on the site and what approving writes, in plain words (owner 2026-11-14)', () => {
+  const { describeBearSource, describeEventTags } = require('../tools/serve-results.js');
+  assert.strictEqual(describeBearSource('manual-bear (verdict store 2026-09-19)'), '🐻 bear, because you said so on Sep 19');
+  assert.strictEqual(describeBearSource('manual-bear (overrode ai: drag show)'), '🐻 bear, because you said so');
+  assert.strictEqual(describeBearSource('manual-tagged (verdict store 2026-11-11)'), '🏷 not bear, kept because you tagged it on Nov 11');
+  assert.strictEqual(describeBearSource('tagged (bear-crowd: a beer bust at Lone Star Saloon, a bear bar)'), '🏷 not bear, kept for its tags: a beer bust at Lone Star Saloon, a bear bar');
+  assert.strictEqual(describeBearSource('keyword'), '🐻 bear: a bear word in its name or description');
+  assert.strictEqual(describeEventTags([], false), '');
+  const line = describeEventTags(['leather', 'kink'], false);
+  assert.ok(line.includes('Approving also saves the tags') && line.includes('<b>Leather</b>') && !line.includes('<b>Kink</b>') && line.includes('bold keeps'), line);
+  assert.ok(describeEventTags(['kink'], true).includes('Tags it would carry') && !describeEventTags(['kink'], true).includes('bold keeps'));
 });
