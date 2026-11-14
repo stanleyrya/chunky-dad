@@ -82,8 +82,19 @@ const exportBlock = [
 
 const output = `${header}const scraperBars = ${JSON.stringify(scraperBars, null, 2)};\n\n${exportBlock}`;
 
+// `--check` writes nothing and exits 1 when a generated file is out of date,
+// so a data/bars edit that skipped this generator fails the tests instead of
+// shipping a runtime bars list without it (Icon DC, 2026-11-14).
+const checkOnly = process.argv.includes('--check');
+const stale = [];
+
 // Write only if content changes
 function writeIfChanged(filePath, content) {
+  if (checkOnly) {
+    const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null;
+    if (existing !== content) stale.push(path.relative(ROOT, filePath));
+    return false;
+  }
   if (fs.existsSync(filePath)) {
     const existing = fs.readFileSync(filePath, 'utf8');
     if (existing === content) {
@@ -97,7 +108,9 @@ function writeIfChanged(filePath, content) {
 const outputPath = path.join(ROOT, 'scripts', 'scraper-bars.js');
 const changed = writeIfChanged(outputPath, output);
 
-if (changed) {
+if (checkOnly) {
+  // reported once below
+} else if (changed) {
   console.log(`✓ Wrote ${path.relative(ROOT, outputPath)}`);
 } else {
   console.log(`⏭️  No change for ${path.relative(ROOT, outputPath)}`);
@@ -110,8 +123,18 @@ if (changed) {
 const jsonOutputPath = path.join(ROOT, 'data', 'scraper-bars.json');
 const jsonChanged = writeIfChanged(jsonOutputPath, `${JSON.stringify(scraperBars, null, 2)}\n`);
 
-if (jsonChanged) {
+if (checkOnly) {
+  // reported once below
+} else if (jsonChanged) {
   console.log(`✓ Wrote ${path.relative(ROOT, jsonOutputPath)}`);
 } else {
   console.log(`⏭️  No change for ${path.relative(ROOT, jsonOutputPath)}`);
+}
+
+if (checkOnly) {
+  if (stale.length > 0) {
+    console.error(`✗ Out of date: ${stale.join(', ')} — run: node tools/generate-scraper-bars.js`);
+    process.exit(1);
+  }
+  console.log('✓ Generated bars files match data/bars');
 }
