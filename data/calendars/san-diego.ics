@@ -6,36 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-san-diego
 X-WR-TIMEZONE:America/Los_Angeles
 BEGIN:VEVENT
-DTSTART:20260516T040000Z
-DTEND:20260516T090000Z
-DTSTAMP:20260910T200621Z
-UID:5B8DF162-E146-4A77-87D2-D03C226F55B4
-CREATED:20260514T005407Z
-DESCRIPTION:description: SAN DIEGO Here we go again… MEGAWOOF is BACK and r
- eady to keep you sweaty\, sexy\, and beefy.\nbar: The Brass Rail\naddress: 
- 3796 Fifth Avenue\, San Diego\, CA 92103\nticketUrl: https://www.eventbrite
- .com/e/megawoof-america-san-diego-tickets-1986666861061\ninstagram: https:/
- /www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%
- 2F%2Fcdn.evbuc.com%2Fimages%2F1181921091%2F185013722403%2F1%2Foriginal.2026
- 0411-040157?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&shar
- p=10&fp-x=0.5&fp-y=0.5&s=3319257efa3598b3e12a398447de4622\ncover: $16.84-$2
- 2.10\nshortName: MEGA-WOOF\nwebsite: https://linktr.ee/megawoof_america\ngm
- aps: https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%
- 203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103\nkey: megawoof-ame
- rica-san-diego|2026-05-16|the brass rail
-LAST-MODIFIED:20260514T005407Z
-LOCATION:32.7468303\,-117.1607394
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF AMERICA - SAN DIEGO
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20251101T040000Z
 DTEND:20251101T110000Z
-DTSTAMP:20260910T200621Z
+DTSTAMP:20261114T020544Z
 UID:192064B4-BCA8-491B-97A9-36BDF7A5A725
 CREATED:20251001T001000Z
 DESCRIPTION:description: MEGAWOOF AMERICA - 10 YEAR SAN DIEGO DEBUT -  INTE
@@ -61,9 +34,35 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20260207T050000Z
+DTEND:20260207T100000Z
+DTSTAMP:20261114T020544Z
+UID:72BA7733-05A0-4516-93E3-FCFD336AB92E
+CREATED:20260117T210202Z
+DESCRIPTION:description: MEGAWOOF SAN DIEGO - Feb 6th\nbar: The Rail\naddre
+ ss: 3796 Fifth Avenue\, San Diego\, CA 92103\ntimezone: America/Los_Angeles
+ \nticketUrl: https://www.eventbrite.com/e/megawoof-san-diego-feb-6th-ticket
+ s-1979742608435\ncover: $11.58 - $16.84 (as of 2/2)\nimage: https://img.evb
+ uc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1174012983%2F185013722403%2F1
+ %2Foriginal.20260105-163247?crop=focalpoint&fit=crop&h=230&w=460&auto=forma
+ t%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=ac5e775082450ea31daa858d2072
+ 0acc\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_a
+ merica\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.
+ com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJw
+ dJrt9pU2YARYuac9G61qQE\nkey: megawoof|2026-02-07|the rail
+LAST-MODIFIED:20260203T035759Z
+LOCATION:32.7468303\, -117.1607394
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20261017T043000Z
 DTEND:20261017T090000Z
-DTSTAMP:20260910T200621Z
+DTSTAMP:20261114T020544Z
 UID:45C72050-23BF-49C5-BC34-C1BF048FBE4E
 CREATED:20260910T193026Z
 DESCRIPTION:description: MEGAWOOF BACK IN SAN DIEGO during our 11 year anni
@@ -94,27 +93,61 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20260207T050000Z
-DTEND:20260207T100000Z
-DTSTAMP:20260910T200621Z
-UID:72BA7733-05A0-4516-93E3-FCFD336AB92E
-CREATED:20260117T210202Z
-DESCRIPTION:description: MEGAWOOF SAN DIEGO - Feb 6th\nbar: The Rail\naddre
- ss: 3796 Fifth Avenue\, San Diego\, CA 92103\ntimezone: America/Los_Angeles
- \nticketUrl: https://www.eventbrite.com/e/megawoof-san-diego-feb-6th-ticket
- s-1979742608435\ncover: $11.58 - $16.84 (as of 2/2)\nimage: https://img.evb
- uc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1174012983%2F185013722403%2F1
- %2Foriginal.20260105-163247?crop=focalpoint&fit=crop&h=230&w=460&auto=forma
- t%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=ac5e775082450ea31daa858d2072
- 0acc\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/megawoof_a
- merica\nurl: https://linktr.ee/megawoof_america\ngmaps: https://www.google.
- com/maps/search/?api=1&query=32.7468303%2C-117.1607394&query_place_id=ChIJw
- dJrt9pU2YARYuac9G61qQE\nkey: megawoof|2026-02-07|the rail
-LAST-MODIFIED:20260203T035759Z
-LOCATION:32.7468303\, -117.1607394
+DTSTART:20261205T053000Z
+DTEND:20261205T100000Z
+DTSTAMP:20261114T020544Z
+UID:E84D02CE-7E70-4EF6-8444-204C37141DC6
+CREATED:20261114T004826Z
+DESCRIPTION:description: MEGAWOOF AMERICA - SAN DIEGO - HOLIDAY KICK OFF\nb
+ ar: The Brass Rail\naddress: 3796 Fifth Avenue\, San Diego\, CA 92103\ntick
+ etUrl: https://www.eventbrite.com/e/megawoof-america-san-diego-holiday-kick
+ -off-tickets-2004408318237\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.
+ evbuc.com%2Fimages%2F1197314575%2F185013722403%2F1%2Foriginal.20261105-0201
+ 57?crop=focalpoint&fit=crop&w=640&auto=format%2Ccompress&q=75&sharp=10&fp-x
+ =0.5&fp-y=0.5&s=40dbce4455db6699c6f1f9dcf5d1d259\ncover: $11.58-$16.84\ntim
+ ezone: America/Los_Angeles\nimageVertical: https://img.evbuc.com/https%3A%2
+ F%2Fcdn.evbuc.com%2Fimages%2F1197314575%2F185013722403%2F1%2Foriginal.20261
+ 105-020157?crop=focalpoint&fit=crop&w=640&auto=format%2Ccompress&q=75&sharp
+ =10&fp-x=0.5&fp-y=0.5&s=40dbce4455db6699c6f1f9dcf5d1d259\naddressSource: pa
+ ge\nwebsite: https://linktr.ee/megawoof_america\ngmaps: https://www.google.
+ com/maps/search/?api=1&query=The%20Brass%20Rail%2C%203796%20Fifth%20Avenue%
+ 2C%20San%20Diego%2C%20CA%2092103\npinSource: curated\nshortName: MEGA­WOOF\
+ ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https://li
+ nktr.ee/megawoof_america\nkey: megawoof-america-san-diego-holiday-kick-off|
+ 2026-12-05|the brass rail\nimageSource: page\nbarSource: curated\nbearSourc
+ e: keyword
+LAST-MODIFIED:20261114T004826Z
+LOCATION:32.7468104\, -117.1606487
 SEQUENCE:0
 STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
+SUMMARY:MEGAWOOF AMERICA - SAN DIEGO - HOLIDAY KICK OFF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260516T040000Z
+DTEND:20260516T090000Z
+DTSTAMP:20261114T020544Z
+UID:5B8DF162-E146-4A77-87D2-D03C226F55B4
+CREATED:20260514T005407Z
+DESCRIPTION:description: SAN DIEGO Here we go again… MEGAWOOF is BACK and r
+ eady to keep you sweaty\, sexy\, and beefy.\nbar: The Brass Rail\naddress: 
+ 3796 Fifth Avenue\, San Diego\, CA 92103\nticketUrl: https://www.eventbrite
+ .com/e/megawoof-america-san-diego-tickets-1986666861061\ninstagram: https:/
+ /www.instagram.com/megawoof_america\nimage: https://img.evbuc.com/https%3A%
+ 2F%2Fcdn.evbuc.com%2Fimages%2F1181921091%2F185013722403%2F1%2Foriginal.2026
+ 0411-040157?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&shar
+ p=10&fp-x=0.5&fp-y=0.5&s=3319257efa3598b3e12a398447de4622\ncover: $16.84-$2
+ 2.10\nshortName: MEGA-WOOF\nwebsite: https://linktr.ee/megawoof_america\ngm
+ aps: https://www.google.com/maps/search/?api=1&query=The%20Brass%20Rail%2C%
+ 203796%20Fifth%20Avenue%2C%20San%20Diego%2C%20CA%2092103\nkey: megawoof-ame
+ rica-san-diego|2026-05-16|the brass rail
+LAST-MODIFIED:20260514T005407Z
+LOCATION:32.7468303\,-117.1607394
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF AMERICA - SAN DIEGO
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

@@ -7,21 +7,32 @@ X-WR-CALNAME:chunky-dad-gettysburg
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
 DTSTART;VALUE=DATE:20261210
-DTEND;VALUE=DATE:20261214
-DTSTAMP:20261001T140823Z
+DTEND;VALUE=DATE:20261215
+DTSTAMP:20261114T020544Z
 UID:B8B8D8E1-74BB-421A-9635-22292DEC63BC
 CREATED:20261001T131421Z
-DESCRIPTION:bar: Eisenhower Hotel and Conference Center\naddress: Gettysbur
- g\, PA\nwebsite: https://bearfuzzfest.com/\nticketUrl: https://sickening.ev
- ents/e/bear-fuzz-fest-2026\nimage: https://acqvlhciredwtlbpisso.supabase.co
- /storage/v1/object/public/event-images/21d2f68f477cc2a3.png\nimageSource: j
- son-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://ww
- w.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20and%20Conference
- %20Center%2C%20Gettysburg%2C%20PA\nkey: bear-fuzz-fest|2026-12-10|eisenhowe
- r hotel and conference center\nallDay: true\nbearSource: keyword\nshortName
- : BEAR FUZZ FEST
-LAST-MODIFIED:20261001T131421Z
-SEQUENCE:0
+DESCRIPTION:description: Bear Fuzz Fest is a weekend Bear Run hosted by Cen
+ tral PA Bears. It will be held at the Eisenhower Hotel in Gettysburg\, PA o
+ n 12/10/26 - 12/13/26. It is an LGBT+ event for bears and admirers that wil
+ l be loaded with activities such as\\: Clothing optional pool parties\, Boa
+ rd games\, Vendors\, Drag Bingo\, Playspace\, Cuddle Room\, Classes/Kink De
+ mos\, Saturday evening dinner and more.When will the event take place? Dece
+ mber 10th\, 11th\, 12th\, 13th of 2026 (Thursday evening through Sunday mor
+ ning) How much will the run be?\nbar: Eisenhower Hotel & Conference Center\
+ nticketUrl: https://sickening.events/e/bear-fuzz-fest-2026\nimage: https://
+ acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21d2
+ f68f477cc2a3.png\ncover: $59-$79\ntimezone: America/New_York\nwebsite: http
+ s://bearfuzzfest.com/\nshortName: FUZZ FEST\nfacebook: https://www.facebook
+ .com/bearfuzzfest\nfavicon: https://bearfuzzfest.com\nkey: bear-fuzz-fest|2
+ 026-12-10|eisenhower hotel & conference center\nbearSource: keyword\ntags: 
+ kink\, naked\nallDay: true\naddress: 2634 Emmitsburg Road\, Gettysburg\, PA
+  17325\npinSource: curated\naddressSource: page\nimageSource: json-api\nbar
+ Source: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Eis
+ enhower%20Hotel%20%26%20Conference%20Center%2C%202634%20Emmitsburg%20Road%2
+ C%20Gettysburg%2C%20PA%2017325
+LAST-MODIFIED:20261114T004828Z
+LOCATION:39.765789\, -77.2691996
+SEQUENCE:1
 STATUS:CONFIRMED
 SUMMARY:Bear Fuzz Fest
 TRANSP:OPAQUE

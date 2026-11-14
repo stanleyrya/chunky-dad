@@ -87,20 +87,20 @@
     "chicago": {
       "name": "Chicago",
       "status": "success",
-      "dataLength": 98190,
-      "eventCount": 71
+      "dataLength": 124069,
+      "eventCount": 89
     },
     "cologne": {
       "name": "Cologne",
       "status": "success",
-      "dataLength": 1978,
-      "eventCount": 2
+      "dataLength": 2671,
+      "eventCount": 3
     },
     "dallas": {
       "name": "Dallas",
       "status": "success",
-      "dataLength": 26390,
-      "eventCount": 16
+      "dataLength": 35779,
+      "eventCount": 21
     },
     "dc": {
       "name": "DC",
@@ -141,13 +141,13 @@
     "fort-lauderdale": {
       "name": "Fort Lauderdale",
       "status": "success",
-      "dataLength": 60979,
-      "eventCount": 50
+      "dataLength": 63472,
+      "eventCount": 52
     },
     "gettysburg": {
       "name": "Gettysburg",
       "status": "success",
-      "dataLength": 1209,
+      "dataLength": 2037,
       "eventCount": 1
     },
     "gran-canaria": {
@@ -183,8 +183,8 @@
     "la": {
       "name": "Los Angeles",
       "status": "success",
-      "dataLength": 158768,
-      "eventCount": 137
+      "dataLength": 169314,
+      "eventCount": 141
     },
     "leipzig": {
       "name": "Leipzig",
@@ -237,8 +237,8 @@
     "montreal": {
       "name": "Montreal",
       "status": "success",
-      "dataLength": 22287,
-      "eventCount": 17
+      "dataLength": 23631,
+      "eventCount": 18
     },
     "nola": {
       "name": "New Orleans",
@@ -249,8 +249,8 @@
     "nyc": {
       "name": "New York",
       "status": "success",
-      "dataLength": 276084,
-      "eventCount": 236
+      "dataLength": 287549,
+      "eventCount": 244
     },
     "orlando": {
       "name": "Orlando",
@@ -309,8 +309,8 @@
     "portland": {
       "name": "Portland",
       "status": "success",
-      "dataLength": 44196,
-      "eventCount": 31
+      "dataLength": 47487,
+      "eventCount": 33
     },
     "prague": {
       "name": "Prague",
@@ -321,7 +321,7 @@
     "ptown": {
       "name": "Provincetown",
       "status": "success",
-      "dataLength": 181553,
+      "dataLength": 181576,
       "eventCount": 134
     },
     "pv": {
@@ -345,8 +345,8 @@
     "san-diego": {
       "name": "San Diego",
       "status": "success",
-      "dataLength": 5863,
-      "eventCount": 4
+      "dataLength": 7631,
+      "eventCount": 5
     },
     "sao-paulo": {
       "name": "São Paulo",
@@ -369,8 +369,8 @@
     "sf": {
       "name": "San Francisco",
       "status": "success",
-      "dataLength": 84440,
-      "eventCount": 63
+      "dataLength": 87220,
+      "eventCount": 65
     },
     "singapore": {
       "name": "Singapore",
@@ -387,7 +387,7 @@
     "sydney": {
       "name": "Sydney",
       "status": "success",
-      "dataLength": 7341,
+      "dataLength": 7362,
       "eventCount": 6
     },
     "taipei": {

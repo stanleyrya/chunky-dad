@@ -90,6 +90,45 @@
         }
       ],
       "slug": "bearpride-cologne-2026-424a06b4"
+    },
+    {
+      "name": "BearPride Cologne 2026",
+      "day": "Monday",
+      "time": null,
+      "eventType": "routine",
+      "recurring": false,
+      "coordinates": {
+        "lat": 50.9413035,
+        "lng": 6.958138
+      },
+      "startDate": "2026-11-16T00:00:00",
+      "endDate": "2026-11-23T00:00:00",
+      "unprocessedDescription": "address: Köln\ntimezone: Europe/Berlin\naddressSource: page\ngm\raps: https://www.google.com/maps/search/?api=1&query=50.9413035%2C6.958138\npinSource: geocoded-exact\nkey: bearpride-cologne-2026|2026-11-15|\nallDay: true\nbearSource: keyword\nshortName: BEARPRIDE",
+      "startTimezone": null,
+      "endTimezone": null,
+      "calendarTimezone": "Europe/Berlin",
+      "wasUTC": false,
+      "sourceUid": "5112DD9D-2446-48C0-960F-CF666BA3A8B2",
+      "uid": "5112DD9D-2446-48C0-960F-CF666BA3A8B2",
+      "recurrenceId": null,
+      "recurrenceIdTimezone": null,
+      "sequence": 0,
+      "overrideIdentityType": null,
+      "cadence": null,
+      "address": "Köln",
+      "website": null,
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=50.9413035%2C6.958138",
+      "shortName": "BEARPRIDE",
+      "bearReview": null,
+      "tags": [],
+      "links": [
+        {
+          "type": "gmaps",
+          "url": "https://www.google.com/maps/search/?api=1&query=50.9413035%2C6.958138",
+          "label": "🗺️ Google Maps"
+        }
+      ],
+      "slug": "bearpride-cologne-2026-415159aa"
     }
   ]
 }

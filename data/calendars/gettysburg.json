@@ -10,9 +10,13 @@
       "time": null,
       "eventType": "routine",
       "recurring": false,
+      "coordinates": {
+        "lat": 39.765789,
+        "lng": -77.2691996
+      },
       "startDate": "2026-12-10T00:00:00",
-      "endDate": "2026-12-14T00:00:00",
-      "unprocessedDescription": "bar: Eisenhower Hotel and Conference Center\naddress: Gettysbur\rg, PA\nwebsite: https://bearfuzzfest.com/\nticketUrl: https://sickening.events/e/bear-fuzz-fest-2026\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21d2f68f477cc2a3.png\nimageSource: json-api\ntimezone: America/New_York\naddressSource: page\ngmaps: https://www.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20and%20Conference%20Center%2C%20Gettysburg%2C%20PA\nkey: bear-fuzz-fest|2026-12-10|eisenhower hotel and conference center\nallDay: true\nbearSource: keyword\nshortName: BEAR FUZZ FEST",
+      "endDate": "2026-12-15T00:00:00",
+      "unprocessedDescription": "description: Bear Fuzz Fest is a weekend Bear Run hosted by Cen\rtral PA Bears. It will be held at the Eisenhower Hotel in Gettysburg, PA on 12/10/26 - 12/13/26. It is an LGBT+ event for bears and admirers that will be loaded with activities such as\\: Clothing optional pool parties, Board games, Vendors, Drag Bingo, Playspace, Cuddle Room, Classes/Kink Demos, Saturday evening dinner and more.When will the event take place? December 10th, 11th, 12th, 13th of 2026 (Thursday evening through Sunday morning) How much will the run be?\nbar: Eisenhower Hotel & Conference Center\nticketUrl: https://sickening.events/e/bear-fuzz-fest-2026\nimage: https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21d2f68f477cc2a3.png\ncover: $59-$79\ntimezone: America/New_York\nwebsite: https://bearfuzzfest.com/\nshortName: FUZZ FEST\nfacebook: https://www.facebook.com/bearfuzzfest\nfavicon: https://bearfuzzfest.com\nkey: bear-fuzz-fest|2026-12-10|eisenhower hotel & conference center\nbearSource: keyword\ntags: kink, naked\nallDay: true\naddress: 2634 Emmitsburg Road, Gettysburg, PA 17325\npinSource: curated\naddressSource: page\nimageSource: json-api\nbarSource: curated\ngmaps: https://www.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20%26%20Conference%20Center%2C%202634%20Emmitsburg%20Road%2C%20Gettysburg%2C%20PA%2017325",
       "startTimezone": null,
       "endTimezone": null,
       "calendarTimezone": "America/New_York",
@@ -21,18 +25,25 @@
       "uid": "B8B8D8E1-74BB-421A-9635-22292DEC63BC",
       "recurrenceId": null,
       "recurrenceIdTimezone": null,
-      "sequence": 0,
+      "sequence": 1,
       "overrideIdentityType": null,
-      "bar": "Eisenhower Hotel and Conference Center",
+      "bar": "Eisenhower Hotel & Conference Center",
+      "cover": "$59-$79",
       "image": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/21d2f68f477cc2a3.png",
+      "favicon": "https://bearfuzzfest.com",
+      "tea": "Bear Fuzz Fest is a weekend Bear Run hosted by Central PA Bears. It will be held at the Eisenhower Hotel in Gettysburg, PA on 12/10/26 - 12/13/26. It is an LGBT+ event for bears and admirers that will be loaded with activities such as: Clothing optional pool parties, Board games, Vendors, Drag Bingo, Playspace, Cuddle Room, Classes/Kink Demos, Saturday evening dinner and more.When will the event take place? December 10th, 11th, 12th, 13th of 2026 (Thursday evening through Sunday morning) How much will the run be?",
       "cadence": null,
-      "address": "Gettysburg, PA",
+      "address": "2634 Emmitsburg Road, Gettysburg, PA 17325",
       "website": "https://bearfuzzfest.com/",
-      "gmaps": "https://www.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20and%20Conference%20Center%2C%20Gettysburg%2C%20PA",
+      "facebook": "https://www.facebook.com/bearfuzzfest",
+      "gmaps": "https://www.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20%26%20Conference%20Center%2C%202634%20Emmitsburg%20Road%2C%20Gettysburg%2C%20PA%2017325",
       "ticketUrl": "https://sickening.events/e/bear-fuzz-fest-2026",
-      "shortName": "BEAR FUZZ FEST",
+      "shortName": "FUZZ FEST",
       "bearReview": null,
-      "tags": [],
+      "tags": [
+        "kink",
+        "naked"
+      ],
       "links": [
         {
           "type": "website",
@@ -40,8 +51,13 @@
           "label": "🌐 Website"
         },
         {
+          "type": "facebook",
+          "url": "https://www.facebook.com/bearfuzzfest",
+          "label": "📘 Facebook"
+        },
+        {
           "type": "gmaps",
-          "url": "https://www.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20and%20Conference%20Center%2C%20Gettysburg%2C%20PA",
+          "url": "https://www.google.com/maps/search/?api=1&query=Eisenhower%20Hotel%20%26%20Conference%20Center%2C%202634%20Emmitsburg%20Road%2C%20Gettysburg%2C%20PA%2017325",
           "label": "🗺️ Google Maps"
         },
         {
