@@ -54,12 +54,12 @@
     "website": "https://dicksps.com",
     "instagram": "https://www.instagram.com/dicks.palmsprings",
     "facebook": "https://www.facebook.com/dicks.palmsprings",
-    "scene": "leather",
     "faviconBg": "#0054a7",
     "faviconFg": "#005ab2",
-    "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
     "palette": "#ffffff:70:0 #0054a6:24:15 #2b70b5:2:13 #5c91c6:1:10 #88afd5:1:7",
-    "accent": "#0054a6"
+    "accent": "#0054a6",
+    "faviconPlate": "#ffffff",
+    "scene": "leather"
   }
 ]

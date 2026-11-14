@@ -7,9 +7,9 @@
     "website": "https://eisenhower.com",
     "faviconBg": "#edd4ca",
     "faviconFg": "#a9abbe",
-    "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
     "palette": "#ffffff:50:0 #fdc39c:16:8 #dbd4f1:13:4 #91baef:11:9 #83a3cc:3:7",
-    "accent": "#fdc39c"
+    "accent": "#fdc39c",
+    "faviconPlate": "#ffffff"
   }
 ]

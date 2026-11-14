@@ -7,10 +7,10 @@
     "website": "https://spaexcess.com",
     "faviconBg": "#d91545",
     "faviconFg": "#e8174a",
-    "faviconPlate": "#ffffff",
     "paletteSource": "favicon",
     "palette": "#ffffff:75:0 #d81b49:17:22 #fae1e7:4:3 #e97f99:2:13 #ee9aaf:1:10",
-    "accent": "#d81b49"
+    "accent": "#d81b49",
+    "faviconPlate": "#ffffff"
   },
   {
     "name": "Black Eagle Toronto",
