@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/19b06d323f87127e.jpg",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/19b06d323f87127e.jpg",
+  "type": "event",
+  "filename": "2026-11-14_bears-paname-bonbon_7565f442.jpg",
+  "contentType": "image/jpeg",
+  "contentLength": "51917",
+  "eventInfo": {
+    "name": "Bears Paname — BONBON",
+    "startDate": "2026-11-14T23:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-11-14T18:29:25.912Z",
+  "etag": "\"b21449f3f75b6cd5fb80a1e02947fd41\"",
+  "lastModified": "Wed, 21 Oct 2026 00:49:39 GMT",
+  "flyerOptimized": 1
+}

@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1793233899/saas/logos/image_1793233890992_0l8bdbmuf.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1793233899/saas/logos/image_1793233890992_0l8bdbmuf.webp",
+  "type": "event",
+  "filename": "2026-12-24_bear-happy-hour-christmas-eve-edition_49124db2.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "188636",
+  "eventInfo": {
+    "name": "Bear Happy Hour: Christmas Eve Edition",
+    "startDate": "2026-12-24T18:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-11-14T18:28:03.219Z",
+  "etag": "\"f8fbdb41fe06ab8f309d74bee3f9ab3d\"",
+  "lastModified": "Thu, 29 Oct 2026 02:48:29 GMT",
+  "flyerOptimized": 1
+}

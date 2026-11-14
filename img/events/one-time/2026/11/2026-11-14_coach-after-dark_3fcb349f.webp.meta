@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1792192761/saas/logos/image_1792192754678_7vpq6g67i.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1792192761/saas/logos/image_1792192754678_7vpq6g67i.webp",
+  "type": "event",
+  "filename": "2026-11-14_coach-after-dark_3fcb349f.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "276692",
+  "eventInfo": {
+    "name": "Coach: After Dark",
+    "startDate": "2026-11-14T21:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-11-14T18:28:07.454Z",
+  "etag": "\"8ac73f2c2a02e64877c075bc18e3c7d9\"",
+  "lastModified": "Sat, 17 Oct 2026 01:07:22 GMT",
+  "flyerOptimized": 1
+}

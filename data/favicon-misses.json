@@ -1,23 +1,28 @@
 {
   "akbarsilverlake.com": {
-    "misses": 2,
+    "misses": 3,
     "firstMiss": "2026-09-25T23:46:58.949Z",
-    "lastTried": "2026-10-03T13:42:08.189Z"
+    "lastTried": "2026-11-14T18:30:46.678Z"
+  },
+  "bearhood.de": {
+    "misses": 1,
+    "firstMiss": "2026-11-14T18:30:36.116Z",
+    "lastTried": "2026-11-14T18:30:36.116Z"
   },
   "img.evbuc.com": {
-    "misses": 6,
+    "misses": 7,
     "firstMiss": "2026-08-23T01:41:04.914Z",
-    "lastTried": "2026-10-02T20:07:56.371Z"
+    "lastTried": "2026-11-14T18:30:39.425Z"
   },
   "noxsatvrn.carrd.co": {
-    "misses": 10,
+    "misses": 11,
     "firstMiss": "2026-07-23T18:05:57.542Z",
-    "lastTried": "2026-10-02T20:07:59.406Z"
+    "lastTried": "2026-11-14T18:30:49.752Z"
   },
   "redroom.club": {
-    "misses": 1,
+    "misses": 2,
     "firstMiss": "2026-09-27T22:06:50.055Z",
-    "lastTried": "2026-09-27T22:06:50.055Z"
+    "lastTried": "2026-11-14T18:30:43.714Z"
   },
   "www.clubxhubusa.com": {
     "misses": 3,
@@ -25,13 +30,13 @@
     "lastTried": "2026-09-05T11:44:22.994Z"
   },
   "www.westernxposure.com": {
-    "misses": 2,
+    "misses": 3,
     "firstMiss": "2026-09-19T18:08:06.299Z",
-    "lastTried": "2026-09-27T17:33:58.448Z"
+    "lastTried": "2026-11-14T18:30:42.700Z"
   },
   "www.woof-berlin.com": {
-    "misses": 6,
+    "misses": 7,
     "firstMiss": "2026-08-23T17:26:09.871Z",
-    "lastTried": "2026-10-02T20:07:55.220Z"
+    "lastTried": "2026-11-14T18:30:33.081Z"
   }
 }

@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1793232441/saas/logos/image_1793232434940_u1x7j6pje.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1793232441/saas/logos/image_1793232434940_u1x7j6pje.webp",
+  "type": "event",
+  "filename": "2026-11-20_daddy-pop_468fa0c6.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "433205",
+  "eventInfo": {
+    "name": "Daddy Pop",
+    "startDate": "2026-11-20T21:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-11-14T18:28:04.739Z",
+  "etag": "\"948f17955916e9836501251f57b59678\"",
+  "lastModified": "Thu, 29 Oct 2026 02:48:30 GMT",
+  "flyerOptimized": 1
+}

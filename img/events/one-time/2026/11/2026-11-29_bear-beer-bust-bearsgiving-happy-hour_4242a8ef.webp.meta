@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/873dfe8e7fbf67aa.webp",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/873dfe8e7fbf67aa.webp",
+  "type": "event",
+  "filename": "2026-11-29_bear-beer-bust-bearsgiving-happy-hour_4242a8ef.webp",
+  "contentType": "image/webp",
+  "contentLength": "136556",
+  "eventInfo": {
+    "name": "Bear Beer Bust: Bearsgiving Happy Hour",
+    "startDate": "2026-11-29T17:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-11-14T18:30:09.054Z",
+  "etag": "\"9d05a77c78c55f015625280010bf79ee\"",
+  "lastModified": "Tue, 13 Oct 2026 05:34:52 GMT",
+  "flyerOptimized": 1
+}

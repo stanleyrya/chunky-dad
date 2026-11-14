@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1791682087/saas/logos/image_1791682081483_z8fvcsivu.webp",
+  "adjustedUrl": "https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1791682087/saas/logos/image_1791682081483_z8fvcsivu.webp",
+  "type": "event",
+  "filename": "2026-10-31_halloween_5d1256ea.webp",
+  "contentType": "image/jpeg",
+  "contentLength": "359330",
+  "eventInfo": {
+    "name": "Halloween",
+    "startDate": "2026-10-31T20:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-11-14T18:28:11.986Z",
+  "etag": "\"905e540d8ae3070110c596e373039336\"",
+  "lastModified": "Sun, 11 Oct 2026 03:15:58 GMT",
+  "flyerOptimized": 1
+}

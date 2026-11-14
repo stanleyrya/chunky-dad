@@ -1,0 +1,17 @@
+{
+  "originalUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
+  "adjustedUrl": "https://acqvlhciredwtlbpisso.supabase.co/storage/v1/object/public/event-images/8f34856f66beb1b0.png",
+  "type": "event",
+  "filename": "2026-10-16_furry-friday_51ebc0e2.png",
+  "contentType": "image/png",
+  "contentLength": "414031",
+  "eventInfo": {
+    "name": "Furry Friday",
+    "startDate": "2026-10-16T19:00:00.000Z",
+    "recurring": false
+  },
+  "downloadedAt": "2026-11-14T18:30:24.568Z",
+  "etag": "\"524190262fa3d70b3e33b7a83664ecf0\"",
+  "lastModified": "Tue, 21 Jul 2026 19:21:47 GMT",
+  "flyerOptimized": 1
+}
