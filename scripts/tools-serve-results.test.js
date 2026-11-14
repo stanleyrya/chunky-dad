@@ -48,6 +48,7 @@ const {
   renderRunFormPage,
   renderSourceAuditPage,
   renderMetricsPage,
+  renderTaggedDropsHtml,
   parsePortFromArgv,
   lookupIcsEvent,
   BRIDGE_SHIM_MARKER,
@@ -2768,4 +2769,14 @@ test('party card: a saved party shown whole — flyer, night, why it is on the s
   assert.ok(!html.includes('<button'), 'swipes and the sheet are the only controls');
   const bare = renderReviewCard({ kind: 'manual', key: 'k', proposal: { ...card, tags: [], kind: 'manual' } }, {});
   assert.ok(bare.includes('No tags yet'));
+});
+
+test('metrics: the off-the-site card lists each tag and party, and says so when there are none', () => {
+  assert.equal(renderTaggedDropsHtml(null), '');
+  assert.match(renderTaggedDropsHtml([]), /No tagged events were left off/);
+  const html = renderTaggedDropsHtml([{ tag: 'kink', label: 'Kink', rows: [{ title: 'Gear Night <b>', venue: 'Dallas Eagle', city: 'dallas', nights: 2, next: '2026-12-01T03:00:00.000Z', url: 'https://example.com/gear', tags: ['kink'] }] }]);
+  assert.match(html, /Off the site, with tags/);
+  assert.match(html, /<h3>Kink · 1<\/h3>/);
+  assert.match(html, /Gear Night &lt;b&gt;/);
+  assert.match(html, /href="https:\/\/example.com\/gear"/);
 });

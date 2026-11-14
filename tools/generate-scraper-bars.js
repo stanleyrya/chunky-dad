@@ -29,6 +29,11 @@ if (fs.existsSync(barsDir)) {
           delete trimmed.accent;
           delete trimmed.paletteSource;
           delete trimmed.faviconPlate;
+          // The icon colours too: the colour action rewrites them, and they
+          // left this file stale (and the --check test red) after every
+          // colour commit.
+          delete trimmed.faviconBg;
+          delete trimmed.faviconFg;
           return trimmed;
         });
       } catch (e) {

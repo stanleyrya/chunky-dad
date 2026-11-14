@@ -233,13 +233,20 @@ const EVENT_TAGS = Object.freeze({
     //      'owner'   — only a deck swipe or the verdict store gives it
     //      'derived' — computed at read time, never stored
     // shown: the site draws a chip for it; the rest stay data.
-    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine', keeps: true, hint: 'a leather, gear or harness night, run, contest or club — not a dress-code aside, not gym gear' }),
+    // under: the umbrella tag it sits under (owner, 2026-11-14: "Kink is
+    //        like an umbrella tag"). 'kink' itself is the GENERAL gear or
+    //        fetish night ("gear nights is kink, rubber night is just
+    //        rubber"); a night about one kink carries only that kink's tag,
+    //        and a filter for the umbrella reads both (tagsUnderUmbrella).
+    //        Underwear is not under it: too general to be a kink.
+    'leather': Object.freeze({ label: 'Leather', shown: true, who: 'machine', keeps: true, under: 'kink', hint: 'a leather night, run, contest or club: leather is the point of the event — not a general gear or fetish night that lists leather among other gear, not a dress-code aside, not gym gear' }),
     'gainer': Object.freeze({ label: 'Gainer', shown: true, who: 'machine', keeps: true, hint: 'a gainer, feeder or belly night: gaining weight or feeding is the point of the event — not a food special, a buffet or an eating contest' }),
-    'kink': Object.freeze({ label: 'Kink', shown: true, who: 'machine', hint: 'a kink, fetish, BDSM or play event — not a DJ or show whose name merely sounds kinky' }),
-    'rubber': Object.freeze({ label: 'Rubber', shown: true, who: 'machine', hint: 'a rubber or latex event' }),
-    'diaper': Object.freeze({ label: 'Diaper', shown: true, who: 'machine', hint: 'a diaper or ABDL event' }),
+    'kink': Object.freeze({ label: 'Kink', shown: true, who: 'machine', hint: 'kink in general: a gear night (gear required or any kind of gear welcome), a fetish party, a BDSM or play night — a gear night IS kink even when it names no fetish; not a night about one kink only (leather, rubber, pups, diapers or furries have their own tags), not a DJ or show whose name merely sounds kinky' }),
+    'rubber': Object.freeze({ label: 'Rubber', shown: true, who: 'machine', under: 'kink', hint: 'a rubber or latex night: rubber is the point of the event — not a general gear or fetish night that lists rubber among other gear' }),
+    'diaper': Object.freeze({ label: 'Diaper', shown: true, who: 'machine', under: 'kink', hint: 'a diaper or ABDL night: diapers are the point of the event — not a general gear or fetish night that lists diapers among other kinks' }),
     'drag': Object.freeze({ label: 'Drag', shown: true, who: 'machine', hint: 'a drag show, brunch, competition or drag-race viewing — not a bar night that merely has a drag host' }),
-    'pup': Object.freeze({ label: 'Pup', shown: true, who: 'machine', hint: 'a pup or pet play night, mosh or pup social — not an event that merely welcomes pups' }),
+    'pup': Object.freeze({ label: 'Pup', shown: true, who: 'machine', under: 'kink', hint: 'a pup or pet play night, mosh or pup social — not an event that merely welcomes pups, not a general gear or fetish night that lists pups among other kinks' }),
+    'furry': Object.freeze({ label: 'Furry', shown: true, who: 'machine', under: 'kink', hint: 'a furry fandom night: fursuits, a furry rave, meet or convention — not a bear night that says fur or furry about hairy men' }),
     'underwear': Object.freeze({ label: 'Underwear', shown: true, who: 'machine', hint: 'an underwear, jockstrap or singlet night or party — not a night where underwear is merely allowed' }),
     'sportswear': Object.freeze({ label: 'Sportswear', shown: true, who: 'machine', hint: 'a sportswear, sports-kit, sneaker or lycra night or party — not a sports league, a match screening or a team social' }),
     'country': Object.freeze({ label: 'Country', shown: true, who: 'machine', hint: 'a country-western night: line dancing, two-step, a rodeo or a honky tonk — not a country as in a nation, not a cowboy costume aside' }),
@@ -283,6 +290,14 @@ function isDerivedEventTag(tag) {
 // The tags that keep a not-bear event on the calendar (EVENT_TAGS `keeps`).
 function keepingEventTags(value) {
     return normalizeEventTags(value).filter(tag => Boolean(EVENT_TAGS[tag] && EVENT_TAGS[tag].keeps === true));
+}
+
+// An umbrella tag and every tag under it (EVENT_TAGS `under`): 'kink' →
+// kink, leather, rubber, diaper, pup, furry. Any other tag is just itself.
+function tagsUnderUmbrella(tag) {
+    const umbrella = normalizeEventTag(tag);
+    if (!umbrella) return [];
+    return [umbrella].concat(Object.keys(EVENT_TAGS).filter(name => EVENT_TAGS[name].under === umbrella)).sort();
 }
 
 // The tags a record may carry in its notes: everything but the derived ones.
@@ -1175,6 +1190,7 @@ const EventSchema = {
     parseNotesIntoFields,
     formatEventNotes,
     EVENT_TAGS,
+    tagsUnderUmbrella,
     normalizeEventTag,
     normalizeEventTags,
     storableEventTags,

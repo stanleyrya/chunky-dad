@@ -1605,6 +1605,18 @@ function renderReviewPictureRow(entry = {}) {
 // reload with ?sort=&dir= (Sources) and ?ysort=&ydir= (Yield): the sort
 // buttons the builders emit are turned into links by a few lines of script.
 // Read only; nothing here writes.
+// Off the site, with tags: the latest run's dropped events that carry a tag
+// that does not keep them (yet). One table per tag, one row per party.
+function renderTaggedDropsHtml(groups) {
+    if (!Array.isArray(groups)) return '';
+    const esc = escapeHtmlText;
+    const day = (iso) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    const body = groups.length === 0
+        ? '<div class="muted">No tagged events were left off in the latest run.</div>'
+        : groups.map((group) => `<h3>${esc(group.label)} · ${esc(String(group.rows.length))}</h3><div class="table-wrapper"><table class="metrics-table"><thead><tr><th>Party</th><th>Venue</th><th>City</th><th>Next</th><th>Nights</th><th>Tags</th></tr></thead><tbody>${group.rows.map((row) => `<tr><td>${row.url ? `<a href="${esc(row.url)}" target="_blank" rel="noopener">${esc(row.title)}</a>` : esc(row.title)}</td><td>${esc(row.venue)}</td><td>${esc(row.city)}</td><td>${esc(day(row.next))}</td><td>${esc(String(row.nights))}</td><td>${esc(row.tags.join(', '))}</td></tr>`).join('')}</tbody></table></div>`).join('');
+    return `<div class="card"><h2>Off the site, with tags</h2><div class="sub">upcoming events the latest run left off because they are not bear, with the tags they would carry · one switch per tag puts them back later</div>${body}</div>`;
+}
+
 function renderMetricsPage(loaded, options = {}) {
     const esc = escapeHtmlText;
     const MetricsSections = require(path.join(repoRoot, 'scripts', 'metrics-sections'));
@@ -1620,6 +1632,7 @@ function renderMetricsPage(loaded, options = {}) {
     const yieldTable = MetricsSections.buildSourceYieldTableHtml(yieldData, { sortState: yieldSort, hostUrl, faviconUrl });
     const verdictCss = (MetricsSections.SOURCE_VERDICT_ORDER || []).map((verdict) => `.verdict-${verdict} { color: var(--v-${verdict}); border-color: var(--v-${verdict}); }`).join('\n');
     const troubled = health ? `${health.troubled} of ${health.hosts} sites need a look` : 'no source ledger yet';
+    const taggedOff = renderTaggedDropsHtml(options.taggedDrops);
     return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Metrics · chunky.dad (on your Mac)</title>
@@ -1653,6 +1666,7 @@ a { color:var(--accent); }
 .metric-chip-value { font-weight:700; }
 .metric-chip.danger { border-color:var(--v-dead); color:var(--v-dead); }
 .table-wrapper { overflow-x:auto; }
+.card h3 { margin:14px 0 6px; font:600 15px/1.2 Poppins, sans-serif; }
 .metrics-table { width:100%; border-collapse:collapse; font-size:13px; }
 .metrics-table th, .metrics-table td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; }
 .metrics-table th.num, .metrics-table td.num { text-align:right; }
@@ -1693,6 +1707,7 @@ ${verdictCss}
 <p class="intro">The source ledger (metrics/sources.ndjson, one line per run per website) as the phone's Sources view reads it: ${esc(troubled)}. Read only.</p>
 <div class="card"><h2>Sources</h2><div class="sub">one row per website host, trouble first · Extr · Bear · Up = the latest run</div>${counters}${sourcesTable}</div>
 <div class="card"><h2>Yield</h2><div class="sub">bear kept / extracted (medians over the last ${esc(String(yieldData.runs.length))} runs) · bars = share of kept events with a time, place, coordinates, link, image, description · lowest yield first</div>${yieldTable}</div>
+${taggedOff}
 </div>
 <script>
 (function () {
@@ -5013,7 +5028,12 @@ async function handleRequest(state, req, res) {
                     yield: MetricsSections.buildSourceYieldRows(loaded.records, { runs: 7 })
                 });
             }
-            return sendHtml(res, 200, renderMetricsPage(loaded, { sourceSort: sortOf('sort', 'dir'), yieldSort: sortOf('ysort', 'ydir') }));
+            let taggedDrops = null;
+            try {
+                const runId = reviewQueue.pickLatestRunId(sharedRoot);
+                if (runId) taggedDrops = reviewQueue.summarizeTaggedDrops(reviewQueue.loadRun(sharedRoot, runId).payload);
+            } catch (_) { taggedDrops = null; }
+            return sendHtml(res, 200, renderMetricsPage(loaded, { sourceSort: sortOf('sort', 'dir'), yieldSort: sortOf('ysort', 'ydir'), taggedDrops }));
         } catch (error) {
             console.error(`Metrics render failed: ${error.stack || error}`);
             return sendText(res, 500, `Metrics render failed: ${error.message}`);
@@ -5153,6 +5173,7 @@ module.exports = {
     renderRunFormPage,
     renderSourceAuditPage,
     renderMetricsPage,
+    renderTaggedDropsHtml,
     countSourceAuditOpen,
     renderConfirmRunPage,
     parsePortFromArgv,
