@@ -2128,3 +2128,25 @@ test('buildDeck: bear wording found only on the poster rides on the card while t
   assert.deepEqual(byTitle('SUNDAY DANCE PARTY').display.flyerWordsNotice, [], 'his own verdict keeps it now');
   assert.deepEqual(byTitle('BEAR NIGHT').display.flyerWordsNotice, []);
 });
+
+test('summarizeTaggedDrops: upcoming dropped events with tags, one row per party, grouped by tag', () => {
+  const now = Date.parse('2026-11-14T00:00:00Z');
+  const payload = { bearDroppedEvents: [
+    { title: 'Gear Night', event: { title: 'Gear Night', bar: 'Dallas Eagle', city: 'dallas', startDate: '2026-12-08T03:00:00Z', tags: 'kink' } },
+    { title: 'Gear Night', event: { title: 'Gear Night', bar: 'Dallas Eagle', city: 'dallas', startDate: '2026-12-01T03:00:00Z', tags: 'kink, rubber' } },
+    { title: 'LateXXX', event: { title: 'LateXXX', bar: 'Oasis', city: 'sf', startDate: '2026-11-20T03:00:00Z', tags: 'rubber' } },
+    { title: 'Past', event: { title: 'Past', startDate: '2026-11-01T03:00:00Z', tags: 'kink' } },
+    { title: 'Untagged', event: { title: 'Untagged', startDate: '2026-12-01T03:00:00Z' } },
+    { title: 'No event', startDate: '2026-12-01T03:00:00Z' }
+  ] };
+  const groups = rq.summarizeTaggedDrops(payload, now);
+  assert.deepEqual(groups.map((group) => [group.tag, group.label, group.rows.map((row) => row.title)]), [
+    ['rubber', 'Rubber', ['LateXXX', 'Gear Night']],
+    ['kink', 'Kink', ['Gear Night']]
+  ]);
+  const gear = groups[1].rows[0];
+  assert.equal(gear.nights, 2);
+  assert.equal(gear.next, '2026-12-01T03:00:00.000Z');
+  assert.deepEqual(gear.tags, ['kink', 'rubber']);
+  assert.deepEqual(rq.summarizeTaggedDrops({}, now), []);
+});

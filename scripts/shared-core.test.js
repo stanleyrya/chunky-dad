@@ -34351,3 +34351,13 @@ test('flyer evidence: the poster is a second question that can make an event bea
   assert.equal(settled.decision.provenance, 'ai: a techno line-up');
   assert.ok(settled.lines.some(line => line.includes('the page text was too thin to judge; with the poster\'s words it is not bear')));
 });
+
+test('tags: a dropped not-bear event carries the tags it would have, so it can be tracked off the site', async () => {
+  const core = createCore();
+  const adapter = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'a general gear night' }, { kink: { applies: true, eventEvidence: ['Gear Night'], reason: 'a gear night' } });
+  const dropped = [];
+  const kept = await core.filterBearEvents([{ title: 'Gear Night', description: 'Gear required upstairs.', startDate: '2030-01-01T03:00:00Z' }], bearCheckConfig('enforce'), adapter, dropped);
+  assert.equal(kept.length, 0, 'kink describes, it does not keep');
+  assert.equal(dropped.length, 1);
+  assert.equal(dropped[0].event.tags, 'kink');
+});

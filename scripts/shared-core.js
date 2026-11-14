@@ -16382,7 +16382,10 @@ Rules:
                         venue: event.bar || event.venue || '',
                         reason: decision.provenance,
                         host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
-                        event: { ...event }
+                        // The tags it would carry (owner, 2026-11-14: "keep
+                        // track of these events so we can add them later"):
+                        // a kink night off the site today is one switch away.
+                        event: { ...event, ...this.buildEventTagsPatch(decision) }
                     }
                 });
             } else if ((decision.result === 'not_bear' && (!trusted || decision.manualStore === true))
@@ -16411,7 +16414,10 @@ Rules:
                         venue: event.bar || event.venue || '',
                         reason: decision.result === 'unsure' ? `${decision.provenance} [listing site, no bear evidence]` : decision.provenance,
                         host: this.getHostFromUrl(event._sourcePageUrl || event.url || event.website || '') || '',
-                        event: { ...event }
+                        // The tags it would carry (owner, 2026-11-14: "keep
+                        // track of these events so we can add them later"):
+                        // a kink night off the site today is one switch away.
+                        event: { ...event, ...this.buildEventTagsPatch(decision) }
                     }
                 });
             } else {

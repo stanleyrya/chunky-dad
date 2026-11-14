@@ -2762,7 +2762,45 @@ function formatRejectionsText(store) {
     return lines.sort((a, b) => a.rank - b.rank).map((entry) => entry.line).join('\n');
 }
 
+// The events a run left off the site that still carry tags (owner,
+// 2026-11-14: gear nights stay off for now, "but let's keep track of these
+// events so we can add them later"). One row per party (title + venue),
+// grouped by tag, upcoming nights only; read from the run, never stored.
+function summarizeTaggedDrops(payload, now = Date.now()) {
+    const { EventSchema } = require(path.join(__dirname, '..', 'scripts', 'event-schema'));
+    const vocabulary = EventSchema.EVENT_TAGS || {};
+    const parties = new Map();
+    for (const row of Array.isArray(payload && payload.bearDroppedEvents) ? payload.bearDroppedEvents : []) {
+        const event = row && row.event;
+        if (!event) continue;
+        const tags = EventSchema.storableEventTags(event.tags);
+        if (tags.length === 0) continue;
+        const start = Date.parse(event.startDate || row.startDate || '');
+        if (!Number.isFinite(start) || start < now) continue;
+        const title = String(event.title || row.title || '').trim();
+        const venue = String(event.bar || row.venue || '').trim();
+        const key = `${title.toLowerCase()}|${venue.toLowerCase()}`;
+        if (!parties.has(key)) parties.set(key, { title, venue, city: String(event.city || ''), tags: new Set(), nights: 0, next: start, url: String(event.url || event.website || '') });
+        const party = parties.get(key);
+        party.nights += 1;
+        tags.forEach((tag) => party.tags.add(tag));
+        if (start < party.next) party.next = start;
+    }
+    const byTag = new Map();
+    for (const party of parties.values()) {
+        const row = { title: party.title, venue: party.venue, city: party.city, nights: party.nights, next: new Date(party.next).toISOString(), url: party.url, tags: [...party.tags].sort() };
+        for (const tag of row.tags) {
+            if (!byTag.has(tag)) byTag.set(tag, []);
+            byTag.get(tag).push(row);
+        }
+    }
+    return [...byTag.entries()]
+        .map(([tag, rows]) => ({ tag, label: (vocabulary[tag] && vocabulary[tag].label) || tag, rows: rows.sort((a, b) => a.next.localeCompare(b.next)) }))
+        .sort((a, b) => b.rows.length - a.rows.length || a.tag.localeCompare(b.tag));
+}
+
 module.exports = {
+    summarizeTaggedDrops,
     NIGHT_COMPARE_FIELDS,
     FRIEND_ADVICE_FILE_NAME,
     ADVICE_PAGE_DEFAULT_BASE,
