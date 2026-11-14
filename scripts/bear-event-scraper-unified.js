@@ -517,6 +517,25 @@ class BearEventScraperOrchestrator {
                         const previousUpcoming = typeof finalAdapter.loadSourceUpcoming === 'function'
                             ? await finalAdapter.loadSourceUpcoming()
                             : null;
+                        // A pin that disagrees with the same bar's other saved
+                        // nights (SharedCore.stampPinsElsewhereForBar): a fact
+                        // on the deck card, never a change.
+                        try {
+                            if (typeof sharedCore.stampPinsElsewhereForBar === 'function') {
+                                // Past nights too: the published calendars the
+                                // run already read (cached on the adapter).
+                                const pastByCity = {};
+                                if (typeof finalAdapter.getPublishedCalendarEvents === 'function') {
+                                    for (const city of cityKeys) {
+                                        const published = await finalAdapter.getPublishedCalendarEvents(city);
+                                        if (published && Array.isArray(published.records)) pastByCity[city] = { records: published.records };
+                                    }
+                                }
+                                sharedCore.stampPinsElsewhereForBar(analyzedEvents, savedByCity, { pastByCity });
+                            }
+                        } catch (pinError) {
+                            console.log(`📍 Orchestrator: pin-elsewhere check skipped — ${pinError && pinError.message ? pinError.message : pinError}`);
+                        }
                         const gone = sharedCore.buildGoneFromSourceCandidates(results, savedByCity, { previousUpcoming, cities: config.cities });
                         results.goneFromSource = gone;
                         // CALENDAR TWINS (SharedCore.buildCalendarTwinCandidates):

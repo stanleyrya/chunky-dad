@@ -2105,6 +2105,18 @@ test('buildDeck: the picture notice rides on a card kept on a shared word alone,
   assert.equal(byTitle('BEAR NIGHT').display.pictureNotice, null);
 });
 
+test('buildDeck: a pin that disagrees with the same bar\'s other saved nights rides on the card as both points', () => {
+  const elsewhere = { bar: 'Icon DC', pin: '38.927797825297, -77.027214107334', count: 2,
+    others: [{ title: 'Icon DC Saturdays', day: '2030-01-04', pin: '38.9171577, -77.0268211', km: 1.2 }, { title: 'Icon DC Fridays', day: '2030-01-10', pin: '38.9171577, -77.0268211', km: 1.2 }] };
+  const deck = deckOf(runPayload({ analyzedEvents: [
+    newEvent({ title: 'MEGAWOOF AMERICA', _pinElsewhere: elsewhere }),
+    newEvent({ title: 'BEAR NIGHT', url: 'https://furball.nyc/bear' })
+  ] }));
+  const byTitle = (title) => deck.cards.find((card) => card.proposal.title === title);
+  assert.deepEqual(byTitle('MEGAWOOF AMERICA').display.pinNotice, elsewhere);
+  assert.equal(byTitle('BEAR NIGHT').display.pinNotice, null);
+});
+
 test('buildDeck: bear wording found only on the poster rides on the card while the AI verdict is what keeps it', () => {
   const deck = deckOf(runPayload({ analyzedEvents: [
     newEvent({ title: 'SATURDAY DANCE PARTY', bearSource: 'ai', _bearFlyerEvidence: ['BEARS CUBS OTTERS\nand OTHER FURRY CRITTERS!', ''] }),

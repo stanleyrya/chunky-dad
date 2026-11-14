@@ -33486,6 +33486,95 @@ test('invisible marks: in a fold the title without them stands, in either order 
   assert.equal(other.title, 'Mommy Issues — ‎', 'source priority decides as before');
 });
 
+test('pin elsewhere: a pin far from where the same bar stands on its other saved nights is stamped with both points, and nothing changes', () => {
+  const core = createReviewCore();
+  const saved = (title, day, location, extra = {}) => ({ identifier: `id-${title}-${day}`, title, startDate: new Date(`${day}T02:00:00.000Z`), location,
+    notes: 'bar: Icon DC\naddress: 2001 11th St NW, Washington, DC 20001', isAllDay: false, ...extra });
+  const savedByCity = { dc: { source: 'published', events: [
+    saved('Icon DC Saturdays', '2030-01-05', '38.9171577, -77.0268211'),
+    saved('Icon DC Fridays', '2030-01-11', '38.9171577, -77.0268211'),
+    { identifier: 'other', title: 'Uproar Night', startDate: new Date('2030-01-05T02:00:00.000Z'), location: '38.9168, -77.0280', notes: 'bar: Uproar' }
+  ] } };
+  const typo = { title: 'MEGAWOOF AMERICA', city: 'dc', bar: 'ICON DC', location: '38.927797825297, -77.027214107334', timezone: 'America/New_York' };
+  const right = { title: 'Another Party', city: 'dc', bar: 'Icon DC', location: '38.9172, -77.0269' };
+  const ownRecord = { title: 'Icon DC Saturdays', city: 'dc', bar: 'Icon DC', location: '38.9277, -77.0272', _existingEvent: { identifier: 'id-Icon DC Saturdays-2030-01-05' } };
+  const unlisted = { title: 'Somewhere', city: 'dc', bar: 'The Nowhere', location: '38.95, -77.05' };
+  // A name whose saved nights already stand at two places roams: no flag.
+  savedByCity.nyc = { source: 'published', events: [
+    { identifier: 'b1', title: 'Bears 4 Bareburger', startDate: new Date('2030-01-05T23:00:00.000Z'), location: '40.7605691, -73.9903480', notes: 'bar: Bareburger' },
+    { identifier: 'b2', title: 'Bears 4 Bareburger', startDate: new Date('2030-01-12T23:00:00.000Z'), location: '40.7844043, -73.9799172', notes: 'bar: Bareburger' }
+  ] };
+  const roaming = { title: 'Bears 4 Bareburger', city: 'nyc', bar: 'Bareburger', location: '40.7605691, -73.9903480' };
+  // Past nights come from the published calendar's own records.
+  const pastByCity = { sf: { records: [{ uid: 'p1', summary: 'Old Night', description: 'bar: The Stud', location: '37.7726, -122.4100', isAllDay: false,
+    start: { date: '2026-09-27T03:00:00.000Z' } }] } };
+  const pastOnly = { title: 'New Night', city: 'sf', bar: 'The Stud', location: '37.7900, -122.4100', timezone: 'America/Los_Angeles' };
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let count;
+  try { count = core.stampPinsElsewhereForBar([typo, right, ownRecord, unlisted, roaming, pastOnly], savedByCity, { pastByCity }); } finally { console.log = quiet; }
+  assert.equal(typo._pinElsewhere.bar, 'ICON DC');
+  assert.equal(typo._pinElsewhere.count, 2);
+  assert.deepEqual(typo._pinElsewhere.others.map((other) => [other.title, other.day, other.km]), [['Icon DC Saturdays', '2030-01-04', 1.2], ['Icon DC Fridays', '2030-01-10', 1.2]]);
+  assert.equal(typo.location, '38.927797825297, -77.027214107334', 'the pin is never changed');
+  assert.equal(right._pinElsewhere, undefined, 'within half a kilometre is the same door');
+  assert.equal(ownRecord._pinElsewhere.count, 1, 'the merge target itself is not another night');
+  assert.equal(unlisted._pinElsewhere, undefined);
+  assert.equal(roaming._pinElsewhere, undefined, 'a chain or a moving party is not one door');
+  assert.deepEqual(pastOnly._pinElsewhere.others.map((other) => [other.title, other.day, other.km]), [['Old Night', '2026-09-26', 1.9]], 'a past night says where the bar stands');
+  assert.equal(count, 3);
+  assert.ok(logs.some((line) => line.startsWith('📍 PIN ELSEWHERE: "MEGAWOOF AMERICA" (dc) at ICON DC would be pinned at 38.927797825297, -77.027214107334, but 2 other saved night(s)')), logs.join('\n'));
+});
+
+test('cut-off titles: the full title stands against the same title cut off with an ellipsis, in both merges and either order', async () => {
+  const pick = (a, b) => SharedCore.pickUntruncatedTitle(a, b);
+  assert.equal(pick('MEGAWOOF PHOENIX - BLACK OUT...', 'MEGAWOOF PHOENIX - BLACK OUT'), 'b');
+  assert.equal(pick('MEGAWOOF PHOENIX - BLACK OUT', 'MEGAWOOF PHOENIX - BLACK OUT…'), 'a', 'the one-character ellipsis too');
+  assert.equal(pick('Megawoof Phoenix - Black…', 'MEGAWOOF PHOENIX - BLACK OUT'), 'b', 'case and spacing are folded');
+  assert.equal(pick('MEGAWOOF PHOENIX...', 'MEGAWOOF DALLAS'), null, 'the stem must open the other title');
+  assert.equal(pick('Bear...', 'Bear Happy Hour'), null, 'a short stem claims nothing');
+  assert.equal(pick('Wait for it...', 'Wait for it...'), null);
+  assert.equal(pick('MEGAWOOF PHOENIX...', 'MEGAWOOF PHOENIX - BLACK…'), null, 'both cut off: nothing clean to pick');
+  assert.equal(pick('MEGAWOOF PHOENIX - BLACK OUT', 'MEGAWOOF PHOENIX - BLACK OUT'), null);
+
+  // The calendar merge: the saved copy carries the cut-off spelling.
+  const core = createReviewCore();
+  const resolve = (a, b, labels) => core.resolveConflictDeterministically('title', a, b,
+    { records: { a: { title: a, bar: 'Kobalt' }, b: { title: b, bar: 'Kobalt' } }, sideLabels: labels });
+  const cut = 'MEGAWOOF PHOENIX - BLACK OUT...';
+  const full = 'MEGAWOOF PHOENIX - BLACK OUT';
+  const saved = resolve(cut, full, { a: 'calendar', b: 'scraped' });
+  assert.equal(saved.winner, 'b');
+  assert.match(saved.reason, /cut off with an ellipsis/);
+  assert.equal(resolve(full, cut, { a: 'calendar', b: 'scraped' }).winner, 'a', 'a cut-off scrape never replaces the full saved title');
+  assert.equal(resolve(cut, full, { a: 'existing', b: 'incoming' }).winner, 'b', 'between two parser records too');
+
+  // The parser merge: the listing row is cut off, the event page is not.
+  const parserCore = createCore();
+  const adapter = buildArbitrationAdapter({});
+  const start = new Date('2026-11-29T04:30:00.000Z');
+  const listing = () => ({
+    title: cut, bar: 'Kobalt', city: 'phoenix', startDate: start, endDate: new Date('2026-11-29T09:00:00.000Z'),
+    source: 'ai-web', _pageOrigin: 'listing', _sourcePageUrl: 'https://www.eventbrite.com/o/megawoof-america-18118978189',
+    _fieldPriorities: { title: { priority: ['ai-web'], merge: 'ai' } }, _parserConfig: TEST_AI_PARSER_CONFIG
+  });
+  const page = () => ({
+    title: full, bar: 'Kobalt', city: 'phoenix', startDate: start, endDate: new Date('2026-11-29T09:00:00.000Z'),
+    source: 'ai-web', _pageOrigin: 'crawl', _sourcePageUrl: 'https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802',
+    _fieldPriorities: { title: { priority: ['ai-web'], merge: 'ai' } }, _parserConfig: TEST_AI_PARSER_CONFIG
+  });
+  const logs = [];
+  const quiet = console.log; console.log = (line) => logs.push(String(line));
+  let merged; let flipped;
+  try {
+    merged = await parserCore.mergeParsedEvents(listing(), page(), { httpAdapter: adapter });
+    flipped = await parserCore.mergeParsedEvents(page(), listing(), { httpAdapter: adapter });
+  } finally { console.log = quiet; }
+  assert.equal(merged.title, full, 'the listing\'s authority does not keep its cut-off title');
+  assert.equal(flipped.title, full);
+  assert.ok(logs.some(line => line.includes(`🏷️ MERGE: "${full}" field=title — the other copy ("${cut}") is the same title cut off with an ellipsis`)), logs.join('\n'));
+});
+
 test('invisible marks: a saved title that carries them yields to the clean name the source states — a spelling fix, not a rename; a saved spelling in another case still stays', async () => {
   const core = createReviewCore();
   const resolve = (a, b, labels) => core.resolveConflictDeterministically('title', a, b,
