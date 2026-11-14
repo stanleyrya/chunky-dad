@@ -343,11 +343,16 @@ jobs:
             # Other workflows commit to main too; rebase onto whatever landed
             # meanwhile and retry (a plain push was rejected when another
             # workflow's commit landed seconds earlier).
+            # --autostash: a step can leave files it did not stage (a deleted
+            # event page), and a plain pull --rebase refuses to run then — every
+            # save after 2026-10-04 was lost that way while the job stayed green.
+            pushed=false
             for attempt in 1 2 3; do
-              git pull --rebase origin main && git push && break
+              git pull --rebase --autostash origin main && git push && { pushed=true; break; }
               echo "push attempt $attempt failed — retrying"
               sleep 10
             done
+            if [ "$pushed" != true ]; then echo "::error::could not push to main after 3 attempts"; exit 1; fi
             echo "✓ Calendar data updated and committed (${CHANGED_FILES} files changed)"
             echo "CALENDAR_CHANGED=true" >> $GITHUB_ENV
           fi
@@ -364,11 +369,16 @@ jobs:
             # Other workflows commit to main too; rebase onto whatever landed
             # meanwhile and retry (a plain push was rejected when another
             # workflow's commit landed seconds earlier).
+            # --autostash: a step can leave files it did not stage (a deleted
+            # event page), and a plain pull --rebase refuses to run then — every
+            # save after 2026-10-04 was lost that way while the job stayed green.
+            pushed=false
             for attempt in 1 2 3; do
-              git pull --rebase origin main && git push && break
+              git pull --rebase --autostash origin main && git push && { pushed=true; break; }
               echo "push attempt $attempt failed — retrying"
               sleep 10
             done
+            if [ "$pushed" != true ]; then echo "::error::could not push to main after 3 attempts"; exit 1; fi
           fi
 
       - name: Generate event pages
@@ -381,6 +391,8 @@ jobs:
           node tools/generate-event-pages.js
           # Stage generated event pages and capture deletions under city/slug dirs
           git add -A */*/ 2>/dev/null || true
+          # A page whose folder is gone is not matched by the glob above.
+          git add -A -- ':(glob)*/*/index.html' 2>/dev/null || true
           if git diff --staged --quiet; then
             echo "No event page changes to commit"
             echo "EVENT_PAGES_CHANGED=false" >> $GITHUB_ENV
@@ -389,11 +401,16 @@ jobs:
             # Other workflows commit to main too; rebase onto whatever landed
             # meanwhile and retry (a plain push was rejected when another
             # workflow's commit landed seconds earlier).
+            # --autostash: a step can leave files it did not stage (a deleted
+            # event page), and a plain pull --rebase refuses to run then — every
+            # save after 2026-10-04 was lost that way while the job stayed green.
+            pushed=false
             for attempt in 1 2 3; do
-              git pull --rebase origin main && git push && break
+              git pull --rebase --autostash origin main && git push && { pushed=true; break; }
               echo "push attempt $attempt failed — retrying"
               sleep 10
             done
+            if [ "$pushed" != true ]; then echo "::error::could not push to main after 3 attempts"; exit 1; fi
             echo "EVENT_PAGES_CHANGED=true" >> $GITHUB_ENV
           fi
 
@@ -416,11 +433,16 @@ jobs:
             # Other workflows commit to main too; rebase onto whatever landed
             # meanwhile and retry (a plain push was rejected when another
             # workflow's commit landed seconds earlier).
+            # --autostash: a step can leave files it did not stage (a deleted
+            # event page), and a plain pull --rebase refuses to run then — every
+            # save after 2026-10-04 was lost that way while the job stayed green.
+            pushed=false
             for attempt in 1 2 3; do
-              git pull --rebase origin main && git push && break
+              git pull --rebase --autostash origin main && git push && { pushed=true; break; }
               echo "push attempt $attempt failed — retrying"
               sleep 10
             done
+            if [ "$pushed" != true ]; then echo "::error::could not push to main after 3 attempts"; exit 1; fi
             echo "✓ Event images and high-quality favicons updated and committed"
             echo "IMAGES_CHANGED=true" >> $GITHUB_ENV
           fi
@@ -438,11 +460,16 @@ jobs:
             # Other workflows commit to main too; rebase onto whatever landed
             # meanwhile and retry (a plain push was rejected when another
             # workflow's commit landed seconds earlier).
+            # --autostash: a step can leave files it did not stage (a deleted
+            # event page), and a plain pull --rebase refuses to run then — every
+            # save after 2026-10-04 was lost that way while the job stayed green.
+            pushed=false
             for attempt in 1 2 3; do
-              git pull --rebase origin main && git push && break
+              git pull --rebase --autostash origin main && git push && { pushed=true; break; }
               echo "push attempt $attempt failed — retrying"
               sleep 10
             done
+            if [ "$pushed" != true ]; then echo "::error::could not push to main after 3 attempts"; exit 1; fi
           fi
 
       - name: Generate OG images for events
@@ -460,11 +487,16 @@ jobs:
             # Other workflows commit to main too; rebase onto whatever landed
             # meanwhile and retry (a plain push was rejected when another
             # workflow's commit landed seconds earlier).
+            # --autostash: a step can leave files it did not stage (a deleted
+            # event page), and a plain pull --rebase refuses to run then — every
+            # save after 2026-10-04 was lost that way while the job stayed green.
+            pushed=false
             for attempt in 1 2 3; do
-              git pull --rebase origin main && git push && break
+              git pull --rebase --autostash origin main && git push && { pushed=true; break; }
               echo "push attempt $attempt failed — retrying"
               sleep 10
             done
+            if [ "$pushed" != true ]; then echo "::error::could not push to main after 3 attempts"; exit 1; fi
           fi
       
       - name: Update test manifest only if calendar data changed
@@ -482,11 +514,16 @@ jobs:
               # Other workflows commit to main too; rebase onto whatever landed
               # meanwhile and retry (a plain push was rejected when another
               # workflow's commit landed seconds earlier).
+              # --autostash: a step can leave files it did not stage (a deleted
+              # event page), and a plain pull --rebase refuses to run then — every
+              # save after 2026-10-04 was lost that way while the job stayed green.
+              pushed=false
               for attempt in 1 2 3; do
-                git pull --rebase origin main && git push && break
+                git pull --rebase --autostash origin main && git push && { pushed=true; break; }
                 echo "push attempt $attempt failed — retrying"
                 sleep 10
               done
+              if [ "$pushed" != true ]; then echo "::error::could not push to main after 3 attempts"; exit 1; fi
               echo "✓ Test manifest updated and committed"
             else
               echo "No manifest changes after regeneration"

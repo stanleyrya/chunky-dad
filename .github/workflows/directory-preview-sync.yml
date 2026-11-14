@@ -51,10 +51,15 @@ jobs:
           # Other workflows commit to main too; rebase onto whatever landed
           # meanwhile and retry (a plain push was rejected when another
           # workflow's commit landed seconds earlier).
+          # --autostash: a step can leave files it did not stage (a deleted
+          # event page), and a plain pull --rebase refuses to run then — every
+          # save after 2026-10-04 was lost that way while the job stayed green.
+          pushed=false
           for attempt in 1 2 3; do
-            git pull --rebase origin main && git push && break
+            git pull --rebase --autostash origin main && git push && { pushed=true; break; }
             echo "push attempt $attempt failed — retrying"
             sleep 10
           done
+          if [ "$pushed" != true ]; then echo "::error::could not push to main after 3 attempts"; exit 1; fi
           echo "✓ Directory preview cache committed."
         fi
