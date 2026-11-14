@@ -16697,9 +16697,31 @@ class AiWebParser {
             return typeof start === 'string' && utcPattern.test(start) && !/T00:00/.test(start) && pageHost && pageHost === sourceHost;
         });
         if (candidates.length === 0) return payload;
-        const samples = candidates.filter(row => !repeats(this.unwrapJsonApiCandidate(row)))
-            .concat(candidates.filter(row => repeats(this.unwrapJsonApiCandidate(row))))
+        // A row's own zone, when the feed names one ("tz": "Europe/London"),
+        // and its offset from UTC at the row's start. A row whose zone sits
+        // at UTC on that date prints the same digits either way, so its page
+        // cannot tell a wall clock from an instant: run 20261113-172540
+        // asked London's "Bear Bash" (21:00Z, 21:00 on the page in
+        // November), read the match as "wall clock" and moved every other
+        // city by its offset (BearUnion Seattle 8pm became 4am). Such a row
+        // is never a sample; a row with no zone (or "UTC") is asked as before.
+        const zoneOfRow = (view) => {
+            const zone = view.tz || view.timezone || view.time_zone;
+            return typeof zone === 'string' && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(zone.trim()) ? zone.trim() : '';
+        };
+        const offsetMinutesOf = (view) => {
+            const zone = zoneOfRow(view);
+            const digits = String(startOf(view)).match(utcPattern);
+            if (!zone || !digits) return null;
+            const zoneInstant = this.wallClockInZone(digits[1], digits[2], zone);
+            const utcInstant = Date.parse(`${digits[1]}T${digits[2]}:00Z`);
+            return Number.isFinite(zoneInstant) && Number.isFinite(utcInstant) ? Math.round((utcInstant - zoneInstant) / 60000) : null;
+        };
+        const telling = candidates.filter(row => offsetMinutesOf(this.unwrapJsonApiCandidate(row)) !== 0);
+        const samples = telling.filter(row => !repeats(this.unwrapJsonApiCandidate(row)))
+            .concat(telling.filter(row => repeats(this.unwrapJsonApiCandidate(row))))
             .slice(0, 3);
+        if (samples.length === 0) return payload;
         if (!this.jsonApiUtcLabelVerdicts) this.jsonApiUtcLabelVerdicts = new Map();
         let verdict = this.jsonApiUtcLabelVerdicts.get(sourceHost);
         if (verdict === undefined) {
@@ -16716,8 +16738,20 @@ class AiWebParser {
                     const pageStarts = [...html.matchAll(/"startDate"\s*:\s*"([^"]+)"/g)].map(m => m[1].trim());
                     // The feed's clock, printed as a wall clock (no offset).
                     const wallClock = pageStarts.find(value => new RegExp(`^\\d{4}-\\d{2}-\\d{2}T${digits[2]}(?::\\d{2})?$`).test(value));
-                    // The feed's instant, printed with an explicit offset.
-                    const instant = pageStarts.find(value => /(?:Z|[+-]\d{2}:?\d{2})$/.test(value) && Number.isFinite(feedMillis) && Date.parse(value) === feedMillis);
+                    // The feed's instant, printed with an explicit offset —
+                    // or printed as the row's own zone's wall clock with no
+                    // offset (Bears Go Bowling: 17:00Z in the feed, 18:00 on
+                    // its page in a UTC+1 city).
+                    const rowZone = zoneOfRow(view);
+                    const zonedWall = rowZone && Number.isFinite(feedMillis) ? (() => {
+                        try {
+                            const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: rowZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                                .formatToParts(new Date(feedMillis)).map(part => [part.type, part.value]));
+                            return `${parts.year}-${parts.month}-${parts.day}T${String(Number(parts.hour) % 24).padStart(2, '0')}:${parts.minute}`;
+                        } catch (_) { return ''; }
+                    })() : '';
+                    const instant = pageStarts.find(value => /(?:Z|[+-]\d{2}:?\d{2})$/.test(value) && Number.isFinite(feedMillis) && Date.parse(value) === feedMillis)
+                        || (zonedWall ? pageStarts.find(value => new RegExp(`^${zonedWall}(?::00)?$`).test(value)) : undefined);
                     if (wallClock) {
                         verdict = true;
                         decided = true;
@@ -17062,9 +17096,22 @@ class AiWebParser {
         const now = Date.now();
         const windowStart = new Date(now - JSON_API_FEED_WINDOW_PAST_MS);
         const windowEnd = new Date(now + JSON_API_FEED_HORIZON_DAYS * 24 * 60 * 60 * 1000);
+        // A row whose start is an instant in a named zone ("2026-11-14T04:00Z",
+        // tz America/Los_Angeles) repeats on its LOCAL day at its local clock:
+        // "2nd Friday" is Friday 8pm in Seattle, which is Saturday in UTC.
+        // Expanding the UTC digits put BearUnion's second-Friday nights on
+        // the wrong week and dropped the real Nov 13 night (run
+        // 20261113-172540). A wall-clock row (no zone, or a zone not yet
+        // resolved) is read as its own digits, as before.
+        const zone = typeof event.timezone === 'string' ? event.timezone.trim() : '';
+        const zonedWall = !event._timezoneUnresolved && /^[A-Za-z]+\/[A-Za-z0-9_+\-/]+$/.test(zone) && this.core && this.core.constructor
+            && typeof this.core.constructor.zonedWallParts === 'function'
+            ? this.core.constructor.zonedWallParts(event.startDate, zone)
+            : null;
+        const seriesStart = zonedWall ? { date: event.startDate, wall: zonedWall, tzid: zone, isDateOnly: false } : event.startDate;
         let occurrences = null;
         try {
-            occurrences = expander(rrule, event.startDate, windowStart, windowEnd);
+            occurrences = expander(rrule, seriesStart, windowStart, windowEnd);
         } catch (_) {
             occurrences = null;
         }
@@ -30338,6 +30385,28 @@ TEXT:
             /\b(\d{1,2})(?::(\d{2}))?\s*([ap])\s*(-|–|—|to|til|till|until)\s*(\d{1,2})(?::(\d{2}))?\s*([ap])\b/gi,
             (whole, h1, m1, a1, sep, h2, m2, a2) => `${h1}${m1 ? ':' + m1 : ''}${a1.toLowerCase()}m ${sep} ${h2}${m2 ? ':' + m2 : ''}${a2.toLowerCase()}m`
         );
+        // A range prints its am/pm once: "4-8PM", "12 – 6 PM", "1:30 to
+        // 4:30PM" (Bears LA's Mac and Cheese poster, run 20261113-172540,
+        // read "8PM" as the start because the bare "4" carried no
+        // meridiem). The first number takes the end's am/pm; when that would
+        // put it at or after the end ("11-2am"), it takes the other one. A
+        // number that is a date ("Sep 11 - 10PM", "11/29 - 8PM", "$5 - 9PM")
+        // is never a clock: one right after a month name, a slash, a dot,
+        // another digit or a currency sign is left alone.
+        const shared = source.replace(
+            /(?<![\d/.$£€:]|(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)\b(\d{1,2})(?::(\d{2}))?\s*(-|–|—|to|til|till|until)\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi,
+            (whole, h1, m1, sep, h2, m2, mer) => {
+                const first = Number(h1);
+                const second = Number(h2);
+                if (first < 1 || first > 12 || second < 1 || second > 12) return whole;
+                const lower = mer.toLowerCase();
+                const toMinutes = (hour, minute, meridiem) => ((hour % 12) + (meridiem === 'pm' ? 12 : 0)) * 60 + minute;
+                const end = toMinutes(second, Number(m2 || 0), lower);
+                let startMeridiem = lower;
+                if (toMinutes(first, Number(m1 || 0), lower) >= end) startMeridiem = lower === 'pm' ? 'am' : 'pm';
+                return `${h1}${m1 ? ':' + m1 : ''}${startMeridiem} ${sep} ${h2}${m2 ? ':' + m2 : ''}${mer}`;
+            }
+        );
         const clockPattern = /\b(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/gi;
         const parse = (match) => {
             let hour = Number(match[1]);
@@ -30349,14 +30418,14 @@ TEXT:
         };
         const found = [];
         let match;
-        while ((match = clockPattern.exec(source)) !== null) {
+        while ((match = clockPattern.exec(shared)) !== null) {
             const parsed = parse(match);
             if (parsed) found.push({ ...parsed, index: match.index, text: match[0] });
         }
         if (found.length === 0) return null;
         const starts = [];
         for (let i = 0; i < found.length; i++) {
-            const between = i > 0 ? source.slice(found[i - 1].index + found[i - 1].text.length, found[i].index) : '';
+            const between = i > 0 ? shared.slice(found[i - 1].index + found[i - 1].text.length, found[i].index) : '';
             // The second clock of a "9pm - 2am" / "9pm to 2am" range is an end.
             if (i > 0 && /^\s*(?:-|–|—|to|til|till|until)\s*$/i.test(between)) continue;
             starts.push(i);
@@ -30365,7 +30434,7 @@ TEXT:
         if (distinct.size !== 1) return null;
         const startIndex = starts[0];
         const next = found[startIndex + 1];
-        const betweenNext = next ? source.slice(found[startIndex].index + found[startIndex].text.length, next.index) : '';
+        const betweenNext = next ? shared.slice(found[startIndex].index + found[startIndex].text.length, next.index) : '';
         const end = next && /^\s*(?:-|–|—|to|til|till|until)\s*$/i.test(betweenNext) ? { hour: next.hour, minute: next.minute } : null;
         return { start: { hour: found[startIndex].hour, minute: found[startIndex].minute }, end, text: end ? `${found[startIndex].text} – ${next.text}` : found[startIndex].text };
     }
