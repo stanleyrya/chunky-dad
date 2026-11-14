@@ -52,11 +52,16 @@ jobs:
             # 18 s before this job's push on 2026-09-17 and the push was
             # rejected, leaving 26 freshly built city pages unpublished).
             # Rebase onto whatever landed meanwhile and retry.
+            # --autostash: a step can leave files it did not stage (a deleted
+            # event page), and a plain pull --rebase refuses to run then — every
+            # save after 2026-10-04 was lost that way while the job stayed green.
+            pushed=false
             for attempt in 1 2 3; do
-              git pull --rebase origin main && git push && break
+              git pull --rebase --autostash origin main && git push && { pushed=true; break; }
               echo "push attempt $attempt failed — retrying"
               sleep 10
             done
+            if [ "$pushed" != true ]; then echo "::error::could not push to main after 3 attempts"; exit 1; fi
           else
             echo "No changes to commit."
           fi
