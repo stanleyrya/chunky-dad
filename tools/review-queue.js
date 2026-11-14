@@ -79,7 +79,7 @@ const TWIN_REASON_TAGS = [
 const MANUAL_REASON_TAGS = [
     'not right', 'later', 'already done by hand', 'not sure'
 ];
-const MANUAL_ACTIONS = ['remove', 'edit', 'choose'];
+const MANUAL_ACTIONS = ['remove', 'edit', 'choose', 'party'];
 const MANUAL_EDIT_FIELDS = ['title', 'startDate', 'endDate', 'location', 'url', 'notes'];
 // The owner's marks on a bar (data/bars `scene`), in the order the deck
 // shows them.
@@ -93,7 +93,10 @@ const BAR_SCENES = ['bear', 'leather', 'adjacent'];
 // snapshot carries the whole card). Three actions: `remove` (the phone
 // deletes through the gone path and its guards), `edit` (the phone applies
 // the card's before→after changes once the before still matches), `choose`
-// (two options; the swipe is the answer, nothing executes). A card expires
+// (two options; the swipe is the answer, nothing executes), `party` (a
+// saved party shown whole, with its tags and why it is on the site: right
+// is bear, left offers keep-for-tags or not bear; the answer is a verdict,
+// nothing executes on the phone). A card expires
 // the day after its night. Teal on the deck: never a run's proposal.
 function getManualCardsPath(sharedRoot) {
     return path.join(sharedRoot, 'manual-cards.json');
@@ -142,6 +145,15 @@ function normalizeManualCard(input, options = {}) {
         const value = String(input[field] || '').trim();
         if (/^https?:\/\/\S+$/i.test(value)) card[field] = value;
     });
+    if (action === 'party') {
+        if (!card.city) throw new Error('a party card needs the city');
+        if (!card.uid) throw new Error("a party card needs a saved event's uid");
+        card.tags = Array.isArray(input.tags) ? input.tags.map((t) => String(t || '').trim()).filter(Boolean) : [];
+        card.bearSource = String(input.bearSource || '').trim();
+        const description = String(input.description || '').replace(/\s+/g, ' ').trim();
+        card.description = description.length > 400 ? `${description.slice(0, 397)}…` : description;
+        card.nights = Math.max(1, Number(input.nights) || 1);
+    }
     if (action === 'remove' || action === 'edit') {
         if (!card.city) throw new Error(`a ${action} card needs the city`);
         if (!card.uid) throw new Error(`a ${action} card needs the saved event's uid`);

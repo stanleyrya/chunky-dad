@@ -143,6 +143,9 @@ body { overscroll-behavior-y:none; }
 .manual-band { margin:-14px -16px 10px; padding:7px 16px; background:#0a7f7f; color:#fff; font-size:12px; font-weight:700; letter-spacing:.03em; }
 .manual-why { font-size:15px; margin:8px 0; }
 .manual-band + .thumb { margin-top:-10px; }
+.party-why { display:flex; flex-direction:column; gap:4px; }
+.sheet.party .mode-never, .sheet.party #sheet-tags, .sheet.party .sheet-fix-note { display:none; }
+.party-description { display:-webkit-box; -webkit-line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
 .manual-changes { border-collapse:collapse; width:100%; margin:8px 0; font-size:13px; }
 .manual-changes th { text-align:left; font-weight:600; padding:4px 6px 4px 0; white-space:nowrap; vertical-align:top; }
 .manual-changes td { padding:4px 4px; vertical-align:top; overflow-wrap:anywhere; }
@@ -231,6 +234,8 @@ body { overscroll-behavior-y:none; }
 .sheet-modes .mode-fix { border-color:var(--accent, #ff6b35); }
 .sheet-modes .mode-tagged-wrap { padding:0; border:0; background:none; gap:6px; }
 .sheet-modes .mode-tagged { border-color:#2bb3a3; width:100%; }
+.sheet-modes .mode-bear-tags { border-color:#c98a2b; width:100%; }
+.tag-chips-label { font-size:12px; color:var(--muted, #777); padding:0 2px; }
 .sheet-modes .tag-chips { display:flex; flex-wrap:wrap; gap:6px; padding:0 2px; }
 .sheet-modes .tag-chips .chip.on { background:#2bb3a3; border-color:#2bb3a3; color:#fff; }
 .sheet.no-tags .mode-tagged-wrap { display:none; }
@@ -422,7 +427,7 @@ h2 { font-size:20px; line-height:1.2; margin:0 0 8px; text-wrap:balance; }
     <div class="sheet-modes">
       <button type="button" class="mode mode-fix" id="sheet-fix"><b>🔧 Needs a fix</b><span>Good event, wrong card. It waits, and comes back by itself once the card changes.</span></button>
       <button type="button" class="mode mode-notbear" id="sheet-notbear"><b>🚫🐻 Not bear</b><span>Not ours. Final — every night of this party.</span></button>
-      <div class="mode mode-tagged-wrap"><div class="chips tag-chips" id="sheet-event-tags"></div><button type="button" class="mode mode-tagged" id="sheet-tagged"><b>🏷 Keep it — not bear, but…</b><span>Tap what it is, then this. It stays on the calendar, every night of this party; the next run writes the tags.</span></button></div>
+      <div class="mode mode-tagged-wrap"><div class="tag-chips-label">🏷 Tags — tap to add or remove. The ones already on are its tags now.</div><div class="chips tag-chips" id="sheet-event-tags"></div><button type="button" class="mode mode-bear-tags" id="sheet-bear-tags"><b>🐻 Bear, with these tags</b><span>It is bear. Every night of this party carries exactly the tags you left on.</span></button><button type="button" class="mode mode-tagged" id="sheet-tagged"><b>🏷 Keep it — not bear, but…</b><span>Not bear, kept for the tags you left on. Every night of this party; the next run writes them.</span></button></div>
       <button type="button" class="mode mode-never" id="sheet-never"><b>🗑 Not an event</b><span>A duplicate, a fragment, junk. Final, whatever it says later.</span></button>
       <button type="button" class="mode mode-ask" id="sheet-ask-mode"><b>🙋 Ask a friend</b><span>Not sure? A friend who knows the city answers from a page; their answer lands on this card, the swipe stays yours.</span></button>
     </div>
@@ -800,6 +805,7 @@ window.__startDeck = function () {
   // right = bear, left = not bear, no sheet, no "later".
   function isConflict(c) { return Boolean(c) && c.kind === 'verdict-conflict'; }
   function isManual(c) { return c && c.kind === 'manual'; }
+  function isParty(c) { return isManual(c) && c.proposal && c.proposal.action === 'party'; }
   function isChoose(c) { return isManual(c) && c.proposal && c.proposal.action === 'choose' && Array.isArray(c.proposal.options) && c.proposal.options.length === 2; }
   function renderFilters() {
     var c = counts();
@@ -1503,14 +1509,17 @@ window.__startDeck = function () {
     // "Keep it, not bear, but…": a tagged verdict with its tags, then the
     // approval — under the dropped card's fix target when it has one.
     var taggedKeep = verdict === 'approve' && reason && reason.mode === 'tagged' && (reason.eventTags || []).length > 0;
+    // "Bear, with these tags": a bear verdict carrying exactly the tags left
+    // on (the owner's tags win over the machine's), then the same approval.
+    var bearTagged = verdict === 'approve' && reason && reason.mode === 'bear-tags';
     // An answer on a PARKED kept card ends the maybe: a verdict (not bear,
     // tagged) replaces it in the store by itself; an approval or a note is
     // only a deck decision, so the maybe is cleared with it — or the next
     // run would still hold the party out. A parked not-bear card's swipe is
     // a verdict already.
-    var clearsMaybe = card.parked === true && card.kind !== 'dropped' && !isConflict(card) && !alsoNotBear && !taggedKeep;
-    var request = taggedKeep
-      ? postBear(card, 'tagged', null, reason.eventTags).then(keepBear).then(function () {
+    var clearsMaybe = card.parked === true && card.kind !== 'dropped' && !isConflict(card) && !alsoNotBear && !taggedKeep && !bearTagged;
+    var request = taggedKeep || bearTagged
+      ? postBear(card, bearTagged ? 'bear' : 'tagged', null, reason.eventTags).then(keepBear).then(function () {
           if (isConflict(card)) return null;
           var target = card.fixTarget || null;
           return post({ key: target ? target.key : card.key, kind: target ? 'new' : card.kind, verdict: 'approve', runId: deck.runId, snapshot: target || card.proposal, reason: null }).then(keepDecision);
@@ -1522,6 +1531,12 @@ window.__startDeck = function () {
       : droppedApprove
       ? postBear(card, 'bear').then(keepBear).then(function () {
           return post({ key: card.fixTarget.key, kind: 'new', verdict: 'approve', runId: deck.runId, snapshot: card.fixTarget, reason: null }).then(keepDecision);
+        })
+      : isParty(card) && verdict === 'approve'
+      // A saved party swiped right: bear, every night of it, then the card's
+      // own approval so it leaves the deck (the phone has nothing to run).
+      ? postBear(card, 'bear', null, card.proposal.tags || []).then(keepBear).then(function () {
+          return post({ key: card.key, kind: card.kind, verdict: 'approve', runId: deck.runId, snapshot: card.proposal, reason: null }).then(keepDecision);
         })
       : card.kind === 'dropped' || isConflict(card)
       ? postBear(card, verdict === 'approve' ? 'bear' : 'not_bear').then(keepBear)
@@ -1698,12 +1713,14 @@ window.__startDeck = function () {
     var isDropped = !item.bulk && card.kind === 'dropped';
     var isGone = !item.bulk && card.kind === 'gone';
     var isManualCard = !item.bulk && isManual(card);
-    sheet.classList.toggle('gone', isGone || isManualCard);
+    var isPartyCard = !item.bulk && isParty(card);
+    sheet.classList.toggle('gone', isGone || (isManualCard && !isPartyCard));
     // "Keep it, not bear, but…" is for event cards only: a bar, a gone
     // record, a manual card or a bulk answer has no tags to give.
-    sheet.classList.toggle('no-tags', Boolean(item.bulk) || isGone || isManualCard || card.kind === 'bar' || isChoose(card));
+    sheet.classList.toggle('no-tags', Boolean(item.bulk) || isGone || (isManualCard && !isPartyCard) || card.kind === 'bar' || isChoose(card));
+    sheet.classList.toggle('party', isPartyCard);
     var tagChips = document.getElementById('sheet-event-tags');
-    var preset = (card.eventTags || []).concat(card.bearVerdictTags || []);
+    var preset = (card.eventTags || []).concat(card.bearVerdictTags || []).concat(isPartyCard && Array.isArray(card.proposal.tags) ? card.proposal.tags : []);
     tagChips.innerHTML = (deck.eventTagChoices || []).map(function (choice) {
       return '<span class="chip' + (preset.indexOf(choice.tag) !== -1 ? ' on' : '') + '" data-tag="' + choice.tag + '">' + choice.label + '</span>';
     }).join('');
@@ -1716,7 +1733,7 @@ window.__startDeck = function () {
       : isDropped
       ? 'It IS ours, and the card is wrong. The next run keeps it; it waits, and comes back by itself once the card changes.'
       : 'Good event, wrong card. It waits, and comes back by itself once the card changes.';
-    document.getElementById('sheet-notbear').querySelector('span').textContent = isDropped ? 'Right call. Final — every night of this party.' : 'Not ours. Final — every night of this party.';
+    document.getElementById('sheet-notbear').querySelector('span').textContent = isPartyCard ? 'Hidden from the site, every night of this party. Nothing is deleted; you can bring it back.' : isDropped ? 'Right call. Final — every night of this party.' : 'Not ours. Final — every night of this party.';
     document.getElementById('sheet-title').textContent = item.bulk
       ? item.label + ' — the same answer for every one'
       : (card.kind === 'bar' ? card.proposal.name : card.proposal.title) + (item.cards.length > 1 ? ' · ' + item.cards.length + ' ' + unitOf(item.series, item.cards.length) : '');
@@ -1725,7 +1742,7 @@ window.__startDeck = function () {
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
     document.getElementById('sheet-text').placeholder = 'Anything else (optional)';
-    document.getElementById('sheet-heading').textContent = isManualCard ? 'Not now — why?' : isGone ? 'Keep it — why?' : friendMode ? 'What’s not right?' : 'Not yet — why?';
+    document.getElementById('sheet-heading').textContent = isPartyCard ? 'Bear or not?' : isManualCard ? 'Not now — why?' : isGone ? 'Keep it — why?' : friendMode ? 'What’s not right?' : 'Not yet — why?';
     if (friendMode) {
       document.getElementById('sheet-fix').querySelector('span').textContent = 'A real bear event, but something on the card is wrong. Tap what, add a note.';
       document.getElementById('sheet-notbear').querySelector('span').textContent = 'Not a bear crowd.';
@@ -1895,19 +1912,21 @@ window.__startDeck = function () {
     // Kept for what it is: the verdict store gets a tagged verdict + the tags, and
     // the card is approved under its own key so Execute writes it. One
     // gesture, both stores — the same shape as a bear swipe on a dropped card.
-    if (mode === 'tagged') {
+    if (mode === 'tagged' || mode === 'bear-tags') {
       var eventTags = Array.prototype.map.call(document.querySelectorAll('#sheet-event-tags .chip.on'), function (el) { return el.getAttribute('data-tag'); });
-      if (eventTags.length === 0) { toast('Tap at least one tag first'); return; }
+      if (mode === 'tagged' && eventTags.length === 0) { toast('Tap at least one tag first'); return; }
       sheet.classList.remove('open'); fitSheet(); pending = null;
-      decide(card, 'approve', { tags: [], text: text, mode: 'tagged', eventTags: eventTags }, 'gone-right');
-      toast('Kept — ' + eventTags.join(', ') + '. Final for every night of this party; the next run writes the tags.');
+      decide(card, 'approve', { tags: [], text: text, mode: mode, eventTags: eventTags }, 'gone-right');
+      toast(mode === 'bear-tags'
+        ? 'Bear' + (eventTags.length ? ' — ' + eventTags.join(', ') : ', no tags of yours') + '. Every night of this party; the next run writes it.'
+        : 'Kept — ' + eventTags.join(', ') + '. Final for every night of this party; the next run writes the tags.');
       return;
     }
     sheet.classList.remove('open'); fitSheet(); pending = null;
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
     // A gone card's only answer is "keep" (its left swipe is not a rejection).
-    if (!card.bulk && (card.cards[0].kind === 'gone' || isManual(card.cards[0]))) mode = 'keep';
+    if (!card.bulk && (card.cards[0].kind === 'gone' || (isManual(card.cards[0]) && !(isParty(card.cards[0]) && mode === 'not-bear')))) mode = 'keep';
     var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
     // A bulk answer: every item of the set gets this reason.
     if (card.bulk) {
@@ -1923,11 +1942,13 @@ window.__startDeck = function () {
     // A conflict card's every left answer is the same one: not bear.
     if (isConflict(card.cards[0])) { decide(card, 'reject', null, 'gone-left'); return; }
     decide(card, 'reject', reason, 'gone-left');
+    if (!card.bulk && isParty(card.cards[0]) && mode === 'not-bear') { toast('Not bear — hidden from the site, nothing deleted'); return; }
     toast(mode === 'keep' ? 'Kept on the calendar' : mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
   }
   document.getElementById('sheet-fix').onclick = function () { answerSheet('fix'); };
   document.getElementById('sheet-notbear').onclick = function () { answerSheet('not-bear'); };
   document.getElementById('sheet-tagged').onclick = function () { answerSheet('tagged'); };
+  document.getElementById('sheet-bear-tags').onclick = function () { answerSheet('bear-tags'); };
   document.getElementById('sheet-never').onclick = function () { answerSheet('never'); };
   function notBearTop() {
     var c = topItem(); if (!c) return;
