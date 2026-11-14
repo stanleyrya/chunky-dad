@@ -136,8 +136,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/thealleybarboston",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJDzxFQ4Rw44kRAxo45UBkJKM",
       "gayCities": "https://boston.gaycities.com/bars/127-the-alley-bar",
-      "gayCitiesLastScrapedAt": "2026-06-13T20:34:56.886Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-13T20:34:56.886Z"
     },
     {
       "name": "Legacy",
@@ -191,8 +191,8 @@ const scraperBars = {
       "gayCities": "https://chicago.gaycities.com/bars/311263-meeting-house-tavern",
       "faviconBg": "#ce5417",
       "faviconFg": "#edc4a2",
-      "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-13T18:37:35.740Z"
     },
     {
       "name": "The SoFo Tap",
@@ -205,8 +205,8 @@ const scraperBars = {
       "gayCities": "https://chicago.gaycities.com/bars/2076-the-sofo-tap",
       "faviconBg": "#000000",
       "faviconFg": "#000000",
-      "gayCitiesLastScrapedAt": "2026-06-13T18:37:37.979Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-13T18:37:37.979Z"
     },
     {
       "name": "Jackhammer",
@@ -220,8 +220,8 @@ const scraperBars = {
       "gayCities": "https://chicago.gaycities.com/bars/176-jackhammer",
       "faviconBg": "#0b0b0b",
       "faviconFg": "#f6f6f6",
-      "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-13T18:37:40.195Z"
     },
     {
       "name": "Touché",
@@ -232,8 +232,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/ToucheChicago",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJnwLkWrzRD4gREreJ-KlTEoU",
       "gayCities": "https://chicago.gaycities.com/bars/184-touch%C3%A9",
-      "gayCitiesLastScrapedAt": "2026-06-13T20:34:54.431Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-13T20:34:54.431Z"
     },
     {
       "name": "Cell Block",
@@ -244,8 +244,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/cellblockchi",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJP1xBx7DTD4gR1jLvMA_vZss",
       "gayCities": "https://chicago.gaycities.com/bars/145-cell-block",
-      "gayCitiesLastScrapedAt": "2026-06-14T01:14:36.735Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-14T01:14:36.735Z"
     },
     {
       "name": "Metro",
@@ -321,6 +321,12 @@ const scraperBars = {
       "address": "1335 Green Court Northwest, Washington, District of Columbia",
       "coordinates": "38.9044841, -77.0308673",
       "scene": "leather"
+    },
+    {
+      "name": "Icon DC",
+      "city": "dc",
+      "address": "2001 11th St NW, Washington, DC 20001",
+      "coordinates": "38.9171577, -77.0268211"
     }
   ],
   "denver": [
@@ -363,8 +369,8 @@ const scraperBars = {
       "gayCities": "https://fortlauderdale.gaycities.com/bars/309115-eagle-wilton-manors",
       "faviconBg": "#ededed",
       "faviconFg": "#161314",
-      "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-13T22:28:52.503Z"
     },
     {
       "name": "Gym Sports Bar",
@@ -402,8 +408,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/scandalsfla",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJK4HWoYMB2YgRf442vxEUrM8",
       "gayCities": "https://fortlauderdale.gaycities.com/bars/256-scandals-saloon",
-      "gayCitiesLastScrapedAt": "2026-06-14T03:19:30.718Z",
-      "scene": "adjacent"
+      "scene": "adjacent",
+      "gayCitiesLastScrapedAt": "2026-06-14T03:19:30.718Z"
     },
     {
       "name": "The Westin Fort Lauderdale",
@@ -487,8 +493,8 @@ const scraperBars = {
       "gayCities": "https://losangeles.gaycities.com/bars/357-eagle-la",
       "faviconBg": "#040404",
       "faviconFg": "#74706a",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:14:53.360Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-13T15:14:53.360Z"
     },
     {
       "name": "Precinct LA",
@@ -503,8 +509,8 @@ const scraperBars = {
       "favicon": "https://linktr.ee/precinctdtla",
       "faviconBg": "#23252b",
       "faviconFg": "#86878c",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:14:55.610Z",
-      "scene": "adjacent"
+      "scene": "adjacent",
+      "gayCitiesLastScrapedAt": "2026-06-13T15:14:55.610Z"
     },
     {
       "name": "Akbar",
@@ -587,8 +593,8 @@ const scraperBars = {
       "gayCities": "https://london.gaycities.com/bars/1704-the-duke-of-wellington",
       "faviconBg": "#522838",
       "faviconFg": "#d8ca8e",
-      "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-13T16:37:27.264Z"
     },
     {
       "name": "Kings Arms",
@@ -599,8 +605,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/kingsarms.soho",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJBUDtIZcEdkgR0k-Xw7rA8wM",
       "gayCities": "https://london.gaycities.com/bars/2046-the-kings-arms",
-      "gayCitiesLastScrapedAt": "2026-06-13T16:37:29.296Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-13T16:37:29.296Z"
     },
     {
       "name": "Eagle London",
@@ -614,8 +620,8 @@ const scraperBars = {
       "gayCities": "https://london.gaycities.com/bars/1685-eagle-london",
       "faviconBg": "#060606",
       "faviconFg": "#787878",
-      "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-13T16:37:31.585Z"
     },
     {
       "name": "Westminster Pier",
@@ -672,8 +678,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/groups/42513323876/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ6615i68byUwRS5KOpOHOFB8",
       "gayCities": "https://montreal.gaycities.com/bars/724-le-stud",
-      "gayCitiesLastScrapedAt": "2026-06-14T01:14:32.066Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-14T01:14:32.066Z"
     },
     {
       "name": "Aigle Noir",
@@ -683,8 +689,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/Bar.Aigle.Noir/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJEc7NGK4byUwR1QVPh5qsYCY",
       "gayCities": "https://montreal.gaycities.com/bars/710-aigle-noir",
-      "gayCitiesLastScrapedAt": "2026-06-14T01:14:34.423Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-14T01:14:34.423Z"
     },
     {
       "name": "Bain Mathieu",
@@ -733,8 +739,8 @@ const scraperBars = {
       "gayCities": "https://newyork.gaycities.com/bars/3486-rockbar-nyc",
       "faviconBg": "#030303",
       "faviconFg": "#7a7a7a",
-      "gayCitiesLastScrapedAt": "2026-06-14T16:38:16.402Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-14T16:38:16.402Z"
     },
     {
       "name": "Eagle NYC",
@@ -749,9 +755,9 @@ const scraperBars = {
       "gayCities": "https://newyork.gaycities.com/bars/400-eagle-nyc",
       "faviconBg": "#f0f0f0",
       "faviconFg": "#565656",
+      "scene": "leather",
       "gayCitiesLastScrapedAt": "2026-06-26T17:08:38.515Z",
-      "wikipediaLastScrapedAt": "2026-06-26T15:16:42.784Z",
-      "scene": "leather"
+      "wikipediaLastScrapedAt": "2026-06-26T15:16:42.784Z"
     },
     {
       "name": "3 Dollar Bill",
@@ -776,8 +782,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/TysNYC",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJaVvpXJNZwokRT3p02KL_TrY",
       "gayCities": "https://newyork.gaycities.com/bars/388-tys-bar-nyc",
-      "gayCitiesLastScrapedAt": "2026-06-14T16:38:20.711Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-14T16:38:20.711Z"
     },
     {
       "name": "Nowhere Bar",
@@ -788,8 +794,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/nowherebar",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJZ1fMFZ5ZwokRkYrV85CZorY",
       "gayCities": "https://newyork.gaycities.com/bars/415-nowhere-bar",
-      "gayCitiesLastScrapedAt": "2026-06-14T16:38:22.742Z",
-      "scene": "adjacent"
+      "scene": "adjacent",
+      "gayCitiesLastScrapedAt": "2026-06-14T16:38:22.742Z"
     },
     {
       "name": "Albatross",
@@ -1002,8 +1008,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/Bearsden-Paris-306571042732756/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJ3wmsgx5u5kcRX4l_NuRC3z0",
       "gayCities": "https://paris.gaycities.com/bars/1625-bears-den",
-      "gayCitiesLastScrapedAt": "2026-06-13T16:37:22.662Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-13T16:37:22.662Z"
     },
     {
       "name": "El Hombre",
@@ -1012,8 +1018,8 @@ const scraperBars = {
       "coordinates": "48.859861, 2.349458",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJsYcLoB5u5kcRvlZDfSyg7w4",
       "gayCities": "https://paris.gaycities.com/bars/307921-el-hombre",
-      "gayCitiesLastScrapedAt": "2026-06-13T16:37:24.689Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-13T16:37:24.689Z"
     },
     {
       "name": "AU WORKSHOP",
@@ -1114,8 +1120,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/ahouseprovincetown",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJyQ3ZXX6n_IkR0_ZfyWwD6Zg",
       "gayCities": "https://ptown.gaycities.com/bars/535-a-house",
-      "gayCitiesLastScrapedAt": "2026-06-13T20:34:59.308Z",
-      "scene": "adjacent"
+      "scene": "adjacent",
+      "gayCitiesLastScrapedAt": "2026-06-13T20:34:59.308Z"
     },
     {
       "name": "Boatslip",
@@ -1148,8 +1154,8 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/gifford_house",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJE9zxSn6n_IkRbOMJFiVbw_k",
       "gayCities": "https://ptown.gaycities.com/bars/543-purgatory-gifford-house",
-      "gayCitiesLastScrapedAt": "2026-06-14T01:14:29.670Z",
-      "scene": "adjacent"
+      "scene": "adjacent",
+      "gayCitiesLastScrapedAt": "2026-06-14T01:14:29.670Z"
     },
     {
       "name": "Red Room",
@@ -1190,8 +1196,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/studsbarpv/",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJYT0eSbpFIYQRxx74YO-xYsY",
       "gayCities": "https://vallarta.gaycities.com/bars/309956-studs-bear-bar",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:19:29.495Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-13T15:19:29.495Z"
     },
     {
       "name": "CC Slaughters",
@@ -1257,9 +1263,9 @@ const scraperBars = {
       "gayCities": "https://seattle.gaycities.com/bars/302690-diesel",
       "faviconBg": "#efeeed",
       "faviconFg": "#7e4b3c",
+      "scene": "bear",
       "gayCitiesLastScrapedAt": "2026-06-26T17:08:40.863Z",
-      "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z",
-      "scene": "bear"
+      "wikipediaLastScrapedAt": "2026-06-26T15:16:42.812Z"
     },
     {
       "name": "The Lumber Yard Bar",
@@ -1271,8 +1277,8 @@ const scraperBars = {
       "gayCities": "https://seattle.gaycities.com/bars/309627-the-lumber-yard-bar",
       "faviconBg": "#5d3d25",
       "faviconFg": "#e9e8e6",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z",
-      "scene": "adjacent"
+      "scene": "adjacent",
+      "gayCitiesLastScrapedAt": "2026-06-13T15:14:46.563Z"
     },
     {
       "name": "The Cuff Complex",
@@ -1285,8 +1291,8 @@ const scraperBars = {
       "gayCities": "https://seattle.gaycities.com/bars/514-the-cuff-complex",
       "faviconBg": "#474747",
       "faviconFg": "#767676",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-13T15:14:48.626Z"
     },
     {
       "name": "Seattle Eagle",
@@ -1299,9 +1305,9 @@ const scraperBars = {
       "gayCities": "https://seattle.gaycities.com/bars/506-seattle-eagle",
       "faviconBg": "#20201f",
       "faviconFg": "#8a836c",
+      "scene": "leather",
       "gayCitiesLastScrapedAt": "2026-06-26T17:08:43.316Z",
-      "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z",
-      "scene": "leather"
+      "wikipediaLastScrapedAt": "2026-06-26T15:16:42.842Z"
     },
     {
       "name": "CC’s Seattle",
@@ -1311,8 +1317,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/ccsseattle",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJk-Ws_tFqkFQRc2h8MPRvv5I",
       "gayCities": "https://seattle.gaycities.com/bars/505-ccs-seattle",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:14:51.206Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-13T15:14:51.206Z"
     },
     {
       "name": "Madison Pub",
@@ -1321,8 +1327,8 @@ const scraperBars = {
       "coordinates": "47.6133619, -122.3149054",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJB_-ecc5qkFQRS1xH4lgadrg",
       "gayCities": "https://seattle.gaycities.com/bars/508-madison-pub",
-      "gayCitiesLastScrapedAt": "2026-06-13T15:19:20.182Z",
-      "scene": "adjacent"
+      "scene": "adjacent",
+      "gayCitiesLastScrapedAt": "2026-06-13T15:19:20.182Z"
     },
     {
       "name": "Pony",
@@ -1366,8 +1372,8 @@ const scraperBars = {
       "gayCities": "https://sanfrancisco.gaycities.com/bars/304619-sf-eagle",
       "faviconBg": "#5f6477",
       "faviconFg": "#e1e1e1",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:19.861Z"
     },
     {
       "name": "Powerhouse",
@@ -1380,8 +1386,8 @@ const scraperBars = {
       "gayCities": "https://sanfrancisco.gaycities.com/bars/43-powerhouse",
       "faviconBg": "#131719",
       "faviconFg": "#14181b",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:22.526Z"
     },
     {
       "name": "Hole in the Wall Saloon",
@@ -1391,8 +1397,8 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/the-hole-in-the-wall-saloon",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJExXNdCh-j4AR6JuGm4ElqcQ",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/40-hole-in-the-wall-saloon",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:24.790Z",
-      "scene": "leather"
+      "scene": "leather",
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:24.790Z"
     },
     {
       "name": "Lone Star Saloon",
@@ -1405,8 +1411,8 @@ const scraperBars = {
       "gayCities": "https://sanfrancisco.gaycities.com/bars/42-lone-star-saloon",
       "faviconBg": "#020000",
       "faviconFg": "#931d20",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:27.073Z"
     },
     {
       "name": "440 Castro",
@@ -1417,8 +1423,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/440Castro",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJlYxnqhx-j4ARE6-6BQBetEI",
       "gayCities": "https://sanfrancisco.gaycities.com/bars/3-castro",
-      "gayCitiesLastScrapedAt": "2026-06-14T05:42:29.719Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-14T05:42:29.719Z"
     },
     {
       "name": "Public Works",
@@ -1494,8 +1500,8 @@ const scraperBars = {
       "facebook": "https://www.facebook.com/eagletokyojp",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJAQCrt9yMGGARObx5wDPQtAA",
       "gayCities": "https://tokyo.gaycities.com/bars/307927-eagle-tokyo",
-      "gayCitiesLastScrapedAt": "2026-06-14T09:13:52.895Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-14T09:13:52.895Z"
     },
     {
       "name": "EAGLE TOKYO BLUE",
@@ -1505,8 +1511,8 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/eagletokyojp",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJVVvvklSNGGAR4pCosef9zpQ",
       "gayCities": "https://tokyo.gaycities.com/bars/312380-eagle-tokyo-blue",
-      "gayCitiesLastScrapedAt": "2026-06-14T09:13:55.162Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-14T09:13:55.162Z"
     }
   ],
   "toronto": [
@@ -1562,8 +1568,8 @@ const scraperBars = {
       "instagram": "https://www.instagram.com/funhogranchlv",
       "googleMaps": "https://www.google.com/maps/place/?q=place_id:ChIJKfM4OVvEyIARKXe7Mp57Uv0",
       "gayCities": "https://lasvegas.gaycities.com/bars/1346-fun-hog-ranch",
-      "gayCitiesLastScrapedAt": "2026-06-14T01:14:27.328Z",
-      "scene": "bear"
+      "scene": "bear",
+      "gayCitiesLastScrapedAt": "2026-06-14T01:14:27.328Z"
     },
     {
       "name": "Dust Las Vegas",
