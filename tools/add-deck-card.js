@@ -7,6 +7,7 @@
 //   node tools/add-deck-card.js remove --city sydney --uid <uid> --why "…"
 //   node tools/add-deck-card.js edit   --city sydney --uid <uid> --why "…" --set endDate=2026-10-16T22:00:00+11:00
 //   node tools/add-deck-card.js choose --title "…" --why "…" --option "Keep A" --option "Keep B" [--city sf --uid <uid>] [--url <page>] [--image <flyer>]
+//   node tools/add-deck-card.js party  --city la --uid <uid> --why "…"   (a saved party: bear, keep for tags, or not bear)
 //   node tools/add-deck-card.js list
 //   node tools/add-deck-card.js drop --key "manual|…"
 //
@@ -56,7 +57,14 @@ function readSavedRecord(repoRoot, city, uid) {
         notes: String(hit.notes || ''),
         bar: String(fields.bar || ''),
         address: String(fields.address || ''),
-        series: Boolean(hit.recurrence)
+        series: Boolean(hit.recurrence),
+        description: String(fields.description || ''),
+        bearSource: String(fields.bearSource || ''),
+        tags: String(fields.tags || '').split(',').map((t) => t.trim()).filter(Boolean),
+        // Every upcoming night of the same party in this calendar: the
+        // answer on a party card covers them all.
+        nights: events.filter((event) => String(event.title || '').trim().toLowerCase() === String(hit.title || '').trim().toLowerCase()
+            && event.startDate instanceof Date && event.startDate.getTime() >= Date.now() - 86400000).length
     };
 }
 
@@ -76,7 +84,7 @@ function buildCard(args, options = {}) {
     const city = String(args.city || '').trim();
     const uid = String(args.uid || '').trim();
     const record = city && uid ? readSavedRecord(repoRoot, city, uid) : null;
-    if (record && record.series) throw new Error('that saved event is a series — manual cards never touch a series');
+    if (record && record.series && action !== 'party') throw new Error('that saved event is a series — manual cards never touch a series');
     const cities = (() => { try { const sc = require('../scripts/scraper-cities'); return (sc && sc.cities) || sc || {}; } catch (_) { return {}; } })();
     const timezone = args.timezone || (cities[city] && cities[city].timezone) || null;
     const input = {
@@ -106,6 +114,12 @@ function buildCard(args, options = {}) {
         });
     }
     if (action === 'choose') input.options = args.option;
+    if (action === 'party' && record) {
+        input.tags = record.tags;
+        input.bearSource = record.bearSource;
+        input.description = record.description;
+        input.nights = record.nights;
+    }
     return reviewQueue.normalizeManualCard(input);
 }
 
@@ -130,7 +144,7 @@ function main(argv, options = {}) {
         return { removed: dropped.removed };
     }
     if (!reviewQueue.MANUAL_ACTIONS.includes(command)) {
-        throw new Error(`usage: add-deck-card.js <remove|edit|choose|list|drop> … (see the header of tools/add-deck-card.js)`);
+        throw new Error(`usage: add-deck-card.js <remove|edit|choose|party|list|drop> … (see the header of tools/add-deck-card.js)`);
     }
     const card = buildCard(args, options);
     reviewQueue.saveManualCards(cardsPath, reviewQueue.upsertManualCard(store, card));

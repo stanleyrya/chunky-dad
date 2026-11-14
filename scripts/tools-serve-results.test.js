@@ -2749,3 +2749,23 @@ test('describeBearSource / describeEventTags: why it is on the site and what app
   assert.ok(line.includes('Approving also saves the tags') && line.includes('<b>Leather</b>') && !line.includes('<b>Kink</b>') && line.includes('bold keeps'), line);
   assert.ok(describeEventTags(['kink'], true).includes('Tags it would carry') && !describeEventTags(['kink'], true).includes('bold keeps'));
 });
+
+test('party card: a saved party shown whole — flyer, night, why it is on the site, its tags, every night it covers (owner 2026-11-14)', () => {
+  const reviewQueue = require('../tools/review-queue');
+  const { renderReviewCard } = require('../tools/serve-results.js');
+  const card = reviewQueue.normalizeManualCard({ action: 'party', title: 'Gear Night', why: 'You said bear on Oct 1.', city: 'dallas', uid: 'ABC', startDate: '2026-12-06T03:00:00.000Z', bar: 'Dallas Eagle',
+    tags: ['leather', 'rubber'], bearSource: 'manual-bear (verdict store 2026-10-01)', description: 'Grab your gear, it’s time for GEAR NIGHT!', nights: 3 });
+  assert.deepStrictEqual(card.tags, ['leather', 'rubber']);
+  assert.strictEqual(card.nights, 3);
+  assert.throws(() => reviewQueue.normalizeManualCard({ action: 'party', title: 'X', why: 'y', city: 'dallas' }), /uid/);
+  const html = renderReviewCard({ kind: 'manual', key: card.key, proposal: { ...card, kind: 'manual' } }, {});
+  assert.ok(html.includes('Check a saved party') && html.includes('all 3 upcoming nights'), 'says how many nights the answer covers');
+  assert.ok(html.includes('🐻 bear, because you said so on Oct 1'), 'why it is on the site, in plain words');
+  assert.ok(html.includes('Tags now: <b>Leather</b>, Rubber'), 'its current tags, the keeping ones bold');
+  const page = require('fs').readFileSync(require('path').join(__dirname, '..', 'tools', 'serve-results.js'), 'utf8');
+  assert.ok(page.includes('id="sheet-bear-tags"') && page.includes("reason.mode === 'bear-tags'"), 'every event sheet can say bear with exactly the tags left on');
+  assert.ok(html.includes('Grab your gear'), 'the description is on the card');
+  assert.ok(!html.includes('<button'), 'swipes and the sheet are the only controls');
+  const bare = renderReviewCard({ kind: 'manual', key: 'k', proposal: { ...card, tags: [], kind: 'manual' } }, {});
+  assert.ok(bare.includes('No tags yet'));
+});
