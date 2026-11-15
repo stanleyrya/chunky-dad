@@ -2404,6 +2404,60 @@ test('a calendar twin card wears its own colour and shows both copies; a keep wi
   }
 });
 
+test('one direction on every card: a removal card is taken off with a LEFT swipe and kept with a right one; hints, stamps and buttons say it in plain words', () => {
+  // The owner (2026-11-14): "swipe it right. On a removal card that means
+  // not bear, take it off" — "SO CONFUSING". Every other card takes an
+  // event off with a left swipe; removal cards were the one exception.
+  const ctx = buildReviewCtx();
+  const removeCard = renderReviewCard({ kind: 'manual', key: 'manual|remove-la-u1', proposal: { kind: 'manual', key: 'manual|remove-la-u1', action: 'remove', title: 'Tea Dance', why: 'not a bear night', city: 'la', uid: 'U1', identifier: 'U1', startDate: '2030-10-16T08:00:00.000Z' } }, ctx);
+  assert.ok(removeCard.includes('← take it off the calendar · → keep it'), 'a hand-made removal says which way is which');
+  const editCard = renderReviewCard({ kind: 'manual', key: 'manual|edit-la-u1', proposal: { kind: 'manual', key: 'manual|edit-la-u1', action: 'edit', title: 'Tea Dance', why: 'ends at ten', city: 'la', uid: 'U1', identifier: 'U1', startDate: '2030-10-16T08:00:00.000Z', changes: { endDate: { from: '2030-10-16T11:00:00.000Z', to: '2030-10-16T12:00:00.000Z' } } } }, ctx);
+  assert.ok(editCard.includes('→ apply the change · ← not now'), 'an edit removes nothing: right still applies it');
+
+  const fixture = reviewRunFixture('20300101-051500');
+  fixture.goneFromSource = {
+    candidates: [{
+      key: 'gone|nyc|UID9', kind: 'gone', city: 'nyc', uid: 'UID9', identifier: 'UID9', title: 'BLUF NYC HARD',
+      startDate: '2030-10-11T02:00:00.000Z', endDate: '2030-10-11T06:00:00.000Z', timezone: 'America/New_York', bar: 'Eagle NYC', address: '554 W 28th St',
+      host: 'eagle-ny.com', site: 'eagle-ny.com', source: 'Eagle NYC', siteEvents: 21, horizonDay: '2031-01-03', misses: 2, reason: 'gone',
+      deepCheck: { verdict: 'site-removed', at: '2030-01-01T00:00:00.000Z', proof: 'listing-covers', proven: true },
+      proof: { kind: 'listing-covers', at: '2030-01-01T00:00:00.000Z', detail: 'the listing covers the night and does not carry it' },
+      instead: { sameNight: [], sameTitle: [] }
+    }],
+    state: {}, summary: { candidates: 1 }
+  };
+  const deck = reviewQueue.buildDeck(fixture, reviewQueue.emptyDecisionStore(), { now: 0, curatedBars: {} });
+  const html = renderReviewPage(deck, { runs: [], scriptName: 'display-saved-run' });
+  assert.ok(html.includes('← take it off the calendar · → keep it'), 'the gone card names both directions');
+  for (const old of ['→ remove from the calendar', '→ remove this copy', '→ remove it']) assert.ok(!html.includes(old), `"${old}" is gone from the page`);
+  assert.ok(html.includes('on a removal card: ← take it off · → keep it'), 'the key legend');
+
+  // The client: which cards are removals, and what each gesture does on one.
+  const helper = (name) => { const hit = html.match(new RegExp(`function ${name}\\(c\\) \\{[^\\n]*\\}\\n`)); assert.ok(hit, name); return hit[0]; };
+  const isRemoval = new Function(`${helper('isManual')}${helper('isRemoval')}return isRemoval;`)();
+  assert.equal(isRemoval({ kind: 'gone', proposal: { reason: 'gone' } }), true);
+  assert.equal(isRemoval({ kind: 'gone', proposal: { reason: 'twin' } }), true, 'an extra copy is a removal too');
+  assert.equal(isRemoval({ kind: 'manual', proposal: { action: 'remove' } }), true);
+  for (const other of [{ kind: 'manual', proposal: { action: 'edit' } }, { kind: 'manual', proposal: { action: 'choose', options: ['a', 'b'] } }, { kind: 'manual', proposal: { action: 'party' } }, { kind: 'new', proposal: {} }, { kind: 'dropped', proposal: {} }, null]) {
+    assert.equal(isRemoval(other), false, JSON.stringify(other));
+  }
+  for (const piece of [
+    // Left (swipe, ←, the button, ↖, n): the removal — still stored as approve, so the phone's side is unchanged.
+    "function takeOff(item) { decide(item, 'approve', null, 'gone-left'); }",
+    "if (isRemoval(c.cards[0])) { takeOff(c); return; }",
+    "if (!cancelled && lockedH && dx < -110 && (conflict || removal)) { notBearTop(); return; }",
+    // Right: keep — the sheet asks why, and the answer leaves to the right.
+    "if (isRemoval(c.cards[0])) { sheet.classList.remove('fix-first'); keepInstead(c); return; }",
+    "decide(card, 'reject', reason, isRemoval(card.cards[0]) ? 'gone-right' : 'gone-left');",
+    // What the finger sees while it is still down, and the buttons under the card.
+    '<div class="stamp ok">KEEP IT</div><div class="stamp no">TAKE IT OFF</div>',
+    "removalOnTop ? 'Take it off'", "removalOnTop ? 'Keep it'",
+    // A bulk answer never takes an event off quietly.
+    "if (isRemoval(c)) { if (!quiet) takeOff(item); return; }",
+    "take an event OFF the calendar."
+  ]) assert.ok(html.includes(piece), piece);
+});
+
 test('manual cards: teal card with band, an edit shows before → after, a choose shows both options as the swipes; the deck loads them from the shared dir; the decide route stores kind manual', async () => {
   const edit = { kind: 'manual', key: 'manual|edit-sydney-furry-friday', action: 'edit', title: 'Furry Friday', why: 'End runs to Sunday; a three-hour night like 9 Oct', city: 'sydney', uid: 'U1', identifier: 'U1', startDate: '2030-10-16T08:00:00.000Z', endDate: '2030-10-18T05:00:00.000Z', timezone: 'Australia/Sydney', bar: 'Kings Cross Hotel', changes: { endDate: { from: '2030-10-18T05:00:00.000Z', to: '2030-10-16T11:00:00.000Z' } }, createdAt: '2030-10-01T00:00:00.000Z' };
   const html = renderReviewCard({ kind: 'manual', key: edit.key, proposal: edit }, buildReviewCtx());
@@ -2741,6 +2795,7 @@ test('renderReviewBearRow: a kept card says when its bear wording is only on the
 test('describeBearSource / describeEventTags: why it is on the site and what approving writes, in plain words (owner 2026-11-14)', () => {
   const { describeBearSource, describeEventTags } = require('../tools/serve-results.js');
   assert.strictEqual(describeBearSource('manual-bear (verdict store 2026-09-19)'), '🐻 bear, because you said so on Sep 19');
+  assert.strictEqual(describeBearSource('poster'), '🐻 bear: a bear word on its own poster, at a bar you marked bear');
   assert.strictEqual(describeBearSource('manual-bear (overrode ai: drag show)'), '🐻 bear, because you said so');
   assert.strictEqual(describeBearSource('manual-tagged (verdict store 2026-11-11)'), '🏷 not bear, kept because you tagged it on Nov 11');
   assert.strictEqual(describeBearSource('tagged (bear-crowd: a beer bust at Lone Star Saloon, a bear bar)'), '🏷 not bear, kept for its tags: a beer bust at Lone Star Saloon, a bear bar');

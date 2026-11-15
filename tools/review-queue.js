@@ -501,7 +501,7 @@ function normalizeReason(reason) {
     // waits for the card to change, 'never' is final. "Not bear" stays a tag —
     // older stores, the phone and the bear verdict all read it there.
     const rawMode = typeof reason.mode === 'string' ? reason.mode.trim().toLowerCase() : '';
-    // 'keep' is the gone card's left swipe: the saved event stays.
+    // 'keep' is the removal card's right swipe: the saved event stays.
     const mode = rawMode === 'fix' || rawMode === 'never' || rawMode === 'keep' ? rawMode : '';
     if (tags.length === 0 && !text && !mode) return null;
     return mode ? { tags, text, mode } : { tags, text };
@@ -2147,7 +2147,7 @@ function buildDeck(runPayload, store, options = {}) {
     // "Gone from its source" (SharedCore.buildGoneFromSourceCandidates):
     // a saved upcoming event its first-party source has not listed for two
     // runs. One card per saved event, decided by its exact key only; a
-    // right swipe is a removal the phone executes, a left swipe keeps it.
+    // left swipe is a removal the phone executes, a right swipe keeps it.
     const gone = payload.goneFromSource && Array.isArray(payload.goneFromSource.candidates) ? payload.goneFromSource.candidates : [];
     gone.forEach((candidate, index) => {
         if (!candidate || typeof candidate !== 'object' || typeof candidate.key !== 'string' || !candidate.key) return;

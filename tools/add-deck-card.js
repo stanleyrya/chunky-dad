@@ -9,6 +9,10 @@
 //   node tools/add-deck-card.js choose --title "…" --why "…" --option "Keep A" --option "Keep B" [--city sf --uid <uid>] [--url <page>] [--image <flyer>]
 //   node tools/add-deck-card.js party  --city la --uid <uid> --why "…"   (a saved party: bear, keep for tags, or not bear)
 //   node tools/add-deck-card.js list
+//
+// On the deck LEFT always takes an event off and RIGHT keeps it: a remove
+// card is approved by a left swipe. A choose card's first --option is the
+// right swipe, so the keeping option goes first.
 //   node tools/add-deck-card.js drop --key "manual|…"
 //
 // With --city and --uid, the saved record is read from the published calendar

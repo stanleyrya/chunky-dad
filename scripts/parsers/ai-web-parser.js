@@ -28517,6 +28517,12 @@ TEXT:
                 vouchedBy: undatedRowVerdict.vouchedBy,
                 vouchKind: undatedRowVerdict.kind,
                 matchesRule: undatedRowVerdict.matchesRule,
+                // The rule the vouching phrase itself states, where it reads
+                // as one (report-only here: the derived date above is
+                // untouched; the standing-page rule in shared-core reads it).
+                phraseRrule: undatedRowVerdict.kind === 'cadence'
+                    ? ((this.extractRecurrenceFromDayPhrases(undatedRowVerdict.vouchedBy) || {}).rrule || '')
+                    : '',
                 window: undatedRowVerdict.window,
                 statedFutureDate: undatedRowVerdict.statedFutureDate
             };

@@ -1032,6 +1032,7 @@ function describeBearSource(source) {
     if (/^keyword\b/.test(raw)) return '🐻 bear: a bear word in its name or description';
     if (/^ai\b/.test(raw)) return '🐻 bear: the AI read it as bear';
     if (/^config\b/.test(raw)) return '🐻 bear: every event from this source counts';
+    if (/^poster\b/.test(raw)) return '🐻 bear: a bear word on its own poster, at a bar you marked bear';
     return `🐻 bear — ${escapeHtmlText(raw)}`;
 }
 
@@ -1203,8 +1204,8 @@ function renderReviewLinkHistory(entry, proposal, display) {
 // many runs it has been missing, why it is here (gone / the extra copy of
 // a twin / moved / date moved), what the site lists instead that night,
 // the same name on other nights, and the audit's deep check when there is
-// one. Right swipe = the phone removes it on the next execute; left swipe
-// = keep it.
+// one. Left swipe = take it off (the phone removes it on the next execute);
+// right swipe = keep it.
 function renderReviewGoneCard(entry, ctx = {}) {
     const p = entry && entry.proposal ? entry.proposal : {};
     const adapter = ctx.adapter;
@@ -1260,7 +1261,7 @@ function renderReviewGoneCard(entry, ctx = {}) {
     const description = String(p.description || '');
     return `<div class="card-body">
   ${renderReviewThumb({}, p.image)}
-  <div class="kind-row"><span class="kind kind-gone">🕳️ ${p.reason === 'duplicate' ? 'Extra copy of a saved event' : 'Gone from its source'}</span><span class="muted reason">→ remove from the calendar · ← keep</span></div>
+  <div class="kind-row"><span class="kind kind-gone">🕳️ ${p.reason === 'duplicate' ? 'Extra copy of a saved event' : 'Gone from its source'}</span><span class="muted reason">← take it off the calendar · → keep it</span></div>
   <h2>${escapeHtmlText(p.title)}</h2>
   <div class="line">📅 ${escapeHtmlText(dateLine)}</div>
   ${renderReviewRouteLine(ctx, { bar: p.bar, address: p.address, city: p.city, coordinates: p.location })}
@@ -1330,6 +1331,11 @@ function renderReviewVerdictConflictCard(entry, ctx = {}) {
 // remove → the phone deletes through the gone path and its guards; edit →
 // the phone applies the before→after changes once the before still matches;
 // choose → right is the first option, left the second, nothing executes.
+// ONE DIRECTION, EVERY CARD: left takes an event off (not bear, not ours,
+// remove it), right keeps it. A removal card used to be the one exception
+// — right approved the removal — and read as the opposite of every card
+// around it. The stored verdict is unchanged (approve = do what the card
+// proposes); only the gesture that sends it moved.
 // A saved party, shown whole (manual `party` card, owner 2026-11-14: "I
 // can't read anything about it. I can't tell what tags it has"): the
 // flyer, the night, the bar, the page, the description, why it is on the
@@ -1373,7 +1379,7 @@ function renderReviewManualCard(entry, ctx = {}) {
     const action = p.action === 'remove' ? 'Remove this saved event' : p.action === 'edit' ? 'Edit this saved event' : 'Your call';
     const hint = p.action === 'choose' && Array.isArray(p.options)
         ? `→ ${escapeHtmlText(p.options[0])} · ← ${escapeHtmlText(p.options[1])}`
-        : p.action === 'remove' ? '→ remove it · ← not now' : '→ apply the change · ← not now';
+        : p.action === 'remove' ? '← take it off the calendar · → keep it' : '→ apply the change · ← not now';
     const fieldLabel = { title: 'title', startDate: 'start', endDate: 'end', location: 'location', url: 'link', notes: 'notes' };
     const showValue = (field, value) => {
         if (!value) return '<span class="muted">(blank)</span>';
@@ -1414,8 +1420,8 @@ function renderReviewManualCard(entry, ctx = {}) {
 // record the owner is asked to clear — so it wears its own colour (the
 // twin band and tint, kind-twin) and never passes for a new event. The
 // copy on the card is the EXTRA one (fewer facts); the twin it keeps is
-// shown beside it, fact by fact, so the choice is visible. A right swipe
-// removes this copy on the next phone execute; a left swipe keeps both
+// shown beside it, fact by fact, so the choice is visible. A left swipe
+// takes this copy off on the next phone execute; a right swipe keeps both
 // (the sheet asks why — "keep the other one instead" is a note for the
 // next pass, not a delete).
 function renderReviewTwinCard(entry, ctx = {}) {
@@ -1447,7 +1453,7 @@ function renderReviewTwinCard(entry, ctx = {}) {
     const extraNote = extraWhy.length ? `why this one: ${escapeHtmlText(extraWhy.join(', '))}` : (p.tie ? 'a tie on facts — picked by id, so the same copy is on this card every run' : '');
     return `<div class="card-body twin">
   <div class="twin-band">👯 Calendar twin · one night saved twice · a hand-kept record, not a source proposal</div>
-  <div class="kind-row"><span class="kind kind-twin">👯 Remove the extra copy</span><span class="muted reason">→ remove this copy · ← keep both</span></div>
+  <div class="kind-row"><span class="kind kind-twin">👯 Remove the extra copy</span><span class="muted reason">← take this copy off · → keep both</span></div>
   <h2>${escapeHtmlText(p.title)}</h2>
   <div class="line">${why.length ? `One night because: ${escapeHtmlText(why.join('; '))}` : ''}</div>
   <div class="line muted">${calendarName ? `📱 ${escapeHtmlText(calendarName)} · ` : ''}${escapeHtmlText(p.city || '')}</div>
@@ -2393,7 +2399,7 @@ ${missingCalendarNotice}
   <button class="btn-skip" id="btn-skip" type="button"><span class="ic">↷</span><span class="lb">Skip</span></button>
   <button class="btn-ok" id="btn-approve" type="button"><span class="ic">✓</span><span class="lb">Approve</span></button>
 </div>
-<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button><span class="keys"> · ← not yet · ↖ not bear · ↙ needs a fix · ↓ pull down: ask a friend · → approve · ␣ skip · n not bear · m maybe · f ask a friend</span></div>
+<div class="meta"><span id="left"></span> · <button type="button" id="btn-undo">↩︎ Undo</button><span class="keys"> · ← not yet · ↖ not bear · ↙ needs a fix · ↓ pull down: ask a friend · → approve · ␣ skip · n not bear · m maybe · f ask a friend · on a removal card: ← take it off · → keep it</span></div>
 <div class="outbox" id="outbox" hidden></div>
 <div class="execute" id="execute"></div>
 ${snapshotBlock}
@@ -2787,6 +2793,13 @@ window.__startDeck = function () {
   function isManual(c) { return c && c.kind === 'manual'; }
   function isParty(c) { return isManual(c) && c.proposal && c.proposal.action === 'party'; }
   function isChoose(c) { return isManual(c) && c.proposal && c.proposal.action === 'choose' && Array.isArray(c.proposal.options) && c.proposal.options.length === 2; }
+  // A card that proposes taking a saved event off the calendar: gone from
+  // its source, an extra copy, or a removal put on the deck by hand. On
+  // these LEFT does it and RIGHT keeps the event — the same way round as
+  // every other card (left = off, right = stays).
+  function isRemoval(c) { return Boolean(c) && (c.kind === 'gone' || (isManual(c) && Boolean(c.proposal) && c.proposal.action === 'remove')); }
+  function takeOff(item) { decide(item, 'approve', null, 'gone-left'); }
+  function keepInstead(item) { pending = item; openSheet(item); }
   function renderFilters() {
     var c = counts();
     var html = '';
@@ -2824,6 +2837,8 @@ window.__startDeck = function () {
         el.setAttribute('data-key', item.key);
         el.innerHTML = item.cards[0].html.replace('<h2>', seriesStrip(item) + '<h2>') + (isConflict(item.cards[0])
           ? '<div class="stamp ok">🐻 BEAR</div><div class="stamp no">NOT BEAR</div>'
+          : isRemoval(item.cards[0])
+          ? '<div class="stamp ok">KEEP IT</div><div class="stamp no">TAKE IT OFF</div>'
           : isChoose(item.cards[0])
           ? '<div class="stamp ok">' + escapeHtml(item.cards[0].proposal.options[0]) + '</div><div class="stamp no">' + escapeHtml(item.cards[0].proposal.options[1]) + '</div>'
           : '<div class="stamp ok">APPROVE</div><div class="stamp no">NOT YET</div><div class="stamp ask">🙋 ASK A FRIEND</div>');
@@ -2869,6 +2884,9 @@ window.__startDeck = function () {
     document.getElementById('left').textContent = list.length + ' left' + (nights !== list.length ? ' (' + nights + ' nights)' : '');
     var disabled = list.length === 0;
     ['btn-reject', 'btn-skip', 'btn-approve', 'btn-ask'].forEach(function (id) { document.getElementById(id).disabled = disabled; });
+    var removalOnTop = list.length > 0 && isRemoval(list[0].cards[0]);
+    document.querySelector('#btn-approve .lb').textContent = removalOnTop ? 'Keep it' : friendMode ? 'Looks right' : 'Approve';
+    document.querySelector('#btn-reject .lb').textContent = removalOnTop ? 'Take it off' : friendMode ? 'Not right' : 'Not yet';
     // Maybe parks a new or a not-bear card; on a parked card the same
     // button takes the maybe back.
     var topCard = list.length > 0 ? list[0].cards[0] : null;
@@ -2936,7 +2954,7 @@ window.__startDeck = function () {
       var executed = d.executed ? '<div class="r ok">📱 written on the phone' + (d.executed.as ? ' (' + escapeHtml(d.executed.as) + ')' : '') + (d.executed.at ? ' · ' + escapeHtml(String(d.executed.at).replace('T', ' ').slice(0, 16)) : '') + '</div>' : '';
       var via = d.via ? '<div class="r">' + (String(d.via).indexOf('series|') === 0 ? '↪ with the series card — you decided the party there' : '↪ with the series — you decided its ' + escapeHtml(String(d.via).split('|')[3] || 'earlier') + ' night') + '</div>' : '';
       var night = d.key && d.key.split('|').length === 4 ? ' · ' + escapeHtml(d.key.split('|')[3]) : '';
-      li.innerHTML = '<span class="v">' + (d.verdict === 'approve' ? '✅' : d.rejectionMode === 'fix' ? '🔧' : d.rejectionMode === 'never' ? '🗑' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + via + executed + '</div>';
+      li.innerHTML = '<span class="v">' + (isRemoval(d) ? (d.verdict === 'approve' ? '🗑' : '✅') : d.verdict === 'approve' ? '✅' : d.rejectionMode === 'fix' ? '🔧' : d.rejectionMode === 'never' ? '🗑' : '🚫') + '</span><div class="t"><div>' + escapeHtml(d.title || d.key) + ' <span class="r">' + escapeHtml(d.kind) + night + (d.stampedAt ? ' · ' + escapeHtml(String(d.stampedAt).slice(0, 10)) : '') + '</span></div>' + (reason ? '<div class="r">' + escapeHtml(reason) + '</div>' : '') + via + executed + '</div>';
       if (d.queued) { var waitingMark = document.createElement('div'); waitingMark.className = 'r'; waitingMark.textContent = '📡 waiting to send to the Mac'; (li.querySelector('.t') || li).appendChild(waitingMark); }
       var btn = document.createElement('button');
       btn.type = 'button';
@@ -3241,7 +3259,9 @@ window.__startDeck = function () {
         + '<div class="lbody" data-act="go"><h4>' + escapeHtml(titleOf(c)) + '</h4>'
         + '<div class="lmeta"><span class="lkind">' + escapeHtml(tabOf(c.kind) === 'merge' ? 'update' : c.kind === 'series' ? 'series' : c.kind) + '</span>' + escapeHtml([whenOf(c), placeOf(c)].filter(Boolean).join(' · ') + nights) + '</div>'
         + (p.source ? '<div class="lmeta">' + escapeHtml(p.source) + '</div>' : '') + '</div>'
-        + '<div class="lacts"><button type="button" class="ok" data-act="approve">✓</button><button type="button" class="no" data-act="notbear">Not bear</button><button type="button" data-act="ask">🙋</button><button type="button" data-act="reject">Not yet…</button></div>'
+        + (isRemoval(c)
+          ? '<div class="lacts"><button type="button" class="no" data-act="takeoff">Take it off</button><button type="button" class="ok" data-act="reject">Keep it…</button></div>'
+          : '<div class="lacts"><button type="button" class="ok" data-act="approve">✓</button><button type="button" class="no" data-act="notbear">Not bear</button><button type="button" data-act="ask">🙋</button><button type="button" data-act="reject">Not yet…</button></div>')
         + '</div>';
     });
     var root = document.getElementById('list');
@@ -3257,6 +3277,7 @@ window.__startDeck = function () {
       var act = target.getAttribute('data-act');
       if (act === 'flyer') { openFlyer({ querySelector: function () { return target; } }); return; }
       if (act === 'go') { jumpTo(item); return; }
+      if (act === 'takeoff') { takeOff(item); return; }
       if (act === 'approve') { decide(item, 'approve', null, 'gone-right'); return; }
       if (act === 'notbear') { notBearItem(item); return; }
       if (act === 'reject') { pending = item; openSheet(item); return; }
@@ -3303,7 +3324,7 @@ window.__startDeck = function () {
       var act = target.getAttribute('data-act');
       if (act === 'list' || act === 'stack') { sourceOnly = name === '(no source)' ? '' : name; view = act; render(); window.scrollTo(0, 0); return; }
       var group = itemsOf(g.cards);
-      if (act === 'approve') { if (confirm('Approve all ' + g.cards.length + ' cards from ' + name + '?')) decideMany(group, 'approve', null); return; }
+      if (act === 'approve') { if (confirm('Approve all ' + g.cards.length + ' cards from ' + name + '?' + removalWarning(group))) decideMany(group, 'approve', null); return; }
       if (act === 'reject') { pending = { bulk: group, label: g.cards.length + ' cards from ' + name }; openSheet(pending); return; }
     };
   }
@@ -3324,9 +3345,14 @@ window.__startDeck = function () {
       + '<button type="button" class="ok" id="bulk-approve"' + (n ? '' : ' disabled') + '>Approve all</button>'
       + '<button type="button" class="no" id="bulk-notbear"' + (n ? '' : ' disabled') + '>Not bear, all</button>'
       + '<button type="button" id="bulk-reject"' + (n ? '' : ' disabled') + '>Not yet, all…</button>';
-    document.getElementById('bulk-approve').onclick = function () { if (confirm('Approve all ' + n + ' matching cards?')) decideMany(items(), 'approve', null); };
+    document.getElementById('bulk-approve').onclick = function () { if (confirm('Approve all ' + n + ' matching cards?' + removalWarning(items()))) decideMany(items(), 'approve', null); };
     document.getElementById('bulk-notbear').onclick = function () { if (confirm('Mark all ' + n + ' matching cards not bear? Final.')) decideMany(items(), 'reject', { tags: ['not bear'], text: words.trim() ? 'words: ' + words.trim() : '' }); };
     document.getElementById('bulk-reject').onclick = function () { pending = { bulk: items(), label: n + ' matching cards' }; openSheet(pending); };
+  }
+  // An "approve all" over removal cards approves the removals.
+  function removalWarning(list) {
+    var n = list.filter(function (item) { return isRemoval(item.cards[0]); }).length;
+    return n > 0 ? ' ' + n + ' of them take an event OFF the calendar.' : '';
   }
   function decideMany(list, verdict, reason) {
     list.forEach(function (item) {
@@ -3342,7 +3368,10 @@ window.__startDeck = function () {
   function notBearItem(item, quiet) {
     var c = item.cards[0];
     if (c.kind === 'dropped' || isConflict(c) || isChoose(c)) { decide(item, 'reject', null, 'gone-left'); return; }
-    if (c.kind === 'bar' || c.kind === 'gone' || isManual(c)) { if (!quiet) { pending = item; openSheet(item); } return; }
+    // A removal card: "not bear" is the removal. Never as part of a bulk
+    // answer — a removal is said card by card.
+    if (isRemoval(c)) { if (!quiet) takeOff(item); return; }
+    if (c.kind === 'bar' || isManual(c)) { if (!quiet) { pending = item; openSheet(item); } return; }
     decide(item, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     if (!quiet) toast('Not bear — final');
   }
@@ -3554,7 +3583,7 @@ window.__startDeck = function () {
       var alsoNotBear = records.length > 0 && records[0].notBearVerdict;
       var queued = records.some(function (r) { return r.queued; });
       if (friendMode) { toast(verdict === 'approve' ? 'Looks right — got it' : 'Noted'); return; }
-      toast((queued ? 'Kept on the phone — it sends when the Mac is back' : isConflict(card) ? (verdict === 'approve' ? 'Settled: bear — one verdict now, the next run keeps it' : 'Settled: not bear — one verdict now, the next run drops it') : isChoose(card) ? ('Noted: ' + card.proposal.options[verdict === 'approve' ? 0 : 1]) : isManual(card) ? (verdict === 'approve' ? (card.proposal.action === 'edit' ? 'Edit approved — the phone applies it on the next execute' : 'Removal approved — the phone takes it off the calendar on the next execute') : 'Not now') : card.kind === 'gone' ? (verdict === 'approve' ? (card.proposal && card.proposal.reason === 'twin' ? 'Removal approved — this copy comes off on the next execute, its twin stays' : 'Removal approved — the phone takes it off the calendar on the next execute') : (card.proposal && card.proposal.reason === 'twin' && reason && (reason.tags || []).indexOf('keep the other one instead') !== -1 ? 'Keeping this copy — the other one comes off on the next execute' : card.proposal && card.proposal.reason === 'twin' ? 'Both stay on the calendar' : 'Kept on the calendar')) : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
+      toast((queued ? 'Kept on the phone — it sends when the Mac is back' : isConflict(card) ? (verdict === 'approve' ? 'Settled: bear — one verdict now, the next run keeps it' : 'Settled: not bear — one verdict now, the next run drops it') : isChoose(card) ? ('Noted: ' + card.proposal.options[verdict === 'approve' ? 0 : 1]) : isManual(card) ? (verdict === 'approve' ? (card.proposal.action === 'edit' ? 'Edit approved — the phone applies it on the next execute' : 'Taking it off — the phone removes it from the calendar on the next execute') : (isRemoval(card) ? 'Kept on the calendar' : 'Not now')) : card.kind === 'gone' ? (verdict === 'approve' ? (card.proposal && card.proposal.reason === 'twin' ? 'Taking this copy off — it goes on the next execute, its twin stays' : 'Taking it off — the phone removes it from the calendar on the next execute') : (card.proposal && card.proposal.reason === 'twin' && reason && (reason.tags || []).indexOf('keep the other one instead') !== -1 ? 'Keeping this copy — the other one comes off on the next execute' : card.proposal && card.proposal.reason === 'twin' ? 'Both stay on the calendar' : 'Kept on the calendar')) : card.kind === 'dropped' ? (verdict === 'approve' ? 'Marked bear — the next run keeps it' : reason && reason.mode === 'fix' ? 'Bear, needs a fix — the next run keeps it and it waits for the fix' : reason && reason.mode === 'never' ? 'Not an event — stays dropped' : 'Not bear, confirmed') : (verdict === 'approve' ? 'Approved' : (alsoNotBear ? 'Rejected — and marked not bear' : 'Rejected'))) + nights);
       renderDecided(); renderExecute(); renderWaiting();
     }).catch(function (error) {
       toast('Not saved: ' + error.message + (left.length > 1 ? ' (' + left.length + ' ' + unitOf(item.series, left.length) + ' back on the stack)' : ''));
@@ -3563,12 +3592,20 @@ window.__startDeck = function () {
       render(); renderDecided(); renderExecute();
     });
   }
-  function approveTop() { var c = topItem(); if (c) decide(c, 'approve', null, 'gone-right'); }
+  function approveTop() {
+    var c = topItem(); if (!c) return;
+    // A removal card: right keeps the event (the sheet asks why, so the
+    // read can be fixed), left takes it off.
+    if (isRemoval(c.cards[0])) { sheet.classList.remove('fix-first'); keepInstead(c); return; }
+    decide(c, 'approve', null, 'gone-right');
+  }
   function rejectTop(fixFirst) {
     var c = topItem(); if (!c) return;
     // A "you said both" card has no "not yet": left is not bear, settled.
     // A "your call" manual card: left IS the second option.
     if (isConflict(c.cards[0]) || isChoose(c.cards[0])) { decide(c, 'reject', null, 'gone-left'); return; }
+    // A removal card has one left answer too: take it off.
+    if (isRemoval(c.cards[0])) { takeOff(c); return; }
     // Reached by a down-left swipe: the sheet opens on "needs a fix".
     sheet.classList.toggle('fix-first', fixFirst === true);
     // A not-bear card gets the same three answers: some of them ARE bear
@@ -3705,8 +3742,10 @@ window.__startDeck = function () {
       return '<span class="chip' + (preset.indexOf(choice.tag) !== -1 ? ' on' : '') + '" data-tag="' + choice.tag + '">' + choice.label + '</span>';
     }).join('');
     Array.prototype.forEach.call(tagChips.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
-    document.getElementById('sheet-fix').querySelector('b').textContent = isManualCard ? '⏸ Not now' : isGone ? '✅ Keep it on the calendar' : isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
-    document.getElementById('sheet-fix').querySelector('span').textContent = isManualCard
+    document.getElementById('sheet-fix').querySelector('b').textContent = isManualCard && !isRemoval(card) ? '⏸ Not now' : isGone || isRemoval(card) ? '✅ Keep it on the calendar' : isDropped ? '🔧🐻 Bear, but needs a fix' : '🔧 Needs a fix';
+    document.getElementById('sheet-fix').querySelector('span').textContent = isManualCard && isRemoval(card)
+      ? 'The saved event stays as it is. Say why, so the card can be fixed or dropped.'
+      : isManualCard
       ? 'Nothing changes on the calendar. Say why, so the card can be fixed or dropped.'
       : isGone
       ? 'The saved event stays as it is. Say why, so the read can be fixed if the source is the problem.'
@@ -3722,7 +3761,7 @@ window.__startDeck = function () {
     Array.prototype.forEach.call(sheetTags.querySelectorAll('.chip'), function (el) { el.onclick = function () { el.classList.toggle('on'); }; });
     document.getElementById('sheet-text').value = '';
     document.getElementById('sheet-text').placeholder = 'Anything else (optional)';
-    document.getElementById('sheet-heading').textContent = isPartyCard ? 'Bear or not?' : isManualCard ? 'Not now — why?' : isGone ? 'Keep it — why?' : friendMode ? 'What’s not right?' : 'Not yet — why?';
+    document.getElementById('sheet-heading').textContent = isPartyCard ? 'Bear or not?' : isManualCard && !isRemoval(card) ? 'Not now — why?' : isGone || isRemoval(card) ? 'Keep it — why?' : friendMode ? 'What’s not right?' : 'Not yet — why?';
     if (friendMode) {
       document.getElementById('sheet-fix').querySelector('span').textContent = 'A real bear event, but something on the card is wrong. Tap what, add a note.';
       document.getElementById('sheet-notbear').querySelector('span').textContent = 'Not a bear crowd.';
@@ -3905,7 +3944,7 @@ window.__startDeck = function () {
     sheet.classList.remove('open'); fitSheet(); pending = null;
     // "Not bear" rides as the tag every reader already understands (the
     // phone, older decisions, the bear verdict); the other two as a mode.
-    // A gone card's only answer is "keep" (its left swipe is not a rejection).
+    // A removal card's sheet has one answer: "keep" (reached by its right swipe).
     if (!card.bulk && (card.cards[0].kind === 'gone' || (isManual(card.cards[0]) && !(isParty(card.cards[0]) && mode === 'not-bear')))) mode = 'keep';
     var reason = mode === 'not-bear' ? { tags: ['not bear'], text: text } : { tags: tags, text: text, mode: mode };
     // A bulk answer: every item of the set gets this reason.
@@ -3921,7 +3960,7 @@ window.__startDeck = function () {
     if (card.cards[0].kind === 'dropped') { decide(card, 'reject', mode === 'not-bear' ? null : reason, 'gone-left'); return; }
     // A conflict card's every left answer is the same one: not bear.
     if (isConflict(card.cards[0])) { decide(card, 'reject', null, 'gone-left'); return; }
-    decide(card, 'reject', reason, 'gone-left');
+    decide(card, 'reject', reason, isRemoval(card.cards[0]) ? 'gone-right' : 'gone-left');
     if (!card.bulk && isParty(card.cards[0]) && mode === 'not-bear') { toast('Not bear — hidden from the site, nothing deleted'); return; }
     toast(mode === 'keep' ? 'Kept on the calendar' : mode === 'fix' ? 'Waiting on a fix — it comes back when the card changes' : mode === 'never' ? 'Not an event — final' : 'Not bear — final');
   }
@@ -3933,7 +3972,8 @@ window.__startDeck = function () {
   function notBearTop() {
     var c = topItem(); if (!c) return;
     if (c.cards[0].kind === 'dropped' || isConflict(c.cards[0]) || isChoose(c.cards[0])) { decide(c, 'reject', null, 'gone-left'); return; }
-    if (c.cards[0].kind === 'bar' || c.cards[0].kind === 'gone' || isManual(c.cards[0])) { pending = c; openSheet(c); return; }
+    if (isRemoval(c.cards[0])) { takeOff(c); return; }
+    if (c.cards[0].kind === 'bar' || isManual(c.cards[0])) { pending = c; openSheet(c); return; }
     decide(c, 'reject', { tags: ['not bear'], text: '' }, 'gone-left');
     toast('Not bear — final');
   }
@@ -3953,6 +3993,7 @@ window.__startDeck = function () {
     // scrolled down scrolls back up as before, and up always scrolls.
     var lockedD = false, atTop = false;
     var conflict = isConflict(card.cards[0]);
+    var removal = isRemoval(card.cards[0]);
     var okStamp = el.querySelector('.stamp.ok'), noStamp = el.querySelector('.stamp.no'), askStamp = el.querySelector('.stamp.ask');
     var frame = null;
     // A left swipe has three directions: UP-left = not bear (done, no
@@ -3982,7 +4023,7 @@ window.__startDeck = function () {
         noStamp.style.opacity = Math.max(0, Math.min(1, -dx / 90));
         var zone = leftZone();
         // A conflict card has one left answer, whatever the angle.
-        var label = conflict ? 'NOT BEAR' : zone === 'notbear' ? 'NOT BEAR' : zone === 'fix' ? 'NEEDS FIX' : 'NOT YET';
+        var label = removal ? 'TAKE IT OFF' : conflict ? 'NOT BEAR' : zone === 'notbear' ? 'NOT BEAR' : zone === 'fix' ? 'NEEDS FIX' : 'NOT YET';
         if (noStamp.textContent !== label) noStamp.textContent = label;
       }
     }
@@ -4050,7 +4091,7 @@ window.__startDeck = function () {
         return;
       }
       if (!cancelled && lockedH && dx > 110) { approveTop(); return; }
-      if (!cancelled && lockedH && dx < -110 && conflict) { notBearTop(); return; }
+      if (!cancelled && lockedH && dx < -110 && (conflict || removal)) { notBearTop(); return; }
       if (!cancelled && lockedH && dx < -110) {
         var zone = leftZone();
         if (zone === 'notbear') { notBearTop(); return; }

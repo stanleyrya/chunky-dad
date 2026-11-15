@@ -4715,7 +4715,9 @@ test('series write: never offered when the calendar already holds the series, a 
   const noTime = (await core.prepareEventsForCalendar([buildStatedSeries({ _recurringNoStartTime: true })], buildWideWindowAdapter([]), {}))[0];
   assert.equal(noTime._seriesWrite, undefined);
   // A whole-day series (no clock on the page) is not written as a series.
-  const dayStart = new Date(Date.now() + 5 * SERIES_DAY_MS); dayStart.setUTCHours(5, 0, 0, 0); // midnight Chicago (CDT)
+  // Midnight in Chicago five days out, whichever side of a clock change that is.
+  const dayStart = new Date(Date.now() + 5 * SERIES_DAY_MS); dayStart.setUTCHours(5, 0, 0, 0);
+  if (new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: 'numeric', hourCycle: 'h23' }).format(dayStart) !== '0') dayStart.setUTCHours(6, 0, 0, 0);
   const wholeDay = (await core.prepareEventsForCalendar([buildStatedSeries({ startDate: dayStart, endDate: new Date(dayStart.getTime() + 86399000), _noTimeStated: true })], buildWideWindowAdapter([]), {}))[0];
   assert.equal(wholeDay._seriesWrite, undefined, 'a series with no stated time stays as it is');
   // A lookup failure fails closed.
@@ -32454,8 +32456,10 @@ test('ticket-link enrichment: a source with a discovery allowlist has an event\'
     'https://tickets-b.example/nympho-x-pep-rally-present-chippy-nonstop-can': { events: [{ title: 'NYMPHO x Pep Rally Present: Chippy Nonstop (CAN)', startDate: soon() }] }
   };
   const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  // Not an aggregator: an aggregator follows nothing before the bear check
+  // and reads its kept records' pages in full after it (the crawl-out).
   const entry = {
-    name: 'Listing Example', siteRole: 'aggregator', urls: ['https://listing.example/cities'],
+    name: 'Listing Example', urls: ['https://listing.example/cities'],
     urlDiscoveryDepth: 1, discoveryAllowedPatterns: ['listing.example/in/'], alwaysBear: true, ai: CRAWL_AI
   };
   await core.processParser(entry, { parsers: [entry] }, httpAdapter, display, parsers);
@@ -34360,4 +34364,284 @@ test('tags: a dropped not-bear event carries the tags it would have, so it can b
   assert.equal(kept.length, 0, 'kink describes, it does not keep');
   assert.equal(dropped.length, 1);
   assert.equal(dropped[0].event.tags, 'kink');
+});
+
+test('keeps: a bear word on the event\'s own poster at a bar the owner marked bear is bear, not just its crowd', async () => {
+  const bars = { sf: [{ name: 'Lone Star Saloon', scene: 'bear' }], la: [{ name: 'Eagle LA', scene: 'leather' }] };
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, bars });
+  const posters = {
+    'https://cdn.example/bust.jpg': 'BIG BEAR POTLUCK\nBEER BUST\nNOV 29TH\nBEST BELLY CONTEST\nMr. Lone Star Leather',
+    'https://cdn.example/plain.jpg': 'BEER BUST\nNOV 29TH\n4 PM - 8 PM'
+  };
+  core.setFlyerEvidenceLookup((url) => (posters[url] ? { text: posters[url], classification: 'event-flyer' } : null));
+  const notBear = { verdict: 'not_bear', reason: '"BIG BEAR" is a generic phrase' };
+  const run = async (event) => {
+    const events = [event];
+    await core.applyFlyerTextEvidence(events, null);
+    return core.filterBearEvents(events, bearCheckConfig('enforce'), buildTagAwareAdapter(notBear));
+  };
+  const bust = await run({ title: 'Mr Lone Star Leather Beer Bust', description: 'Come and join Mr Lone Star Leather as he raises money.', bar: 'Lone Star Saloon', city: 'sf', image: 'https://cdn.example/bust.jpg' });
+  assert.equal(bust.length, 1);
+  assert.equal(bust[0].bearSource, 'poster');
+  // A poster with no bear word is the beer-bust rule's: bear crowd.
+  const plain = await run({ title: 'Beer Bust', bar: 'Lone Star Saloon', city: 'sf', image: 'https://cdn.example/plain.jpg' });
+  assert.match(plain[0].bearSource, /bear-crowd/);
+  // A leather bar is not a bear bar: the poster rule leaves it to the bust rule.
+  const leather = await run({ title: 'Beer Bust', bar: 'Eagle LA', city: 'la', image: 'https://cdn.example/bust.jpg' });
+  assert.notEqual(leather[0].bearSource, 'poster');
+});
+
+// ---------------------------------------------------------------------------
+// The aggregator crawl-out (2026-11-14).
+//
+// The Bear Calendar gave 86 kept records and a street address on 14 of them:
+// its feed rows name a party, a night and a link to the party's own page,
+// and nothing ever opened that page. Owner: "fix bear calendar AND other
+// aggregators, plus make sure we don't double-process pages". So: aggregators
+// run after every other source; a kept aggregator record follows its own
+// link one hop (enrich-only) unless the event's own source already gave it
+// this run or the page was already read; the page's facts fold into the
+// record, which keeps its verdict.
+// ---------------------------------------------------------------------------
+function crawlOutCore() {
+  return new SharedCore(CITIES, {
+    eventSchema: EventSchema,
+    pageClassificationRules: [
+      { pattern: /agg\.example|venue\.example\/events\/?$/i, classification: 'multi-event-page' }
+    ]
+  });
+}
+
+function nthWeekdayOfMonth(year, month, weekday, nth, hour = 21) {
+  const first = new Date(year, month, 1);
+  return new Date(year, month, 1 + ((weekday - first.getDay() + 7) % 7) + (nth - 1) * 7, hour, 0, 0);
+}
+
+test('crawl-out: aggregators run last, results stay in config order, and a kept aggregator record takes the street its own page states', async () => {
+  const core = crawlOutCore();
+  const display = createDisplayAdapterStub();
+  const night = new Date(Date.now() + 7 * DAY_MS);
+  const own = 'https://party.example/bear-night';
+  const pages = {
+    'https://agg.example/events/': { events: [{ title: 'Bear Night', startDate: night, bar: 'The Den', website: own, isBearEvent: true, bearSource: 'keyword', tags: 'leather' }] },
+    'https://venue.example/events/': { events: [{ title: 'Venue Party', startDate: new Date(Date.now() + 9 * DAY_MS), bar: 'The Venue', address: '5 Side St, Springfield' }] },
+    [own]: { events: [{ title: 'Bear Night', startDate: night, bar: 'The Den', address: '12 Main St, Springfield', cover: '$10' }] }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const config = { config: {}, parsers: [
+    { name: 'Bear Listing', siteRole: 'aggregator', urls: ['https://agg.example/events/'], ai: CRAWL_AI },
+    { name: 'The Venue', urls: ['https://venue.example/events/'], ai: CRAWL_AI }
+  ] };
+  const results = await core.processEvents(config, httpAdapter, display, parsers);
+
+  assert.deepEqual(results.parserResults.map(result => result.name), ['Bear Listing', 'The Venue'], 'results stay in config order');
+  assert.ok(fetched.indexOf('https://venue.example/events/') < fetched.indexOf('https://agg.example/events/'), 'the aggregator is read after the other source');
+  assert.ok(fetched.includes(own), 'the record\'s own page is opened');
+  assert.ok(!display.logs.some(line => line.includes('Ticket-link enrichment: following')), 'nothing is followed before the bear check for an aggregator');
+  assert.ok(display.logs.some(line => line.includes('🧭 CRAWL-OUT: Bear Listing') && line.includes('following 1 of 1 link(s)')));
+  const [record] = results.parserResults[0].events;
+  assert.equal(record.title, 'Bear Night');
+  assert.equal(record.address, '12 Main St, Springfield', 'the page\'s street reaches the record');
+  assert.equal(record.cover, '$10');
+  assert.equal(record.isBearEvent, true, 'the verdict stays the record\'s');
+  assert.equal(record.bearSource, 'keyword');
+  assert.equal(record.tags, 'leather');
+  assert.equal(results.parserResults[0].events.length, 1, 'the page record is folded in, never added');
+});
+
+test('crawl-out: a record its own source gave this run is not followed, a page already read is not read twice, and a social link is never opened', async () => {
+  const core = crawlOutCore();
+  const display = createDisplayAdapterStub();
+  const night = new Date(Date.now() + 7 * DAY_MS);
+  const later = new Date(Date.now() + 10 * DAY_MS);
+  const venuePage = 'https://venue.example/events/venue-party';
+  const pages = {
+    'https://venue.example/events/': {
+      events: [{ title: 'Venue Bear Party', startDate: night, bar: 'The Venue', address: '5 Side St, Springfield', url: venuePage }],
+      additionalLinks: ['https://venue.example/events/drag-brunch']
+    },
+    'https://venue.example/events/drag-brunch': { events: [{ title: 'Bear Brunch', startDate: later, bar: 'The Venue', address: '5 Side St, Springfield', url: 'https://venue.example/events/drag-brunch' }] },
+    'https://agg.example/events/': { events: [
+      { title: 'Venue Bear Party', startDate: night, bar: 'The Venue', website: venuePage },
+      { title: 'Leather Bears Social', startDate: new Date(later.getTime() + 2 * DAY_MS), bar: 'The Venue', website: 'https://venue.example/events/drag-brunch' },
+      { title: 'Insta Bear Party', startDate: later, bar: 'Somewhere', website: 'https://www.instagram.com/p/abc123/' }
+    ] }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const config = { config: {}, parsers: [
+    { name: 'Bear Listing', siteRole: 'aggregator', urls: ['https://agg.example/events/'], ai: CRAWL_AI },
+    { name: 'The Venue', urls: ['https://venue.example/events/'], ai: CRAWL_AI }
+  ] };
+  await core.processEvents(config, httpAdapter, display, parsers);
+
+  assert.ok(!fetched.includes(venuePage), 'the venue gave this night itself: its page is not opened for the aggregator');
+  assert.equal(fetched.filter(url => url === 'https://venue.example/events/drag-brunch').length, 1, 'a page read this run is not read again');
+  assert.ok(!fetched.some(url => url.includes('instagram.com')), 'a social link is never requested');
+  const summary = display.logs.find(line => line.includes('🧭 CRAWL-OUT: Bear Listing') && line.includes('kept record(s)'));
+  assert.ok(summary, 'the crawl-out says what it skipped');
+  assert.match(summary, /1 already given by their own source this run/);
+  assert.match(summary, /1 link\(s\) already read this run/);
+  assert.match(summary, /following 0 of 0 link\(s\)/);
+});
+
+test('crawl-out: the standing page of a recurring party gives its place to every row whose night its cadence covers; the rows keep their dates and titles and never become a series', async () => {
+  const core = crawlOutCore();
+  const display = createDisplayAdapterStub();
+  const now = new Date();
+  const rowNight = nthWeekdayOfMonth(now.getFullYear(), now.getMonth() + 2, 5, 2);
+  const nextNight = nthWeekdayOfMonth(now.getFullYear(), now.getMonth() + 1, 5, 2);
+  const offNight = new Date(rowNight.getTime() + 10 * DAY_MS);
+  const standing = 'https://union.example/seattle';
+  const pages = {
+    'https://agg.example/events/': { events: [
+      { title: 'BearUnion Seattle', startDate: rowNight, website: standing },
+      { title: 'Bear Pop-Up Seattle', startDate: offNight, website: standing }
+    ] },
+    [standing]: { events: [{
+      title: 'Seattle, WA', startDate: nextNight, bar: 'CC\'s Seattle', address: '1701 E Olive Way, Seattle, WA 98102',
+      recurrenceRule: 'FREQ=MONTHLY;BYDAY=FR;BYSETPOS=2',
+      _dateOrigin: { kind: 'rrule-fallback', rrule: 'FREQ=MONTHLY;BYDAY=FR;BYSETPOS=2', source: 'model-rrule' }
+    }] }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const config = { config: {}, parsers: [{ name: 'Bear Listing', siteRole: 'aggregator', urls: ['https://agg.example/events/'], ai: CRAWL_AI }] };
+  const results = await core.processEvents(config, httpAdapter, display, parsers);
+  const events = results.parserResults[0].events;
+  const row = events.find(event => event.title === 'BearUnion Seattle');
+  const popUp = events.find(event => event.title === 'Bear Pop-Up Seattle');
+  assert.equal(events.length, 2, 'the page record is nobody\'s extra night');
+  assert.ok(row, 'the row keeps its own title, not the page heading');
+  assert.equal(SharedCore.toEpochMillis(row.startDate), rowNight.getTime(), 'the row keeps its own night');
+  assert.equal(row.address, '1701 E Olive Way, Seattle, WA 98102');
+  assert.equal(row.bar, 'CC\'s Seattle');
+  assert.equal(row.recurrenceRule, undefined, 'one row is one night');
+  assert.equal(row.recurrence, undefined);
+  assert.ok(!popUp.address, 'a night the cadence does not cover takes nothing from the page');
+});
+
+test('crawl-out: "the third Thursday" written as BYDAY=TH;BYSETPOS=3 is the same rule as BYDAY=3TH', () => {
+  const f = EventSchema.computeNextRruleOccurrence;
+  const from = new Date(2026, 10, 14);
+  assert.equal(f('FREQ=MONTHLY;BYDAY=TH;BYSETPOS=3', from), '2026-11-19');
+  assert.equal(f('FREQ=MONTHLY;BYDAY=TH;BYSETPOS=3', from), f('FREQ=MONTHLY;BYDAY=3TH', from));
+  assert.equal(f('FREQ=MONTHLY;BYDAY=FR;BYSETPOS=-1', from), f('FREQ=MONTHLY;BYDAY=-1FR', from));
+  assert.equal(f('FREQ=MONTHLY;BYDAY=TH,FR;BYSETPOS=3', from), null, 'several weekdays under one position stay out of the subset');
+  assert.equal(f('FREQ=MONTHLY;BYDAY=TH;BYSETPOS=1,3', from), null);
+});
+
+test('crawl-out: an aggregator with a discovery allowlist follows nothing before the bear check, then reads its kept records\' pages in full; a page that will not open is not a run error', async () => {
+  const core = createCore();
+  const display = createDisplayAdapterStub();
+  const soon = new Date(Date.now() + 7 * DAY_MS);
+  const pages = {
+    'https://listing.example/cities': { additionalLinks: ['https://listing.example/in/melbourne'] },
+    'https://listing.example/in/melbourne': { events: [
+      { title: 'Bear Den Thursdays', startDate: soon, bar: 'onesixone', ticketUrl: 'https://tickets-a.example/events/2578203' },
+      { title: 'Bear Pep Rally', startDate: new Date(soon.getTime() + DAY_MS), bar: 'Colour', ticketUrl: 'https://tickets-b.example/bear-pep-rally' },
+      { title: 'Techno Thursdays', startDate: soon, bar: 'Colour', ticketUrl: 'https://tickets-c.example/techno' }
+    ] },
+    'https://tickets-a.example/events/2578203': { events: [{ title: 'Bear Den Thursdays', startDate: soon, bar: 'onesixone', address: '161 High St, Prahran VIC', ticketUrl: 'https://tickets-a.example/events/2578203' }] },
+    'https://tickets-b.example/bear-pep-rally': { fail: 'HTTP request failed for https://tickets-b.example/bear-pep-rally: HTTP 403: ' },
+    'https://tickets-c.example/techno': { events: [{ title: 'Techno Thursdays', startDate: soon }] }
+  };
+  const { fetched, httpAdapter, parsers } = createCrawlHarness(pages);
+  const entry = {
+    name: 'Listing Example', siteRole: 'aggregator', urls: ['https://listing.example/cities'],
+    urlDiscoveryDepth: 1, discoveryAllowedPatterns: ['listing.example/in/'], ai: CRAWL_AI
+  };
+  const results = await core.processEvents({ config: {}, parsers: [entry] }, httpAdapter, display, parsers);
+
+  assert.ok(!display.logs.some(line => line.includes('Ticket-link enrichment:')), 'nothing is followed, or refused, before the bear check');
+  assert.ok(fetched.includes('https://tickets-a.example/events/2578203'), 'a kept record\'s page is read');
+  assert.ok(!fetched.includes('https://tickets-c.example/techno'), 'a record the bear check dropped is never followed');
+  const events = results.parserResults[0].events;
+  assert.equal(events.find(event => event.title === 'Bear Den Thursdays').address, '161 High St, Prahran VIC', 'the page is read in full: the allowlist scopes discovery, not the answer');
+  assert.ok(events.some(event => event.title === 'Bear Pep Rally'), 'a record whose page will not open is still proposed as found');
+  assert.equal((results.errors || []).filter(line => String(line).includes('tickets-b.example')).length, 0, 'someone else\'s closed door is not this source\'s error');
+  assert.ok(display.logs.some(line => line.includes('🧭 CRAWL-OUT: Listing Example') && line.includes('1 page(s) would not open') && line.includes('tickets-b.example')));
+});
+
+test('crawl-out: a week-long record keeps its span and its own link, takes the street its page states next to the town it named, and takes nothing from one night on a page of several parties', async () => {
+  const core = crawlOutCore();
+  const display = createDisplayAdapterStub();
+  const start = new Date(Date.now() + 20 * DAY_MS);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start.getTime() + 5 * DAY_MS - 1000);
+  const weekStart = new Date(start.getTime() + 30 * DAY_MS);
+  const weekEnd = new Date(weekStart.getTime() + 7 * DAY_MS - 1000);
+  const desk = 'https://tickets.example/e/bear-fest-registration';
+  const programme = 'https://week.example/tickets';
+  const pages = {
+    'https://agg.example/events/': { events: [
+      { title: 'Midwest Bear Fest', startDate: start, endDate: end, address: 'Westfield, IN', website: 'https://bearfest.example/', ticketUrl: desk },
+      { title: 'Bear Week Vallarta', startDate: weekStart, endDate: weekEnd, bar: 'Beach Club', cover: '$225', ticketUrl: programme }
+    ] },
+    [desk]: { events: [{ title: 'Midwest Bear Fest', startDate: new Date(start.getTime() + 16 * 60 * 60 * 1000), endDate: new Date(start.getTime() + 18 * 60 * 60 * 1000), address: '18592 Carousel Lane,', url: desk }] },
+    [programme]: { events: [
+      { title: 'Bear Week Welcome Pool Party', startDate: new Date(weekStart.getTime() + 13 * 60 * 60 * 1000), bar: 'Pool Club', cover: '$20', address: '527 Carranza' },
+      { title: 'Bear Boat', startDate: new Date(weekStart.getTime() + 2 * DAY_MS), bar: 'The Pier', cover: '$90' }
+    ] }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const config = { config: {}, parsers: [{ name: 'Bear Listing', siteRole: 'aggregator', urls: ['https://agg.example/events/'], ai: CRAWL_AI }] };
+  const results = await core.processEvents(config, httpAdapter, display, parsers);
+  const events = results.parserResults[0].events;
+  const fest = events.find(event => event.title === 'Midwest Bear Fest');
+  const week = events.find(event => event.title === 'Bear Week Vallarta');
+  assert.equal(events.length, 2);
+  assert.equal(SharedCore.toEpochMillis(fest.startDate), start.getTime(), 'the festival still starts on its first day');
+  assert.equal(SharedCore.toEpochMillis(fest.endDate), end.getTime(), 'a two-hour registration desk does not cut the festival down');
+  assert.equal(fest.address, '18592 Carousel Lane, Westfield, IN', 'the page\'s street joins the town the record named');
+  assert.equal(fest.website, 'https://bearfest.example/', 'the event\'s own site is not traded for the page that was read');
+  assert.equal(week.bar, 'Beach Club', 'one party of the programme is not the week');
+  assert.equal(week.cover, '$225');
+  assert.ok(!week.address);
+  assert.equal(SharedCore.toEpochMillis(week.endDate), weekEnd.getTime());
+});
+
+test('crawl-out: where the page\'s own words and the reader\'s rule name different nights, a row on the night the words name still takes the page\'s place', async () => {
+  const core = crawlOutCore();
+  const display = createDisplayAdapterStub();
+  const now = new Date();
+  const wednesday = nthWeekdayOfMonth(now.getFullYear(), now.getMonth() + 2, 3, 3, 19);
+  const thursday = nthWeekdayOfMonth(now.getFullYear(), now.getMonth() + 1, 4, 3, 0);
+  const standing = 'https://union.example/fortlauderdale';
+  const pages = {
+    'https://agg.example/events/': { events: [{ title: 'BearUnion Fort Lauderdale', startDate: wednesday, address: 'Fort Lauderdale, FL', website: standing }] },
+    [standing]: { events: [{
+      title: 'Fort Lauderdale, FL', startDate: thursday, address: '321 W. Sunrise Boulevard',
+      _dateOrigin: { kind: 'rrule-fallback', rrule: 'FREQ=MONTHLY;BYDAY=TH;BYSETPOS=3', source: 'model-rrule', vouchedBy: 'third wednesday', vouchKind: 'cadence', matchesRule: false, phraseRrule: 'FREQ=MONTHLY;BYDAY=3WE' }
+    }] }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const config = { config: {}, parsers: [{ name: 'Bear Listing', siteRole: 'aggregator', urls: ['https://agg.example/events/'], ai: CRAWL_AI }] };
+  const results = await core.processEvents(config, httpAdapter, display, parsers);
+  const [row] = results.parserResults[0].events;
+  assert.equal(results.parserResults[0].events.length, 1);
+  assert.equal(SharedCore.toEpochMillis(row.startDate), wednesday.getTime(), 'the row keeps its own night');
+  assert.equal(row.address, '321 W. Sunrise Boulevard, Fort Lauderdale, FL');
+});
+
+test('crawl-out: a two-day record takes its place from the one night of the same name on a page of several parties, and keeps its days', async () => {
+  const core = crawlOutCore();
+  const display = createDisplayAdapterStub();
+  const start = new Date(Date.now() + 12 * DAY_MS);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start.getTime() + 2 * DAY_MS - 1000);
+  const bar = 'https://den.example/whats-on';
+  const pages = {
+    'https://agg.example/events/': { events: [{ title: 'Bear Night', startDate: start, endDate: end, bar: 'The Den', address: 'Springfield', website: bar }] },
+    [bar]: { events: [
+      { title: 'Bear Night', startDate: new Date(start.getTime() + 21 * 60 * 60 * 1000), bar: 'The Den', address: '251 South St, Springfield' },
+      { title: 'Underwear Night', startDate: new Date(start.getTime() + 8 * DAY_MS), bar: 'The Den', address: '251 South St, Springfield' }
+    ] }
+  };
+  const { httpAdapter, parsers } = createCrawlHarness(pages);
+  const config = { config: {}, parsers: [{ name: 'Bear Listing', siteRole: 'aggregator', urls: ['https://agg.example/events/'], ai: CRAWL_AI }] };
+  const results = await core.processEvents(config, httpAdapter, display, parsers);
+  const [row] = results.parserResults[0].events;
+  assert.equal(results.parserResults[0].events.length, 1);
+  assert.equal(row.address, '251 South St, Springfield');
+  assert.equal(SharedCore.toEpochMillis(row.startDate), start.getTime());
+  assert.equal(SharedCore.toEpochMillis(row.endDate), end.getTime());
 });

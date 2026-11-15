@@ -1093,7 +1093,8 @@ function buildCalendarBatchIcs(events, options = {}) {
 // them all). Supported forms:
 //   - FREQ=DAILY (no BYDAY filter)
 //   - FREQ=WEEKLY with BYDAY of one or more plain weekday codes → nearest
-//   - FREQ=MONTHLY with a single ordinal BYDAY (1FR..5SU, -1 for last)
+//   - FREQ=MONTHLY with a single ordinal BYDAY (1FR..5SU, -1 for last),
+//     or one plain weekday picked by a single BYSETPOS (the same rule)
 // Anything else — unknown FREQ, INTERVAL>1 (no DTSTART anchor to phase it),
 // missing/ordinal-free BYDAY where required — returns null and the caller
 // keeps today's discard behavior. Pure local-calendar date math on the
@@ -1148,6 +1149,13 @@ function computeNextRruleOccurrence(rrule, fromDate) {
     if (parts.FREQ === 'MONTHLY') {
         const codes = String(parts.BYDAY || '').split(',').map(code => code.trim()).filter(Boolean);
         if (codes.length !== 1) return null;
+        // "The third Thursday" is written two ways: BYDAY=3TH, or a plain
+        // BYDAY=TH picked by BYSETPOS=3 (the form the model writes as often
+        // as the other — BearUnion's city pages, run 2026-11-14, lost their
+        // only record to it). One weekday and one position is the same rule.
+        if (/^(SU|MO|TU|WE|TH|FR|SA)$/.test(codes[0]) && /^-?\d$/.test(String(parts.BYSETPOS || '').trim())) {
+            codes[0] = `${String(parts.BYSETPOS).trim()}${codes[0]}`;
+        }
         const match = codes[0].match(/^(-?\d)(SU|MO|TU|WE|TH|FR|SA)$/);
         if (!match) return null;
         const ordinal = Number(match[1]);
