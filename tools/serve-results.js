@@ -1032,6 +1032,7 @@ function describeBearSource(source) {
     if (/^keyword\b/.test(raw)) return '🐻 bear: a bear word in its name or description';
     if (/^ai\b/.test(raw)) return '🐻 bear: the AI read it as bear';
     if (/^config\b/.test(raw)) return '🐻 bear: every event from this source counts';
+    if (/^poster\b/.test(raw)) return '🐻 bear: a bear word on its own poster, at a bar you marked bear';
     return `🐻 bear — ${escapeHtmlText(raw)}`;
 }
 

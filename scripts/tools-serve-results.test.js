@@ -2741,6 +2741,7 @@ test('renderReviewBearRow: a kept card says when its bear wording is only on the
 test('describeBearSource / describeEventTags: why it is on the site and what approving writes, in plain words (owner 2026-11-14)', () => {
   const { describeBearSource, describeEventTags } = require('../tools/serve-results.js');
   assert.strictEqual(describeBearSource('manual-bear (verdict store 2026-09-19)'), '🐻 bear, because you said so on Sep 19');
+  assert.strictEqual(describeBearSource('poster'), '🐻 bear: a bear word on its own poster, at a bar you marked bear');
   assert.strictEqual(describeBearSource('manual-bear (overrode ai: drag show)'), '🐻 bear, because you said so');
   assert.strictEqual(describeBearSource('manual-tagged (verdict store 2026-11-11)'), '🏷 not bear, kept because you tagged it on Nov 11');
   assert.strictEqual(describeBearSource('tagged (bear-crowd: a beer bust at Lone Star Saloon, a bear bar)'), '🏷 not bear, kept for its tags: a beer bust at Lone Star Saloon, a bear bar');

@@ -4715,7 +4715,9 @@ test('series write: never offered when the calendar already holds the series, a 
   const noTime = (await core.prepareEventsForCalendar([buildStatedSeries({ _recurringNoStartTime: true })], buildWideWindowAdapter([]), {}))[0];
   assert.equal(noTime._seriesWrite, undefined);
   // A whole-day series (no clock on the page) is not written as a series.
-  const dayStart = new Date(Date.now() + 5 * SERIES_DAY_MS); dayStart.setUTCHours(5, 0, 0, 0); // midnight Chicago (CDT)
+  // Midnight in Chicago five days out, whichever side of a clock change that is.
+  const dayStart = new Date(Date.now() + 5 * SERIES_DAY_MS); dayStart.setUTCHours(5, 0, 0, 0);
+  if (new Intl.DateTimeFormat('en-US', { timeZone: 'America/Chicago', hour: 'numeric', hourCycle: 'h23' }).format(dayStart) !== '0') dayStart.setUTCHours(6, 0, 0, 0);
   const wholeDay = (await core.prepareEventsForCalendar([buildStatedSeries({ startDate: dayStart, endDate: new Date(dayStart.getTime() + 86399000), _noTimeStated: true })], buildWideWindowAdapter([]), {}))[0];
   assert.equal(wholeDay._seriesWrite, undefined, 'a series with no stated time stays as it is');
   // A lookup failure fails closed.
@@ -34360,4 +34362,29 @@ test('tags: a dropped not-bear event carries the tags it would have, so it can b
   assert.equal(kept.length, 0, 'kink describes, it does not keep');
   assert.equal(dropped.length, 1);
   assert.equal(dropped[0].event.tags, 'kink');
+});
+
+test('keeps: a bear word on the event\'s own poster at a bar the owner marked bear is bear, not just its crowd', async () => {
+  const bars = { sf: [{ name: 'Lone Star Saloon', scene: 'bear' }], la: [{ name: 'Eagle LA', scene: 'leather' }] };
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, bars });
+  const posters = {
+    'https://cdn.example/bust.jpg': 'BIG BEAR POTLUCK\nBEER BUST\nNOV 29TH\nBEST BELLY CONTEST\nMr. Lone Star Leather',
+    'https://cdn.example/plain.jpg': 'BEER BUST\nNOV 29TH\n4 PM - 8 PM'
+  };
+  core.setFlyerEvidenceLookup((url) => (posters[url] ? { text: posters[url], classification: 'event-flyer' } : null));
+  const notBear = { verdict: 'not_bear', reason: '"BIG BEAR" is a generic phrase' };
+  const run = async (event) => {
+    const events = [event];
+    await core.applyFlyerTextEvidence(events, null);
+    return core.filterBearEvents(events, bearCheckConfig('enforce'), buildTagAwareAdapter(notBear));
+  };
+  const bust = await run({ title: 'Mr Lone Star Leather Beer Bust', description: 'Come and join Mr Lone Star Leather as he raises money.', bar: 'Lone Star Saloon', city: 'sf', image: 'https://cdn.example/bust.jpg' });
+  assert.equal(bust.length, 1);
+  assert.equal(bust[0].bearSource, 'poster');
+  // A poster with no bear word is the beer-bust rule's: bear crowd.
+  const plain = await run({ title: 'Beer Bust', bar: 'Lone Star Saloon', city: 'sf', image: 'https://cdn.example/plain.jpg' });
+  assert.match(plain[0].bearSource, /bear-crowd/);
+  // A leather bar is not a bear bar: the poster rule leaves it to the bust rule.
+  const leather = await run({ title: 'Beer Bust', bar: 'Eagle LA', city: 'la', image: 'https://cdn.example/bust.jpg' });
+  assert.notEqual(leather[0].bearSource, 'poster');
 });

@@ -16337,7 +16337,8 @@ Rules:
                     : decision.provenance.startsWith('keyword:') ? 'keyword'
                         : decision.provenance.startsWith('ai:') ? 'ai'
                             : decision.provenance.startsWith('config:') ? 'config'
-                                : '';
+                                : decision.provenance.startsWith('poster:') ? 'poster'
+                                    : '';
                 // The words a keyword verdict stood on travel with the event:
                 // a word two scenes share is later settled by the picture
                 // (see PICTURE_SCENE_CHECKS).
@@ -16685,6 +16686,21 @@ Rules:
         // from this site") and is never overruled.
         const promotable = decision.result === 'not_bear' || decision.result === 'unsure';
         if (!promotable || String(decision.provenance || '').startsWith('allowlist:')) return decision;
+        // A bear word on the event's OWN poster, at a bar the owner marked
+        // bear (data/bars `scene: bear`), is bear — not just its crowd.
+        // Owner, 2026-11-14, on Mr Lone Star Leather Beer Bust ("BIG BEAR
+        // POTLUCK … BEST BELLY CONTEST" on its flyer): "It says bear all
+        // over the image! Totally bear! Not just bear crowd". The model had
+        // read "BIG BEAR" as a generic phrase. Venue artwork, programmes and
+        // posters shared by several parties never reach here
+        // (getFlyerTextEvidence withholds them).
+        const posterBar = this.getPosterBearSceneBar(event);
+        if (posterBar) {
+            console.log(`🖼️🐻 POSTER AT A BEAR BAR: "${title}" → bear — ${posterBar.words.join(', ')} on its own poster, at ${posterBar.bar.name}, a bear bar on your list; was ${decision.result} (${decision.provenance})`);
+            decision.result = 'bear';
+            decision.provenance = `poster: ${posterBar.words.join(', ')} on its own poster at ${posterBar.bar.name}, a bear bar — ${decision.provenance}`;
+            return decision;
+        }
         const bearRun = typeof schema.findBearRunForEvent === 'function'
             ? schema.findBearRunForEvent(event, this.festivals, { destinations: this.cities || {} })
             : null;
@@ -17158,11 +17174,28 @@ Rules:
     getBeerBustSceneBar(event) {
         if (!event || typeof event !== 'object') return null;
         if (!/\bbeer\s*(?:bust|blast)\b|\bbust\b/i.test(String(event.title || ''))) return null;
+        const bar = this.getCuratedEventBar(event);
+        return bar && (bar.scene === 'bear' || bar.scene === 'leather') ? bar : null;
+    }
+
+    // The curated bar an event is held at: its curated name, else the
+    // curated door at its place. null when the city or bar is not curated.
+    getCuratedEventBar(event) {
+        if (!event || typeof event !== 'object') return null;
         const cityBars = this.getCuratedCityBars(String(event.city || '').trim().toLowerCase());
         if (!cityBars) return null;
-        const bar = this.findCuratedBarByName(cityBars, event.bar || event.venue || '')
-            || this.findCuratedBarByPlace(cityBars, typeof event.location === 'string' ? event.location : '', typeof event.address === 'string' ? event.address : '');
-        return bar && (bar.scene === 'bear' || bar.scene === 'leather') ? bar : null;
+        return this.findCuratedBarByName(cityBars, event.bar || event.venue || '')
+            || this.findCuratedBarByPlace(cityBars, typeof event.location === 'string' ? event.location : '', typeof event.address === 'string' ? event.address : '')
+            || null;
+    }
+
+    // { bar, words } when the event's own poster carries a bear word and the
+    // event is at a bar the owner marked bear; null otherwise.
+    getPosterBearSceneBar(event) {
+        const words = this.matchBearKeywords(this.getFlyerTextEvidence(event));
+        if (words.length === 0) return null;
+        const bar = this.getCuratedEventBar(event);
+        return bar && bar.scene === 'bear' ? { bar, words } : null;
     }
 
     isPosterOnlyTagHit(hit) {
@@ -34478,7 +34511,7 @@ SharedCore.PROVENANCE_TRUST_TIERS = Object.freeze({
     // parser spells structured-data artwork 'jsonld', 'json-ld' or
     // 'json-api' depending on the route it came by.
     imageSource: Object.freeze({ 'og-image': 2, 'jsonld': 2, 'json-ld': 2, 'json-api': 2, 'page': 1 }),
-    bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'manual-tagged': 2, 'keyword': 1, 'ai': 1, 'config': 1, 'tagged': 1 })
+    bearSource: Object.freeze({ 'manual-bear': 2, 'manual-not-bear': 2, 'manual-tagged': 2, 'keyword': 1, 'ai': 1, 'config': 1, 'poster': 1, 'tagged': 1 })
 });
 
 // ============================================================================
