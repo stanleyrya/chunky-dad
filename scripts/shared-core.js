@@ -10104,12 +10104,27 @@ Rules:
             && (automationContext.filterParsers || candidate.enabled !== false)
             && this.evaluateAutomationForParser(candidate, automationContext).shouldRun));
 
-        for (let i = 0; i < config.parsers.length; i++) {
+        // AGGREGATORS RUN LAST. An aggregator's record is a pointer to an
+        // event some other site published, and what the run should do with
+        // the pointer depends on what the event's own source said THIS run:
+        // a night its own source already gave needs nothing more (the copy
+        // folds into it and loses every contested field), a page that source
+        // already read is never read again, and only a night nobody else
+        // covered has its link followed (crawlOutAggregatorRecords). None of
+        // that can be known while the first-party sources are still to come
+        // — The Bear Calendar ran 25th of 69. The RESULTS keep config order
+        // (assembled below), so nothing downstream sees a different list.
+        const runOrder = this.getParserRunOrder(config.parsers);
+        const parserOutcomes = new Array(config.parsers.length).fill(null);
+        const firstPartyRunEvents = [];
+        this._firstPartyRunEvents = firstPartyRunEvents;
+        for (let position = 0; position < runOrder.length; position++) {
+            const i = runOrder[position];
             // Network gave up mid-run: stop starting new parsers. Whatever the
             // earlier parsers already produced is kept and shown, but the run is
             // stamped truncated below and the calendar write is refused.
             if (this.networkResilience && this.networkResilience.isGivenUp()) {
-                networkTruncatedParsers.push(...config.parsers.slice(i).map(p => p?.name || 'unnamed'));
+                networkTruncatedParsers.push(...runOrder.slice(position).map(index => config.parsers[index]?.name || 'unnamed'));
                 break;
             }
             const parserConfig = config.parsers[i];
@@ -10128,10 +10143,11 @@ Rules:
             }
             
             try {
-                await displayAdapter.logInfo(`SYSTEM: Parser ${i + 1}/${parserCount}: ${parserConfig.name}`);
+                await displayAdapter.logInfo(`SYSTEM: Parser ${position + 1}/${parserCount}: ${parserConfig.name}`);
                 
                 const parserResult = await this.processParser(parserConfig, config, httpAdapter, displayAdapter, parsers, globalProcessedUrls);
-                results.parserResults.push(parserResult);
+                const outcome = { parserResult, events: [], dropped: [] };
+                parserOutcomes[i] = outcome;
                 results.totalEvents += parserResult.totalEvents;
                 results.rawBearEvents += parserResult.rawBearEvents;
                 results.bearEvents += parserResult.bearEvents;
@@ -10152,7 +10168,8 @@ Rules:
                         const selfLinks = this.clearAggregatorSelfLinks(event);
                         if (selfLinks > 0) console.log(`🧭 AGGREGATOR: "${event.title || 'event'}" — ${selfLinks} link(s) back to ${stampedConfig.name || 'the aggregator'} cleared; an aggregator is never linked`);
                     });
-                    results.allProcessedEvents.push(...parserResult.events);
+                    outcome.events = parserResult.events;
+                    if (!this.isAggregatorConfig(stampedConfig)) firstPartyRunEvents.push(...parserResult.events);
                 }
 
                 // Aggregate enforce-mode bear-check drops. Their event objects
@@ -10166,7 +10183,7 @@ Rules:
                             dropped.event._parserConfig = stampedConfig;
                         }
                     }
-                    results.bearDroppedEvents.push(...parserResult.bearDroppedEvents);
+                    outcome.dropped = parserResult.bearDroppedEvents;
                 }
 
                 // Crawl-page failures count as run errors (they were already
@@ -10195,6 +10212,15 @@ Rules:
                 }
             }
         }
+
+        // Config order, whatever order the sources ran in.
+        for (const outcome of parserOutcomes) {
+            if (!outcome) continue;
+            results.parserResults.push(outcome.parserResult);
+            if (outcome.events.length > 0) results.allProcessedEvents.push(...outcome.events);
+            if (outcome.dropped.length > 0) results.bearDroppedEvents.push(...outcome.dropped);
+        }
+        this._firstPartyRunEvents = null;
 
         // What the flyers of the dropped events show — a notice for the
         // owner's not-bear pile, read once per picture. Never a run error.
@@ -10618,7 +10644,30 @@ Rules:
         // (see borrowPartyDescriptions): after dedup, so each night is one
         // record with everything its own pages said.
         this.borrowPartyDescriptions(deduplicatedEvents);
-        const bearEvents = await this.filterBearEvents(deduplicatedEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
+        let bearEvents = await this.filterBearEvents(deduplicatedEvents, effectiveParserConfig, httpAdapter, bearDropCollector);
+        // An aggregator's kept records follow their own links out to the
+        // event's own page — after the bear check, so no request is spent on
+        // another crowd's night (see crawlOutAggregatorRecords).
+        if (!discoveryOnly && this.isAggregatorConfig(effectiveParserConfig)) {
+            bearEvents = await this.crawlOutAggregatorRecords(bearEvents, {
+                parsers,
+                parserConfig: effectiveParserConfig,
+                mainConfig,
+                httpAdapter,
+                displayAdapter,
+                processedUrls: globalProcessedUrls,
+                parserName,
+                allowParserAutoSwitch,
+                urlClassifications,
+                enrichDropCollector,
+                crawlErrorCollector,
+                crawlGoneCollector,
+                foreignOrgDropCollector,
+                icsFeedCollector,
+                undatedDropCollector,
+                offSiteScope
+            });
+        }
 
         await displayAdapter.logInfo(`SYSTEM: Event filtering complete: ${allEvents.length} → ${futureEvents.length} future → ${bearEvents.length} bear → ${bearEvents.length} final`);
 
@@ -13500,11 +13549,29 @@ Rules:
                         // events (they belong to the venue calendar, not this source).
                         const keptEvents = [];
                         const droppedEvents = [];
+                        let standingPageRecords = 0;
                         for (const childEvent of parsedEvents) {
                             const keptByParent = enrichContext.parentEvents.find(parentEvent =>
                                 this.getSameEventIdentitySignal(childEvent, parentEvent, { requireCloseStartTimes: false })
-                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url, parsedEvents)) || null;
+                                || this.isTicketLinkPageRecord(childEvent, parentEvent, url, parsedEvents, enrichContext.pointerFields)) || null;
+                            // A standing page of a recurring party states
+                            // a cadence, not a night, so it answers every
+                            // row whose night the cadence covers — not only
+                            // the one that happens to be its next occurrence
+                            // (see isStandingPageOfRowNight).
+                            const standingParents = enrichContext.standingPageNights
+                                ? enrichContext.parentEvents.filter(parentEvent => parentEvent !== keptByParent
+                                    && this.isStandingPageOfRowNight(childEvent, parentEvent, url, parsedEvents, enrichContext.pointerFields))
+                                : [];
+                            if (Array.isArray(enrichContext.keptCollector)) {
+                                for (const parentEvent of standingParents) {
+                                    enrichContext.keptCollector.push({ child: this.fitStandingPageRecordToRow(childEvent, parentEvent), parent: parentEvent, url, standing: true, pageParties: this.countDistinctEventNames(parsedEvents) });
+                                }
+                            }
                             if (keptByParent) {
+                                if (Array.isArray(enrichContext.keptCollector)) {
+                                    enrichContext.keptCollector.push({ child: childEvent, parent: keptByParent, url, pageParties: this.countDistinctEventNames(parsedEvents) });
+                                }
                                 // WHO VOUCHES FOR THIS RECORD? It was read on
                                 // someone else's page (a ticket page, a venue
                                 // page) and is here only because a row of
@@ -13524,6 +13591,10 @@ Rules:
                                     childEvent._enrichParentPageUrl = vouchingPage.trim();
                                 }
                                 keptEvents.push(childEvent);
+                            } else if (standingParents.length > 0) {
+                                // Its facts went to the rows it stands for;
+                                // its own invented date is nobody's night.
+                                standingPageRecords += 1;
                             } else {
                                 droppedEvents.push(childEvent);
                             }
@@ -13747,9 +13818,17 @@ Rules:
                 // confirm or enrich its parent, never add a sibling), never
                 // from an enrich-only child, and skipped where the ordinary
                 // event-page path already follows ticket links.
+                // …and never for an aggregator, whose rows are mostly other
+                // crowds' nights: here the bear check has not run, so the
+                // first 12 ticket links of the page were followed whoever
+                // they belonged to (Gathr, run 20261114-184702: 305 rows, 1
+                // link followed; whereto.party: 597 rows for 11 kept). An
+                // aggregator's links are followed after the bear check, for
+                // the kept records only — see crawlOutAggregatorRecords.
                 const eventPageFollowsTickets = pageClassification === 'event-page'
                     && (adaptiveCrawl || (shouldFollowLinks && !adaptiveEnrichOnlyEventPage));
-                if (!discoveryOnly && (!enrichContext || ownSiteListingPage) && !eventPageFollowsTickets && pageEventsForEnrich.length > 0) {
+                if (!discoveryOnly && (!enrichContext || ownSiteListingPage) && !eventPageFollowsTickets && pageEventsForEnrich.length > 0
+                    && !this.isAggregatorConfig(parserConfig)) {
                     const ticketLinks = [];
                     const seenTicketLinks = new Set();
                     const allowlistRefusedLinks = [];
@@ -19568,6 +19647,293 @@ Rules:
     isAggregatorRecord(record) {
         const config = record && record._parserConfig && typeof record._parserConfig === 'object' ? record._parserConfig : null;
         return Boolean(config) && String(config.siteRole || '').trim().toLowerCase() === 'aggregator';
+    }
+
+    // The same question asked of a source's config (a record wears its
+    // config only after its parser has finished).
+    isAggregatorConfig(parserConfig) {
+        return Boolean(parserConfig) && typeof parserConfig === 'object'
+            && String(parserConfig.siteRole || '').trim().toLowerCase() === 'aggregator';
+    }
+
+    // The order the sources RUN in: config order, aggregators moved to the
+    // end (see processEvents). Indexes into `parsers`.
+    getParserRunOrder(parsers) {
+        const list = Array.isArray(parsers) ? parsers : [];
+        const firstParty = [];
+        const aggregators = [];
+        list.forEach((parser, index) => (this.isAggregatorConfig(parser) ? aggregators : firstParty).push(index));
+        return firstParty.concat(aggregators);
+    }
+
+    // AN AGGREGATOR'S RECORD IS A POINTER: FOLLOW IT TO THE EVENT'S OWN PAGE.
+    //
+    // An aggregator's card is a summary. The Bear Calendar's feed gives a
+    // city for an address ("Fort Lauderdale, FL") and the event's own page
+    // in `website`; that page states the door ("321 Slammer, 321 West
+    // Sunrise Blvd."). Run 20261114-184702: 86 kept records, 14 with a
+    // street address, 66 with no street and a link to a page that has one.
+    // Only an event's ticket link was ever followed, for the first 12 links
+    // of the page, before the bear check — 11 pages for 154 rows.
+    //
+    // So, after the bear check and only for the records it kept:
+    //   • A night the event's OWN source gave this run needs nothing: the
+    //     copy folds into that record and loses every contested field
+    //     (aggregators run last — processEvents — so this is known).
+    //   • A page some source already read this run is never read again
+    //     (the run-wide visited set), and another running source's
+    //     configured page is left to it.
+    //   • Every other record's own links — ticket link and website — are
+    //     read enrich-only: the page may confirm and enrich the record that
+    //     pointed at it, never add a sibling (the enrich-only crawl's own
+    //     filter; a page of several parties must also name the row).
+    //     Never the aggregator's own host, a social network, a link hub, an
+    //     API door or a file.
+    //   • Budget: the source's maxAdditionalUrls, else the listing-row page
+    //     budget. Records with no street address go first, soonest first.
+    //   • The page is read IN FULL. A discovery allowlist scopes what an
+    //     aggregator discovers (whereto.party reads only its /in/<city>
+    //     listings); here nothing is discovered — the page can only answer
+    //     the record that pointed at it — so the allowlist is not applied to
+    //     it. (Before the bear check that link was not followed at all for
+    //     such a source: every record the page gave was thrown away.)
+    //   • A page that will not open is a fact about someone else's site,
+    //     not a failure of this source: named on the closing line, never
+    //     counted in the run's errors.
+    // What the page gave is folded into its record by the ordinary parsed-
+    // event merge (the listing still names the event), and the record keeps
+    // the verdict the bear check gave it. Every record stays an aggregator's
+    // record: it still never wins a field from the event's own source and
+    // never changes a saved one.
+    async crawlOutAggregatorRecords(events, context = {}) {
+        const list = Array.isArray(events) ? events : [];
+        const { parserConfig, mainConfig, httpAdapter, displayAdapter, processedUrls } = context;
+        if (!this.isAggregatorConfig(parserConfig) || list.length === 0 || !(processedUrls instanceof Set)) return list;
+        const sourceName = parserConfig.name || 'aggregator';
+        const ownHosts = [...this.getAggregatorOwnHosts(parserConfig)];
+        const hostOf = (url) => this.getHostFromUrl(url).toLowerCase().replace(/^www\./, '');
+        const dayOf = (event) => this.normalizeEventDateLocal(event.startDate, event.timezone || this.getCityTimezone(event.city) || null) || '';
+        const neighbourDays = (day) => {
+            const base = Date.parse(`${day}T00:00:00Z`);
+            if (!Number.isFinite(base)) return [day];
+            return [-1, 0, 1].map(offset => new Date(base + offset * 86400000).toISOString().slice(0, 10));
+        };
+        const firstPartyByDay = new Map();
+        for (const record of Array.isArray(this._firstPartyRunEvents) ? this._firstPartyRunEvents : []) {
+            const day = record && typeof record === 'object' ? dayOf(record) : '';
+            if (!day) continue;
+            if (!firstPartyByDay.has(day)) firstPartyByDay.set(day, []);
+            firstPartyByDay.get(day).push(record);
+        }
+        const coveredByOwnSource = (event) => {
+            const day = dayOf(event);
+            if (!day) return null;
+            const options = { requireCloseStartTimes: false };
+            for (const candidateDay of neighbourDays(day)) {
+                for (const record of firstPartyByDay.get(candidateDay) || []) {
+                    const signal = this.getUngatedSameEventIdentitySignal(event, record, options);
+                    if (!signal) continue;
+                    const softBarNames = (signal === 'ticket-url' || signal === 'ticket-link-page') && !this.recordsShareSourcePage(event, record);
+                    if (!this.getIdentityContradiction(event, record, { ...options, softBarNames })) return record;
+                }
+            }
+            return null;
+        };
+
+        const tally = { past: 0, covered: 0, alreadyRead: 0, leftToOwner: 0, noLink: 0 };
+        const links = new Map();
+        for (const event of list) {
+            if (!event || typeof event !== 'object' || event._chimeraWithheld) continue;
+            const startMs = SharedCore.toEpochMillis(event.startDate);
+            if (Number.isFinite(startMs) && (Date.now() - startMs) > TICKET_LINK_PAST_EVENT_GRACE_MS) { tally.past += 1; continue; }
+            if (coveredByOwnSource(event)) { tally.covered += 1; continue; }
+            const lacksStreet = !this.addressStatesStreet(event.address);
+            let usable = 0;
+            let accounted = false;
+            const seenForEvent = new Set();
+            for (const field of ['ticketUrl', 'website', 'url']) {
+                const raw = typeof event[field] === 'string' ? event[field].trim().split('#')[0] : '';
+                if (!raw || !/^https?:\/\//i.test(raw)) continue;
+                const normalized = this.normalizeUrl(raw, raw);
+                const key = normalized ? this.getUrlDedupeKey(normalized) : '';
+                if (!key || seenForEvent.has(key)) continue;
+                seenForEvent.add(key);
+                const host = hostOf(normalized);
+                if (!host || ownHosts.some(own => host === own || host.endsWith(`.${own}`))) continue;
+                if (FetchPoliteness.neverRequestReason(normalized) || isLinkHubHost(host)) continue;
+                if (this.isApiEndpointUrl(normalized) || this.isStaticAssetUrl(normalized)) continue;
+                if (this.findOtherParserOwningUrl(normalized, mainConfig, parserConfig)) { tally.leftToOwner += 1; accounted = true; continue; }
+                if (this.hasProcessedUrl(processedUrls, normalized)) { tally.alreadyRead += 1; accounted = true; continue; }
+                usable += 1;
+                if (!links.has(key)) links.set(key, { url: normalized, parents: [], lacksStreet: false, soonestMs: Infinity });
+                const entry = links.get(key);
+                entry.parents.push(event);
+                if (lacksStreet) entry.lacksStreet = true;
+                if (Number.isFinite(startMs) && startMs < entry.soonestMs) entry.soonestMs = startMs;
+            }
+            if (usable === 0 && !accounted) tally.noLink += 1;
+        }
+
+        const configuredMax = parserConfig.maxAdditionalUrls;
+        const budget = configuredMax === null ? Infinity
+            : (Number.isInteger(configuredMax) && configuredMax >= 0 ? configuredMax : LISTING_ROW_PAGE_CRAWL_MAX);
+        const ordered = [...links.values()].sort((a, b) =>
+            (Number(b.lacksStreet) - Number(a.lacksStreet)) || (a.soonestMs - b.soonestMs));
+        const wanted = ordered.slice(0, budget);
+        const followable = new Set(this.filterKnownDeadEndUrls(wanted.map(entry => entry.url), false, Date.now(), httpAdapter));
+        const chosen = wanted.filter(entry => followable.has(entry.url));
+        await displayAdapter.logInfo(`SYSTEM: 🧭 CRAWL-OUT: ${sourceName} — ${list.length} kept record(s): ${tally.past} already over, ${tally.covered} already given by their own source this run, ${tally.alreadyRead} link(s) already read this run, ${tally.leftToOwner} link(s) left to the source that owns the page, ${tally.noLink} record(s) with no link to follow; following ${chosen.length} of ${links.size} link(s) to the events' own pages (enrich-only)`);
+        if (chosen.length === 0) return list;
+
+        const keptCollector = [];
+        const enrichOnlyByUrl = {};
+        for (const entry of chosen) {
+            enrichOnlyByUrl[this.getUrlDedupeKey(entry.url)] = {
+                parentEvents: entry.parents,
+                parentTitle: entry.parents.length === 1 ? (entry.parents[0].title || 'event') : `${entry.parents.length} events`,
+                parentUrl: String(entry.parents[0]._sourcePageUrl || (Array.isArray(parserConfig.urls) ? parserConfig.urls[0] : '') || ''),
+                // An aggregator names the event's page in `website` as often
+                // as in `ticketUrl` (see isTicketLinkPageRecord).
+                pointerFields: ['website', 'url'],
+                // …and that page may be the party's standing page.
+                standingPageNights: true,
+                keptCollector
+            };
+        }
+        const pageRecords = [];
+        const unreadPages = [];
+        const pageConfig = { ...parserConfig };
+        delete pageConfig.discoveryAllowedPatterns;
+        await this.crawlUrlsForEvents({
+            urls: chosen.map(entry => entry.url),
+            allEvents: pageRecords,
+            parsers: context.parsers,
+            parserConfig: pageConfig,
+            httpAdapter,
+            displayAdapter,
+            processedUrls,
+            // One hop: the page a record points at, and nothing it links.
+            maxDepth: 1,
+            currentDepth: 1,
+            mainConfig,
+            parserName: context.parserName,
+            allowParserAutoSwitch: context.allowParserAutoSwitch,
+            urlClassifications: context.urlClassifications,
+            includeInlineInput: false,
+            discoveryOnly: false,
+            enrichOnlyByUrl,
+            // The budget was spent above; the crawl's own cap must not cut
+            // these again as discovery links.
+            enrichmentUrlKeys: new Set(Object.keys(enrichOnlyByUrl)),
+            enrichDropCollector: context.enrichDropCollector,
+            crawlErrorCollector: unreadPages,
+            crawlGoneCollector: unreadPages,
+            foreignOrgDropCollector: context.foreignOrgDropCollector,
+            icsFeedCollector: context.icsFeedCollector,
+            undatedDropCollector: context.undatedDropCollector,
+            offSiteScope: context.offSiteScope
+        });
+
+        // Fold what each page gave into the record that pointed at it.
+        const current = new Map();
+        const globalConfig = mainConfig && mainConfig.config ? mainConfig.config : (mainConfig || null);
+        const reportFields = ['bar', 'address', 'startDate', 'endDate', 'cover', 'ticketUrl', 'website', 'image', 'description'];
+        const show = (value) => {
+            if (value === null || value === undefined || value === '') return '(blank)';
+            const epoch = SharedCore.toEpochMillis(value);
+            const text = typeof value !== 'string' && Number.isFinite(epoch) ? new Date(epoch).toISOString() : String(value);
+            return text.length > 70 ? `${text.slice(0, 67)}…` : text;
+        };
+        // A span of more than a day and a half is a festival or a week, not
+        // a night that ran late.
+        const spansSeveralDays = (event) => {
+            const start = SharedCore.toEpochMillis(event && event.startDate);
+            const end = SharedCore.toEpochMillis(event && event.endDate);
+            return Number.isFinite(start) && Number.isFinite(end) && end - start > 36 * 60 * 60 * 1000;
+        };
+        const blank = (value) => value === null || value === undefined || value === '';
+        for (const { child: rawChild, parent, url, pageParties } of keptCollector) {
+            if (!list.includes(parent)) continue;
+            const before = current.get(parent) || parent;
+            // A row that spans several days is a programme's umbrella, and
+            // a one-night record on a page of several parties is one item of
+            // that programme: its bar, door price and clock are that
+            // party's, not the week's (first measured run: "Bearadise IBFF
+            // Bear Week 2027" took the Friday pool party's bar and its $20
+            // door off the tickets page, in place of the week's $225 pass).
+            // A record under the row's very own name is the row all the
+            // same ("Bear Night", a Friday and Saturday on the aggregator,
+            // one night on the bar's page): it gives its place and the row
+            // keeps its days.
+            const nameKey = (event) => String((event && event.title) || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+            const umbrellaRow = spansSeveralDays(before);
+            const oneNightRecord = !spansSeveralDays(rawChild);
+            if (umbrellaRow && oneNightRecord && Number(pageParties) >= 2 && nameKey(rawChild) !== nameKey(before)) {
+                console.log(`🧭 CRAWL-OUT: "${before.title || 'event'}" ← ${url}: "${rawChild.title || 'event'}" is one night on a page of ${pageParties} parties and the record spans several days — one item of its programme, nothing taken`);
+                continue;
+            }
+            // A date the reader computed from the page's cadence is not the
+            // page's statement about this row's night, same day or not.
+            const child = rawChild._dateOrigin && rawChild._dateOrigin.kind === 'rrule-fallback'
+                ? this.fitStandingPageRecordToRow(rawChild, before)
+                : rawChild;
+            this.clearDegenerateScrapedEnds([child]);
+            this.applyAllDayConvention(child);
+            const merged = await this.mergeParsedEvents(before, child, { httpAdapter, globalConfig });
+            merged.key = before.key;
+            // The verdict and everything the pipeline stamped on the record
+            // belong to the record, whichever side the fold used as its base.
+            for (const field of ['isBearEvent', 'bearSource', 'bearReview', 'tags']) {
+                if (before[field] !== undefined) merged[field] = before[field];
+                else delete merged[field];
+            }
+            for (const [field, value] of Object.entries(before)) {
+                if (field.startsWith('_')) merged[field] = value;
+            }
+            // What the record already says and its page does not say better:
+            // a span of several days is never cut down to the one night (or
+            // the two-hour registration desk) its page happens to state; a
+            // link to the event's own site is never traded for the page that
+            // was read; and a page that is silent about a field erases
+            // nothing.
+            if (umbrellaRow && oneNightRecord) {
+                for (const field of ['startDate', 'endDate', 'allDay', 'timezone']) {
+                    if (before[field] !== undefined) merged[field] = before[field];
+                    else delete merged[field];
+                }
+            }
+            for (const field of ['website', 'url']) {
+                if (!blank(before[field])) merged[field] = before[field];
+            }
+            for (const field of reportFields) {
+                if (blank(merged[field]) && !blank(before[field])) merged[field] = before[field];
+            }
+            // The record names the town, its page the street: together they
+            // are the address ("448 E. Brighton Avenue" alone is a street in
+            // a hundred towns).
+            const town = String(before.address || '').trim();
+            const street = String(merged.address || '').trim().replace(/[\s,;]+$/, '');
+            if (street && street !== String(merged.address || '')) merged.address = street;
+            if (town && !/\d/.test(town) && /\d/.test(street)
+                && !street.toLowerCase().includes(town.split(',')[0].trim().toLowerCase())) {
+                merged.address = `${street}, ${town}`;
+            }
+            this.applyAllDayConvention(merged);
+            const changes = [];
+            for (const field of reportFields) {
+                const was = show(before[field]);
+                const now = show(merged[field]);
+                if (was !== now) changes.push(field === 'description' ? 'description' : `${field} ${was} → ${now}`);
+            }
+            console.log(`🧭 CRAWL-OUT: "${before.title || 'event'}" ← ${url}: ${changes.length > 0 ? changes.join('; ') : 'confirmed, nothing new'}`);
+            current.set(parent, merged);
+        }
+        const result = list.map(event => current.get(event) || event);
+        this.canonicalizeIdentityLinks(result);
+        const followedParents = new Set(chosen.flatMap(entry => entry.parents));
+        const unanswered = [...followedParents].filter(parent => !current.has(parent));
+        await displayAdapter.logInfo(`SYSTEM: 🧭 CRAWL-OUT: ${sourceName} — ${current.size} record(s) enriched from their own page; ${unanswered.length} record(s) whose page gave nothing that is their night${unanswered.length > 0 ? `: ${unanswered.slice(0, 12).map(parent => `"${parent.title || 'event'}"`).join(', ')}${unanswered.length > 12 ? ', …' : ''}` : ''}${unreadPages.length > 0 ? `; ${unreadPages.length} page(s) would not open (not counted as errors of this source): ${[...new Set(unreadPages.map(note => this.getHostFromUrl((String(note).match(/https?:\/\/\S+/) || [''])[0].replace(/:$/, '')) || 'unknown host'))].slice(0, 12).join(', ')}` : ''}`);
+        return result;
     }
 
     // Hosts an aggregator parser must never be linked through: its configured
@@ -31623,18 +31989,21 @@ Rules:
     // test, a shared curated brand, or the same flyer file). Otherwise it is
     // a neighbour on a listing: nothing enriched, nothing folded, and the
     // enrich-only crawl drops and lists it with the page's other siblings.
-    isTicketLinkPageRecord(pageRecord, row, pageUrl = '', pageRecords = null) {
+    // pointerFields: further fields of the row that point at its page. An
+    // aggregator's row names the event's own page in `website` as often as
+    // in `ticketUrl` (The Bear Calendar: 68 of 86 kept rows carry a website,
+    // 36 a ticket link), and the aggregator crawl-out follows both.
+    isTicketLinkPageRecord(pageRecord, row, pageUrl = '', pageRecords = null, pointerFields = null) {
         if (!pageRecord || typeof pageRecord !== 'object' || !row || typeof row !== 'object') return false;
         const rowShape = this.buildIdentityComparisonShape(row);
-        if (!rowShape.ticketUrl) return false;
-        const pageKey = this.normalizeTicketUrlForIdentity(String(pageRecord._sourcePageUrl || pageUrl || '').trim());
-        if (!pageKey || pageKey !== rowShape.ticketUrl) return false;
+        const pointer = this.findRowPointerToPage(row, pageRecord, pageUrl, pointerFields);
+        if (!pointer) return false;
         const pageShape = this.buildIdentityComparisonShape(pageRecord);
         if (!this.areIdentityDatesOnSameLocalDay(pageShape, rowShape)) return false;
         if (this.isFanInTicketUrl(pageRecord, row)) return false;
         const partyCount = this.countDistinctEventNames(pageRecords);
         if (partyCount >= 2 && !this.ticketLinkPageRecordSharesRowName(pageRecord, row)) {
-            console.log(`🛑 ENRICH: "${pageRecord.title || 'event'}" is on the page "${row.title || 'event'}"'s ticket link opens (${rowShape.ticketUrl}), on the same night, but that page lists ${partyCount} differently named parties and the two names share nothing — a listing's neighbour, not the row's ticket page: nothing enriched, nothing folded`);
+            console.log(`🛑 ENRICH: "${pageRecord.title || 'event'}" is on the page "${row.title || 'event'}"'s ticket link opens (${pointer}), on the same night, but that page lists ${partyCount} differently named parties and the two names share nothing — a listing's neighbour, not the row's ticket page: nothing enriched, nothing folded`);
             return false;
         }
         const contradiction = this.getIdentityContradiction(pageRecord, row, { requireCloseStartTimes: false, softBarNames: true });
@@ -31646,9 +32015,86 @@ Rules:
         // ladder reads it as its last rung (ticket-link-page); the row and
         // the page record then fold the way a listing stub and its detail
         // page do. Underscore field: never serialized, dies at the merge.
-        pageRecord._ticketLinkPageOf = rowShape.ticketUrl;
-        console.log(`🎟️ ENRICH: "${pageRecord.title || 'event'}" is the night on the page "${row.title || 'event'}"'s ticket link opens (${rowShape.ticketUrl}) — one event, kept`);
+        pageRecord._ticketLinkPageOf = pointer;
+        console.log(`🎟️ ENRICH: "${pageRecord.title || 'event'}" is the night on the page "${row.title || 'event'}"'s ticket link opens (${pointer}) — one event, kept`);
         return true;
+    }
+
+    // The row's link that opens the page a record was read on, in the
+    // ticket-url rung's own key (tracking params gone, host www-folded, a
+    // bare root is no page), or '' when the row does not point there.
+    findRowPointerToPage(row, pageRecord, pageUrl = '', pointerFields = null) {
+        const pointers = [this.buildIdentityComparisonShape(row).ticketUrl];
+        for (const field of Array.isArray(pointerFields) ? pointerFields : []) {
+            const value = typeof row[field] === 'string' ? row[field].trim() : '';
+            if (value) pointers.push(this.normalizeTicketUrlForIdentity(value));
+        }
+        const pageKey = this.normalizeTicketUrlForIdentity(String((pageRecord && pageRecord._sourcePageUrl) || pageUrl || '').trim());
+        return (pageKey && pointers.find(candidate => candidate && candidate === pageKey)) || '';
+    }
+
+    // ── The standing page of a recurring party ──────────────────────────
+    // A row's link may open a page that never states a night at all: the
+    // party's own standing page — "BearUnion Seattle, every second Friday
+    // at CC's" — which the reader can only date by its cadence (the rrule
+    // fallback, stamped _dateOrigin). That date is the NEXT occurrence, so
+    // the same-local-day guard above called the page a sibling of every
+    // row but one (The Bear Calendar, run 2026-11-14: the Nov 13 row
+    // pointed at bearcumunion.com/seattle, the page record was dated
+    // Dec 11, and the bar and street the page states never reached the
+    // row). The page's cadence is its statement, and it is checked against
+    // the row's own night: the row is that party's night when its local day
+    // is an occurrence of the rule. Same guards as the ticket-link page — a
+    // bare root is no page, a page of several parties needs the row's name,
+    // hard facts must not contradict — and the row keeps its own date and
+    // title: the page gives where and what, never when.
+    isStandingPageOfRowNight(pageRecord, row, pageUrl = '', pageRecords = null, pointerFields = null) {
+        if (!pageRecord || typeof pageRecord !== 'object' || !row || typeof row !== 'object') return false;
+        const origin = pageRecord._dateOrigin;
+        const rule = origin && origin.kind === 'rrule-fallback' ? String(origin.rrule || '').trim() : '';
+        if (!rule) return false;
+        const pointer = this.findRowPointerToPage(row, pageRecord, pageUrl, pointerFields);
+        if (!pointer) return false;
+        const rowDay = this.normalizeEventDateLocal(row.startDate, row.timezone || this.getCityTimezone(row.city) || null) || '';
+        const dayParts = rowDay.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        const schema = this.eventSchema;
+        if (!dayParts || !schema || typeof schema.computeNextRruleOccurrence !== 'function') return false;
+        // The page's cadence is stated twice: by the reader's rule and by
+        // the page's own words that vouched for it. Where the two differ
+        // ("third wednesday" on the page, BYDAY=TH from the model —
+        // bearcumunion.com/fortlauderdale321; "fifth friday" read as the
+        // first), the row's night may be a night of either.
+        const rowDate = new Date(Number(dayParts[1]), Number(dayParts[2]) - 1, Number(dayParts[3]));
+        const phraseRule = String(origin.phraseRrule || '').trim();
+        const cadence = [rule, phraseRule].find(candidate => candidate && schema.computeNextRruleOccurrence(candidate, rowDate) === rowDay) || '';
+        if (!cadence) return false;
+        const partyCount = this.countDistinctEventNames(pageRecords);
+        if (partyCount >= 2 && !this.ticketLinkPageRecordSharesRowName(pageRecord, row)) return false;
+        const contradiction = this.getIdentityContradiction(this.fitStandingPageRecordToRow(pageRecord, row), row, { requireCloseStartTimes: false, softBarNames: true });
+        if (contradiction) {
+            console.log(`🛑 IDENTITY: "${pageRecord.title || 'event'}" is the standing page "${row.title || 'event'}" points at, and its cadence (${cadence}) covers the row's night, but their ${contradiction} contradict — not folded`);
+            return false;
+        }
+        console.log(`🎟️ ENRICH: "${pageRecord.title || 'event'}" is the standing page "${row.title || 'event'}" points at (${pointer}): it states a cadence (${cadence === rule ? cadence : `"${origin.vouchedBy}", ${cadence}`}), no night, and ${rowDay} is one of its nights — the row keeps its date and takes the page's place`);
+        return true;
+    }
+
+    // The standing page's record as a statement about one row's night: the
+    // row's own date and title (the page stated neither — its date was
+    // computed, its heading is the page's), everything else the page's.
+    fitStandingPageRecordToRow(pageRecord, row) {
+        const fitted = { ...pageRecord, title: row.title, startDate: row.startDate, endDate: row.endDate };
+        for (const field of ['timezone', 'allDay', '_allDay']) {
+            if (row[field] !== undefined) fitted[field] = row[field];
+        }
+        delete fitted._dateOrigin;
+        delete fitted._recurringNoStartTime;
+        delete fitted._recurrenceFromDayPhrase;
+        // One row is one night: the page's cadence never makes it a series.
+        for (const field of ['recurring', 'recurrence', 'recurrenceRule']) {
+            if (row[field] === undefined) delete fitted[field];
+        }
+        return fitted;
     }
 
     // How many differently named parties a set of records holds: titles
