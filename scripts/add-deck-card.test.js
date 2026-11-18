@@ -50,3 +50,27 @@ test('add-deck-card: an edit card reads the saved record from the published cale
     global.Date = RealDate;
   }
 });
+
+test('add-deck-card: a party the machine already calls bear by itself gets no card unless forced', () => {
+  const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-deckcard-repo-'));
+  fs.mkdirSync(path.join(repoRoot, 'data', 'calendars'), { recursive: true });
+  const vevent = (uid, title, source) => ['BEGIN:VEVENT', `UID:${uid}`, 'DTSTAMP:20300101T000000Z', 'DTSTART:20301016T080000Z', 'DTEND:20301016T110000Z', `SUMMARY:${title}`,
+    `DESCRIPTION:bar: Kings Cross Hotel\\nbearSource: ${source}\\ntags: leather`, 'END:VEVENT'];
+  fs.writeFileSync(path.join(repoRoot, 'data', 'calendars', 'sydney.ics'), ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//test//EN',
+    ...vevent('POSTER-1', 'Bear Naked Sunday', 'poster'), ...vevent('MANUAL-1', 'Gear Night', 'manual-bear (verdict store 2030-09-01)'), 'END:VCALENDAR'].join('\r\n'));
+  const sharedRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'chunky-deckcard-shared-'));
+  const log = () => {};
+  const now = new Date('2030-10-01T00:00:00.000Z');
+  const RealDate = Date;
+  global.Date = class extends RealDate { constructor(...args) { super(...(args.length ? args : [now.getTime()])); } static now() { return now.getTime(); } };
+  try {
+    assert.throws(() => cli.main(['party', '--city', 'sydney', '--uid', 'POSTER-1', '--why', 'check'], { repoRoot, sharedRoot, log }), /bear by the machine's own reading \(poster\) — no card needed/);
+    const asked = cli.main(['party', '--city', 'sydney', '--uid', 'MANUAL-1', '--why', 'check'], { repoRoot, sharedRoot, log }).card;
+    assert.equal(asked.bearSource, 'manual-bear (verdict store 2030-09-01)');
+    assert.deepEqual(asked.tags, ['leather']);
+    const forced = cli.main(['party', '--city', 'sydney', '--uid', 'POSTER-1', '--why', 'check', '--force'], { repoRoot, sharedRoot, log }).card;
+    assert.equal(forced.bearSource, 'poster');
+  } finally {
+    global.Date = RealDate;
+  }
+});

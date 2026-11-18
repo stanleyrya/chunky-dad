@@ -700,10 +700,32 @@ class SharedCore {
             // (owner, 2026-11-14: "gear nights is kink, rubber night is just
             // rubber"); the gear words left leather for here. `titleWord`
             // as leather had it: "gear" alone is an aside in a description.
+            // `titleStates`: a phrase that, in a TITLE, is the tag — nobody
+            // is asked. The owner ruled it ("gear nights is kink"), and the
+            // model still declined it on a title that says nothing else
+            // ("FURBALL GEAR NIGHT", "Gear Night", run 20261118-060143; his
+            // word, 2026-11-18: "All the gear nights were just tagged
+            // leather and rubber but not kink"). Not when the phrase is the
+            // tail of another family's own word ("Gym Gear Night" is gym
+            // gear) — see getTitleStatedTagPhrase.
             kink: {
                 substring: ['kink', 'fetish', 'bdsm', 'dungeon'],
                 word: ['play party', 'cbt', 'gear night', 'gear party', 'gear required', 'gear is required', 'gear only', 'gear mandatory', 'full gear'],
-                titleWord: ['gear']
+                titleWord: ['gear'],
+                titleStates: ['gear night', 'gear nights']
+            },
+            // The bar's own notice on a holiday: a greeting, its opening
+            // hours that day ("HAPPY THANKSGIVING – BAR OPENS AT 6PM").
+            // Owner, 2026-11-18: "it's kinda like special hours for the
+            // bar? … add them for now for bear and leather bars with a
+            // tag". The opening-hours words count only in a title: every
+            // party's description says when its doors open. A party held
+            // on a holiday is not one — the tag check reads the hint.
+            holiday: {
+                substring: ['holiday hours'],
+                pattern: [{ name: 'holiday greeting', test: /\b(?:happy|merry)\s+(?:thanksgiving|holidays?|christmas|x-?mas|new\s+years?|easter|hanukkah|chanukah|halloween|4th|fourth|memorial\s+day|labor\s+day|mlk(?:\s+day)?|presidents'?\s+day|veterans\s+day|juneteenth)\b/i }],
+                word: [],
+                titleWord: ['bar opens', 'bar open', 'bar closed', 'opens at', 'closed for', 'we are closed']
             },
             // The fandom, never a hairy man: the same words that stop "furry"
             // counting as a bear word (furryFandomPattern) are the tag's.
@@ -1550,6 +1572,40 @@ class SharedCore {
     // ("manual-bear ..." / "manual-not-bear ..." as stamped by the results UI).
     isManualBearSource(value) {
         return typeof value === 'string' && value.trim().toLowerCase().startsWith('manual-');
+    }
+
+    // The stamps the bear check itself gives a bear event (filterBearEvents):
+    // which tier reached bear with nobody telling it.
+    static isMachineBearSource(value) {
+        return typeof value === 'string' && ['keyword', 'ai', 'config', 'poster'].includes(value.trim().toLowerCase());
+    }
+
+    // A SAVED `manual-bear` STAMP THAT THE MACHINE NOW AGREES WITH. The
+    // run-side rule (machineReachesStoredBear) stamps the machine's reason
+    // on an event the owner once had to mark bear by hand; the saved copy
+    // still says `manual-bear`, and a manual stamp on the calendar outranks
+    // every automatic one — so without this the saved events would say
+    // "manual" forever (owner, 2026-11-18: "Let's fix the events I already
+    // saved too"). The saved stamp gives way only when all of this holds:
+    //   - it is a manual BEAR (never a manual-tagged or a manual-not-bear:
+    //     those carry an answer the machine cannot reach);
+    //   - this run's record was kept as bear by a machine tier, with no
+    //     review flag on it;
+    //   - the verdict store still holds his bear for this party, with no
+    //     tags of his. That is what makes the stamp one the run would have
+    //     written from the store. A manual stamp with no store entry behind
+    //     it is his word on that one record, and stays.
+    // Notes-only: the stamp changes and nothing else, so it is written
+    // with no card (getOwnerReviewChangeFields).
+    savedManualBearYieldsToMachine(runRecord, savedBearSource) {
+        const saved = typeof savedBearSource === 'string' ? savedBearSource.trim().toLowerCase() : '';
+        if (!saved.startsWith('manual-bear')) return false;
+        if (!runRecord || typeof runRecord !== 'object') return false;
+        if (!SharedCore.isMachineBearSource(runRecord.bearSource)) return false;
+        if (typeof runRecord.bearReview === 'string' && runRecord.bearReview.trim()) return false;
+        const match = this.findStoredBearVerdictMatch(runRecord);
+        if (!match || !match.entry || match.entry.verdict !== 'bear') return false;
+        return this.eventSchema.normalizeEventTags(match.entry.tags).length === 0;
     }
 
     // The owner's manual verdict stored on a calendar record's notes, or null.
@@ -16665,7 +16721,44 @@ Rules:
     // bear-crowd, bear-run.
     async computeBearCheckDecision(event, parserConfig, httpAdapter) {
         const decision = await this.computeBearCheckVerdict(event, parserConfig, httpAdapter);
+        const machine = await this.machineReachesStoredBear(decision, event, parserConfig, httpAdapter);
+        if (machine) return machine;
         return this.attachEventTagsToBearDecision(decision, event, parserConfig, httpAdapter);
+    }
+
+    // THE OWNER SAID BEAR, AND THE MACHINE SAYS SO TOO. A stored bear
+    // verdict used to answer before any tier ran, so the event was stamped
+    // `manual-bear` for good — even when its own title says "bear", or its
+    // own poster does, and the machine would have kept it without being
+    // told (owner, 2026-11-18: "a lot of them had 'bear' 'bara' or 'cub' on
+    // the images. They should have just automatically been tagged bear …
+    // I don't want the earlier clearly bear events to be tagged 'manual'").
+    // So a stored bear with no tags is asked again WITHOUT the store: when
+    // the tiers reach bear by themselves, the machine's decision — and its
+    // reason — is the event's. Every other case is the stored verdict's,
+    // as before: the machine says anything but bear, the verdict carries
+    // the owner's tags, or it is a not-bear, a tagged or a maybe. The
+    // store entry is not touched: it is still what answers on the day the
+    // page text changes and the tiers stop reaching bear.
+    async machineReachesStoredBear(decision, event, parserConfig, httpAdapter) {
+        if (!decision || decision.manualStore !== true || decision.result !== 'bear') return null;
+        const entry = decision.storedVerdictEntry || {};
+        if (this.eventSchema.normalizeEventTags(entry.tags).length > 0) return null;
+        let machine = null;
+        try {
+            machine = await this.computeBearCheckVerdict(event, parserConfig, httpAdapter, { skipStoredVerdict: true });
+            if (!machine || machine.manualStore === true) return null;
+            machine = await this.attachEventTagsToBearDecision(machine, event, parserConfig, httpAdapter);
+        } catch (error) {
+            console.log(`🐻 BEAR CHECK: "${(event && event.title) || 'Unknown'}" — the machine's own reading failed (${error && error.message}); your stored bear stands`);
+            return null;
+        }
+        if (!machine || machine.result !== 'bear') return null;
+        if (!SharedCore.isMachineBearSource(String(machine.provenance || '').split(':')[0])) return null;
+        const said = `${entry.stampedAt ? String(entry.stampedAt).slice(0, 10) : 'earlier'}`;
+        console.log(`🤝 BEAR CHECK: "${(event && event.title) || 'Unknown'}" — you said bear (${said}) and the machine reaches bear by itself (${machine.provenance}) — stamped with the machine's reason, not "manual"`);
+        machine.agreesWithStoredVerdict = entry;
+        return machine;
     }
 
     async attachEventTagsToBearDecision(decision, event, parserConfig, httpAdapter) {
@@ -16733,10 +16826,15 @@ Rules:
             // One focused call per candidate tag (memoized per event+tag,
             // cached like every pass). The bear verdict is a separate answer
             // on purpose: sharing one JSON moved verdicts (2026-11-06).
-            const answers = await Promise.all(machine.candidates.map(tag => this.getAiTagVerdict(event, tag, parserConfig, httpAdapter)));
+            // What the title states outright is not a question (the
+            // vocabulary's `titleStates`).
+            const stated = machine.stated || {};
+            const statedTags = machine.candidates.filter(tag => stated[tag]);
+            const answers = await Promise.all(machine.candidates.map(tag => (stated[tag] ? null : this.getAiTagVerdict(event, tag, parserConfig, httpAdapter))));
             const confirmed = []; const declined = []; const unanswered = [];
             machine.candidates.forEach((tag, index) => {
                 const answer = answers[index];
+                if (stated[tag]) return;
                 if (!answer) unanswered.push(tag);
                 else if (answer.applies) confirmed.push(`${tag}: "${answer.evidence[0] || ''}"`);
                 else declined.push(`${tag}: ${answer.reason || 'no reason'}`);
@@ -16744,8 +16842,9 @@ Rules:
             // No AI to ask: what the TITLE names stands, a description-only
             // hit does not (a dress-code aside reads the same as a night).
             const standing = unanswered.filter(tag => machine.fromTitle.includes(tag));
-            tags = schema.normalizeEventTags(confirmed.map(line => line.split(':')[0]).concat(standing));
+            tags = schema.normalizeEventTags(confirmed.map(line => line.split(':')[0]).concat(standing, statedTags));
             const parts = [];
+            if (statedTags.length > 0) parts.push(`the title says ${statedTags.map(tag => `${tag}: "${stated[tag]}"`).join('; ')} (not asked)`);
             if (confirmed.length > 0) parts.push(`confirmed ${confirmed.join('; ')}`);
             if (declined.length > 0) parts.push(`declined ${declined.join('; ')}`);
             if (unanswered.length > 0) parts.push(`no AI for ${unanswered.join(', ')} → ${standing.length > 0 ? `title-named stand: ${standing.join(', ')}` : 'not tagged'}`);
@@ -16806,6 +16905,21 @@ Rules:
             decision.provenance = `tagged: ${decision.keptAs} — ${decision.provenance}`;
             return decision;
         }
+        //   4. the bar's own holiday notice (the `holiday` tag: a greeting,
+        //      its hours that day) at a bar the owner marked bear or
+        //      leather. Owner, 2026-11-18: "I suppose add them for now for
+        //      bear and leather bars with a tag. We can figure out what to
+        //      do about them later". The tag describes and keeps nothing by
+        //      itself: it is the bar's mark that keeps the notice, exactly
+        //      as it keeps the bar's beer bust.
+        const holidayBar = this.getHolidayNoticeSceneBar(event, tags);
+        if (holidayBar) {
+            console.log(`🎄 HOLIDAY: "${title}" kept — the bar's own holiday notice at ${holidayBar.name}, a ${holidayBar.scene} bar on your list; was ${decision.result} (${decision.provenance})`);
+            decision.result = 'tagged';
+            decision.keptAs = `holiday: the bar's own holiday notice at ${holidayBar.name}, a ${holidayBar.scene} bar`;
+            decision.provenance = `tagged: ${decision.keptAs} — ${decision.provenance}`;
+            return decision;
+        }
         // A poster word counts like a page word — a dress code printed on
         // the flyer is the same dress code ("Randy: Unwrapped": "ENCOURAGED:
         // LEATHER, GEAR, HARNESS"; page text with those words is kept). The
@@ -16847,14 +16961,17 @@ Rules:
         return decision;
     }
 
-    async computeBearCheckVerdict(event, parserConfig, httpAdapter) {
+    async computeBearCheckVerdict(event, parserConfig, httpAdapter, options = {}) {
         // Tier 0 — the owner's persistent verdict store (results-UI taps the
         // adapters persist to bear-verdicts.json). A stored manual verdict
         // outranks every automatic tier IN BOTH DIRECTIONS, exactly like the
         // manual-override-on-calendar-record path: the owner already judged
         // this party at this venue, and the AI re-litigating it every run is
         // how MEAT RACK kept getting re-dropped (run 20260812-002001).
-        const storedMatch = this.findStoredBearVerdictMatch(event);
+        // options.skipStoredVerdict: the tiers alone, for the one caller
+        // that asks whether the machine agrees with a stored bear
+        // (machineReachesStoredBear). A parked maybe still answers.
+        const storedMatch = options.skipStoredVerdict === true ? null : this.findStoredBearVerdictMatch(event);
         const storedVerdict = storedMatch ? storedMatch.entry : null;
         if (storedVerdict) {
             const stamp = String(storedVerdict.stampedAt || '').slice(0, 10);
@@ -17226,10 +17343,51 @@ Rules:
             result.candidates.push(tag);
             if (title.length > 0) result.fromTitle.push(tag);
             result.hits[tag] = flyer.length > 0 ? { title, description, flyer } : { title, description };
+            // Only present when a title states a tag outright.
+            const statedPhrase = this.getTitleStatedTagPhrase(event, tag);
+            if (statedPhrase) {
+                if (!result.stated) result.stated = {};
+                result.stated[tag] = statedPhrase;
+            }
         }
         result.candidates.sort();
         result.fromTitle.sort();
         return result;
+    }
+
+    // The phrase in the event's title that states a tag outright (the
+    // family's `titleStates`), or ''. The phrase has to stand by itself:
+    // when another family's keyword runs across its edge the words belong
+    // to that keyword ("Gym Gear Night" holds sportswear's "gym gear", so
+    // it is not a gear night). The other families are read from the
+    // vocabulary, never listed here.
+    getTitleStatedTagPhrase(event, tag) {
+        const family = this.tagKeywords && this.tagKeywords[tag];
+        const phrases = family && Array.isArray(family.titleStates) ? family.titleStates : [];
+        if (phrases.length === 0 || !event || typeof event !== 'object') return '';
+        const titles = [event.title].concat(this.getStatedTitles(event)).map(value => String(value || '').toLowerCase()).filter(Boolean);
+        const others = [];
+        for (const name of Object.keys(this.tagKeywords)) {
+            if (name === tag) continue;
+            const other = this.tagKeywords[name] || {};
+            for (const keyword of (other.substring || []).concat(other.word || [], other.titleWord || [])) others.push(String(keyword).toLowerCase());
+        }
+        const straddled = (source, start, end) => others.some(keyword => {
+            for (let at = source.indexOf(keyword); at !== -1; at = source.indexOf(keyword, at + 1)) {
+                const stop = at + keyword.length;
+                if (at < end && stop > start && (at < start || stop > end)) return true;
+            }
+            return false;
+        });
+        for (const source of titles) {
+            for (const phrase of phrases) {
+                const pattern = new RegExp(`\\b${String(phrase).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+                for (let hit = pattern.exec(source); hit; hit = pattern.exec(source)) {
+                    if (!straddled(source, hit.index, hit.index + hit[0].length)) return phrase;
+                }
+            }
+        }
+        return '';
     }
 
     // The poster joins a tag question only when it names the tag in a word
@@ -17253,6 +17411,16 @@ Rules:
     getBeerBustSceneBar(event) {
         if (!event || typeof event !== 'object') return null;
         if (!/\bbeer\s*(?:bust|blast)\b|\bbust\b/i.test(String(event.title || ''))) return null;
+        const bar = this.getCuratedEventBar(event);
+        return bar && (bar.scene === 'bear' || bar.scene === 'leather') ? bar : null;
+    }
+
+    // The curated bar a holiday notice is about, when the owner marked that
+    // bar bear or leather; null otherwise. `tags` are the event's confirmed
+    // tags: the notice is one only once the tag check said so.
+    getHolidayNoticeSceneBar(event, tags) {
+        if (!event || typeof event !== 'object') return null;
+        if (!Array.isArray(tags) || !tags.includes('holiday')) return null;
         const bar = this.getCuratedEventBar(event);
         return bar && (bar.scene === 'bear' || bar.scene === 'leather') ? bar : null;
     }
@@ -19431,6 +19599,26 @@ Rules:
             }
             crossSourceDeduplicated = kept;
         }
+
+        // A special edition of the bar's regular night is that night (see
+        // getSpecialEditionSignal). One line per pair, always.
+        const editionFolded = [];
+        for (const event of crossSourceDeduplicated) {
+            let edition = null;
+            const match = editionFolded.find(existing => {
+                edition = this.getSpecialEditionSignal(event, existing);
+                return Boolean(edition);
+            });
+            if (!match) {
+                editionFolded.push(event);
+                continue;
+            }
+            const zone = this.getEventZone(edition.regular) || this.getEventZone(edition.special);
+            const clock = zone ? new Date(this.toEpochMillis(edition.regular.startDate)).toLocaleTimeString('en-US', { timeZone: zone, hour: 'numeric', minute: '2-digit' }) : String(edition.regular.startDate);
+            console.log(`🎗️ SPECIAL EDITION: "${edition.special.title}" (${edition.sameClock ? 'same start' : 'no time stated'}, ${edition.day}) is "${edition.regular.title}" that day at ${edition.special.bar || edition.regular.bar || 'the same door'} — the ${SharedCore.describeCadenceRule(edition.cadence) || 'regular'} night, ${clock} — one event: kept under its own name and page${edition.sameClock ? '' : ", at the regular night's time"}`);
+            editionFolded[editionFolded.indexOf(match)] = this.foldSpecialEdition(edition);
+        }
+        crossSourceDeduplicated = editionFolded;
 
         // Fourth pass: same-series export collapse (run 20260806-171735). When
         // a run lands on a weekly series' own weekday, the site surfaces BOTH
@@ -22226,7 +22414,10 @@ Rules:
             // (getOwnerReviewChangeFields): a tags-only update is housekeeping.
             if (fieldName === 'tags') {
                 const scraperManual = this.isManualBearSource(scraperObject.bearSource);
-                const calendarManual = this.isManualBearSource(calendarObject.bearSource);
+                // A saved manual-bear the machine now agrees with is an
+                // automatic reading like any other (savedManualBearYieldsToMachine).
+                const calendarManual = this.isManualBearSource(calendarObject.bearSource)
+                    && !this.savedManualBearYieldsToMachine(scraperObject, calendarObject.bearSource);
                 const tags = scraperManual
                     ? this.eventSchema.formatEventTags(scraperValue)
                     : calendarManual
@@ -22239,6 +22430,10 @@ Rules:
 
             if (fieldName === 'bearSource') {
                 if (this.isManualBearSource(scraperValue)) {
+                    mergedObject[fieldName] = scraperValue;
+                } else if (this.savedManualBearYieldsToMachine(scraperObject, calendarValue)) {
+                    // The owner's bear and the machine's are the same answer:
+                    // the record says how the machine got there.
                     mergedObject[fieldName] = scraperValue;
                 } else if (this.isManualBearSource(calendarValue) || this.isEmptyArbitrationValue(scraperValue)) {
                     mergedObject[fieldName] = calendarValue;
@@ -28649,7 +28844,12 @@ Rules:
                 // Mirrors the live-tap `keptMarkedBear` branch in the Scriptable
                 // adapter (isBearEvent set, stored bearSource adopted, review flag
                 // deleted) so a stored verdict and a live tap converge on one state.
-                if (storedVerdict === 'manual-bear' || storedVerdict === 'manual-tagged') {
+                const savedFields = storedVerdict === 'manual-bear' ? this.parseNotesIntoFields(matchedRecord.notes || '') : null;
+                if (savedFields && this.savedManualBearYieldsToMachine(event, savedFields.bearSource)) {
+                    // The saved stamp is not adopted: the machine keeps this
+                    // event as bear by itself now, and the record says how.
+                    console.log(`🤝 BEAR CHECK: "${event.title || 'Unknown'}" — saved as ${String(savedFields.bearSource).trim()}; the machine reaches bear by itself (${event.bearSource}) — the saved record takes the machine's reason`);
+                } else if (storedVerdict === 'manual-bear' || storedVerdict === 'manual-tagged') {
                     const storedFields = this.parseNotesIntoFields(matchedRecord.notes || '');
                     const storedBearSource = typeof storedFields.bearSource === 'string' ? storedFields.bearSource.trim() : '';
                     preparedEvent = { ...event, isBearEvent: true };
@@ -32534,7 +32734,7 @@ Rules:
         // page per occurrence (Eagle LA's CUBSCOUT at /events/cub-scout-3/
         // and /events/cubscout-51/) puts one event on two sibling slugs,
         // and either slug spells the other record's title.
-        if (!sharedPage) {
+        if (!sharedPage && !options.ownPagesExpected) {
             const siblings = this.getSiblingEventPages(eventA, eventB, options);
             if (siblings && !this.siblingPagesNameOneEvent(eventA, eventB, siblings)) {
                 return `event pages (${siblings.a} vs ${siblings.b})`;
@@ -32561,6 +32761,10 @@ Rules:
             return `curated bars ("${curatedA.name}" vs "${curatedB.name}")`;
         }
         if (!options.ignoreStatedDays && this.haveContradictingStatedDays(eventA, eventB)) return 'stated days';
+        // options.ownPagesExpected: the pair is a special edition and the
+        // regular night it replaces (getSpecialEditionSignal) — a page of
+        // its own is what makes it a special edition, not a second party.
+        if (options.ownPagesExpected) return null;
         const destinations = this.getContradictingDestinations(eventA, eventB, options);
         if (destinations) return `destinations (${destinations.a} vs ${destinations.b})`;
         return null;
@@ -33715,6 +33919,103 @@ Rules:
     //     significant token of the shorter title must appear in the longer.
     //     Unrelated titles sharing a token ("Treasure Hunt" / "Treasure
     //     Trail") never match — the subset must be total.
+    // A SPECIAL EDITION OF THE BAR'S REGULAR NIGHT IS THAT NIGHT. A bar
+    // with a weekly night gives one date of it a page of its own when the
+    // date falls on a holiday: Eagle LA, run 20261118-060143, published
+    // "SUNDAY BEER BUST" (every Sunday, 2 PM) and, for Sunday 17 January
+    // 2027, a second page "MLK BEER BUST" with no time and "Check back
+    // later for more details". Two saved events for one afternoon. Owner,
+    // 2026-11-18: "Mlk beer bust on Sunday should probably merge with beer
+    // bust on Sunday?".
+    //
+    // The cross-source signal sees the pair and refuses it, rightly for
+    // what it knows: two event pages are two destinations. What tells
+    // this pair apart is on the records themselves, all of it needed:
+    //   - `regular` states a cadence (the page's own "every Sunday") and a
+    //     clock time, and is one night of it — never a whole-series
+    //     export, which stands for every other night too;
+    //   - `special` states no cadence, is at the same door, on that same
+    //     night, and either states no time (the placeholder) or states the
+    //     regular night's own start;
+    //   - the regular night's name — its title without weekday words, two
+    //     words or more — is printed in the special's title in the same
+    //     order ("beer bust" inside "mlk beer bust"). One shared word is a
+    //     theme, not a name;
+    //   - place, curated bars and stated days must not contradict. Pages
+    //     are not compared: a page of its own is the special edition.
+    // Returns { special, regular, day, cadence, sameClock } or null.
+    getSpecialEditionSignal(eventA, eventB) {
+        if (!eventA || typeof eventA !== 'object' || !eventB || typeof eventB !== 'object') return null;
+        if (this.areDistinctPublishedFeedRows(eventA, eventB)) return null;
+        return this.readSpecialEdition(eventA, eventB) || this.readSpecialEdition(eventB, eventA);
+    }
+
+    readSpecialEdition(special, regular) {
+        const cadence = this.getEventCadenceRule(regular);
+        if (!cadence || this.getEventCadenceRule(special)) return null;
+        if (this.getSeriesExportIdentity(regular) || this.getSeriesExportIdentity(special)) return null;
+        if (Boolean(special._timezoneUnresolved) !== Boolean(regular._timezoneUnresolved)) return null;
+        if (!this.holdsClockSlot(regular, special)) return null;
+        const specialMs = this.toEpochMillis(special.startDate);
+        if (specialMs === null) return null;
+        const sameClock = this.holdsClockSlot(special, regular);
+        if (sameClock) {
+            if (specialMs !== this.toEpochMillis(regular.startDate)) return null;
+        } else {
+            // A placeholder for one day only: a weekend-long all-day
+            // record is a festival, not an edition of one night.
+            const zone = special._timezoneUnresolved ? 'UTC' : (this.getEventZone(special) || this.getEventZone(regular));
+            const days = zone ? SharedCore.allDayDaysInZone(special.startDate, special.endDate, zone) : null;
+            if (days && days.startDay !== days.endDay) return null;
+        }
+        const day = this.getEventNightKey(regular);
+        if (!day || this.getEventNightKey(special) !== day) return null;
+        if (!this.getCrossSourceVenueIdentity(special, regular)) return null;
+        const venueKeys = [this.normalizeBarNameKey(special.bar), this.normalizeBarNameKey(regular.bar)].filter(Boolean);
+        const name = this.getCrossSourceTitleTokens(regular.title, venueKeys);
+        if (name.length < 2) return null;
+        const title = this.getCrossSourceTitleTokens(special.title, venueKeys);
+        const printed = title.some((_, start) => name.every((token, offset) => title[start + offset] === token));
+        if (!printed) return null;
+        const contradiction = this.getIdentityContradiction(special, regular, { ownPagesExpected: true });
+        if (contradiction) {
+            console.log(`🛑 IDENTITY: "${special.title || 'event'}" reads as a special edition of "${regular.title || 'event'}", but their ${contradiction} contradict — two events, not folded`);
+            return null;
+        }
+        return { special, regular, day, cadence, sameClock };
+    }
+
+    // One record for a special edition and the regular night it is: the
+    // special's own name, page, picture, words, verdict and tags; the
+    // regular night's clock when the special states none; the regular
+    // night's place where the special's is blank. Never the cadence — this
+    // is one date. The regular night's record for that date is not kept:
+    // a saved copy of it then has no source row and comes up on the deck's
+    // existing "gone from the source" card, which is the owner's to answer.
+    foldSpecialEdition(edition) {
+        const { special, regular } = edition;
+        const merged = { ...special };
+        if (!edition.sameClock) {
+            merged.startDate = regular.startDate;
+            if (regular.endDate === null || regular.endDate === undefined || regular.endDate === '') delete merged.endDate;
+            else merged.endDate = regular.endDate;
+            SharedCore.setWholeDayFlags(merged, '');
+            delete merged._noTimeStated;
+        }
+        const blank = (value) => value === null || value === undefined || (typeof value === 'string' && value.trim() === '');
+        for (const field of ['bar', 'address', 'addressSource', 'location', 'pinSource', 'gmaps', 'timezone']) {
+            if (blank(merged[field]) && !blank(regular[field])) merged[field] = regular[field];
+        }
+        if ([...IMAGE_MERGE_FIELDS].every(field => blank(merged[field]))) {
+            for (const field of [...IMAGE_MERGE_FIELDS, 'imageSource']) {
+                if (!blank(regular[field])) merged[field] = regular[field];
+            }
+        }
+        if (special.manuallyMarkedBear === true || regular.manuallyMarkedBear === true) merged.manuallyMarkedBear = true;
+        merged._specialEditionOf = { title: String(regular.title || ''), cadence: edition.cadence, tookClock: !edition.sameClock };
+        return merged;
+    }
+
     getCalendarTitleSubsetSignal(newEvent, existingEvent) {
         if (!newEvent || typeof newEvent !== 'object' || !existingEvent || typeof existingEvent !== 'object') {
             return null;

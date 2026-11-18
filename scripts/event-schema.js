@@ -252,6 +252,11 @@ const EVENT_TAGS = Object.freeze({
     'country': Object.freeze({ label: 'Country', shown: true, who: 'machine', hint: 'a country-western night: line dancing, two-step, a rodeo or a honky tonk — not a country as in a nation, not a cowboy costume aside' }),
     'naked': Object.freeze({ label: 'Naked', shown: true, who: 'machine', hint: 'a night, party, pool or retreat where the guests themselves are naked or clothing is optional — not nude performers, models, art or photos, not a clothes check that is merely on offer, not a show or performer name' }),
     'sex-party': Object.freeze({ label: 'Sex party', shown: true, who: 'machine', hint: 'a sex party or play party: sex on the premises is the point of the event — not a dance night that merely has a dark room or play space, not a boat cruise' }),
+    // The bar's own notice on a holiday, not a party (owner, 2026-11-18:
+    // "it's kinda like special hours for the bar"). Describes only; at a
+    // bar marked bear or leather the bar's mark keeps it (SharedCore
+    // attachEventTagsToBearDecision, rule 4).
+    'holiday': Object.freeze({ label: 'Holiday', shown: true, who: 'machine', hint: 'the bar\'s own notice for a holiday: a holiday greeting from the bar, or its opening hours that day ("Happy Thanksgiving – bar opens at 6pm", "closed for Christmas") — not a party, show, contest or beer bust held on or named for a holiday (a New Year\'s Eve bash, a Thanksgiving Eve beer bust, a Halloween party)' }),
     'bear-crowd': Object.freeze({ label: 'Bear crowd', shown: false, who: 'owner', keeps: true }),
     'bear-run': Object.freeze({ label: 'Bear run', shown: false, who: 'derived', keeps: true })
 });

@@ -1940,7 +1940,7 @@ function buildDeck(runPayload, store, options = {}) {
     const runId = (payload.summary && payload.summary.runId) || options.runId || null;
     const cards = [];
     const decided = [];
-    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, manual: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0, 'verdict-conflict': 0, verdictConflictsInStore: 0, maybe: 0, worth: 0, lowRisk: 0, shapeFlagged: 0 };
+    const counts = { pending: 0, decided: 0, approved: 0, rejected: 0, waiting: 0, new: 0, merge: 0, override: 0, series: 0, bar: 0, gone: 0, manual: 0, dropped: 0, droppedDecided: 0, pastSkipped: 0, 'verdict-conflict': 0, verdictConflictsInStore: 0, maybe: 0, worth: 0, lowRisk: 0, shapeFlagged: 0, machineSettled: 0 };
 
     // A row the phone re-analyzed and wrote carries _ownerReviewApproved and
     // its fresh action; the run file's executions[] dates it. Executions
@@ -2168,13 +2168,38 @@ function buildDeck(runPayload, store, options = {}) {
     // Questions first: a choose card waits on the owner's answer, and what
     // it answers decides which remove cards come next.
     const manual = Array.isArray(options.manualCards) ? options.manualCards : [];
+    // A party card is written once and asked days later. What it says the
+    // event is tagged, and why it is on the site, is read from this run
+    // (the merged record the run would save), so a tag the owner fixed by
+    // hand yesterday is on the card today. And a party the machine now
+    // calls bear by itself is not a question: its card is not dealt
+    // (owner, 2026-11-18: "They should have just automatically been
+    // tagged bear"). A card he already answered stays in the decided pile.
+    const liveBySavedUid = new Map();
+    if (manual.some((card) => card && card.action === 'party')) {
+        const SharedCore = loadSharedCore();
+        analyzed.forEach((event) => {
+            const identifier = event && event._existingEvent ? String(event._existingEvent.identifier || '') : '';
+            const uid = identifier ? SharedCore.savedEventUid(identifier) : '';
+            if (uid && !liveBySavedUid.has(uid)) liveBySavedUid.set(uid, event);
+        });
+    }
+    const livePartyFacts = (card) => {
+        const live = card && card.action === 'party' ? liveBySavedUid.get(String(card.uid || '')) : null;
+        if (!live) return null;
+        const tags = (Array.isArray(live.tags) ? live.tags : String(live.tags || '').split(',')).map((tag) => String(tag || '').trim()).filter(Boolean);
+        return { tags, bearSource: String(live.bearSource || '').trim(), machineBear: loadSharedCore().isMachineBearSource(String(live.bearSource || '')) && !live.bearReview };
+    };
     const manualOrder = manual.map((card, index) => ({ card, index }))
         .sort((a, b) => Number(!(a.card && a.card.action === 'choose')) - Number(!(b.card && b.card.action === 'choose')) || a.index - b.index);
     manualOrder.forEach(({ card, index }) => {
         if (!card || typeof card !== 'object' || typeof card.key !== 'string' || !card.key) return;
         if (manualCardExpired(card, now)) { counts.pastSkipped++; return; }
         const decision = decisions.find((entry) => entry && entry.key === card.key && (entry.verdict === 'approve' || entry.verdict === 'reject')) || null;
-        file({ id: `m${index}`, kind: 'manual', key: card.key, sourceIndex: index, proposal: { ...card, kind: 'manual' } }, decision);
+        const live = livePartyFacts(card);
+        if (live && live.machineBear && !decision) { counts.machineSettled++; return; }
+        const proposal = live ? { ...card, kind: 'manual', tags: live.tags, bearSource: live.bearSource, factsFromRun: true } : { ...card, kind: 'manual' };
+        file({ id: `m${index}`, kind: 'manual', key: card.key, sourceIndex: index, proposal }, decision);
     });
 
     // Events the bear check DROPPED (flag, don't drop — they are in the run
