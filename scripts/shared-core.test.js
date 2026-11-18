@@ -30003,6 +30003,56 @@ test('calendar twins: contained names at one bar, one name at two places, a plac
   assert.equal(byUid.ROOM1, undefined, 'two rooms in one slot are two events');
 });
 
+// Run 20261118-175515: the site's "MLK BEER BUST" page folded into the
+// Sunday beer bust and the run matched it to the saved MLK stub — still
+// all-day on the calendar until the phone writes the 2 PM start. The twin
+// card counted facts and offered the MLK copy for removal, the opposite of
+// what the run had just decided.
+test('calendar twins: the copy this run matched the site\'s listing to is the one kept, whatever the fact count says; a copy with a gone-from-source card gets no second card', () => {
+  const core = new SharedCore({ la: { timezone: 'America/Los_Angeles' } }, { eventSchema: EventSchema });
+  const notes = 'bar: Eagle LA\naddress: 4219 Santa Monica Blvd, Los Angeles, CA 90029\nimage: https://x/a.jpg';
+  const saved = { la: { source: 'published', events: [
+    { identifier: 'MLK', uid: 'MLK', title: 'MLK BEER BUST', startDate: new Date('2031-01-19T00:00:00.000Z'), endDate: new Date('2031-01-20T00:00:00.000Z'), isAllDay: true, location: '34.09, -118.28', notes, url: '', series: false },
+    { identifier: 'SUN', uid: 'SUN', title: 'SUNDAY BEER BUST', startDate: new Date('2031-01-19T22:00:00.000Z'), endDate: null, isAllDay: false, location: '34.09, -118.28', notes, url: '', series: false }
+  ] } };
+  const now = new Date('2030-11-18T12:00:00.000Z');
+  const card = (out) => out.candidates.find((c) => !c.twinMirror);
+
+  // Alone, the fact count: the all-day copy is the extra.
+  const plain = core.buildCalendarTwinCandidates(saved, { now });
+  assert.equal(card(plain).uid, 'MLK');
+  assert.deepEqual(card(plain).extraWhy, ['all-day beside a timed copy']);
+  assert.equal(card(plain).byRun, false);
+
+  // The run gave the site's one listing that night to the MLK copy.
+  const keptByRun = [{ city: 'la', uid: 'SUN', keptUid: 'MLK', keptTitle: 'MLK BEER BUST' }];
+  const followed = core.buildCalendarTwinCandidates(saved, { now, keptByRun });
+  assert.equal(card(followed).uid, 'SUN', 'the Sunday copy is the extra');
+  assert.equal(card(followed).key, 'gone|la|SUN');
+  assert.equal(card(followed).twinOf.uid, 'MLK');
+  assert.equal(card(followed).byRun, true);
+  assert.equal(card(followed).tie, false);
+  assert.deepEqual(card(followed).extraWhy, ['the site lists one event that night and this run matched it to the other copy']);
+  assert.equal(followed.candidates.find((c) => c.twinMirror).uid, 'MLK', 'the mirror is the kept copy');
+  assert.equal(followed.summary.byRun, 1);
+
+  // A finding about another calendar, or another pair, changes nothing.
+  const elsewhere = core.buildCalendarTwinCandidates(saved, { now, keptByRun: [{ city: 'sf', uid: 'SUN', keptUid: 'MLK' }, { city: 'la', uid: 'SUN', keptUid: 'OTHER' }] });
+  assert.equal(card(elsewhere).uid, 'MLK');
+
+  // Two findings that point at each other say nothing: back to the facts.
+  const both = core.buildCalendarTwinCandidates(saved, { now, keptByRun: [...keptByRun, { city: 'la', uid: 'MLK', keptUid: 'SUN' }] });
+  assert.equal(card(both).uid, 'MLK');
+  assert.equal(card(both).byRun, false);
+
+  // The Sunday copy already has its "extra copy" card from the source
+  // comparison (same key): one saved event, one removal card.
+  const covered = core.buildCalendarTwinCandidates(saved, { now, keptByRun, carded: new Set(['gone|la|SUN']) });
+  assert.equal(covered.candidates.length, 0);
+  assert.equal(covered.summary.covered, 1);
+  assert.equal(covered.summary.candidates, 0);
+});
+
 // ---------------------------------------------------------------------------
 // Spooky Bear weekend, run 20261029-071349: an aggregator's copy wearing the
 // first-party record's own picture, an umbrella fragment anchoring a saved

@@ -547,12 +547,21 @@ class BearEventScraperOrchestrator {
                             if (typeof sharedCore.buildCalendarTwinCandidates === 'function') {
                                 const restCities = Object.keys(config.cities || {}).filter((city) => !cityKeys.has(city));
                                 const restSaved = restCities.length > 0 ? await finalAdapter.listSavedUpcomingEvents(restCities) : {};
-                                const twins = sharedCore.buildCalendarTwinCandidates({ ...savedByCity, ...restSaved }, { cities: config.cities });
+                                // The copy this run matched the site's listing to
+                                // is the one kept, and a copy that already has a
+                                // gone-from-source card gets no second card.
+                                const twins = sharedCore.buildCalendarTwinCandidates({ ...savedByCity, ...restSaved }, {
+                                    cities: config.cities,
+                                    keptByRun: gone.keptByRun,
+                                    carded: new Set(gone.candidates.map((card) => card.key))
+                                });
                                 gone.twins = twins.summary;
                                 gone.candidates.push(...twins.candidates);
                                 const t = twins.summary;
-                                console.log(`👯 Orchestrator: calendar twins — ${t.singles} saved single(s) in ${t.cities} city calendar(s): ${t.pairs} pair(s) that are one night, ${t.candidates} on the deck`);
+                                console.log(`👯 Orchestrator: calendar twins — ${t.singles} saved single(s) in ${t.cities} city calendar(s): ${t.pairs} pair(s) that are one night, ${t.candidates} on the deck${t.byRun ? `, ${t.byRun} with the extra copy named by this run's own match` : ''}${t.covered ? `, ${t.covered} already on a gone-from-source card` : ''}`);
                                 for (const card of twins.candidates) {
+                                    // The mirror is the kept copy, never a card.
+                                    if (card.twinMirror) continue;
                                     console.log(`👯 TWIN: "${card.title}" (${card.city}, ${card.startDate ? card.startDate.slice(0, 10) : '?'}) is one night with the saved "${card.twinOf.title}" — ${card.why.join('; ')}; this copy is the extra (${card.extraWhy.length ? card.extraWhy.join(', ') : 'a tie, picked by uid'}). On the deck.`);
                                 }
                             }
@@ -575,6 +584,8 @@ class BearEventScraperOrchestrator {
                             console.log(`🕳️ IDENTITY: saved "${miss.title}" (${miss.city}, ${miss.day}${miss.bar ? `, ${miss.bar}` : ''}) is listed by ${miss.host} that night at the same place as "${miss.listed}", but the run ${miss.proposal === 'new' ? 'proposes it as a NEW event' : miss.proposal === 'dropped' ? 'dropped it as not bear' : 'did not fold them'} — an identity gap, not a gone event; no card.`);
                         }
                         for (const card of gone.candidates) {
+                            // A calendar twin has its own line above (👯 TWIN).
+                            if (card.reason === 'twin') continue;
                             const instead = card.reason === 'duplicate'
                                 ? ` — the site lists it and the run matched that to the saved "${card.duplicateOf.title}" (${card.duplicateOf.uid}): this copy is the extra`
                                 : card.instead.sameNight.length > 0

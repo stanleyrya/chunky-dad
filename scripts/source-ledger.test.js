@@ -556,6 +556,15 @@ test('buildGoneFromSourceCandidates: a saved event pointing into a site a first-
   assert.equal(card.instead.sameNight[0].title, 'Underwear Night Party');
   assert.equal(card.instead.sameNight[0].samePlace, false);
   assert.equal(card.reason, 'moved', 'similar name at another place that night: the event moved (or the saved place is wrong)');
+  assert.deepEqual(second.keptByRun, [], 'the run gave that row to no saved record');
+  // …and when the run gave that row to ANOTHER saved record, the finding
+  // names it: that copy is the one the run keeps (the calendar-twin step
+  // reads it). The card is still the "moved" card.
+  const movedTo = core.buildGoneFromSourceCandidates(
+    { parserResults, analyzedEvents: [...results.analyzedEvents, { ...parserResults[0].events.find((event) => event.title === 'Underwear Night Party'), _action: 'merge', _existingEvent: { identifier: 'cal:B9', title: 'Underwear Night Party' } }] },
+    savedByCity, { now: new Date('2026-10-07T12:00:00Z'), previousUpcoming: { hosts: {}, gone: first.state } });
+  assert.equal(movedTo.candidates[0].reason, 'moved');
+  assert.deepEqual(movedTo.keptByRun, [{ city: 'la', uid: 'B', keptUid: 'B9', keptTitle: 'Underwear Night Party' }]);
 
   // The site lists it at the SAME place and the run gave that row to another
   // saved record: this one is the extra copy — a duplicate card.
@@ -565,6 +574,12 @@ test('buildGoneFromSourceCandidates: a saved event pointing into a site a first-
   assert.equal(duplicate.candidates.length, 1);
   assert.equal(duplicate.candidates[0].reason, 'duplicate');
   assert.deepEqual(duplicate.candidates[0].duplicateOf, { identifier: 'cal:B2', uid: 'B2', title: 'Underwear Night (copy)' });
+  // The finding itself is handed on (the calendar-twin step reads it to
+  // know which copy the run kept) — on the FIRST miss too, before any card.
+  assert.deepEqual(duplicate.keptByRun, [{ city: 'la', uid: 'B', keptUid: 'B2', keptTitle: 'Underwear Night (copy)' }]);
+  const firstMiss = core.buildGoneFromSourceCandidates(twinSite, savedByCity, { now: new Date('2026-10-06T12:00:00Z') });
+  assert.equal(firstMiss.candidates.length, 0, 'one miss is not a card yet');
+  assert.deepEqual(firstMiss.keptByRun, [{ city: 'la', uid: 'B', keptUid: 'B2', keptTitle: 'Underwear Night (copy)' }]);
   // …and when the run proposes that row as NEW instead, the gate failed to
   // fold two records of one event: logged as an identity miss, never a card.
   const gap = { parserResults: twinSite.parserResults, analyzedEvents: [...results.analyzedEvents, { ...site('Underwear Night', '2026-10-25'), _action: 'new' }] };
