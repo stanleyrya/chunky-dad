@@ -23877,6 +23877,20 @@ Rules:
         return Boolean(wall) && (wall.hour !== 0 || wall.minute !== 0);
     }
 
+    // A reader stamps `_noTimeStated` when the page gave a day and no time.
+    // A later step may still find the time — in the title, a caption, on
+    // the poster — and set the start; the stamp stays, because the page
+    // itself still stated none (applyAllDayConvention reads it the same
+    // way). Such a record has a clock of its own, though not a page-stated
+    // one (run 20261118-171739: every Eagle LA "SUNDAY BEER BUST" row,
+    // listed with no time, 2 PM read off its poster).
+    hasAdoptedClockStart(record) {
+        if (!record || typeof record !== 'object' || record._noTimeStated !== true) return false;
+        const timezone = record._timezoneUnresolved ? 'UTC' : this.getEventZone(record);
+        const wall = timezone ? this.getZonedWallParts(record.startDate, timezone) : null;
+        return Boolean(wall) && (wall.hour !== 0 || wall.minute !== 0);
+    }
+
     // THE ANALYSIS NEVER SEES A STORED ALL-DAY RECORD'S RAW INSTANTS. They
     // are the store's own notation for a day (the device's midnight; midnight
     // UTC in a published ICS), hours away from the event's own midnight —
@@ -33931,8 +33945,9 @@ Rules:
     // The cross-source signal sees the pair and refuses it, rightly for
     // what it knows: two event pages are two destinations. What tells
     // this pair apart is on the records themselves, all of it needed:
-    //   - `regular` states a cadence (the page's own "every Sunday") and a
-    //     clock time, and is one night of it — never a whole-series
+    //   - `regular` states a cadence (the page's own "every Sunday") and
+    //     has a clock time (the page's, or one read off its poster for a
+    //     row listed with none), and is one night of it — never a whole-series
     //     export, which stands for every other night too;
     //   - `special` states no cadence, is at the same door, on that same
     //     night, and either states no time (the placeholder) or states the
@@ -33955,10 +33970,13 @@ Rules:
         if (!cadence || this.getEventCadenceRule(special)) return null;
         if (this.getSeriesExportIdentity(regular) || this.getSeriesExportIdentity(special)) return null;
         if (Boolean(special._timezoneUnresolved) !== Boolean(regular._timezoneUnresolved)) return null;
-        if (!this.holdsClockSlot(regular, special)) return null;
+        // A clock of its own: stated by the page, or found by a later
+        // step on a row listed with no time (hasAdoptedClockStart).
+        const hasClock = (record, counterpart) => this.holdsClockSlot(record, counterpart) || this.hasAdoptedClockStart(record);
+        if (!hasClock(regular, special)) return null;
         const specialMs = this.toEpochMillis(special.startDate);
         if (specialMs === null) return null;
-        const sameClock = this.holdsClockSlot(special, regular);
+        const sameClock = hasClock(special, regular);
         if (sameClock) {
             if (specialMs !== this.toEpochMillis(regular.startDate)) return null;
         } else {
@@ -34001,6 +34019,12 @@ Rules:
             else merged.endDate = regular.endDate;
             SharedCore.setWholeDayFlags(merged, '');
             delete merged._noTimeStated;
+            // The clock keeps what it is: one read off the regular night's
+            // title, caption or poster is still that on this record.
+            for (const stamp of ['_startTimeFromFlyer', '_startTimeFromTitle', '_startTimeFromCaption']) {
+                if (regular[stamp] === true) merged[stamp] = true;
+                else delete merged[stamp];
+            }
         }
         const blank = (value) => value === null || value === undefined || (typeof value === 'string' && value.trim() === '');
         for (const field of ['bar', 'address', 'addressSource', 'location', 'pinSource', 'gmaps', 'timezone']) {

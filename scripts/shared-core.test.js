@@ -34824,6 +34824,43 @@ test('special edition: a no-time page for one date of the bar\'s weekly night fo
   assert.equal(out.some(event => event.title === 'SUNDAY BEER BUST' && SharedCore.toEpochMillis(event.startDate) === Date.parse('2027-01-24T22:00:00.000Z')), true);
 });
 
+test('special edition: the regular night\'s time was read off its poster, the row itself listed none (run 20261118-171739: the fold never ran)', async () => {
+  // As the run holds them when duplicates are folded — not as saved, where
+  // the underscore stamps are gone. Every SUNDAY BEER BUST row is listed
+  // with no time and takes 2 PM from its poster; the stamp stays.
+  const core = createLaCore();
+  const { regular, special } = buildEditionPair();
+  regular._noTimeStated = true;
+  regular._startTimeFromFlyer = true;
+  special._noTimeStated = true;
+  assert.equal(core.holdsClockSlot(regular, special), false, 'the slot rule still reads the row as listed with no time');
+  const signal = core.getSpecialEditionSignal(special, regular);
+  assert.equal(signal && signal.regular, regular);
+  assert.equal(signal.sameClock, false);
+
+  const out = await core.deduplicateEvents([regular, special], null, null);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].title, 'MLK BEER BUST');
+  assert.equal(SharedCore.toEpochMillis(out[0].startDate), Date.parse('2027-01-17T22:00:00.000Z'));
+  assert.equal(out[0]._noTimeStated, undefined, 'it has a time now');
+  assert.equal(out[0]._startTimeFromFlyer, true, 'and the time is still a poster-read one');
+
+  // A special whose own poster gave it a different time is its own event.
+  const other = buildEditionPair();
+  other.regular._noTimeStated = true;
+  other.special._noTimeStated = true;
+  other.special.startDate = new Date('2027-01-18T00:00:00.000Z'); // 4 PM that Sunday
+  other.special.endDate = null;
+  assert.equal(core.getSpecialEditionSignal(other.special, other.regular), null);
+
+  // Two rows that both list no time and found none: nothing to fold on.
+  const bare = buildEditionPair();
+  bare.regular._noTimeStated = true;
+  bare.regular.startDate = new Date('2027-01-17T08:00:00.000Z');
+  bare.special._noTimeStated = true;
+  assert.equal(core.getSpecialEditionSignal(bare.special, bare.regular), null);
+});
+
 test('special edition: what is not one stays two events', () => {
   const core = createLaCore();
   const pair = () => buildEditionPair();
