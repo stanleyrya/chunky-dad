@@ -6,40 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-dc
 X-WR-TIMEZONE:America/New_York
 BEGIN:VEVENT
-DTSTART:20260927T010000Z
-DTEND:20260927T070000Z
-DTSTAMP:20260927T220619Z
-UID:787E9181-C677-4679-8CF8-BB945E9E1202
-CREATED:20260820T174238Z
-DESCRIPTION:description: TWISTED BEAR - from London - is super excited to b
- e making its long-awaited debut at ICON D.C.\nbar: Icon DC\naddress: 2001 1
- 1th Street Northwest\, Washington\, DC 20001\nticketUrl: https://www.eventb
- rite.com/e/twisted-bear-washington-dc-debut-tickets-1997898549343\nimage: h
- ttps://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191263087%2F10
- 88207912863%2F1%2Foriginal.20260817-175227?w=940&auto=format%2Ccompress&q=7
- 5&sharp=10&s=197deab80f6f213e399e77f54af50254\ncover: $23.18-$28.52\ntimezo
- ne: America/New_York\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2F
- cdn.evbuc.com%2Fimages%2F1191263087%2F1088207912863%2F1%2Foriginal.20260817
- -175227?w=940&auto=format%2Ccompress&q=75&sharp=10&s=197deab80f6f213e399e77
- f54af50254\nwebsite: https://twisted-bear.com\nshortName: TWIST­ED BEAR\nin
- stagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.
- facebook.com/twistedglobal/\nfavicon: https://twisted-bear.com\nkey: twiste
- d-bear-washington-d.c-debut|2026-09-27|icon dc\nbearSource: keyword\npinSou
- rce: geocoded-exact\naddressSource: page\nimageSource: jsonld\ngmaps: https
- ://www.google.com/maps/search/?api=1&query=38.9171577%2C-77.0268211
-LAST-MODIFIED:20260916T120637Z
-LOCATION:38.9171577\, -77.0268211
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:TWISTED BEAR Washington\, D.C. Debut
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20261004T020000Z
 DTEND:20261004T040000Z
-DTSTAMP:20260927T220619Z
+DTSTAMP:20261118T035718Z
 UID:F8F7EF8B-A718-4C26-A1BF-621C554CBDB4
 CREATED:20260927T214754Z
 DESCRIPTION:description: 🚨 FURBALL IS BACK IN DC 🚨 SATURDAY OCT 3 — our I
@@ -72,7 +41,7 @@ END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260214T020000Z
 DTEND:20260214T080000Z
-DTSTAMP:20260927T220619Z
+DTSTAMP:20261118T035718Z
 UID:C32DBFE5-FAB5-4B93-B65E-FEEAAC41B2BC
 CREATED:20260121T135638Z
 DESCRIPTION:description: MEGAWOOF AMERICA - S.VALENTINE + President Day Wee
@@ -92,6 +61,70 @@ LOCATION:38.9162081\, -77.0213011
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20260927T010000Z
+DTEND:20260927T070000Z
+DTSTAMP:20261118T035718Z
+UID:787E9181-C677-4679-8CF8-BB945E9E1202
+CREATED:20260820T174238Z
+DESCRIPTION:description: TWISTED BEAR - from London - is super excited to b
+ e making its long-awaited debut at ICON D.C.\nbar: Icon DC\naddress: 2001 1
+ 1th Street Northwest\, Washington\, DC 20001\nticketUrl: https://www.eventb
+ rite.com/e/twisted-bear-washington-dc-debut-tickets-1997898549343\nimage: h
+ ttps://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1191263087%2F10
+ 88207912863%2F1%2Foriginal.20260817-175227?w=940&auto=format%2Ccompress&q=7
+ 5&sharp=10&s=197deab80f6f213e399e77f54af50254\ncover: $23.18-$28.52\ntimezo
+ ne: America/New_York\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2F
+ cdn.evbuc.com%2Fimages%2F1191263087%2F1088207912863%2F1%2Foriginal.20260817
+ -175227?w=940&auto=format%2Ccompress&q=75&sharp=10&s=197deab80f6f213e399e77
+ f54af50254\nwebsite: https://twisted-bear.com\nshortName: TWIST­ED BEAR\nin
+ stagram: https://www.instagram.com/twistedbearparty\nfacebook: https://www.
+ facebook.com/twistedglobal/\nfavicon: https://twisted-bear.com\nkey: twiste
+ d-bear-washington-d.c-debut|2026-09-27|icon dc\nbearSource: keyword\npinSou
+ rce: geocoded-exact\naddressSource: page\nimageSource: jsonld\ngmaps: https
+ ://www.google.com/maps/search/?api=1&query=38.9171577%2C-77.0268211
+LAST-MODIFIED:20260916T120637Z
+LOCATION:38.9171577\, -77.0268211
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:TWISTED BEAR Washington\, D.C. Debut
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261206T020000Z
+DTEND:20261206T080000Z
+DTSTAMP:20261118T035718Z
+UID:D4A341FA-082A-4AB1-8221-07A12829929A
+CREATED:20261118T035558Z
+DESCRIPTION:description: WASHINGTON DC—LET’S GET NAUGHTY! MEGAWOOF AMERICA 
+ is coming back to Washington DC At the new ICON DC on Saturday\, December 5
+ th!\naddress: 2001 11th Street Northwest\, Washington\, DC 20001\nticketUrl
+ : https://www.eventbrite.com/e/megawoof-america-washington-dc-holiday-kick-
+ off-tickets-2004408619137\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.e
+ vbuc.com%2Fimages%2F1197373702%2F185013722403%2F1%2Foriginal.20261105-19441
+ 3?crop=focalpoint&fit=crop&w=640&auto=format%2Ccompress&q=75&sharp=10&fp-x=
+ 0.5&fp-y=0.5&s=c5fe1ac890857c1c0b9a7c37c5ec4576\ncover: From $16.84\ntimezo
+ ne: America/New_York\nimageHorizontal: https://img.evbuc.com/https%3A%2F%2F
+ cdn.evbuc.com%2Fimages%2F1197373702%2F185013722403%2F1%2Foriginal.20261105-
+ 194413?crop=focalpoint&fit=crop&w=640&auto=format%2Ccompress&q=75&sharp=10&
+ fp-x=0.5&fp-y=0.5&s=c5fe1ac890857c1c0b9a7c37c5ec4576\naddressSource: page\n
+ website: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/
+ maps/search/?api=1&query=Icon%20DC%2C%202001%2011th%20Street%20Northwest%2C
+ %20Washington%2C%20DC%2020001\npinSource: geocoded-exact\nshortName: MEGA­W
+ OOF\ninstagram: https://www.instagram.com/megawoof_america\nfavicon: https:
+ //linktr.ee/megawoof_america\nkey: megawoof-america|2026-12-06|icon dc\nbar
+ : Icon DC\nimageSource: page\nbarSource: page-adjacent\nbearSource: keyword
+LAST-MODIFIED:20261118T035559Z
+LOCATION:38.9171577\, -77.0268211
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF AMERICA
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63

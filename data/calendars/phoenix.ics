@@ -6,73 +6,9 @@ METHOD:PUBLISH
 X-WR-CALNAME:chunky-dad-phoenix
 X-WR-TIMEZONE:America/Phoenix
 BEGIN:VEVENT
-DTSTART:20261122T043000Z
-DTEND:20261122T090000Z
-DTSTAMP:20261106T020631Z
-UID:B74122C0-789A-4EC5-AB41-9FB1B22BD8D1
-CREATED:20261029T100448Z
-DESCRIPTION:description: Treasure Trail makes it debut in Phoenix and we in
- vite you to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab
-  a wristband when you walk in\\: Red Wristband TOP Blue Wristband VERS Gree
- n Wristband BOTTOM White Wristband SIDE You can choose one when you arrive 
- or go without one. Knowing someones preference helps break the ice. Consent
-  is mandatory. Clothes Check Available Hosted by JP Hardy Music by DJ Hi Si
- r\nbar: Royale\naddress: 635 W Glenrosa Ave\, Phoenix\, Arizona\, AZ 85013\
- nticketUrl: https://www.sickening.events/e/treasuretrail-phoenix/tickets\ni
- mage: https://bearracuda.com/wp-content/uploads/2026/08/newttphxweb-819x102
- 4.jpg\ncover: $15\ntimezone: America/Phoenix\naddressSource: page\nwebsite:
-  https://bearracuda.com/events/phoenixtt/\ngmaps: https://www.google.com/ma
- ps/search/?api=1&query=Royale%2C%20635%20W%20Glenrosa%20Ave%2C%20Phoenix%2C
- %20Arizona%2C%20AZ%2085013\npinSource: curated\nshortName: TREAS­URE TRAIL\
- ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracu
- da.com/\nkey: treasure-trail-phoenix-wish-boned|2026-11-22|royale\nfacebook
- : https://www.facebook.com/bearracuda/\nendNote: late\nimageVertical: https
- ://bearracuda.com/wp-content/uploads/2026/08/newttphxweb-819x1024.jpg\nimag
- eSource: og-image\nbarSource: curated\nbearSource: ai
-LAST-MODIFIED:20261029T100448Z
-LOCATION:33.4977695\, -112.0823699
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:Treasure Trail Phoenix: Wish Boned
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
-DTSTART:20261129T043000Z
-DTEND:20261129T090000Z
-DTSTAMP:20261106T020631Z
-UID:80A14257-C100-4528-9AA2-30633F446B56
-CREATED:20261029T100447Z
-DESCRIPTION:description: MEGAWOOF PHOENIX - BLACK OUT...\nbar: North Centra
- l Avenue\naddress: North Central Avenue\, Phoenix\, AZ 85012\nticketUrl: ht
- tps://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003750204802
- \nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F11963
- 29446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoint&fit=cro
- p&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=86820c5ca7
- adb668cd161b1accf9e972\nimageSource: jsonld\ncover: $11.58-$22.10\ntimezone
- : America/Phoenix\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn.e
- vbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-01043
- 8?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=
- 0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\naddressSource: page\nwebsi
- te: https://linktr.ee/megawoof_america\ngmaps: https://www.google.com/maps/
- search/?api=1&query=33.5199151%2C-112.0737137\npinSource: geocoded-approx\n
- shortName: MEGA­WOOF\ninstagram: https://www.instagram.com/megawoof_america
- \nfavicon: https://linktr.ee/megawoof_america\nkey: megawoof-phoenix-black-
- out|2026-11-29|north central avenue\nbearSource: keyword
-LAST-MODIFIED:20261029T100447Z
-LOCATION:33.5199151\, -112.0737137
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF PHOENIX - BLACK OUT...
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20261213T043000Z
 DTEND:20261213T090000Z
-DTSTAMP:20261106T020631Z
+DTSTAMP:20261118T035718Z
 UID:DF8E4101-C3DF-4DD7-8910-842FA269457E
 CREATED:20261030T190603Z
 DESCRIPTION:description: On Sat\, Dec 12th TWISTED BEAR is super excited to
@@ -105,7 +41,7 @@ X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
 DTSTART:20260524T043000Z
-DTSTAMP:20261106T020631Z
+DTSTAMP:20261118T035718Z
 UID:9165A83C-32B2-497F-A522-7C5ADF7B9A2A
 CREATED:20260507T001637Z
 DESCRIPTION:description: Bearracuda PhoenixRELAUNCH PARTYSaturday\, May 23t
@@ -131,9 +67,69 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
+DTSTART:20261122T043000Z
+DTEND:20261122T090000Z
+DTSTAMP:20261118T035718Z
+UID:B74122C0-789A-4EC5-AB41-9FB1B22BD8D1
+CREATED:20261029T100448Z
+DESCRIPTION:description: Treasure Trail makes it debut in Phoenix and we in
+ vite you to GET STUFFED at our Pre-Thanksgiving Romp! Now our guys can grab
+  a wristband when you walk in\\: Red Wristband TOP Blue Wristband VERS Gree
+ n Wristband BOTTOM White Wristband SIDE You can choose one when you arrive 
+ or go without one. Knowing someones preference helps break the ice. Consent
+  is mandatory. Clothes Check Available Hosted by JP Hardy Music by DJ Hi Si
+ r\nbar: Royale\naddress: 635 W Glenrosa Ave\, Phoenix\, Arizona\, AZ 85013\
+ nticketUrl: https://www.sickening.events/e/treasuretrail-phoenix/tickets\ni
+ mage: https://bearracuda.com/wp-content/uploads/2026/08/newttphxweb-819x102
+ 4.jpg\ncover: $15\ntimezone: America/Phoenix\naddressSource: page\nwebsite:
+  https://bearracuda.com/events/phoenixtt/\ngmaps: https://www.google.com/ma
+ ps/search/?api=1&query=Royale%2C%20635%20W%20Glenrosa%20Ave%2C%20Phoenix%2C
+ %20Arizona%2C%20AZ%2085013\npinSource: curated\nshortName: TREAS­URE TRAIL\
+ ninstagram: https://www.instagram.com/bearracuda\nfavicon: https://bearracu
+ da.com/\nkey: treasure-trail-phoenix-wish-boned|2026-11-22|royale\nfacebook
+ : https://www.facebook.com/bearracuda/\nendNote: late\nimageVertical: https
+ ://bearracuda.com/wp-content/uploads/2026/08/newttphxweb-819x1024.jpg\nimag
+ eSource: og-image\nbarSource: curated\nbearSource: ai
+LAST-MODIFIED:20261029T100448Z
+LOCATION:33.4977695\, -112.0823699
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:Treasure Trail Phoenix: Wish Boned
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20251005T040000Z
+DTEND:20251005T090000Z
+DTSTAMP:20261118T035718Z
+UID:F6548399-1DB6-4C62-9F75-A6045BF3884F
+CREATED:20251001T000958Z
+DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
+ nbar: Kobalt\naddress: 3110 North Central Avenue\, Phoenix\, AZ 85012\ntime
+ zone: America/Phoenix\nurl: https://linktr.ee/megawoof_america\nticketUrl: 
+ https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-
+ tickets-1675720327609\ncover: $11.58 - $22.10 (as of 10/1)\nimage: https://
+ img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1117518673%2F185013722
+ 403%2F1%2Foriginal.20250908-150401?crop=focalpoint&fit=crop&h=230&w=460&aut
+ o=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3aac96e3f15ffea9f7cc5
+ 3f0c3a8efa5\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/meg
+ awoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.48
+ 33086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM\nkey: megaw
+ oof|2025-10-05|kobalt|eventbrite
+LAST-MODIFIED:20251002T003853Z
+LOCATION:33.4833086\, -112.0754149
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
 DTSTART:20260809T043000Z
 DTEND:20260809T090000Z
-DTSTAMP:20261106T020631Z
+DTSTAMP:20261118T035718Z
 UID:DBB2B903-E956-45AE-8645-08B4C4A8A455
 CREATED:20260712T004132Z
 DESCRIPTION:description: MEGAWOOF AMERICA - PHOENIX - SUMMER WOOFERS\nbar: 
@@ -159,36 +155,9 @@ X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
 END:VEVENT
 BEGIN:VEVENT
-DTSTART:20251005T040000Z
-DTEND:20251005T090000Z
-DTSTAMP:20261106T020631Z
-UID:F6548399-1DB6-4C62-9F75-A6045BF3884F
-CREATED:20251001T000958Z
-DESCRIPTION:description: MEGAWOOF 10 YEAR ANNIVERSARY \\: PHOENIX KICK OFF\
- nbar: Kobalt\naddress: 3110 North Central Avenue\, Phoenix\, AZ 85012\ntime
- zone: America/Phoenix\nurl: https://linktr.ee/megawoof_america\nticketUrl: 
- https://www.eventbrite.com/e/megawoof-10-year-anniversary-phoenix-kick-off-
- tickets-1675720327609\ncover: $11.58 - $22.10 (as of 10/1)\nimage: https://
- img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimages%2F1117518673%2F185013722
- 403%2F1%2Foriginal.20250908-150401?crop=focalpoint&fit=crop&h=230&w=460&aut
- o=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=3aac96e3f15ffea9f7cc5
- 3f0c3a8efa5\nshortName: MEGA-WOOF\ninstagram: https://www.instagram.com/meg
- awoof_america\ngmaps: https://www.google.com/maps/search/?api=1&query=33.48
- 33086%2C-112.0754149&query_place_id=ChIJkRBEr18SK4cR8jynbFt5fPM\nkey: megaw
- oof|2025-10-05|kobalt|eventbrite
-LAST-MODIFIED:20251002T003853Z
-LOCATION:33.4833086\, -112.0754149
-SEQUENCE:0
-STATUS:CONFIRMED
-SUMMARY:MEGAWOOF
-TRANSP:OPAQUE
-X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
-X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
-END:VEVENT
-BEGIN:VEVENT
 DTSTART:20261011T043000Z
 DTEND:20261011T090000Z
-DTSTAMP:20261106T020631Z
+DTSTAMP:20261118T035718Z
 UID:9FF35A8A-3A10-4BCB-BE7F-FDFC8B6187BC
 CREATED:20260815T022623Z
 DESCRIPTION:description: Bearracuda PhoenixPRIDE SATURDAYSaturday\, Oct. 10
@@ -214,6 +183,38 @@ LOCATION:33.497757\, -112.077333
 SEQUENCE:0
 STATUS:CONFIRMED
 SUMMARY:BEARRACUDA: PHOENIX PRIDE
+TRANSP:OPAQUE
+X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
+X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
+END:VEVENT
+BEGIN:VEVENT
+DTSTART:20261129T043000Z
+DTEND:20261129T090000Z
+DTSTAMP:20261118T035718Z
+UID:80A14257-C100-4528-9AA2-30633F446B56
+CREATED:20261029T100447Z
+DESCRIPTION:description: MEGAWOOF PHOENIX - BLACK OUT...\nbar: Kobalt\ntick
+ etUrl: https://www.eventbrite.com/e/megawoof-phoenix-black-out-tickets-2003
+ 750204802\nimage: https://img.evbuc.com/https%3A%2F%2Fcdn.evbuc.com%2Fimage
+ s%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010438?crop=focalpoin
+ t&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-x=0.5&fp-y=0.5&s=8
+ 6820c5ca7adb668cd161b1accf9e972\ncover: $11.58-$22.10\ntimezone: America/Ph
+ oenix\nwebsite: https://linktr.ee/megawoof_america\nshortName: MEGA­WOOF\ni
+ nstagram: https://www.instagram.com/megawoof_america\nfavicon: https://link
+ tr.ee/megawoof_america\nkey: megawoof-phoenix-black-out|2026-11-29|kobalt\n
+ bearSource: keyword\nimageVertical: https://img.evbuc.com/https%3A%2F%2Fcdn
+ .evbuc.com%2Fimages%2F1196329446%2F185013722403%2F1%2Foriginal.20261022-010
+ 438?crop=focalpoint&fit=crop&w=940&auto=format%2Ccompress&q=75&sharp=10&fp-
+ x=0.5&fp-y=0.5&s=86820c5ca7adb668cd161b1accf9e972\naddress: 3110 N CENTRAL 
+ AVE #175 PHOENIX\, AZ 85012\npinSource: geocoded-approx\naddressSource: pag
+ e\nimageSource: jsonld\nbarSource: page-adjacent\ngmaps: https://www.google
+ .com/maps/search/?api=1&query=Kobalt%2C%203110%20N%20CENTRAL%20AVE%20%23175
+ %20PHOENIX%2C%20AZ%2085012
+LAST-MODIFIED:20261118T035609Z
+LOCATION:33.4834859\, -112.0757318
+SEQUENCE:0
+STATUS:CONFIRMED
+SUMMARY:MEGAWOOF PHOENIX - BLACK OUT
 TRANSP:OPAQUE
 X-APPLE-CREATOR-IDENTITY:dk.simonbs.Scriptable
 X-APPLE-CREATOR-TEAM-IDENTITY:8NQFWJHC63
