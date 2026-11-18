@@ -290,6 +290,16 @@
     "accent": "#db8c64"
   },
   {
+    "slug": "furball-boston-08730c98",
+    "url": "https://www.furball.nyc",
+    "faviconBg": "#f6f6f6",
+    "faviconFg": "#393a3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#010101:39:0 #0d0c12:16:1 #2a2d40:11:3 #0f69a5:5:12 #5eb7db:5:10",
+    "accent": "#0f69a5"
+  },
+  {
     "slug": "furball-boston-16693caa",
     "url": "https://www.furball.nyc",
     "faviconBg": "#f6f6f6",

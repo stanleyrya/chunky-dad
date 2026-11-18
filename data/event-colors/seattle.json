@@ -60,6 +60,16 @@
     "accent": "#cc0000"
   },
   {
+    "slug": "game-night-45421b0c",
+    "url": "https://xlbears.org",
+    "faviconBg": "#c90d0d",
+    "faviconFg": "#dfdcdc",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:70:0 #cc0000:21:22 #d4d6d6:3:0 #cc6363:2:13",
+    "accent": "#cc0000"
+  },
+  {
     "slug": "game-night-4d232090",
     "url": "https://xlbears.org",
     "faviconBg": "#c90d0d",

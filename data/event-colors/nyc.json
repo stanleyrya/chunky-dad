@@ -914,6 +914,12 @@
     "accent": "#cd937b"
   },
   {
+    "slug": "fursdays-46a3696e",
+    "paletteSource": "flyer",
+    "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
+    "accent": "#cd937b"
+  },
+  {
     "slug": "fursdays-4e4ff5f9",
     "paletteSource": "flyer",
     "palette": "#cd937b:25:8 #e5baa3:24:6 #ab6b53:16:9 #7d431b:12:10 #2c864a:4:13",
@@ -1554,6 +1560,16 @@
     "accent": "#141489"
   },
   {
+    "slug": "lodge-ny-dads-n-lads-675bb9e1",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
     "slug": "lodge-ny-dads-n-lads-6820521d",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
@@ -1655,6 +1671,16 @@
   },
   {
     "slug": "lodge-ny-the-bear-party-0dc69e50",
+    "url": "https://lodgeny.com",
+    "faviconBg": "#f0eff6",
+    "faviconFg": "#372a8e",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "favicon",
+    "palette": "#ffffff:54:0 #141489:14:18 #9587bd:9:8 #6255a4:6:12 #4f308a:4:14",
+    "accent": "#141489"
+  },
+  {
+    "slug": "lodge-ny-the-bear-party-0f9677c8",
     "url": "https://lodgeny.com",
     "faviconBg": "#f0eff6",
     "faviconFg": "#372a8e",

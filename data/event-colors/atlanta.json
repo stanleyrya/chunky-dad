@@ -79,6 +79,15 @@
     "accent": "#951923"
   },
   {
+    "slug": "lumberjack-0ff83baf",
+    "url": "https://atlantaeagle.com/event/lumberjack/",
+    "faviconBg": "#6c6b6f",
+    "faviconFg": "#3c3b3f",
+    "faviconPlate": "#ffffff",
+    "paletteSource": "flyer",
+    "palette": "#1a191d:20:1 #868789:18:0 #4e4d51:18:1"
+  },
+  {
     "slug": "megawoof-1e891b28",
     "url": "https://linktr.ee/megawoof_america",
     "faviconBg": "#575d64",
