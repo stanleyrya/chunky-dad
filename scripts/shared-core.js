@@ -3012,13 +3012,36 @@ class SharedCore {
     // ticket link that is a bare id, all-day beside a timed one, the
     // shorter name when the longer carries a brand prefix. A tie picks by
     // uid so the same copy is on the card every run (the card says so).
+    //
+    // THE RUN'S OWN MATCH OUTRANKS THE FACT COUNT. When this run read the
+    // site, found one event that night and gave it to one copy of the pair
+    // (`options.keptByRun`, the gone-from-source step's duplicate finding),
+    // that copy is the one the calendar keeps and the other is the extra —
+    // whatever each holds today. Run 20261118-175515: the site's "MLK BEER
+    // BUST" page folded into the Sunday beer bust and matched the saved MLK
+    // stub; the stub was still all-day until the phone wrote it, so the
+    // fact count offered the MLK copy for removal — the opposite of what
+    // the run had just decided. The same holds with no such finding, when
+    // this run matched a listing to exactly ONE copy of the pair
+    // (`options.matchedByRun`): the matched copy is the live one (BeefDip's
+    // "FURBALL POOL PARTY", matched at the hotel the site names, beside a
+    // richer copy at another bar that no listing reached). Both matched, or
+    // neither: the fact count decides. And one saved event gets ONE removal card:
+    // a pair whose extra copy already has a gone-from-source card
+    // (`options.carded`, the same key) is not dealt a second time.
     buildCalendarTwinCandidates(savedByCity, options = {}) {
         const now = options.now instanceof Date ? options.now : new Date(options.now || Date.now());
         const todayKey = now.toISOString().slice(0, 10);
         const cityConfigs = options.cities && typeof options.cities === 'object' ? options.cities : (this.cities || {});
         const cities = savedByCity && typeof savedByCity === 'object' ? savedByCity : {};
-        const summary = { cities: 0, saved: 0, singles: 0, pairs: 0, candidates: 0 };
+        const summary = { cities: 0, saved: 0, singles: 0, pairs: 0, candidates: 0, byRun: 0, covered: 0 };
         const candidates = [];
+        const keptByRun = new Map();
+        (Array.isArray(options.keptByRun) ? options.keptByRun : []).forEach((entry) => {
+            if (entry && entry.city && entry.uid && entry.keptUid) keptByRun.set(`${entry.city}|${entry.uid}`, String(entry.keptUid));
+        });
+        const carded = options.carded instanceof Set ? options.carded : new Set(Array.isArray(options.carded) ? options.carded : []);
+        const matchedByRun = options.matchedByRun instanceof Set ? options.matchedByRun : new Set(Array.isArray(options.matchedByRun) ? options.matchedByRun : []);
         const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
         const tokensOf = (text) => fold(text).split(' ').filter((token) => token.length >= 2);
         const iso = (value) => {
@@ -3207,12 +3230,29 @@ class SharedCore {
                         let extra = a;
                         let kept = b;
                         let tie = false;
-                        if (factsA.length > factsB.length) { extra = b; kept = a; }
+                        // The run gave the site's one listing that night to
+                        // the other copy: this one is the extra.
+                        const runKeptOther = (x, y) => keptByRun.get(`${city}|${x.uid}`) === y.uid;
+                        let byRun = runKeptOther(a, b) !== runKeptOther(b, a);
+                        let byRunWhy = 'the site lists one event that night and this run matched it to the other copy';
+                        if (byRun) {
+                            if (runKeptOther(b, a)) { extra = b; kept = a; }
+                        } else if (matchedByRun.has(a.uid) !== matchedByRun.has(b.uid)) {
+                            // …or the run matched a listing to one copy only.
+                            byRun = true;
+                            byRunWhy = 'this run matched a listing to the other copy and none to this one';
+                            if (matchedByRun.has(a.uid)) { extra = b; kept = a; }
+                        } else if (factsA.length > factsB.length) { extra = b; kept = a; }
                         else if (factsA.length === factsB.length) {
                             tie = true;
                             if (a.uid < b.uid) { extra = b; kept = a; }
                         }
                         taken.add(extra.uid);
+                        if (carded.has(`gone|${city}|${extra.uid}`)) { summary.covered += 1; continue; }
+                        if (byRun) summary.byRun += 1;
+                        const whyExtra = byRun
+                            ? [byRunWhy, ...extraWhy(extra, kept)]
+                            : extraWhy(extra, kept);
                         summary.candidates += 1;
                         candidates.push({
                             key: `gone|${city}|${extra.uid}`,
@@ -3235,8 +3275,9 @@ class SharedCore {
                             cover: extra.cover,
                             description: extra.description.slice(0, 400),
                             why,
-                            extraWhy: extraWhy(extra, kept),
+                            extraWhy: whyExtra,
                             tie,
+                            byRun,
                             facts: { extra: extra === a ? factsA : factsB, kept: kept === a ? factsA : factsB },
                             twinOf: {
                                 uid: kept.uid, identifier: kept.identifier, title: kept.title,
@@ -20353,6 +20394,13 @@ Rules:
         const summary = { cities: 0, saved: 0, attributed: 0, seen: 0, firstMisses: 0, candidates: 0, duplicates: 0, identityMisses: 0, beyondHorizon: 0, series: 0, suppressedThin: 0, suppressedDrift: 0, sites: 0, notRead: 0, suppressedCollapse: 0, heldNoProof: 0 };
         const cities = savedByCity && typeof savedByCity === 'object' ? savedByCity : {};
         const identityMisses = [];
+        // Every saved record whose night the site listed this run and the
+        // run gave to ANOTHER saved record — at the same place (a duplicate)
+        // or under a similar name elsewhere (moved). The finding itself,
+        // first miss included: it rests on this run's read, not on a
+        // streak. The calendar-twin step reads it to know which copy of a
+        // pair the run kept.
+        const keptByRun = [];
         // Every record whose card was due and was held back, with why.
         const held = [];
         const iso = (value) => {
@@ -20613,12 +20661,18 @@ Rules:
                 const listedHere = sameNight.filter((row) => row.samePlace && row.similar);
                 let reason = 'gone';
                 let duplicateOf = null;
+                // The saved record this run gave those rows to, when it is
+                // another one than this.
+                const givenTo = (rows) => {
+                    const twins = rows.flatMap((row) => analyzedIndex.get(`${fold(row.title)}|${row.day}`) || []);
+                    return { twins, other: twins.find((twin) => twin.existingIdentifier && twin.existingIdentifier !== identifier && SharedCore.savedEventUid(twin.existingIdentifier) !== uid) || null };
+                };
                 if (listedHere.length > 0) {
-                    const twins = listedHere.flatMap((row) => analyzedIndex.get(`${fold(row.title)}|${row.day}`) || []);
-                    const other = twins.find((twin) => twin.existingIdentifier && twin.existingIdentifier !== identifier && SharedCore.savedEventUid(twin.existingIdentifier) !== uid);
+                    const { twins, other } = givenTo(listedHere);
                     if (other) {
                         reason = 'duplicate';
                         duplicateOf = { identifier: other.existingIdentifier, uid: SharedCore.savedEventUid(other.existingIdentifier), title: other.existingTitle };
+                        if (uid && duplicateOf.uid) keptByRun.push({ city, uid, keptUid: duplicateOf.uid, keptTitle: duplicateOf.title });
                     } else {
                         summary.identityMisses += 1;
                         identityMisses.push({ city, uid, title: String(record.title || ''), day, bar: String(fields.bar || ''), host: facts.host, source: target.source, listed: listedHere[0].title, proposal: twins.length > 0 ? twins[0].action || 'proposal' : (listedHere[0].dropped ? 'dropped' : 'none') });
@@ -20627,6 +20681,13 @@ Rules:
                     }
                 } else if (sameNight.some((row) => row.similar)) {
                     reason = 'moved';
+                    // Listed that night under a similar name at another
+                    // place, and the run gave that row to another saved
+                    // record: that one is the copy the run keeps (BeefDip's
+                    // "WET & WILD" pool party, saved once at each hotel).
+                    const { other } = givenTo(sameNight.filter((row) => row.similar));
+                    const keptUid = other ? SharedCore.savedEventUid(other.existingIdentifier) : '';
+                    if (uid && keptUid) keptByRun.push({ city, uid, keptUid, keptTitle: other.existingTitle });
                 } else if (sameTitle.length > 0) {
                     reason = 'date-moved';
                 }
@@ -20739,7 +20800,7 @@ Rules:
         });
         summary.sites = sitesUsed.size;
         candidates.sort((a, b) => b.misses - a.misses || String(a.startDate || '').localeCompare(String(b.startDate || '')));
-        return { candidates, state, summary, identityMisses, held };
+        return { candidates, state, summary, identityMisses, held, keptByRun, matched: [...matched] };
     }
 
     // One key per page: scheme dropped, host lowercased without "www.", the
