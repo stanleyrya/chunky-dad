@@ -2150,3 +2150,37 @@ test('summarizeTaggedDrops: upcoming dropped events with tags, one row per party
   assert.deepEqual(gear.tags, ['kink', 'rubber']);
   assert.deepEqual(rq.summarizeTaggedDrops({}, now), []);
 });
+
+// A party card is written once and asked days later (owner, 2026-11-18:
+// cards showed "leather, rubber" after he had fixed the tags by hand, and
+// asked about parties whose own flyer says "bear").
+test('buildDeck: a party card shows the tags and reason this run would save; a party the machine calls bear by itself is not dealt', () => {
+  const party = (uid, title) => rq.normalizeManualCard({ action: 'party', title, why: 'You said bear on Oct 1.', city: 'nyc', uid, startDate: iso(FUTURE), bar: 'Rockbar',
+    tags: ['leather', 'rubber'], bearSource: 'manual-bear (verdict store 2029-10-01)', nights: 1 });
+  const saved = (uid, overrides) => mergeEvent({ _changes: ['notes'], _existingEvent: { title: 'x', identifier: `CAL-1:${uid}`, startDate: iso(FUTURE), endDate: null, location: '', url: '' }, ...overrides });
+  const gear = party('GEAR-1', 'Gear Night');
+  const bearNight = party('BEAR-1', 'Bear Naked Sunday');
+  const flagged = party('FLAG-1', 'Maybe Night');
+  const unseen = party('GONE-1', 'Not Read This Run');
+  const payload = runPayload({ analyzedEvents: [
+    saved('GEAR-1', { title: 'Gear Night', tags: 'kink, leather', bearSource: 'manual-bear (verdict store 2029-10-01)' }),
+    saved('BEAR-1', { title: 'Bear Naked Sunday', tags: '', bearSource: 'poster' }),
+    saved('FLAG-1', { title: 'Maybe Night', tags: '', bearSource: 'ai', bearReview: 'unsure: thin' })
+  ] });
+  const deck = deckOf(payload, rq.emptyDecisionStore(), { manualCards: [gear, bearNight, flagged, unseen] });
+  const manual = deck.cards.filter((card) => card.kind === 'manual');
+  assert.deepEqual(manual.map((card) => card.proposal.title), ['Gear Night', 'Maybe Night', 'Not Read This Run'], 'the poster-bear party is settled, no card');
+  assert.equal(deck.counts.machineSettled, 1);
+  assert.deepEqual(manual[0].proposal.tags, ['kink', 'leather'], 'the tags this run would save, not the ones on the card file');
+  assert.equal(manual[0].proposal.factsFromRun, true);
+  assert.equal(manual[1].proposal.bearSource, 'ai', 'a flagged machine reading is still a question');
+  assert.deepEqual(manual[2].proposal.tags, ['leather', 'rubber'], 'not read this run: the card as written');
+  assert.equal(manual[2].proposal.factsFromRun, undefined);
+
+  // One he already answered stays in the decided pile.
+  const answered = rq.upsertDecision(rq.emptyDecisionStore(), rq.buildDecision({ key: bearNight.key, kind: 'manual', verdict: 'approve', snapshot: null }));
+  const after = deckOf(payload, answered, { manualCards: [bearNight] });
+  assert.equal(after.counts.machineSettled, 0);
+  assert.equal(after.cards.filter((card) => card.kind === 'manual').length, 0);
+  assert.equal(after.counts.decided >= 1 || after.counts.waiting >= 1, true, 'answered, not dropped');
+});

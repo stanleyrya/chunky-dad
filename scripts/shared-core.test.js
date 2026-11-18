@@ -6017,7 +6017,9 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
   assert.deepEqual(core.collectMachineEventTags(gearNight), {
     candidates: ['kink', 'leather', 'rubber'],
     fromTitle: ['kink'],
-    hits: { leather: { title: [], description: ['leather', 'harnesses'] }, kink: { title: ['gear night', 'gear'], description: ['gear night'] }, rubber: { title: [], description: ['rubber'] } }
+    hits: { leather: { title: [], description: ['leather', 'harnesses'] }, kink: { title: ['gear night', 'gear'], description: ['gear night'] }, rubber: { title: [], description: ['rubber'] } },
+    // The title says it: kink is not a question for the model (2026-11-18).
+    stated: { kink: 'gear night' }
   });
   // The dress-code aside is a candidate too — nothing in the words tells it
   // from a leather night; the AI does.
@@ -6030,12 +6032,13 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
 test('tags: every machine tag in the schema has a keyword family; the bear check never hears about tags, the tag check carries the gloss', () => {
   const core = createCore();
   const machineTags = SharedCore.getAiConfirmableTags();
-  assert.deepEqual(machineTags, ['leather', 'gainer', 'kink', 'rubber', 'diaper', 'drag', 'pup', 'furry', 'underwear', 'sportswear', 'country', 'naked', 'sex-party']);
+  assert.deepEqual(machineTags, ['leather', 'gainer', 'kink', 'rubber', 'diaper', 'drag', 'pup', 'furry', 'underwear', 'sportswear', 'country', 'naked', 'sex-party', 'holiday']);
   for (const tag of machineTags) {
     assert.ok(core.tagKeywords[tag], `${tag} has a keyword family`);
     // "furry night" is a bear night as often as not: the tag's own words
     // are the fandom's.
-    const named = tag === 'furry' ? 'furry rave' : `${tag} night`;
+    // A "holiday night" is a party: the tag's own words are the bar's notice.
+    const named = tag === 'furry' ? 'furry rave' : tag === 'holiday' ? 'holiday hours' : `${tag} night`;
     assert.ok(core.matchTagKeywords(named, tag).length > 0, `${tag} names itself`);
   }
   // The bear check never hears about tags (measured 2026-11-06: a tags
@@ -6279,8 +6282,11 @@ test('bear keyword tier: jock, pup and furry in a name no longer pass an event �
   stored.bearVerdicts = [{ verdict: 'bear', stampedAt: '2026-11-10T00:00:00.000Z', title: 'PUP NIGHT', venue: 'The Heretic', address: '', location: '', city: 'atlanta' }];
   const never = buildBearVerdictAdapter({ verdict: 'not_bear', reason: 'nope' });
   const keptStored = await stored.filterBearEvents([{ title: 'PUP NIGHT', bar: 'The Heretic', city: 'atlanta' }], bearCheckConfig('enforce'), never, []);
-  assert.equal(never.calls.filter(call => !/^Tag: /m.test(call.prompt)).length, 0);
+  // The machine is asked whether it gets there by itself (2026-11-18); its
+  // "no" changes nothing.
+  assert.equal(never.calls.filter(call => !/^Tag: /m.test(call.prompt)).length, 1);
   assert.equal(keptStored.length, 1);
+  assert.equal(keptStored[0].bearSource, 'manual-bear (verdict store 2026-11-10)');
 });
 
 test('bear check report mode returns exactly what legacy returns', async () => {
@@ -20942,7 +20948,9 @@ test('bear verdict store: a stored manual bear verdict outranks the AI drop (MEA
   });
   const drops = [];
   const kept = await core.filterBearEvents([buildMeatRackEvent()], bearCheckConfig('enforce'), adapter, drops);
-  assert.equal(adapter.calls.length, 0, 'the stored verdict short-circuits the AI tier entirely');
+  // The machine is still asked — a "bear" from it would be the event's own
+  // reason (2026-11-18) — and its "not bear" is what the store outranks.
+  assert.equal(adapter.calls.length, 1, 'the machine is asked once whether it reaches bear by itself');
   assert.equal(kept.length, 1, 'MEAT RACK stays kept');
   assert.equal(drops.length, 0);
   assert.equal(kept[0].isBearEvent, true);
@@ -21089,7 +21097,8 @@ test('maybe: a firm verdict on the same party always outranks it, and a maybe ne
   const drops = [];
   const kept = await core.filterBearEvents([cubscout], bearCheckConfig('enforce'), null, drops);
   assert.equal(kept.length, 1);
-  assert.equal(kept[0].bearSource, 'manual-bear (verdict store 2026-11-11)');
+  // "cub" is in the title: the machine's own reason, not "manual".
+  assert.equal(kept[0].bearSource, 'keyword');
   assert.equal(drops.length, 0);
 });
 
@@ -34644,4 +34653,204 @@ test('crawl-out: a two-day record takes its place from the one night of the same
   assert.equal(row.address, '251 South St, Springfield');
   assert.equal(SharedCore.toEpochMillis(row.startDate), start.getTime());
   assert.equal(SharedCore.toEpochMillis(row.endDate), end.getTime());
+});
+
+// ── The machine agrees with a stored bear verdict (owner, 2026-11-18) ───────
+// "I don't want the earlier clearly bear events to be tagged 'manual' lol."
+
+test('bear verdict store: when the machine reaches bear by itself the event carries the machine\'s reason, not "manual"', async () => {
+  const verdicts = [
+    buildMeatRackVerdictEntry({ title: 'BEAR NAKED SUNDAY' }),
+    buildMeatRackVerdictEntry({ title: 'MEAT RACK' }),
+    buildMeatRackVerdictEntry({ title: 'ONYX NIGHT', tags: ['bear-crowd'] }),
+    buildMeatRackVerdictEntry({ title: 'TUESDAY TRIVIA', verdict: 'not_bear' })
+  ];
+  const notBear = { verdict: 'not_bear', reason: 'generic' };
+  const run = (title, verdict = notBear) => {
+    // A core per question: one core remembers the model's answer to a prompt.
+    const core = createCore();
+    core.bearVerdicts = verdicts;
+    const adapter = buildBearVerdictAdapter(verdict);
+    const drops = [];
+    return core.filterBearEvents([buildMeatRackEvent({ title, description: '' })], bearCheckConfig('enforce'), adapter, drops)
+      .then(kept => ({ kept, drops, calls: adapter.calls.length }));
+  };
+
+  const keyword = await run('BEAR NAKED SUNDAY');
+  assert.equal(keyword.kept.length, 1);
+  assert.equal(keyword.kept[0].bearSource, 'keyword', 'a bear word in the title is the reason');
+  assert.equal(keyword.kept[0].bearReview, undefined);
+
+  const ai = await run('MEAT RACK', { verdict: 'bear', reason: 'the event names its crowd', eventEvidence: ['MEAT RACK'] });
+  assert.match(ai.kept[0].bearSource, /^ai/, 'the AI reaching bear from the event\'s own words is the machine\'s reason too');
+
+  const alone = await run('MEAT RACK');
+  assert.equal(alone.kept.length, 1, 'the owner\'s word still keeps it');
+  assert.equal(alone.kept[0].bearSource, 'manual-bear (verdict store 2026-08-12)', 'the machine did not get there: it stays his');
+
+  const unsure = await run('MEAT RACK', { verdict: 'unsure', reason: 'thin' });
+  assert.equal(unsure.kept[0].bearSource, 'manual-bear (verdict store 2026-08-12)', 'unsure is not bear');
+  assert.equal(unsure.kept[0].bearReview, undefined, 'and his word leaves no review flag');
+
+  const tagged = await run('ONYX NIGHT', { verdict: 'bear', reason: 'x' });
+  assert.equal(tagged.kept[0].bearSource, 'manual-bear (verdict store 2026-08-12)', 'a verdict that carries his own tags is exact and stays his');
+  assert.equal(tagged.kept[0].tags, 'bear-crowd');
+  assert.equal(tagged.calls, 0, 'and the machine is not asked');
+
+  const refused = await run('TUESDAY TRIVIA', { verdict: 'bear', reason: 'x' });
+  assert.equal(refused.kept.length, 0, 'his not-bear is never re-opened');
+  assert.equal(refused.calls, 0);
+});
+
+test('bear verdict store: a saved "manual-bear" stamp gives way to the machine\'s reason only while his stored verdict agrees', async () => {
+  const core = createCore();
+  const saved = () => buildCalendarEvent({}, 'bar: STATION 4\nbearSource: manual-bear (verdict store 2030-01-01)');
+  const entry = { verdict: 'bear', stampedAt: '2030-01-01T00:00:00.000Z', title: 'DALLAS FREEDOM TEA', venue: 'STATION 4', address: '3911 Cedar Springs Rd, Dallas, TX 75219', location: '', city: 'dallas' };
+
+  core.bearVerdicts = [entry];
+  const agreed = await core.createFinalEventObject(saved(), buildScrapedEvent({ bearSource: 'keyword', tags: 'underwear' }), {});
+  assert.equal(agreed.bearSource, 'keyword', 'the saved record takes the machine\'s reason');
+  assert.equal(agreed.tags, 'underwear', 'and the run\'s tags: the saved stamp no longer makes the saved tags exact');
+  assert.equal(core.parseNotesIntoFields(agreed.notes).bearSource, 'keyword');
+
+  core.bearVerdicts = [];
+  const noVerdict = await core.createFinalEventObject(saved(), buildScrapedEvent({ bearSource: 'keyword' }), {});
+  assert.equal(noVerdict.bearSource, 'manual-bear (verdict store 2030-01-01)', 'no stored verdict to agree with (a tap on the phone): the saved stamp stands');
+
+  core.bearVerdicts = [{ ...entry, tags: ['leather'] }];
+  const withTags = await core.createFinalEventObject(saved(), buildScrapedEvent({ bearSource: 'keyword' }), {});
+  assert.equal(withTags.bearSource, 'manual-bear (verdict store 2030-01-01)', 'a verdict with his own tags is exact');
+
+  core.bearVerdicts = [entry];
+  const flagged = await core.createFinalEventObject(saved(), buildScrapedEvent({ bearSource: 'ai', bearReview: 'unsure: thin' }), {});
+  assert.equal(flagged.bearSource, 'manual-bear (verdict store 2030-01-01)', 'a flagged machine reading is not agreement');
+  const taggedOnly = await core.createFinalEventObject(saved(), buildScrapedEvent({ bearSource: 'tagged (ai: leather night)' }), {});
+  assert.equal(taggedOnly.bearSource, 'manual-bear (verdict store 2030-01-01)', 'kept-for-its-tags is not bear');
+
+  assert.equal(SharedCore.isMachineBearSource('poster'), true);
+  assert.equal(SharedCore.isMachineBearSource('manual-bear (verdict store 2030-01-01)'), false);
+  assert.equal(SharedCore.isMachineBearSource('tagged (ai: x)'), false);
+});
+
+// ── A title that says "gear night" is kink (owner, 2026-11-14 / 2026-11-18) ─
+
+test('tags: a title that says "gear night" is kink without asking; the tail of another family\'s word is not', async () => {
+  const core = createCore();
+  const stated = core.collectMachineEventTags({ title: 'FURBALL GEAR NIGHT' });
+  assert.deepEqual(stated.stated, { kink: 'gear night' });
+  assert.equal(core.collectMachineEventTags({ title: 'Gym Gear Night' }).stated, undefined, '"gym gear" is sportswear\'s word');
+  assert.equal(core.collectMachineEventTags({ title: 'Sports Gear Nights' }).stated, undefined);
+  assert.equal(core.collectMachineEventTags({ title: 'Trivia', description: 'our gear night is next week' }).stated, undefined, 'only a title states it');
+  assert.equal(core.getTitleStatedTagPhrase({ title: 'Leather Gear Night' }, 'kink'), 'gear night', 'a word before it that does not run into it changes nothing');
+  assert.equal(core.getTitleStatedTagPhrase({ title: 'Gear Night' }, 'leather'), '');
+
+  // The model declines everything — the title's tag stands and is never asked.
+  const adapter = buildTagAwareAdapter({ verdict: 'bear', reason: 'a bear party' });
+  const decision = await core.attachEventTagsToBearDecision({ result: 'bear', provenance: 'keyword' }, { title: 'FURBALL GEAR NIGHT', description: 'underwear welcome', city: 'dallas' }, bearCheckConfig('enforce'), adapter);
+  assert.deepEqual(decision.tags, ['kink']);
+  const asked = adapter.calls.map(call => (/^Tag: ([a-z-]+)$/m.exec(String(call.prompt || '')) || [])[1]).filter(Boolean);
+  assert.equal(asked.includes('kink'), false, 'not a question');
+  assert.equal(asked.includes('underwear'), true, 'every other candidate still is');
+
+  const gym = buildTagAwareAdapter({ verdict: 'bear', reason: 'x' });
+  const gymDecision = await core.attachEventTagsToBearDecision({ result: 'bear', provenance: 'keyword' }, { title: 'Gym Gear Night', city: 'dallas' }, bearCheckConfig('enforce'), gym);
+  assert.deepEqual(gymDecision.tags || [], [], 'asked, and declined');
+  assert.equal(gym.calls.some(call => /^Tag: kink$/m.test(String(call.prompt || ''))), true);
+});
+
+// ── The bar's own holiday notice (owner, 2026-11-18) ────────────────────────
+
+test('keeps: a bar\'s own holiday notice is tagged holiday and kept at a bear or leather bar only', async () => {
+  const bars = { la: [{ name: 'Eagle LA', scene: 'leather' }, { name: 'Precinct', scene: 'adjacent' }, { name: 'Akbar' }] };
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, bars });
+  const notBear = { verdict: 'not_bear', reason: 'opening hours, not a party' };
+  const yes = { holiday: { applies: true, eventEvidence: ['HAPPY THANKSGIVING'], reason: 'the bar\'s holiday greeting' } };
+  const run = (event, answers = yes) => core.filterBearEvents([event], bearCheckConfig('enforce'), buildTagAwareAdapter(notBear, answers));
+
+  const notice = await run({ title: 'HAPPY THANKSGIVING – BAR OPENS AT 6PM', bar: 'Eagle LA', city: 'la' });
+  assert.equal(notice.length, 1);
+  assert.equal(notice[0].tags, 'holiday');
+  assert.equal(notice[0].bearSource, 'tagged (holiday: the bar\'s own holiday notice at Eagle LA, a leather bar)');
+  assert.equal(notice[0].isBearEvent, true);
+
+  assert.equal((await run({ title: 'HAPPY THANKSGIVING – BAR OPENS AT 6PM', bar: 'Precinct', city: 'la' })).length, 0, 'an adjacent bar');
+  assert.equal((await run({ title: 'HAPPY THANKSGIVING – BAR OPENS AT 6PM', bar: 'Akbar', city: 'la' })).length, 0, 'an unmarked bar');
+  const declined = new SharedCore(CITIES, { eventSchema: EventSchema, bars });
+  assert.equal((await declined.filterBearEvents([{ title: 'HAPPY THANKSGIVING – BAR OPENS AT 6PM', bar: 'Eagle LA', city: 'la' }], bearCheckConfig('enforce'), buildTagAwareAdapter(notBear, {}))).length, 0, 'the tag check has to say it is the bar\'s notice');
+  assert.equal(core.collectMachineEventTags({ title: 'EAGLE LA NEW YEARS BASH!!' }).candidates.includes('holiday'), false, 'a party on a holiday is not a candidate');
+  assert.equal(core.collectMachineEventTags({ title: 'Underwear Night', description: 'Doors open at 9pm. Bar opens at 8.' }).candidates.includes('holiday'), false, 'opening words in a description are every party\'s');
+  assert.equal(EventSchema.EVENT_TAGS.holiday.keeps, undefined, 'the tag describes; the bar\'s mark keeps');
+  assert.equal(EventSchema.EVENT_TAGS.holiday.shown, true);
+});
+
+// ── A special edition of the bar's regular night (owner, 2026-11-18) ────────
+
+function buildEditionPair() {
+  const place = { bar: 'Eagle LA', address: '4219 Santa Monica Blvd, Los Angeles, CA 90029', city: 'la', timezone: 'America/Los_Angeles' };
+  return {
+    // As saved: the special's ticket link is its own page on the bar's
+    // site, which is what makes the two pages contradict for the
+    // cross-source pass. The regular night carries none.
+    regular: { ...place, title: 'SUNDAY BEER BUST', startDate: new Date('2027-01-17T22:00:00.000Z'), endDate: null, cadence: 'FREQ=WEEKLY;BYDAY=SU', website: 'https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-01-17', description: 'Sunday Beer Bust 2pm $5 domestic drafts', bearSource: 'tagged (bear-crowd: a beer bust at Eagle LA, a leather bar)', tags: 'bear-crowd', key: 'sunday-beer-bust|2027-01-17|eagle la' },
+    special: { ...place, ticketUrl: 'https://eaglela.com/events/mlk-beer-bust-2/', title: 'MLK BEER BUST', startDate: new Date('2027-01-17T08:00:00.000Z'), endDate: new Date('2027-01-18T07:59:59.000Z'), timeUnknown: true, website: 'https://eaglela.com/events/mlk-beer-bust-2/', description: 'Check back later for more details on this event', image: 'https://eaglela.com/wp-content/uploads/MORE-INFO-Coming-Soon-1.jpg', bearSource: 'manual-tagged (verdict store 2026-11-18)', tags: 'bear-crowd', key: 'mlk-beer-bust|2027-01-17|eagle la' }
+  };
+}
+
+function createLaCore() {
+  return new SharedCore({ la: { timezone: 'America/Los_Angeles', patterns: ['los angeles'] } }, { eventSchema: EventSchema });
+}
+
+test('special edition: a no-time page for one date of the bar\'s weekly night folds into that night (MLK BEER BUST, Eagle LA, run 20261118-060143)', async () => {
+  const core = createLaCore();
+  const { regular, special } = buildEditionPair();
+  assert.equal(core.getCrossSourceDuplicateSignal(special, regular), null, 'two pages: the cross-source pass refuses the pair');
+  const signal = core.getSpecialEditionSignal(regular, special);
+  assert.equal(signal.special, special);
+  assert.equal(signal.regular, regular);
+  assert.equal(signal.day, '2027-01-17');
+  assert.equal(signal.sameClock, false);
+
+  const nextSunday = { ...regular, startDate: new Date('2027-01-24T22:00:00.000Z'), website: 'https://eaglela.com/events/sunday-beer-bust-4/?occurrence=2027-01-24', key: 'sunday-beer-bust|2027-01-24|eagle la' };
+  const out = await core.deduplicateEvents([regular, nextSunday, special], null, null);
+  assert.equal(out.length, 2, 'one event that afternoon, and next Sunday untouched');
+  const merged = out.find(event => event.title === 'MLK BEER BUST');
+  assert.equal(SharedCore.toEpochMillis(merged.startDate), Date.parse('2027-01-17T22:00:00.000Z'), 'at the regular night\'s time');
+  assert.equal(merged.endDate, undefined, 'the placeholder\'s all-day end is gone');
+  assert.equal(merged.timeUnknown, undefined);
+  assert.equal(merged.website, 'https://eaglela.com/events/mlk-beer-bust-2/', 'its own page');
+  assert.equal(merged.key, 'mlk-beer-bust|2027-01-17|eagle la', 'its own key: the saved placeholder is the record it updates');
+  assert.equal(merged.bearSource, 'manual-tagged (verdict store 2026-11-18)');
+  assert.equal(merged.cadence, undefined, 'one date, never a series');
+  assert.equal(out.some(event => event.title === 'SUNDAY BEER BUST' && SharedCore.toEpochMillis(event.startDate) === Date.parse('2027-01-24T22:00:00.000Z')), true);
+});
+
+test('special edition: what is not one stays two events', () => {
+  const core = createLaCore();
+  const pair = () => buildEditionPair();
+  const refuses = (mutate, why) => {
+    const { regular, special } = pair();
+    mutate(regular, special);
+    assert.equal(core.getSpecialEditionSignal(special, regular), null, why);
+  };
+  refuses((regular) => { delete regular.cadence; }, 'no cadence stated: nothing says it is a regular night');
+  refuses((regular, special) => { special.cadence = 'FREQ=WEEKLY;BYDAY=SU'; }, 'two regular nights');
+  refuses((regular, special) => { special.bar = 'Precinct'; special.address = '357 S Broadway, Los Angeles, CA 90013'; }, 'another door');
+  refuses((regular, special) => { special.startDate = new Date('2027-01-18T08:00:00.000Z'); special.endDate = new Date('2027-01-19T07:59:59.000Z'); }, 'another day (the Monday notice)');
+  refuses((regular, special) => { special.endDate = new Date('2027-01-20T07:59:59.000Z'); }, 'a weekend-long placeholder is a festival');
+  refuses((regular, special) => { special.title = 'MLK WEEKEND BRUNCH'; }, 'the regular night\'s name is not in its title');
+  refuses((regular, special) => { special.title = 'BUST OUT THE BEER'; }, 'the same words in another order are not the name');
+  refuses((regular, special) => { regular.title = 'SUNDAY NIGHT'; special.title = 'HOT BOOTS GEAR NIGHT'; }, 'one shared word is a theme, not a name');
+  refuses((regular, special) => { delete special.timeUnknown; special.startDate = new Date('2027-01-18T00:00:00.000Z'); special.endDate = null; }, 'a stated time of its own, at another hour');
+  refuses((regular) => { regular.startDate = new Date('2027-01-17T08:00:00.000Z'); regular.endDate = new Date('2027-01-18T07:59:59.000Z'); }, 'a regular night with no clock has no time to lend');
+
+  // The special states the regular night's own start: one event, its own times.
+  const { regular, special } = pair();
+  delete special.timeUnknown;
+  special.startDate = new Date('2027-01-17T22:00:00.000Z');
+  special.endDate = new Date('2027-01-18T02:00:00.000Z');
+  const same = core.getSpecialEditionSignal(special, regular);
+  assert.equal(same.sameClock, true);
+  const merged = core.foldSpecialEdition(same);
+  assert.equal(SharedCore.toEpochMillis(merged.endDate), Date.parse('2027-01-18T02:00:00.000Z'));
+  assert.deepEqual(merged._specialEditionOf, { title: 'SUNDAY BEER BUST', cadence: 'FREQ=WEEKLY;BYDAY=SU', tookClock: false });
 });

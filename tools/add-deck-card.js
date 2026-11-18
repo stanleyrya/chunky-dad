@@ -8,6 +8,8 @@
 //   node tools/add-deck-card.js edit   --city sydney --uid <uid> --why "…" --set endDate=2026-10-16T22:00:00+11:00
 //   node tools/add-deck-card.js choose --title "…" --why "…" --option "Keep A" --option "Keep B" [--city sf --uid <uid>] [--url <page>] [--image <flyer>]
 //   node tools/add-deck-card.js party  --city la --uid <uid> --why "…"   (a saved party: bear, keep for tags, or not bear)
+//       refused when the saved record is bear by the machine's own reading
+//       (bearSource keyword / ai / config / poster); --force asks anyway
 //   node tools/add-deck-card.js list
 //
 // On the deck LEFT always takes an event off and RIGHT keeps it: a remove
@@ -119,6 +121,12 @@ function buildCard(args, options = {}) {
     }
     if (action === 'choose') input.options = args.option;
     if (action === 'party' && record) {
+        // The machine already calls it bear by itself (a keyword, the AI,
+        // the source, its poster): nothing to ask the owner.
+        const { SharedCore } = require('../scripts/shared-core');
+        if (SharedCore.isMachineBearSource(String(record.bearSource || '')) && !args.force) {
+            throw new Error(`"${record.title}" is bear by the machine's own reading (${record.bearSource}) — no card needed. Pass --force to ask anyway.`);
+        }
         input.tags = record.tags;
         input.bearSource = record.bearSource;
         input.description = record.description;
