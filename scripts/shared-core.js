@@ -3021,7 +3021,12 @@ class SharedCore {
     // BUST" page folded into the Sunday beer bust and matched the saved MLK
     // stub; the stub was still all-day until the phone wrote it, so the
     // fact count offered the MLK copy for removal — the opposite of what
-    // the run had just decided. And one saved event gets ONE removal card:
+    // the run had just decided. The same holds with no such finding, when
+    // this run matched a listing to exactly ONE copy of the pair
+    // (`options.matchedByRun`): the matched copy is the live one (BeefDip's
+    // "FURBALL POOL PARTY", matched at the hotel the site names, beside a
+    // richer copy at another bar that no listing reached). Both matched, or
+    // neither: the fact count decides. And one saved event gets ONE removal card:
     // a pair whose extra copy already has a gone-from-source card
     // (`options.carded`, the same key) is not dealt a second time.
     buildCalendarTwinCandidates(savedByCity, options = {}) {
@@ -3036,6 +3041,7 @@ class SharedCore {
             if (entry && entry.city && entry.uid && entry.keptUid) keptByRun.set(`${entry.city}|${entry.uid}`, String(entry.keptUid));
         });
         const carded = options.carded instanceof Set ? options.carded : new Set(Array.isArray(options.carded) ? options.carded : []);
+        const matchedByRun = options.matchedByRun instanceof Set ? options.matchedByRun : new Set(Array.isArray(options.matchedByRun) ? options.matchedByRun : []);
         const fold = (value) => String(value || '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
         const tokensOf = (text) => fold(text).split(' ').filter((token) => token.length >= 2);
         const iso = (value) => {
@@ -3227,9 +3233,15 @@ class SharedCore {
                         // The run gave the site's one listing that night to
                         // the other copy: this one is the extra.
                         const runKeptOther = (x, y) => keptByRun.get(`${city}|${x.uid}`) === y.uid;
-                        const byRun = runKeptOther(a, b) !== runKeptOther(b, a);
+                        let byRun = runKeptOther(a, b) !== runKeptOther(b, a);
+                        let byRunWhy = 'the site lists one event that night and this run matched it to the other copy';
                         if (byRun) {
                             if (runKeptOther(b, a)) { extra = b; kept = a; }
+                        } else if (matchedByRun.has(a.uid) !== matchedByRun.has(b.uid)) {
+                            // …or the run matched a listing to one copy only.
+                            byRun = true;
+                            byRunWhy = 'this run matched a listing to the other copy and none to this one';
+                            if (matchedByRun.has(a.uid)) { extra = b; kept = a; }
                         } else if (factsA.length > factsB.length) { extra = b; kept = a; }
                         else if (factsA.length === factsB.length) {
                             tie = true;
@@ -3239,7 +3251,7 @@ class SharedCore {
                         if (carded.has(`gone|${city}|${extra.uid}`)) { summary.covered += 1; continue; }
                         if (byRun) summary.byRun += 1;
                         const whyExtra = byRun
-                            ? ['the site lists one event that night and this run matched it to the other copy', ...extraWhy(extra, kept)]
+                            ? [byRunWhy, ...extraWhy(extra, kept)]
                             : extraWhy(extra, kept);
                         summary.candidates += 1;
                         candidates.push({
@@ -20788,7 +20800,7 @@ Rules:
         });
         summary.sites = sitesUsed.size;
         candidates.sort((a, b) => b.misses - a.misses || String(a.startDate || '').localeCompare(String(b.startDate || '')));
-        return { candidates, state, summary, identityMisses, held, keptByRun };
+        return { candidates, state, summary, identityMisses, held, keptByRun, matched: [...matched] };
     }
 
     // One key per page: scheme dropped, host lowercased without "www.", the

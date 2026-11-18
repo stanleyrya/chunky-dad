@@ -532,6 +532,7 @@ test('buildGoneFromSourceCandidates: a saved event pointing into a site a first-
 
   const first = core.buildGoneFromSourceCandidates(results, savedByCity, { now });
   assert.equal(first.candidates.length, 0, 'one miss is not a card');
+  assert.deepEqual(first.matched.sort(), ['A', 'cal:A'], 'the saved records this run matched, by identifier and uid');
   assert.deepEqual(first.state.la.B && { misses: first.state.la.B.misses, day: first.state.la.B.day, host: first.state.la.B.host }, { misses: 1, day: '2026-10-24', host: 'eaglela.com' });
   assert.equal(first.state.la.A, undefined, 'the matched saved event has no streak');
   assert.equal(first.state.la.C, undefined, 'beyond the furthest night the source showed — outside its statement');

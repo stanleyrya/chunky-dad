@@ -30045,6 +30045,19 @@ test('calendar twins: the copy this run matched the site\'s listing to is the on
   assert.equal(card(both).uid, 'MLK');
   assert.equal(card(both).byRun, false);
 
+  // No finding, but the run matched a listing to ONE copy only: that copy
+  // is the live one. Both matched, or neither, says nothing.
+  const oneMatched = core.buildCalendarTwinCandidates(saved, { now, matchedByRun: new Set(['MLK']) });
+  assert.equal(card(oneMatched).uid, 'SUN');
+  assert.equal(card(oneMatched).byRun, true);
+  assert.deepEqual(card(oneMatched).extraWhy, ['this run matched a listing to the other copy and none to this one']);
+  const bothMatched = core.buildCalendarTwinCandidates(saved, { now, matchedByRun: ['MLK', 'SUN'] });
+  assert.equal(card(bothMatched).uid, 'MLK');
+  assert.equal(card(bothMatched).byRun, false);
+  // The finding outranks the bare match.
+  const findingFirst = core.buildCalendarTwinCandidates(saved, { now, keptByRun, matchedByRun: new Set(['SUN']) });
+  assert.equal(card(findingFirst).uid, 'SUN');
+
   // The Sunday copy already has its "extra copy" card from the source
   // comparison (same key): one saved event, one removal card.
   const covered = core.buildCalendarTwinCandidates(saved, { now, keptByRun, carded: new Set(['gone|la|SUN']) });

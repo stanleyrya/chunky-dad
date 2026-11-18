@@ -553,6 +553,7 @@ class BearEventScraperOrchestrator {
                                 const twins = sharedCore.buildCalendarTwinCandidates({ ...savedByCity, ...restSaved }, {
                                     cities: config.cities,
                                     keptByRun: gone.keptByRun,
+                                    matchedByRun: new Set(gone.matched),
                                     carded: new Set(gone.candidates.map((card) => card.key))
                                 });
                                 gone.twins = twins.summary;
