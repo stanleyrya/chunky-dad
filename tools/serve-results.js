@@ -1038,7 +1038,7 @@ function describeBearSource(source) {
 
 // The tags line: what approving writes, and which tags keep a not-bear
 // event on the site (EVENT_TAGS `keeps`) versus only describe it.
-function describeEventTags(tags, dropped) {
+function describeEventTags(tags, dropped, bear) {
     const list = (Array.isArray(tags) ? tags : []).filter(Boolean);
     if (list.length === 0) return '';
     let vocabulary = {};
@@ -1046,9 +1046,13 @@ function describeEventTags(tags, dropped) {
     const named = list.map((tag) => {
         const entry = vocabulary[tag] || {};
         const label = escapeHtmlText(entry.label || tag);
-        return entry.keeps ? `<b>${label}</b>` : label;
+        return entry.keeps && !bear ? `<b>${label}</b>` : label;
     });
     const keeps = list.some((tag) => vocabulary[tag] && vocabulary[tag].keeps);
+    // On a bear event a tag only describes (owner, 2026-11-19, reading
+    // "leather (bold keeps a not-bear night on the site)" on a bear card:
+    // "Why is this leather and not bear?").
+    if (bear) return `<span class="bear-tags">🏷 It is bear. Approving also saves the ${list.length === 1 ? 'tag' : 'tags'}: ${named.join(', ')}</span>`;
     const lead = dropped ? '🏷 Tags it would carry' : '🏷 Approving also saves the tags';
     return `<span class="bear-tags">${lead}: ${named.join(', ')}${keeps ? ' (bold keeps a not-bear night on the site)' : ''}</span>`;
 }
@@ -1079,7 +1083,8 @@ function renderReviewBearRow(display = {}, proposal = {}) {
         state = '🐻 bear (no check recorded)';
     }
     const storedLabel = stored === 'bear' ? '🐻 bear' : stored === 'tagged' ? `🏷 kept for ${escapeHtmlText(storedTags.join(', ') || 'its tags')}` : '🚫 not bear';
-    const tagText = describeEventTags(eventTags, proposal.kind === 'dropped');
+    const readsBear = proposal.kind !== 'dropped' && !display.bearReview && !/^(?:manual-)?tagged\b|^manual-not-bear\b/.test(String(display.bearSource || '').trim());
+    const tagText = describeEventTags(eventTags, proposal.kind === 'dropped', readsBear);
     const storedText = stored
         ? `<span class="bear-stored">you said: ${storedLabel}${display.bearVerdictStampedAt ? ` (${escapeHtmlText(String(display.bearVerdictStampedAt).slice(0, 10))})` : ''}${display.bearVerdictOn ? ` — on the same party, listed as “${escapeHtmlText(display.bearVerdictOn)}”` : ''}</span>`
         : '';
