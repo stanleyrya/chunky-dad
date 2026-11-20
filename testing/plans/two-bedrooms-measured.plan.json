@@ -1,0 +1,272 @@
+{
+  "name": "Two bedrooms · as measured",
+  "ppi": 4,
+  "wall": 6,
+  "margin": 12,
+  "rooms": [
+    {
+      "label": "Bedroom",
+      "dims": "7′11″ × 14′1″",
+      "poly": [
+        [
+          30,
+          20
+        ],
+        [
+          125,
+          75
+        ],
+        [
+          125,
+          189
+        ],
+        [
+          30,
+          189
+        ]
+      ],
+      "labelAt": [
+        74,
+        137
+      ]
+    },
+    {
+      "label": "Primary",
+      "dims": "7′6″ × 13′11″",
+      "poly": [
+        [
+          185,
+          20
+        ],
+        [
+          275,
+          72
+        ],
+        [
+          275,
+          187
+        ],
+        [
+          185,
+          187
+        ],
+        [
+          185,
+          176
+        ],
+        [
+          181,
+          176
+        ],
+        [
+          181,
+          31
+        ],
+        [
+          185,
+          31
+        ]
+      ],
+      "labelAt": [
+        233,
+        135
+      ]
+    },
+    {
+      "x": 203.0,
+      "y": 187,
+      "w": 47.5,
+      "h": 59
+    }
+  ],
+  "doors": [
+    {
+      "x": 32,
+      "y": 189,
+      "w": 30,
+      "h": 6
+    },
+    {
+      "x": 216.5,
+      "y": 246,
+      "w": 32,
+      "h": 6
+    },
+    {
+      "x": 197.0,
+      "y": 205,
+      "w": 6,
+      "h": 28
+    }
+  ],
+  "fixtures": [
+    {
+      "label": "post",
+      "poly": [
+        [
+          113,
+          86
+        ],
+        [
+          125,
+          86
+        ],
+        [
+          125,
+          75
+        ],
+        [
+          113,
+          68.1
+        ]
+      ],
+      "labelAt": [
+        119,
+        77
+      ]
+    },
+    {
+      "x": 181,
+      "y": 31,
+      "w": 4,
+      "h": 145,
+      "fill": "#ececec"
+    }
+  ],
+  "labels": [
+    {
+      "text": "169″",
+      "x": 35,
+      "y": 104,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "103″ to the post",
+      "x": 122,
+      "y": 137,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "95″",
+      "x": 77.5,
+      "y": 186,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "window wall",
+      "x": 76,
+      "y": 58,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": 30
+    },
+    {
+      "text": "door",
+      "x": 47,
+      "y": 200,
+      "size": 3.4,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "closet?",
+      "x": 19,
+      "y": 161,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "167″ · the X brace sits 4″ behind the posts",
+      "x": 190,
+      "y": 103,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "115″",
+      "x": 272,
+      "y": 129,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "90″",
+      "x": 222.0,
+      "y": 177,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "window wall",
+      "x": 230,
+      "y": 57,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": 30
+    },
+    {
+      "text": "24.5″",
+      "x": 262.75,
+      "y": 184,
+      "size": 3,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "hall 47.5″ × 59″",
+      "x": 226.75,
+      "y": 217,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "door",
+      "x": 232.5,
+      "y": 257,
+      "size": 3.4,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "closet",
+      "x": 186.0,
+      "y": 220,
+      "size": 3.4,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle"
+    }
+  ],
+  "notes": "Measured 2026-11-20. Guessed: where the doors sit, how wide they are, how long the Primary posts are."
+}
