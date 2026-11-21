@@ -600,6 +600,15 @@ const PAST_CREATE_UNPLACED_CLOCK_GRACE_MS = 48 * 60 * 60 * 1000;
 const DEFAULT_MISSING_END_DURATION_HOURS = 3;
 const DEFAULT_MISSING_END_DURATION_MS = DEFAULT_MISSING_END_DURATION_HOURS * 60 * 60 * 1000;
 
+// What the words a tag answer quotes can be, asked only of a question that
+// carries the event's poster (buildTagCheckPrompt).
+const TAG_EVIDENCE_KINDS = [
+    "the event's own billing or description",
+    "a sponsor's or brand's name",
+    "a host's, performer's or venue's name",
+    'another sense'
+];
+
 class SharedCore {
     constructor(cities, options = {}) {
         if (!cities || typeof cities !== 'object') {
@@ -16886,6 +16895,13 @@ Rules:
             tags = schema.normalizeEventTags(confirmed.map(line => line.split(':')[0]).concat(standing, statedTags));
             const parts = [];
             if (statedTags.length > 0) parts.push(`the title says ${statedTags.map(tag => `${tag}: "${stated[tag]}"`).join('; ')} (not asked)`);
+            // Flag, don't drop silently: the gear a general night lists.
+            const underStated = machine.underStated || {};
+            const setAside = Object.keys(underStated).sort();
+            if (setAside.length > 0) {
+                const where = hit => (hit.description.length > 0 ? `description: ${hit.description.join(', ')}` : `flyer: ${(hit.flyer || []).join(', ')}`);
+                parts.push(`set aside ${setAside.map(tag => `${tag} (${where(underStated[tag].hit)})`).join('; ')} — the title says "${underStated[setAside[0]].phrase}", the general ${underStated[setAside[0]].umbrella} night, and does not name ${setAside.length > 1 ? 'them' : 'it'}`);
+            }
             if (confirmed.length > 0) parts.push(`confirmed ${confirmed.join('; ')}`);
             if (declined.length > 0) parts.push(`declined ${declined.join('; ')}`);
             if (unanswered.length > 0) parts.push(`no AI for ${unanswered.join(', ')} → ${standing.length > 0 ? `title-named stand: ${standing.join(', ')}` : 'not tagged'}`);
@@ -16958,6 +16974,21 @@ Rules:
             console.log(`🎄 HOLIDAY: "${title}" kept — the bar's own holiday notice at ${holidayBar.name}, a ${holidayBar.scene} bar on your list; was ${decision.result} (${decision.provenance})`);
             decision.result = 'tagged';
             decision.keptAs = `holiday: the bar's own holiday notice at ${holidayBar.name}, a ${holidayBar.scene} bar`;
+            decision.provenance = `tagged: ${decision.keptAs} — ${decision.provenance}`;
+            return decision;
+        }
+        //   5. a general night the TITLE states ("Gear Night") at a bar the
+        //      owner marked bear or leather. Its one tag is the umbrella
+        //      (kink), which describes and keeps nothing by itself, and the
+        //      gear its description lists is no longer a tag of its own; the
+        //      owner keeps these by hand ("Gear Night with DJ Tristan Jaxx"
+        //      at Dallas Eagle, 2026-11-18). As with the beer bust and the
+        //      holiday notice, it is the bar's mark that keeps the night.
+        const statedBar = this.getTitleStatedNightSceneBar(event, machine, tags);
+        if (statedBar) {
+            console.log(`🏷️ TAGS: "${title}" kept — the title says "${statedBar.phrase}", a ${statedBar.tag} night at ${statedBar.bar.name}, a ${statedBar.bar.scene} bar on your list; was ${decision.result} (${decision.provenance})`);
+            decision.result = 'tagged';
+            decision.keptAs = `${statedBar.tag}: "${statedBar.phrase}" at ${statedBar.bar.name}, a ${statedBar.bar.scene} bar`;
             decision.provenance = `tagged: ${decision.keptAs} — ${decision.provenance}`;
             return decision;
         }
@@ -17391,6 +17422,24 @@ Rules:
                 result.stated[tag] = statedPhrase;
             }
         }
+        // A title that states an umbrella outright ("Gear Night") is the
+        // GENERAL night, whatever its description or poster goes on to list
+        // ("Leather, Harnesses, Rubber, Sports, any kind of gear is always
+        // welcome" — owner, 2026-11-19: "WHY DO THESE KEEP GETTING TAGGED AS
+        // LEATHER AND RUBBER WHEN THEY ARE GEAR NIGHTS"). A tag that sits
+        // under that umbrella (EVENT_TAGS `under`) is a candidate only when
+        // the TITLE names it too ("Rubber Gear Night"). Only present when a
+        // tag was set aside.
+        const vocabulary = SharedCore.eventTagsVocabulary();
+        for (const tag of result.candidates.slice()) {
+            const umbrella = vocabulary[tag] && vocabulary[tag].under;
+            if (!umbrella || !result.stated || !result.stated[umbrella]) continue;
+            if (result.hits[tag].title.length > 0) continue;
+            if (!result.underStated) result.underStated = {};
+            result.underStated[tag] = { umbrella, phrase: result.stated[umbrella], hit: result.hits[tag] };
+            result.candidates = result.candidates.filter(name => name !== tag);
+            delete result.hits[tag];
+        }
         result.candidates.sort();
         result.fromTitle.sort();
         return result;
@@ -17464,6 +17513,20 @@ Rules:
         if (!Array.isArray(tags) || !tags.includes('holiday')) return null;
         const bar = this.getCuratedEventBar(event);
         return bar && (bar.scene === 'bear' || bar.scene === 'leather') ? bar : null;
+    }
+
+    // { bar, tag, phrase } when the event's TITLE states an umbrella tag
+    // outright (`machine.stated`: "gear night" → kink; an umbrella is a tag
+    // other tags sit `under`), the tag is among its confirmed `tags`, and
+    // the night is at a bar the owner marked bear or leather; null otherwise.
+    getTitleStatedNightSceneBar(event, machine, tags) {
+        if (!event || typeof event !== 'object' || !machine || !machine.stated || !Array.isArray(tags)) return null;
+        const vocabulary = SharedCore.eventTagsVocabulary();
+        const umbrellas = new Set(Object.keys(vocabulary).map(name => vocabulary[name] && vocabulary[name].under).filter(Boolean));
+        const tag = tags.find(name => umbrellas.has(name) && machine.stated[name]);
+        if (!tag) return null;
+        const bar = this.getCuratedEventBar(event);
+        return bar && (bar.scene === 'bear' || bar.scene === 'leather') ? { bar, tag, phrase: machine.stated[tag] } : null;
     }
 
     // The curated bar an event is held at: its curated name, else the
@@ -17565,6 +17628,14 @@ Rules:
         const named = (family.pattern || [])
             .filter(item => item.means && item.test.test(`${title}\n${description}${flyerText ? `\n${flyerText}` : ''}`))
             .map(item => item.means);
+        // A question that carries the poster also asks what the quoted words
+        // ARE (`evidenceIs`). A poster prints who backs the party next to
+        // what the party is ("BEEFYBOY BEAR SKN UNDERWEAR mistr" under
+        // Butterball — owner, 2026-11-19: "The underwear is just a brand ad
+        // placement"); a sentence saying so did not move the answer, naming
+        // the kinds did (94 poster questions, 2026-11-20: 4 answers moved, the
+        // sponsor lines declined). Page-only questions are
+        // unchanged, so their cached answers stand.
         return [
             'You are tagging events on a gay men\'s nightlife calendar. One tag, one event: does the tag apply?',
             '',
@@ -17581,9 +17652,9 @@ Rules:
             'The tag applies only when the EVENT ITSELF is that kind of event. It does not apply because of the venue\'s reputation, a host\'s persona, a dress-code aside ("gear welcome"), a word used in another sense (a DJ called KiNK, gym gear, a Dungeons & Dragons game), or a promoter\'s other parties.',
             '',
             'Respond with ONLY this JSON object (an object, never a bare list), no other text:',
-            `{"tag": "${tag}", "applies": true | false, "eventEvidence": ["<words copied exactly from the ${flyerLines.length > 0 ? 'Title, Description or Flyer text' : 'Title or Description'}>"], "reason": "<one short sentence>"}`,
+            `{"tag": "${tag}", "applies": true | false, "eventEvidence": ["<words copied exactly from the ${flyerLines.length > 0 ? 'Title, Description or Flyer text' : 'Title or Description'}>"], ${flyerLines.length > 0 ? `"evidenceIs": ${TAG_EVIDENCE_KINDS.map(kind => `"${kind}"`).join(' | ')}, ` : ''}"reason": "<one short sentence>"}`,
             '',
-            `eventEvidence is checked automatically: every string must be copied WORD FOR WORD from ${flyerLines.length > 0 ? 'the Title, the Description or the Flyer text' : 'the Title or the Description'}, never from the Venue line. It holds the words that make the tag apply; when it would be empty, applies is false.${flyerLines.length > 0 ? " The Flyer text is this event's own poster; a venue name or slogan printed on it says what the venue is, not what this event is." : ''}`
+            `eventEvidence is checked automatically: every string must be copied WORD FOR WORD from ${flyerLines.length > 0 ? 'the Title, the Description or the Flyer text' : 'the Title or the Description'}, never from the Venue line. It holds the words that make the tag apply; when it would be empty, applies is false.${flyerLines.length > 0 ? " The Flyer text is this event's own poster; a venue name or slogan printed on it says what the venue is, not what this event is. evidenceIs says what the eventEvidence words are in this event's text: a sponsor's or brand's name (a clothing label, a shop, an app, a drink — often a row of names set apart from the party's own words) says who backs the party." : ''}`
         ].join('\n');
     }
 
@@ -17623,6 +17694,11 @@ Rules:
             const reason = typeof parsed.reason === 'string' ? parsed.reason.trim() : '';
             if (parsed.applies && evidence.length === 0) {
                 return { applies: false, evidence: [], reason: `${claimed.length > 0 ? 'quoted words not in the event text' : 'no words quoted'}${reason ? ` — ${reason}` : ''}` };
+            }
+            // The model's own reading of its quote: a sponsor's or brand's
+            // name says who backs the party, whatever `applies` says.
+            if (parsed.applies && /\b(?:sponsor|brand)/i.test(String(parsed.evidenceIs || ''))) {
+                return { applies: false, evidence: [], reason: `the quoted words are a sponsor's or brand's name ("${evidence[0]}")${reason ? ` — ${reason}` : ''}` };
             }
             // The poster is the tag's only witness: the quote has to hold
             // the poster's word for it. "ASHKOLE" confirmed leather for

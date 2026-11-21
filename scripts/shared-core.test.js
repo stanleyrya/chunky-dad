@@ -6006,8 +6006,9 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
   // Leather vocabulary left the bear lists on 2026-11-05 (it is TAG
   // evidence now — see collectMachineEventTags): Gear Night carries no bear
   // keyword at all; its title names a gear night — the general kink night
-  // (owner, 2026-11-14) — and its description leather and rubber, all three
-  // candidates for the AI to confirm.
+  // (owner, 2026-11-14) — and its description lists leather and rubber
+  // among "any kind of gear": the title states the general night, so the
+  // tags under kink are set aside unless the title names them (2026-11-19).
   const gearNight = {
     title: 'Gear Night',
     bar: 'Dallas Eagle',
@@ -6015,11 +6016,15 @@ test('bear keyword tier: title and venue-name hits still short-circuit; descript
   };
   assert.deepEqual(classify(gearNight), { shortCircuit: false, source: 'none', brand: '' });
   assert.deepEqual(core.collectMachineEventTags(gearNight), {
-    candidates: ['kink', 'leather', 'rubber'],
+    candidates: ['kink'],
     fromTitle: ['kink'],
-    hits: { leather: { title: [], description: ['leather', 'harnesses'] }, kink: { title: ['gear night', 'gear'], description: ['gear night'] }, rubber: { title: [], description: ['rubber'] } },
+    hits: { kink: { title: ['gear night', 'gear'], description: ['gear night'] } },
     // The title says it: kink is not a question for the model (2026-11-18).
-    stated: { kink: 'gear night' }
+    stated: { kink: 'gear night' },
+    underStated: {
+      leather: { umbrella: 'kink', phrase: 'gear night', hit: { title: [], description: ['leather', 'harnesses'] } },
+      rubber: { umbrella: 'kink', phrase: 'gear night', hit: { title: [], description: ['rubber'] } }
+    }
   });
   // The dress-code aside is a candidate too — nothing in the words tells it
   // from a leather night; the AI does.
@@ -33429,15 +33434,17 @@ test('standing lines: a sentence one venue prints word for word under three diff
   assert.ok(!kept.some(event => event.title === 'Sunday Funday: Rewind' || event.title === 'Dirty Pop with DJ Drew G'), 'a not-bear night is no longer kept on the shop notice');
   assert.ok(lines.some(line => line.includes('🧱 SITE LINES: thedallaseagle.com') && line.includes('at one venue')));
 
-  // The party's own words still count: the gear night is named in its title
-  // and its own sentences, and the Thanksgiving row's dress-code sentence is
-  // its own wording (no other party prints it word for word).
+  // The party's own words still count: the Thanksgiving row's dress-code
+  // sentence is its own wording (no other party prints it word for word).
+  // The gear night's own sentences are still read too; its title states the
+  // general night, so the gear they list is set aside by THAT rule
+  // (`underStated`), not as a venue line.
   const gear = core.collectMachineEventTags(records.gearNight);
-  assert.ok(gear.candidates.includes('leather'));
-  assert.ok(gear.hits.leather.description.includes('leather'), 'its own sentences are still read');
+  assert.deepEqual(gear.candidates, ['kink']);
+  assert.ok(gear.underStated.leather.hit.description.includes('leather'), 'its own sentences are still read');
   assert.equal(gear.siteLineHits, undefined, 'nothing was set aside that its own words do not also say');
   assert.ok(core.collectMachineEventTags(records.thanksgiving).candidates.includes('leather'), 'a reworded dress code is not caught by this rule');
-  assert.ok(kept.some(event => event.title === 'Gear Night with DJ Tristan Jaxx'));
+  assert.ok(kept.some(event => event.title === 'Dirty Bird Thanksgiving'));
 
   // Nothing is cut from the description itself.
   assert.ok(records.rewind.description.includes('Our Leather Shop is Now Open!'));
@@ -34819,6 +34826,109 @@ test('tags: a title that says "gear night" is kink without asking; the tail of a
   const gymDecision = await core.attachEventTagsToBearDecision({ result: 'bear', provenance: 'keyword' }, { title: 'Gym Gear Night', city: 'dallas' }, bearCheckConfig('enforce'), gym);
   assert.deepEqual(gymDecision.tags || [], [], 'asked, and declined');
   assert.equal(gym.calls.some(call => /^Tag: kink$/m.test(String(call.prompt || ''))), true);
+});
+
+// ── A gear night is kink only; what people wear and who sponsors is not the night (owner, 2026-11-19) ──
+
+test('tags: a title-stated gear night sets aside the gear its description or poster lists; a title that names the gear still asks', async () => {
+  const core = createCore();
+  const yesToAll = { leather: { applies: true, eventEvidence: ['Leather'], reason: 'leather is listed' }, rubber: { applies: true, eventEvidence: ['Rubber'], reason: 'rubber is listed' }, underwear: { applies: true, eventEvidence: ['underwear'], reason: 'x' } };
+  const gearNight = { title: 'Gear Night with DJ Philip Webb', bar: 'Dallas Eagle', city: 'dallas', description: 'Grab your gear, it\'s time for GEAR NIGHT! Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome at the Dallas Eagle!' };
+  const adapter = buildTagAwareAdapter({ verdict: 'not_bear', reason: 'a general gear night' }, yesToAll);
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+  let decision;
+  try {
+    decision = await core.attachEventTagsToBearDecision({ result: 'not_bear', provenance: 'ai: a general gear night' }, gearNight, bearCheckConfig('enforce'), adapter);
+  } finally {
+    console.log = originalLog;
+  }
+  assert.deepEqual(decision.tags, ['kink'], 'the model would have said yes to leather and rubber; it is never asked');
+  const asked = adapter.calls.map(call => (/^Tag: ([a-z-]+)$/m.exec(String(call.prompt || '')) || [])[1]).filter(Boolean);
+  assert.equal(asked.includes('leather'), false);
+  assert.equal(asked.includes('rubber'), false);
+  const line = logs.find(text => text.includes('🏷️ TAGS: "Gear Night with DJ Philip Webb"')) || '';
+  assert.ok(line.includes('set aside leather (description: leather, harnesses); rubber (description: rubber) — the title says "gear night", the general kink night, and does not name them'), line);
+
+  // The poster's gear list is the same list.
+  core.setFlyerEvidenceLookup(() => ({ text: 'HOT BOOTS\nGEAR NIGHT\nLeather and Uniforms Encouraged\nAll Gear Welcome', classification: 'event-flyer' }));
+  const poster = [{ title: 'HOT BOOTS GEAR NIGHT', bar: 'Eagle LA', city: 'la', image: 'https://example.com/boots.jpg' }];
+  await core.applyFlyerTextEvidence(poster, null);
+  const fromPoster = core.collectMachineEventTags(poster[0]);
+  assert.deepEqual(fromPoster.candidates, ['kink']);
+  assert.deepEqual(Object.keys(fromPoster.underStated || {}), ['leather']);
+
+  // The title names the gear: it is a question again, and the answer stands.
+  const named = createCore().collectMachineEventTags({ title: 'Rubber Gear Night', description: 'Leather welcome too' });
+  assert.deepEqual(named.candidates, ['kink', 'rubber']);
+  assert.deepEqual(Object.keys(named.underStated), ['leather']);
+  // A tag that is not under kink is untouched, and so is a night whose
+  // title states nothing.
+  assert.deepEqual(createCore().collectMachineEventTags({ title: 'Gear Night', description: 'an underwear contest at midnight' }).candidates, ['kink', 'underwear']);
+  const plain = createCore().collectMachineEventTags({ title: 'Saturday Social', description: 'Leather, rubber, any gear welcome' });
+  assert.deepEqual(plain.candidates, ['leather', 'rubber']);
+  assert.equal(plain.underStated, undefined);
+});
+
+test('tags: a question that carries the poster asks what the quoted words are, and a sponsor\'s or brand\'s name never applies', async () => {
+  const core = createCore();
+  const pageOnly = core.buildTagCheckPrompt({ title: 'Deep Woods', description: 'Strip down to your jock, leather, harness, or nothing at all.', city: 'seattle' }, 'leather');
+  assert.equal(pageOnly.includes('evidenceIs'), false, 'a question without a poster is asked exactly as before');
+  assert.equal(pageOnly.includes('sponsor'), false);
+
+  core.setFlyerEvidenceLookup(() => ({ text: 'Butterball\n11/25 9PM\nBEEFYBOY BEAR SKN UNDERWEAR mistr\nROCKBAR NYC', classification: 'event-flyer' }));
+  const butterball = () => ({ title: 'BUTTERBALL', description: 'Furball presents Butterball', city: 'nyc', image: 'https://example.com/butterball.png' });
+  const events = [butterball()];
+  await core.applyFlyerTextEvidence(events, null);
+  const withPoster = core.buildTagCheckPrompt(events[0], 'underwear');
+  assert.ok(withPoster.includes('BEEFYBOY BEAR SKN UNDERWEAR mistr'));
+  assert.ok(withPoster.includes('"eventEvidence": ["<words copied exactly from the Title, Description or Flyer text>"], "evidenceIs": "the event\'s own billing or description" | "a sponsor\'s or brand\'s name" | "a host\'s, performer\'s or venue\'s name" | "another sense", "reason": "<one short sentence>"}'));
+  assert.ok(withPoster.endsWith('evidenceIs says what the eventEvidence words are in this event\'s text: a sponsor\'s or brand\'s name (a clothing label, a shop, an app, a drink — often a row of names set apart from the party\'s own words) says who backs the party.'));
+
+  // The model says yes and calls its own quote a brand: the brand wins.
+  const ask = async (answer) => {
+    const fresh = createCore();
+    fresh.setFlyerEvidenceLookup(() => ({ text: 'Butterball\n11/25 9PM\nBEEFYBOY BEAR SKN UNDERWEAR mistr\nROCKBAR NYC', classification: 'event-flyer' }));
+    const rows = [butterball()];
+    await fresh.applyFlyerTextEvidence(rows, null);
+    return fresh.getAiTagVerdict(rows[0], 'underwear', bearCheckConfig('enforce'), buildTagAwareAdapter({ verdict: 'bear', reason: 'x' }, { underwear: answer }));
+  };
+  const brand = await ask({ applies: true, eventEvidence: ['BEEFYBOY BEAR SKN UNDERWEAR'], evidenceIs: 'a sponsor\'s or brand\'s name', reason: 'a clothing label' });
+  assert.equal(brand.applies, false);
+  assert.ok(brand.reason.startsWith('the quoted words are a sponsor\'s or brand\'s name ("BEEFYBOY BEAR SKN UNDERWEAR")'), brand.reason);
+  const billed = await ask({ applies: true, eventEvidence: ['BEEFYBOY BEAR SKN UNDERWEAR'], evidenceIs: 'the event\'s own billing or description', reason: 'x' });
+  assert.equal(billed.applies, true, 'any other reading leaves the answer alone');
+  const unsaid = await ask({ applies: true, eventEvidence: ['BEEFYBOY BEAR SKN UNDERWEAR'], reason: 'x' });
+  assert.equal(unsaid.applies, true, 'an answer without the field is read as before');
+});
+
+test('keeps: a title-stated gear night is kept, tagged kink, at a bar marked bear or leather only', async () => {
+  const bars = { dallas: [{ name: 'Dallas Eagle', scene: 'leather' }, { name: 'Round-Up Saloon', scene: 'adjacent' }, { name: 'The Hidden Door' }] };
+  const core = new SharedCore(CITIES, { eventSchema: EventSchema, bars });
+  const notBear = { verdict: 'not_bear', reason: 'a general gear night' };
+  const yesToAll = { leather: { applies: true, eventEvidence: ['Leather'], reason: 'leather is listed' }, rubber: { applies: true, eventEvidence: ['Rubber'], reason: 'rubber is listed' } };
+  const night = bar => ({ title: 'Gear Night with DJ Philip Webb', bar, city: 'dallas', description: 'Grab your gear, it\'s time for GEAR NIGHT! Leather, Harnesses, Rubber, Sports, any kind of gear is always welcome!' });
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args.join(' '));
+  let kept; let unmarked; let adjacent; let untitled;
+  try {
+    kept = await core.filterBearEvents([night('Dallas Eagle')], bearCheckConfig('enforce'), buildTagAwareAdapter(notBear, yesToAll));
+    unmarked = await core.filterBearEvents([night('The Hidden Door')], bearCheckConfig('enforce'), buildTagAwareAdapter(notBear, yesToAll));
+    adjacent = await core.filterBearEvents([night('Round-Up Saloon')], bearCheckConfig('enforce'), buildTagAwareAdapter(notBear, yesToAll));
+    // "Gear welcome" in a description states nothing: the title has to.
+    untitled = await core.filterBearEvents([{ title: 'Saturday Social', bar: 'Dallas Eagle', city: 'dallas', description: 'Any kind of gear is always welcome.' }], bearCheckConfig('enforce'), buildTagAwareAdapter(notBear, { kink: { applies: true, eventEvidence: ['Any kind of gear is always welcome'], reason: 'gear' } }));
+  } finally {
+    console.log = originalLog;
+  }
+  assert.equal(kept.length, 1);
+  assert.deepEqual(EventSchema.normalizeEventTags(kept[0].tags), ['kink'], 'kink alone: the gear it lists is not a tag of its own');
+  assert.equal(kept[0].bearSource, 'tagged (kink: "gear night" at Dallas Eagle, a leather bar)');
+  assert.ok(logs.some(line => line.includes('🏷️ TAGS: "Gear Night with DJ Philip Webb" kept — the title says "gear night", a kink night at Dallas Eagle, a leather bar on your list')));
+  assert.equal(unmarked.length, 0, 'a bar with no mark keeps nothing');
+  assert.equal(adjacent.length, 0, 'an adjacent bar keeps nothing');
+  assert.equal(untitled.length, 0, 'kink the title does not state still keeps nothing');
 });
 
 // ── The bar's own holiday notice (owner, 2026-11-18) ────────────────────────
