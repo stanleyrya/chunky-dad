@@ -90,6 +90,39 @@ function getJson(url) { return new Promise((resolve, reject) => http.get(url, (r
         const before = Number(await evalJs('apt().furniture.length'));
         await evalJs("document.querySelector('#list .row .x').click(); 1"); await sleep(300);
         check('× on a row removes the piece', Number(await evalJs('apt().furniture.length')) === before - 1);
+        // Diagonals: a piece turns a few degrees in place, is drawn turned, and overlap follows its real outline, not its box.
+        await evalJs('localStorage.clear(); 1'); await go(url);
+        const diag = JSON.parse(await evalJs(`JSON.stringify((() => {
+            const a = apt(); a.furniture = withIds([{ name: 'Long', w: 60, d: 10, x: 40, y: 40, r: 0 }, { name: 'Corner', w: 10, d: 10, x: 41, y: 41, r: 0 }, { name: 'Far', w: 20, d: 20, x: 200, y: 200, r: 0 }]);
+            const long = a.furniture[0], corner = a.furniture[1], far = a.furniture[2]; selected = long; renderStage(); renderPanel();
+            const mid = it => { const D = dims(it); return [it.x + D.w / 2, it.y + D.h / 2]; };
+            const m0 = mid(long), flatOverlap = overlaps(long, corner);
+            const press = sel => { const b = document.querySelector(sel); b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true })); b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true })); };
+            for (let i = 0; i < 9; i++) press('.selbar .turn button[data-turn="5"]');
+            const m1 = mid(long), D = dims(long);
+            // In the empty top-right corner of the turned piece's box: no overlap. On its middle: overlap.
+            corner.x = long.x + D.w - 11; corner.y = long.y + 1; const boxOnly = overlaps(long, corner);
+            corner.x = m1[0] - 5; corner.y = m1[1] - 5; const onIt = overlaps(long, corner);
+            renderStage(); renderPanel();
+            const g = [...document.querySelectorAll('g.item')].find(x => x._item === long), rect = g.querySelector('rect:not(.hit)');
+            const out = { r: long.r, moved: Math.hypot(m1[0] - m0[0], m1[1] - m0[1]), box: [D.w, D.h], flatOverlap, boxOnly, onIt, transform: rect.getAttribute('transform') || '', bar: document.getElementById('selWho').textContent, badMarks: document.querySelectorAll('g.item.bad').length, status: document.getElementById('status').textContent };
+            press('.selbar .turn button[data-turn="-5"]'); out.back = long.r;
+            document.getElementById('fR').value = '30'; document.getElementById('updatePiece').click(); out.typed = long.r; out.typedMoved = Math.hypot(mid(long)[0] - m0[0], mid(long)[1] - m0[1]);
+            long.r = 90; long.x = 40; long.y = 40; const q = dims(long); out.quarter = [q.w, q.h];
+            long.r = 30; far.r = 12.5; return out;
+        })())`));
+        const side = 70 / Math.SQRT2;
+        check('↻ turns a piece 5° at a time about its middle', diag.r === 45 && diag.moved < 0.02 && diag.back === 40, `nine presses: ${diag.r}°, middle moved ${diag.moved.toFixed(3)}", one back: ${diag.back}°`);
+        check('a diagonal piece is drawn turned and the bar shows its angle', /^rotate\(45 /.test(diag.transform) && /45°/.test(diag.bar) && Math.abs(diag.box[0] - side) < 0.01 && Math.abs(diag.box[1] - side) < 0.01, `${diag.transform.slice(0, 24)} · "${diag.bar}"`);
+        check('overlap follows the turned outline, not the box around it', diag.flatOverlap === true && diag.boxOnly === false && diag.onIt === true && diag.badMarks === 2 && /2 pieces overlapping/.test(diag.status), `in the box corner: ${diag.boxOnly}, on the piece: ${diag.onIt}, ${diag.status}`);
+        check('an exact angle can be typed, and a quarter turn still swaps width and depth', diag.typed === 30 && diag.typedMoved < 0.02 && diag.quarter[0] === 10 && diag.quarter[1] === 60, `typed ${diag.typed}°, quarter turn box ${diag.quarter.join(' × ')}`);
+        const diagHash = await evalJs('encodeShare(apt())');
+        await evalJs('localStorage.clear(); 1'); await go(url + diagHash);
+        const diagSeen = JSON.parse(await evalJs("JSON.stringify({ angles: apt().furniture.map(f => f.r), turned: [...document.querySelectorAll('g.item rect:not(.hit)')].filter(r => /^rotate\\(/.test(r.getAttribute('transform') || '')).length })"));
+        check('a share link carries the angles', diagSeen.angles.join(',') === '30,0,12.5' && diagSeen.turned === 2, `angles ${diagSeen.angles.join(', ')}; ${diagSeen.turned} drawn turned`);
+        await evalJs('selected = apt().furniture[0]; renderStage(); renderPanel(); 1'); await sleep(300);
+        console.log('   screenshot', await shot('diagonals'));
+        await evalJs('localStorage.clear(); 1');
         // Phone handling: fingertip-sized grab areas, nudge arrows, new pieces in view, pinch zoom, the loupe.
         await go(url);
         const hits = JSON.parse(await evalJs("JSON.stringify((() => { const rs = [...document.querySelectorAll('g.item rect.hit')].map(r => r.getBoundingClientRect()); return { n: rs.length, pieces: document.querySelectorAll('g.item').length, small: rs.filter(r => r.width < 43 || r.height < 43).length }; })())"));

@@ -84,6 +84,7 @@ input[type=file] { padding:6px; }
 .selbar .who small { font-weight:500; color:var(--muted); font-family:ui-monospace, Menlo, monospace; margin-left:6px; }
 .selbar button { padding:7px 10px; min-height:32px; }
 .selbar .nudge { display:flex; gap:4px; }
+.selbar .turn button { font-size:18px; }
 .selbar .nudge button { width:36px; padding:0; font-size:14px; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:none; }
 /* On a phone the plan is most of the screen, so the bar for the selected piece rides along the bottom edge instead of hiding under the fold. */
 @media (max-width: 959px) { .selbar.show { position:sticky; bottom:calc(8px + env(safe-area-inset-bottom)); z-index:4; background:#232a4a; box-shadow:var(--shadow); } }
@@ -148,8 +149,8 @@ input[type=file] { padding:6px; }
       <button id="calApply" class="go" type="button" disabled>Apply scale</button>
       <button id="calCancel" type="button">Cancel</button>
     </div>
-    <div id="selbar" class="selbar"><span class="who" id="selWho"></span><span class="nudge" role="group" aria-label="Nudge one inch"><button type="button" data-nudge="-1,0" title="Left 1 inch (hold to keep going)" aria-label="Left 1 inch">◀</button><button type="button" data-nudge="0,-1" title="Up 1 inch (hold to keep going)" aria-label="Up 1 inch">▲</button><button type="button" data-nudge="0,1" title="Down 1 inch (hold to keep going)" aria-label="Down 1 inch">▼</button><button type="button" data-nudge="1,0" title="Right 1 inch (hold to keep going)" aria-label="Right 1 inch">▶</button></span><button id="rotate" type="button">⟳ Rotate</button><button id="dup" type="button">⧉ Duplicate</button><button id="remove" type="button">✕ Delete</button></div>
-    <p class="hint">Drag a piece to move it; double-tap it to rotate; the arrows nudge it an inch (hold to keep going). Drag the plan itself to pan, pinch to zoom. Edges snap together when close; red means two pieces overlap. Undo takes back the last change. <span class="keys">Arrow keys nudge 1", Shift+arrow 1', R rotates, Delete removes, Ctrl+scroll zooms.</span> The tool knows the scale, not the walls, so check those by eye.</p>
+    <div id="selbar" class="selbar"><span class="who" id="selWho"></span><span class="nudge" role="group" aria-label="Nudge one inch"><button type="button" data-nudge="-1,0" title="Left 1 inch (hold to keep going)" aria-label="Left 1 inch">◀</button><button type="button" data-nudge="0,-1" title="Up 1 inch (hold to keep going)" aria-label="Up 1 inch">▲</button><button type="button" data-nudge="0,1" title="Down 1 inch (hold to keep going)" aria-label="Down 1 inch">▼</button><button type="button" data-nudge="1,0" title="Right 1 inch (hold to keep going)" aria-label="Right 1 inch">▶</button></span><span class="nudge turn" role="group" aria-label="Turn a little"><button type="button" data-turn="-5" title="Turn 5° left (hold to keep going)" aria-label="Turn 5 degrees left">↺</button><button type="button" data-turn="5" title="Turn 5° right (hold to keep going)" aria-label="Turn 5 degrees right">↻</button></span><button id="rotate" type="button" title="Quarter turn">⟳ 90°</button><button id="dup" type="button">⧉ Duplicate</button><button id="remove" type="button">✕ Delete</button></div>
+    <p class="hint">Drag a piece to move it; double-tap it for a quarter turn; ↺ and ↻ turn it 5° for a diagonal (hold to keep going, or type an exact angle under Add a piece); the arrows nudge it an inch. Drag the plan itself to pan, pinch to zoom. Edges snap together when close; red means two pieces overlap. Undo takes back the last change. <span class="keys">Arrow keys nudge 1", Shift+arrow 1', R rotates, [ and ] turn 5°, Delete removes, Ctrl+scroll zooms.</span> The tool knows the scale, not the walls, so check those by eye.</p>
     <div id="status" class="status"></div>
   </div>
 
@@ -160,6 +161,7 @@ input[type=file] { padding:6px; }
         <label class="full">Name <input id="fName" placeholder="e.g. Dresser" required></label>
         <label>Width (in) <input id="fW" type="number" min="0.5" max="400" step="any" inputmode="decimal" required></label>
         <label>Depth (in) <input id="fD" type="number" min="0.5" max="400" step="any" inputmode="decimal" required></label>
+        <label class="full">Angle (°, blank = square to the plan) <input id="fR" type="number" min="-360" max="360" step="any" inputmode="decimal" placeholder="0"></label>
         <div class="full toolbar" style="margin-top:0"><button class="go" type="submit">Add to plan</button><button type="button" id="updatePiece" hidden>Update selected</button></div>
       </form>
       <p class="hint">Quick picks:</p>
@@ -247,12 +249,33 @@ const BUILT_IN = [
   // tools/draw-plan.js draws them from testing/plans/apartment-measured.plan.json.
   { id:'measured-apartment', name:'The apartment · as measured', img:{ src:'plans/apartment-measured.png', w:1212, h:2122 }, ppi:4,
     furniture:[
-      {name:'Queen bed',w:60,d:80,x:30,y:56,r:0},{name:'Side Table',w:14,d:18,x:92,y:66,r:0},{name:'Desk',w:60,d:30,x:95,y:125,r:90},
-      {name:'Desk Chair',w:25,d:27,x:68,y:142,r:0},{name:'Mirror',w:31,d:2,x:69,y:186,r:0},
-      {name:'Queen bed',w:60,d:80,x:215,y:74,r:0},{name:'Side Table',w:14,d:18,x:200,y:74,r:0},{name:'TV',w:60,d:16,x:181,y:46,r:90},
-      {name:'Dresser',w:34,d:16,x:181,y:110,r:90},{name:'Mirror',w:31,d:2,x:273,y:155,r:90},
-      {name:'Couch A',w:40,d:40,x:184,y:306,r:0},{name:'Couch B',w:40,d:40,x:224,y:306,r:0},{name:'Couch C',w:40,d:40,x:184,y:346,r:0},
-      {name:'TV stand',w:60,d:16,x:269,y:340,r:90},{name:'Dining table',w:60,d:36,x:105,y:424,r:0}
+      // The 30 pieces of the saved Ainslie layout, same names and sizes, room by room.
+      // the bedroom
+      {name:'Queen bed',w:60,d:80,x:30,y:56,r:0},{name:'Ottoman',w:32,d:16,x:30,y:137,r:0},{name:'Matteo’s desk',w:48,d:24,x:101,y:139,r:90},{name:'Desk Chair',w:25,d:27,x:75,y:150,r:0},{name:'Hanger Rack',w:28,d:16,x:109,y:90,r:90},
+      // the Primary; the TV leans along the window wall
+      {name:'Queen bed',w:60,d:80,x:199,y:84,r:0},{name:'Side Table',w:14,d:18,x:185,y:84,r:0},{name:'Side Table',w:14,d:18,x:259,y:84,r:0},{name:'TV',w:60,d:16,x:205.52,y:37.64,r:30},{name:'Dresser',w:34,d:16,x:259,y:150,r:90},{name:'mirror 1',w:31,d:2.5,x:185,y:150,r:90},{name:'Wood Chair',w:22,d:22,x:186,y:59,r:0},
+      // the living room
+      {name:'Couch A',w:40,d:40,x:184,y:306,r:0},{name:'Couch B',w:40,d:40,x:224,y:306,r:0},{name:'Couch C',w:40,d:40,x:184,y:346,r:0},{name:'Coffee table',w:40,d:18,x:228,y:350,r:0},{name:'TV',w:60,d:16,x:269,y:328,r:90},{name:'lil ottoman',w:17.5,d:17.5,x:247,y:372,r:0},{name:'Floor lamp',w:19.75,d:19.75,x:184,y:386.5,r:0},{name:'mirror 2',w:31,d:2.5,x:125.5,y:372.5,r:0},{name:'Games',w:28,d:14,x:126,y:376,r:0},{name:'cubbys',w:30,d:18,x:165.5,y:373,r:90},
+      // kitchen, desk and the things by the front door
+      {name:'bar/kitchen table',w:22,d:22,x:128,y:425,r:0},{name:'bar stool 1',w:12.5,d:12.5,x:114.5,y:429.75,r:0},{name:'bar stool 2',w:12.5,d:12.5,x:151,y:429.75,r:0},{name:'Desk',w:60,d:30,x:214,y:438.5,r:90},{name:'Desk Chair',w:25,d:27,x:188,y:453,r:0},{name:'Trash Can',w:12,d:16,x:187,y:482.5,r:0},{name:'Trash Can',w:12,d:16,x:199.5,y:482.5,r:0},{name:'Shoes',w:34,d:14,x:250,y:441,r:90}
+    ] },
+  // The same apartment from a 3D room scan (magicplan, 2026-11-20): the rooms sit where they really join.
+  // Door swings follow photos; the scan read the Primary's window and its X brace as doors.
+  // The bedroom is drawn at the tape's shorter lengths (169 and 103, the scan read 175 and 108); the X brace takes about 4 in of floor.
+  // tools/draw-plan.js draws it from testing/plans/apartment-scanned.plan.json.
+  { id:'scanned-apartment', name:'The apartment · 3D scan', img:{ src:'plans/apartment-scanned.png', w:1683, h:1423 }, ppi:4,
+    furniture:[
+      // The 30 pieces of the saved Ainslie layout, same names and sizes, room by room.
+      // the bedroom
+      {name:'Queen bed',w:60,d:80,x:149.3,y:127.2,r:0},{name:'Hanger Rack',w:28,d:16,x:213.3,y:127.2,r:0},{name:'Ottoman',w:32,d:16,x:231.3,y:144,r:90},{name:'Matteo’s desk',w:48,d:24,x:100.3,y:195.4,r:0},{name:'Desk Chair',w:25,d:27,x:111.3,y:168,r:0},
+      // the Primary; the TV leans along the window wall
+      {name:'Queen bed',w:60,d:80,x:89.3,y:251.6,r:90},{name:'Side Table',w:14,d:18,x:169.7,y:292.2,r:0},{name:'Side Table',w:14,d:18,x:74.8,y:271,r:0},{name:'TV',w:60,d:16,x:38.99,y:230.09,r:118.95},{name:'Dresser',w:34,d:16,x:184.2,y:279.5,r:0},{name:'mirror 1',w:31,d:2.5,x:128.3,y:224.9,r:0},{name:'Wood Chair',w:22,d:22,x:93.3,y:225,r:0},
+      // the living room
+      {name:'TV',w:60,d:16,x:207.8,y:20.5,r:0},{name:'Floor lamp',w:19.75,d:19.75,x:186,y:31,r:0},{name:'Couch A',w:40,d:40,x:192.3,y:81.8,r:0},{name:'Couch B',w:40,d:40,x:232.3,y:81.8,r:0},{name:'Coffee table',w:40,d:18,x:212.3,y:57,r:0},{name:'Games',w:28,d:14,x:272.8,y:93.8,r:90},{name:'mirror 2',w:31,d:2.5,x:185.6,y:90.6,r:90},{name:'Couch C',w:40,d:40,x:252.8,y:122.5,r:0},{name:'cubbys',w:30,d:18,x:252.8,y:162.6,r:0},
+      // by the front door
+      {name:'Desk',w:60,d:30,x:315.8,y:39.3,r:0},{name:'Desk Chair',w:25,d:27,x:333.3,y:69.8,r:0},{name:'lil ottoman',w:17.5,d:17.5,x:382.8,y:64.5,r:0},{name:'Shoes',w:34,d:14,x:386.3,y:82.5,r:90},
+      // the kitchen
+      {name:'Trash Can',w:12,d:16,x:355.8,y:117.5,r:0},{name:'Trash Can',w:12,d:16,x:355.8,y:133.7,r:0},{name:'bar/kitchen table',w:22,d:22,x:325.3,y:187,r:0},{name:'bar stool 1',w:12.5,d:12.5,x:312.3,y:191.75,r:0},{name:'bar stool 2',w:12.5,d:12.5,x:347.8,y:191.75,r:0}
     ] }
 ];
 const STARTER = [
@@ -277,7 +300,31 @@ const NS = 'http://www.w3.org/2000/svg';
 const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
 const apt = () => apts[activeId];
 const fmt = i => { const f = Math.floor(i / 12), n = Math.round((i % 12) * 2) / 2; return f ? `${f}'${n ? n + '"' : ''}` : `${n}"`; };
-const dims = it => it.r % 180 ? { w: it.d, h: it.w } : { w: it.w, h: it.d };
+// A piece can sit at any angle. x and y are the top-left of the box that holds the turned piece,
+// so a quarter turn still swaps width and depth exactly as before.
+const TURN = 5;
+const normAngle = r => ((Number(r) || 0) % 360 + 360) % 360;
+const isSquare = it => normAngle(it.r) % 90 === 0;
+const dims = it => {
+  const r = normAngle(it.r) % 180;
+  if (r === 0) return { w: it.w, h: it.d };
+  if (r === 90) return { w: it.d, h: it.w };
+  const t = r * Math.PI / 180, c = Math.abs(Math.cos(t)), n = Math.abs(Math.sin(t));
+  return { w: it.w * c + it.d * n, h: it.w * n + it.d * c };
+};
+const fmtAngle = r => `${+normAngle(r).toFixed(1)}°`;
+const cornersOf = it => {
+  const D = dims(it), cx = it.x + D.w / 2, cy = it.y + D.h / 2, t = normAngle(it.r) * Math.PI / 180, c = Math.cos(t), n = Math.sin(t);
+  return [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => ({ x: cx + a * it.w / 2 * c - b * it.d / 2 * n, y: cy + a * it.w / 2 * n + b * it.d / 2 * c }));
+};
+// Turn a piece in place: its middle stays where it is.
+function turnPiece(it, deg) {
+  const D = dims(it), cx = it.x + D.w / 2, cy = it.y + D.h / 2;
+  it.r = +normAngle(normAngle(it.r) + deg).toFixed(2);
+  const N = dims(it); it.x = Math.round((cx - N.w / 2) * 100) / 100; it.y = Math.round((cy - N.h / 2) * 100) / 100;
+}
+// The quarter turn keeps its corner for a square-on piece (as it always has) and its middle for a diagonal one.
+function quarterTurn(it) { if (isSquare(it)) it.r = normAngle(it.r + 90); else turnPiece(it, 90); }
 const imgSrc = a => a.img.data || a.img.src;
 const withIds = list => list.map(f => ({ ...f, id: String(uid++) }));
 const toastEl = $('toast'); let toastTimer = null;
@@ -380,7 +427,20 @@ async function boot() {
 }
 
 // ---------- Fit check ----------
-const overlaps = (a, b) => { const A = dims(a), B = dims(b); return a.x < b.x + B.w && a.x + A.w > b.x && a.y < b.y + B.h && a.y + A.h > b.y; };
+const overlaps = (a, b) => {
+  const A = dims(a), B = dims(b);
+  if (!(a.x < b.x + B.w && a.x + A.w > b.x && a.y < b.y + B.h && a.y + A.h > b.y)) return false;
+  if (isSquare(a) && isSquare(b)) return true;
+  // A diagonal piece: the two outlines overlap only if no edge direction of either separates them.
+  const P = cornersOf(a), Q = cornersOf(b);
+  for (const poly of [P, Q]) for (let i = 0; i < 2; i++) {
+    const ax = poly[i + 1].y - poly[i].y, ay = poly[i].x - poly[i + 1].x, len = Math.hypot(ax, ay) || 1;
+    const span = pts => { let lo = Infinity, hi = -Infinity; for (const q of pts) { const v = (q.x * ax + q.y * ay) / len; if (v < lo) lo = v; if (v > hi) hi = v; } return [lo, hi]; };
+    const [p0, p1] = span(P), [q0, q1] = span(Q);
+    if (p1 - q0 < 0.05 || q1 - p0 < 0.05) return false;
+  }
+  return true;
+};
 const problems = it => apt().furniture.some(o => o !== it && overlaps(it, o)) ? ['overlap'] : [];
 
 // ---------- Render ----------
@@ -435,17 +495,21 @@ function renderStage() {
       const D = dims(it), bad = problems(it).length > 0;
       const g = el('g', { class: 'item' + (bad ? ' bad' : '') + (it === selected ? ' sel' : ''), transform: `translate(${it.x * ppi} ${it.y * ppi})` }, layer);
       g._item = it;
-      const hitW = Math.max(D.w * ppi, 44 / screen), hitH = Math.max(D.h * ppi, 44 / screen);
-      el('rect', { class: 'hit', x: (D.w * ppi - hitW) / 2, y: (D.h * ppi - hitH) / 2, width: hitW, height: hitH }, g);
-      el('rect', { x: 0, y: 0, width: D.w * ppi, height: D.h * ppi }, g);
-      const cx = D.w / 2 * ppi, cy = D.h / 2 * ppi, wPx = D.w * ppi, hPx = D.h * ppi;
+      // A diagonal piece is drawn at its own size, turned about the middle of its box; its name turns with it, never upside down.
+      const square = isSquare(it), cx = D.w / 2 * ppi, cy = D.h / 2 * ppi;
+      const wPx = (square ? D.w : it.w) * ppi, hPx = (square ? D.h : it.d) * ppi;
+      const lean = normAngle(it.r) % 180 > 90 ? normAngle(it.r) % 180 - 180 : normAngle(it.r) % 180;
+      const turned = square ? {} : { transform: `rotate(${normAngle(it.r)} ${cx} ${cy})` }, leaning = square ? {} : { transform: `rotate(${lean} ${cx} ${cy})` };
+      const hitW = Math.max(wPx, 44 / screen), hitH = Math.max(hPx, 44 / screen);
+      el('rect', { class: 'hit', x: cx - hitW / 2, y: cy - hitH / 2, width: hitW, height: hitH, ...turned }, g);
+      el('rect', square ? { x: 0, y: 0, width: wPx, height: hPx } : { x: cx - wPx / 2, y: cy - hPx / 2, width: wPx, height: hPx, ...turned }, g);
       const nameFits = wPx >= fs * 0.6 * Math.min(it.name.length, 12) + fs * 0.4 && hPx >= fs * 1.2;
       const bothFit = nameFits && hPx >= fs * 2.6 && wPx >= fs * 3.2;
       if (nameFits) {
-        const t = el('text', { x: cx, y: bothFit ? cy - fs * 0.15 : cy + fs * 0.35, 'font-size': fs }, g);
+        const t = el('text', { x: cx, y: bothFit ? cy - fs * 0.15 : cy + fs * 0.35, 'font-size': fs, ...leaning }, g);
         t.textContent = it.name.length > 14 && wPx < fs * 0.55 * it.name.length ? it.name.slice(0, 12) + '…' : it.name;
       }
-      if (bothFit) { const s = el('text', { class: 'dim', x: cx, y: cy + fs * 1.05, 'font-size': fs * 0.85 }, g); s.textContent = `${fmt(D.w)} × ${fmt(D.h)}`; }
+      if (bothFit) { const s = el('text', { class: 'dim', x: cx, y: cy + fs * 1.05, 'font-size': fs * 0.85, ...leaning }, g); s.textContent = square ? `${fmt(D.w)} × ${fmt(D.h)}` : `${fmt(it.w)} × ${fmt(it.d)}`; }
       g.addEventListener('pointerdown', e => startDrag(e, it, svg, g));
     }
   }
@@ -575,10 +639,10 @@ function isVisibleIn(node, box) { const r = node.getBoundingClientRect(), b = bo
 function renderSelection() {
   const a = apt(), bar = $('selbar'), it = selected && a && a.furniture.includes(selected) ? selected : null;
   bar.classList.toggle('show', !!it);
-  if (it) $('selWho').innerHTML = `${escapeHtml(it.name)}<small>${fmt(it.w)} × ${fmt(it.d)}${it.r ? ` · ${it.r}°` : ''}</small>`;
+  if (it) $('selWho').innerHTML = `${escapeHtml(it.name)}<small>${normAngle(it.r) ? `${fmtAngle(it.r)} · ` : ''}${fmt(it.w)} × ${fmt(it.d)}</small>`;
   // The add form edits the selected piece too.
   $('updatePiece').hidden = !it;
-  if (it) { $('fName').value = it.name; $('fW').value = it.w; $('fD').value = it.d; }
+  if (it) { $('fName').value = it.name; $('fW').value = it.w; $('fD').value = it.d; $('fR').value = normAngle(it.r) || ''; }
 }
 function escapeHtml(text) { return String(text).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function renderPanel() {
@@ -599,7 +663,7 @@ function renderPanel() {
     const p = problems(it);
     const r = document.createElement('div'); r.className = 'row' + (it === selected ? ' sel' : '');
     const name = document.createElement('span'); name.className = 'name'; name.textContent = it.name;
-    const sz = document.createElement('span'); sz.className = 'sz'; sz.textContent = `${fmt(it.w)} × ${fmt(it.d)}`;
+    const sz = document.createElement('span'); sz.className = 'sz'; sz.textContent = `${fmt(it.w)} × ${fmt(it.d)}${isSquare(it) ? '' : ` · ${fmtAngle(it.r)}`}`;
     const x = document.createElement('button'); x.type = 'button'; x.className = 'x'; x.textContent = '×'; x.title = `Remove ${it.name}`; x.setAttribute('aria-label', `Remove ${it.name}`);
     x.onclick = e => { e.stopPropagation(); a.furniture = a.furniture.filter(o => o !== it); if (selected === it) selected = null; persist(a); renderStage(); renderPanel(); toast(`${it.name} removed`); };
     r.append(name, sz, x);
@@ -616,7 +680,7 @@ function startDrag(e, it, svg, g) {
   if (cal) return; e.preventDefault(); e.stopPropagation();
   if (svg._fingers && svg._fingers.size > 1) return; // a second finger is a pinch, not a second drag
   const a = apt(), p = pt(e, svg), now = Date.now();
-  if (lastTap.it === it && now - lastTap.t < 350) { lastTap = { it: null, t: 0 }; selected = it; it.r = (it.r + 90) % 360; persist(a); renderStage(); renderPanel(); return; }
+  if (lastTap.it === it && now - lastTap.t < 350) { lastTap = { it: null, t: 0 }; selected = it; quarterTurn(it); persist(a); renderStage(); renderPanel(); return; }
   lastTap = { it, t: now };
   selected = it;
   drag = { it, g, dx: p.x / a.ppi - it.x, dy: p.y / a.ppi - it.y };
@@ -644,8 +708,8 @@ $('fit').onclick = () => { setZoom(1); const st = document.querySelector('.stage
 // Nudge buttons: an inch per tap, held = keeps going; one undo step per press.
 let nudging = null;
 for (const b of document.querySelectorAll('.selbar .nudge button')) {
-  const [dx, dy] = b.dataset.nudge.split(',').map(Number);
-  const step = () => { if (!selected) return; selected.x += dx; selected.y += dy; keepView = true; renderStage(); renderPanel(); };
+  const [dx, dy] = (b.dataset.nudge || '0,0').split(',').map(Number), deg = Number(b.dataset.turn) || 0;
+  const step = () => { if (!selected) return; if (deg) turnPiece(selected, deg); else { selected.x += dx; selected.y += dy; } keepView = true; renderStage(); renderPanel(); };
   const stop = () => { if (!nudging) return; clearTimeout(nudging.t); clearInterval(nudging.i); nudging = null; persist(apt()); renderStage(); };
   b.addEventListener('pointerdown', e => { e.preventDefault(); if (!selected) return; step(); nudging = { t: setTimeout(() => { nudging.i = setInterval(step, 70); }, 400) }; });
   for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, stop);
@@ -653,18 +717,21 @@ for (const b of document.querySelectorAll('.selbar .nudge button')) {
 $('undo').onclick = undo;
 let resizeTimer = null;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!drag) renderStage(); }, 150); });
-$('rotate').onclick = () => { if (!selected) return; selected.r = (selected.r + 90) % 360; persist(apt()); renderStage(); renderPanel(); };
+$('rotate').onclick = () => { if (!selected) return; quarterTurn(selected); persist(apt()); renderStage(); renderPanel(); };
 $('remove').onclick = () => { if (!selected) return; const a = apt(); a.furniture = a.furniture.filter(o => o !== selected); selected = null; persist(a); renderStage(); renderPanel(); };
 $('dup').onclick = () => { if (!selected) return; const a = apt(); const c = { ...selected, id: String(uid++), x: selected.x + 6, y: selected.y + 6 }; a.furniture.push(c); selected = c; persist(a); renderStage(); renderPanel(); };
 $('addForm').addEventListener('submit', e => {
   e.preventDefault(); const a = apt(); if (!a || !a.img) return;
   const name = $('fName').value.trim(), w = +$('fW').value, d = +$('fD').value; if (!name || !w || !d) return;
-  const it = { id: String(uid++), name, w, d, x: 12, y: 12, r: 0 }; placeInView(it); a.furniture.push(it); selected = it; persist(a); renderStage(); renderPanel(); toast(`${name} added — drag it into place`);
+  const it = { id: String(uid++), name, w, d, x: 12, y: 12, r: normAngle($('fR').value) }; placeInView(it); a.furniture.push(it); selected = it; persist(a); renderStage(); renderPanel(); toast(`${name} added — drag it into place`);
 });
 $('updatePiece').onclick = () => {
   const a = apt(); if (!a || !selected) return;
   const name = $('fName').value.trim(), w = +$('fW').value, d = +$('fD').value; if (!name || !w || !d) return;
-  selected.name = name; selected.w = w; selected.d = d; persist(a); renderStage(); renderPanel(); toast('Piece updated');
+  { const D = dims(selected), cx = selected.x + D.w / 2, cy = selected.y + D.h / 2, r = normAngle($('fR').value), turnedNow = r !== normAngle(selected.r);
+    selected.name = name; selected.w = w; selected.d = d;
+    if (turnedNow) { selected.r = r; const N = dims(selected); selected.x = Math.round((cx - N.w / 2) * 100) / 100; selected.y = Math.round((cy - N.h / 2) * 100) / 100; } }
+  persist(a); renderStage(); renderPanel(); toast('Piece updated');
 };
 for (const [n, w, d] of PRESETS) { const b = document.createElement('button'); b.type = 'button'; b.textContent = `${n} ${w}×${d}`; b.onclick = () => { $('fName').value = n; $('fW').value = w; $('fD').value = d; }; $('presets').appendChild(b); }
 $('reset').onclick = () => {
@@ -683,7 +750,8 @@ document.addEventListener('keydown', e => {
   const s = e.shiftKey ? 12 : 1;
   if (e.key === 'ArrowLeft') selected.x -= s; else if (e.key === 'ArrowRight') selected.x += s;
   else if (e.key === 'ArrowUp') selected.y -= s; else if (e.key === 'ArrowDown') selected.y += s;
-  else if (e.key === 'r' || e.key === 'R') selected.r = (selected.r + 90) % 360;
+  else if (e.key === 'r' || e.key === 'R') quarterTurn(selected);
+  else if (e.key === '[' || e.key === ']') turnPiece(selected, e.key === '[' ? -TURN : TURN);
   else if (e.key === 'Delete' || e.key === 'Backspace') { const a = apt(); a.furniture = a.furniture.filter(o => o !== selected); selected = null; }
   else return;
   e.preventDefault(); persist(apt()); renderStage(); renderPanel();
