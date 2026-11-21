@@ -133,15 +133,67 @@ function getJson(url) { return new Promise((resolve, reject) => http.get(url, (r
         if (WIDTH < 600) check('the selected-piece bar rides along the bottom on a phone', nudged.shown && nudged.barPos === 'sticky', nudged.barPos);
         const placed = JSON.parse(await evalJs("JSON.stringify((() => { setZoom(3); const st = document.querySelector('.stage'); st.scrollLeft = st.scrollWidth * 0.4; st.scrollTop = st.scrollHeight * 0.4; document.getElementById('fName').value = 'Nightstand'; document.getElementById('fW').value = '20'; document.getElementById('fD').value = '16'; document.getElementById('addForm').requestSubmit(); const it = apt().furniture[apt().furniture.length - 1]; const g = [...document.querySelectorAll('g.item')].find(x => x._item === it); const r = g.querySelector('rect:not(.hit)').getBoundingClientRect(), b = document.querySelector('.stage').getBoundingClientRect(); return { name: it.name, x: it.x, y: it.y, inView: r.left >= b.left && r.right <= b.right && r.top >= b.top && r.bottom <= b.bottom, zoom }; })())"));
         check('a new piece lands inside the part of the plan on screen', placed.name === 'Nightstand' && placed.inView && placed.x > 12, `at ${placed.x}", ${placed.y}" with zoom ${placed.zoom}`);
+        // Zoom keeps the plan picture: the same <image> node before and after. A rebuilt node loads the picture again, which is the blink.
+        const steady = JSON.parse(await evalJs(`JSON.stringify((() => {
+            const picture = () => document.querySelector('#plan image'); picture()._kept = 1;
+            setZoom(2); const z = document.getElementById('zoom'); z.value = '2.6'; z.dispatchEvent(new Event('input', { bubbles: true }));
+            const afterZoom = picture()._kept === 1;
+            selected = apt().furniture[0]; renderStage(); renderPanel();
+            const b = document.querySelector('.selbar .nudge button[data-nudge="1,0"]'); b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+            return { afterZoom, afterNudge: picture()._kept === 1, zoom, width: Math.round(document.querySelector('#plan').getBoundingClientRect().width), fit: Math.round(apt().img.w * fitScale * zoom) };
+        })())`));
+        check('zooming and nudging keep the plan picture in place (no rebuild, so no blink)', steady.afterZoom === true && steady.afterNudge === true && Math.abs(steady.zoom - 2.6) < 0.01 && steady.width === steady.fit, `kept through zoom ${steady.afterZoom}, through a nudge ${steady.afterNudge}; zoom ${steady.zoom}, plan ${steady.width}px wide`);
+        // A held turn always ends: two presses before one lift, a lift that never arrives, a lift somewhere else on the page.
+        const held = JSON.parse(await evalJs(`(async () => {
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            selected = apt().furniture[0]; selected.r = 0; renderStage(); renderPanel();
+            const b = document.querySelector('.selbar .turn button[data-turn="5"]');
+            const down = id => b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: id }));
+            down(11); down(12); await wait(900);
+            const during = selected.r;
+            b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 12 }));
+            const atLift = selected.r; await wait(500); const afterLift = selected.r;
+            down(13); await wait(700); window.dispatchEvent(new Event('blur'));
+            const atBlur = selected.r; await wait(500); const afterBlur = selected.r;
+            down(14); await wait(700); document.body.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 14 }));
+            const atElsewhere = selected.r; await wait(500);
+            return JSON.stringify({ during, atLift, afterLift, atBlur, afterBlur, atElsewhere, afterElsewhere: selected.r, picture: document.querySelector('#plan image')._kept === 1 });
+        })()`));
+        check('a held ↻ keeps turning and always stops: after a double press, a lift that never came, a lift elsewhere', held.during >= 10 && held.afterLift === held.atLift && held.afterBlur === held.atBlur && held.afterElsewhere === held.atElsewhere && held.picture === true, `turned to ${held.during}° while held; after the lift ${held.atLift}° then ${held.afterLift}°; page left ${held.atBlur}° then ${held.afterBlur}°; lift elsewhere ${held.atElsewhere}° then ${held.afterElsewhere}°`);
+        // The round handle: a real mouse drags it around the piece. The piece follows by the degree and catches on 15° steps.
+        const knob = JSON.parse(await evalJs(`JSON.stringify((() => {
+            setZoom(1); const it = apt().furniture[0]; it.r = 0; selected = it; renderStage(); renderPanel();
+            const k = document.querySelector('.turner .knob'); if (!k) return { none: true };
+            k.scrollIntoView({ block: 'center', inline: 'center' });
+            const r = k.getBoundingClientRect(), g = [...document.querySelectorAll('g.item')].find(x => x._item === it).querySelector('rect:not(.hit)').getBoundingClientRect(), D = dims(it);
+            return { kx: r.left + r.width / 2, ky: r.top + r.height / 2, cx: g.left + g.width / 2, cy: g.top + g.height / 2, mx: it.x + D.w / 2, my: it.y + D.h / 2 };
+        })())`));
+        if (knob.none) check('the selected piece has a round handle to turn it', false, 'no handle drawn');
+        else {
+            const at = (deg) => { const t = deg * Math.PI / 180, vx = knob.kx - knob.cx, vy = knob.ky - knob.cy; return { x: knob.cx + vx * Math.cos(t) - vy * Math.sin(t), y: knob.cy + vx * Math.sin(t) + vy * Math.cos(t) }; };
+            const mouse = (type, deg) => send('Input.dispatchMouseEvent', { type, ...at(deg), button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1, pointerType: 'mouse' });
+            await mouse('mouseMoved', 0); await mouse('mousePressed', 0);
+            for (let d = 4; d <= 36; d += 4) await mouse('mouseMoved', d);
+            await mouse('mouseMoved', 37); await sleep(50);
+            const free = Number(await evalJs('selected.r'));
+            for (let d = 40; d <= 84; d += 4) await mouse('mouseMoved', d);
+            await mouse('mouseMoved', 88.4); await sleep(50);
+            const caught = Number(await evalJs('selected.r'));
+            await mouse('mouseReleased', 88.4); await sleep(150);
+            const turned = JSON.parse(await evalJs(`JSON.stringify((() => { const it = selected, D = dims(it); return { r: it.r, moved: Math.hypot(it.x + D.w / 2 - ${knob.mx}, it.y + D.h / 2 - ${knob.my}), bar: document.getElementById('selWho').textContent, undo: !document.getElementById('undo').disabled, handle: !!document.querySelector('.turner .knob'), turning: !!turning, picture: document.querySelector('#plan image')._kept === 1 }; })())`));
+            check('dragging the round handle turns the piece about its middle, by the degree, catching on 15° steps', Math.abs(free - 37) <= 1 && free % 15 !== 0 && caught === 90 && turned.r === 90 && turned.moved < 0.02 && /90°/.test(turned.bar) && turned.undo && turned.handle && !turned.turning && turned.picture === true, `at 37° of travel: ${free}°; at 88.4°: ${caught}°; let go at ${turned.r}°, middle moved ${turned.moved.toFixed(3)}", bar "${turned.bar}"`);
+        }
         await evalJs("setZoom(1); localStorage.clear(); 1");
         if (WIDTH < 600) {
             await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 });
             await go(url);
             const box = JSON.parse(await evalJs("JSON.stringify(document.querySelector('.stage').getBoundingClientRect())"));
+            await evalJs("document.querySelector('#plan image')._kept = 1; 1");
             await send('Input.synthesizePinchGesture', { x: box.x + box.width / 2, y: box.y + box.height / 2, scaleFactor: 2.2, relativeSpeed: 400, gestureSourceType: 'touch' });
             await sleep(600);
-            const pinched = JSON.parse(await evalJs("JSON.stringify({ zoom, page: window.visualViewport ? window.visualViewport.scale : 1, slider: document.getElementById('zoom').value })"));
+            const pinched = JSON.parse(await evalJs("JSON.stringify({ zoom, page: window.visualViewport ? window.visualViewport.scale : 1, slider: document.getElementById('zoom').value, picture: document.querySelector('#plan image')._kept === 1 })"));
             check('a pinch on the plan zooms the plan, not the page', pinched.zoom > 1.4 && Math.abs(pinched.page - 1) < 0.01, `zoom ${pinched.zoom.toFixed(2)}, page scale ${pinched.page}, slider ${pinched.slider}`);
+            check('the plan picture stays in place through a pinch and the lift after it', pinched.picture === true);
             await evalJs("setZoom(1); 1");
             const piece = JSON.parse(await evalJs("JSON.stringify((() => { const r = document.querySelector('g.item rect:not(.hit)').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })())"));
             await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: piece.x, y: piece.y, id: 1 }] });
@@ -154,6 +206,48 @@ function getJson(url) { return new Promise((resolve, reject) => http.get(url, (r
             check('dragging a piece by touch shows the loupe above the finger, lifting hides it', loupe.shown && loupe.dragging && loupe.above && !!loupe.viewBox && !after.shown && !after.dragging, `during ${JSON.stringify(loupe)} after ${JSON.stringify(after)}`);
             await send('Emulation.setTouchEmulationEnabled', { enabled: false });
         }
+        // Saved layouts: three old layouts on the tape-measured plan (kept at the size its picture
+        // used to be) and one on the scanned plan.
+        await evalJs(`(() => { localStorage.clear();
+            const site = id => BUILT_IN.find(b => b.id === id), old = site('measured-apartment'), scan = site('scanned-apartment');
+            const piece = (n, x) => ({ id: 'p' + n + x, name: 'Sofa', w: 80, d: 36, x, y: 20, r: 0 });
+            const saved = {};
+            ['a', 'b', 'c'].forEach((k, i) => { saved['apt-old' + k] = { id: 'apt-old' + k, name: 'Old try ' + (i + 1), ppi: 4.27, img: { src: old.img.src, w: old.img.w, h: old.img.h + 144 }, furniture: [piece(k, 20 + i * 10)], t: Date.now() - (i + 2) * 864e5 }; });
+            saved['apt-new1'] = { id: 'apt-new1', name: 'Scan try', ppi: scan.ppi, img: { ...scan.img }, furniture: [piece('n', 30), piece('n', 130)], t: Date.now() };
+            localStorage.setItem('fitcheck-apts', JSON.stringify(saved)); localStorage.setItem('fitcheck-active', JSON.stringify('apt-new1')); })(); 1`);
+        await go(url);
+        const savesJs = (body) => evalJs(`JSON.stringify((() => { const box = document.getElementById('saves'); const plans = [...box.querySelectorAll('.plan')]; const planOf = t => plans.find(p => p.querySelector('.plan-name').textContent.includes(t)); const row = id => [...box.querySelectorAll('.lay')].find(r => r._id === id); const btn = (el, t) => [...el.querySelectorAll('button')].find(b => b.textContent.trim().startsWith(t)); const stored = () => JSON.parse(localStorage.getItem('fitcheck-apts') || '{}'); ${body} })())`).then(JSON.parse);
+        const listed = await savesJs(`const old = BUILT_IN.find(b => b.id === 'measured-apartment'), o = apts['apt-olda']; const m = planOf('as measured'), sc = planOf('3D scan');
+            return { built: BUILT_IN.length, fresh: o.img.h === old.img.h && o.ppi === old.ppi, plans: plans.length, first: plans[0].querySelector('.plan-name').textContent, measured: m && m.querySelector('small').textContent, all: !!(m && btn(m, 'Delete all 3')), scanAll: !!btn(sc, 'Delete all'), meta: row('apt-new1').querySelector('.meta').textContent, noDelOnSite: !btn(row('scanned-apartment'), '🗑') };`);
+        check('a layout saved on a site plan takes that plan\'s current size', listed.fresh === true);
+        check('Saved layouts lists every plan with its layouts, the open one first, with pieces and the day it changed', listed.plans === listed.built && /3D scan/.test(listed.first) && /^3 layouts of yours/.test(listed.measured) && listed.all && !listed.scanAll && /^2 pieces · changed today/.test(listed.meta) && listed.noDelOnSite, `${listed.plans} plans; "${listed.measured}"; "${listed.meta}"`);
+        await savesJs(`row('apt-oldb').querySelector('.nm').click(); return 1;`); await sleep(400);
+        const opened = await savesJs(`return { id: activeId, on: row('apt-oldb').classList.contains('on'), sel: document.getElementById('aptSel').value, first: plans[0].querySelector('.plan-name').textContent };`);
+        check('tapping a layout opens it', opened.id === 'apt-oldb' && opened.on && opened.sel === 'apt-oldb' && /as measured/.test(opened.first), opened.id);
+        await savesJs(`btn(row('apt-oldb'), '✎').click(); return 1;`); await sleep(200);
+        await savesJs(`const i = row('apt-oldb').querySelector('input'); i.value = 'Couch by the window'; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return 1;`); await sleep(200);
+        const renamed = await savesJs(`return { stored: stored()['apt-oldb'].name, row: row('apt-oldb').querySelector('b').textContent, sel: document.getElementById('aptSel').selectedOptions[0].textContent, form: document.getElementById('aptName').value };`);
+        check('✎ renames a layout in place, everywhere it is shown', renamed.stored === 'Couch by the window' && renamed.row.startsWith('Couch by the window') && renamed.sel.includes('Couch by the window') && renamed.form === 'Couch by the window', JSON.stringify(renamed).slice(0, 160));
+        await savesJs(`btn(row('apt-oldc'), '🗑').click(); return 1;`); await sleep(200);
+        const asked = await savesJs(`const c = box.querySelector('.confirm'); const shown = !!c && c.textContent.includes('Old try 3'); btn(c, 'Keep').click(); return { shown, kept: !!stored()['apt-oldc'] && !box.querySelector('.confirm') };`);
+        await savesJs(`btn(row('apt-oldc'), '🗑').click(); return 1;`); await sleep(200);
+        await savesJs(`btn(box.querySelector('.confirm'), 'Delete').click(); return 1;`); await sleep(600);
+        const one = await savesJs(`return { gone: !stored()['apt-oldc'] && !apts['apt-oldc'], rest: Object.keys(stored()).sort().join(','), active: activeId };`);
+        check('🗑 asks in place; Keep keeps it, Delete removes that one layout only', asked.shown && asked.kept && one.gone && one.rest === 'apt-new1,apt-olda,apt-oldb' && one.active === 'apt-oldb', one.rest);
+        await savesJs(`btn(planOf('as measured'), 'Delete all 2').click(); return 1;`); await sleep(200);
+        await savesJs(`btn(box.querySelector('.confirm'), 'Delete 2').click(); return 1;`); await sleep(600);
+        const cleared = await savesJs(`return { rest: Object.keys(stored()).join(','), active: activeId, has: !!apts[activeId], small: planOf('as measured').querySelector('small').textContent };`);
+        check('"Delete all" clears every layout of yours on one plan and leaves the rest', cleared.rest === 'apt-new1' && cleared.has && !/^apt-old/.test(cleared.active) && /^no layouts of yours/.test(cleared.small), `left: ${cleared.rest}; now on ${cleared.active}`);
+        await savesJs(`btn(planOf('as measured'), 'Hide').click(); return 1;`); await sleep(400);
+        const hid = await savesJs(`const ids = [...document.getElementById('aptSel').options].map(o => o.value); return { inPicker: ids.includes('measured-apartment'), still: !!apts['measured-apartment'], show: !!btn(planOf('as measured'), 'Show'), last: plans[plans.length - 1].querySelector('.plan-name').textContent, active: activeId };`);
+        await go(url);
+        const hidAfter = await savesJs(`const ids = [...document.getElementById('aptSel').options].map(o => o.value); const out = { inPicker: ids.includes('measured-apartment'), active: activeId }; btn(planOf('as measured'), 'Show').click(); out.back = [...document.getElementById('aptSel').options].map(o => o.value).includes('measured-apartment'); return out;`);
+        check('Hide takes a site plan off the list, a reload keeps it off, Show puts it back', !hid.inPicker && hid.still && hid.show && /as measured/.test(hid.last) && hid.active !== 'measured-apartment' && !hidAfter.inPicker && hidAfter.back, `hidden: picker ${hid.inPicker}, after reload ${hidAfter.inPicker}, shown again ${hidAfter.back}`);
+        await savesJs(`row('apt-new1').querySelector('.nm').click(); return 1;`); await sleep(300);
+        await evalJs("document.getElementById('saveAs').click(); 1"); await sleep(500);
+        const asNew = await savesJs(`const a = apt(); const i = row(a.id) && row(a.id).querySelector('input'); return { name: a.name, pieces: a.furniture.length, naming: !!i && i.value === a.name, own: !a.builtIn && a.id !== 'apt-new1', stored: !!stored()[a.id], count: Object.keys(stored()).length };`);
+        check('"Save this as a new layout" keeps a second layout and asks for its name', / · layout 2$/.test(asNew.name) && asNew.pieces === 2 && asNew.naming && asNew.own && asNew.stored && asNew.count === 2, asNew.name);
+        await shot('saved-layouts');
         // Nothing wider than the screen: the widest elements past the viewport, by selector.
         const overflow = JSON.parse(await evalJs("JSON.stringify((() => { const vw = document.documentElement.clientWidth; const wide = []; for (const el of document.querySelectorAll('body *')) { const r = el.getBoundingClientRect(); if (r.right > vw + 1 && r.width > 0) wide.push([Math.round(r.right - vw), el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ').join('.') : '')]); } wide.sort((a, b) => b[0] - a[0]); return { scrollWidth: document.documentElement.scrollWidth, vw, wide: wide.slice(0, 6) }; })())"));
         check(`nothing wider than the ${WIDTH}px screen`, overflow.scrollWidth <= overflow.vw && overflow.wide.length === 0, overflow.wide.map(([px, sel]) => `${sel} +${px}px`).join(', ') || `scrollWidth ${overflow.scrollWidth}`);

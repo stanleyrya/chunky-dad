@@ -53,6 +53,11 @@ svg { display:block; touch-action:none; user-select:none; -webkit-user-select:no
 .item rect.hit { fill:transparent; fill-opacity:1; stroke:none; }
 .item text { font-family:-apple-system, system-ui, sans-serif; fill:#0b0d13; pointer-events:none; text-anchor:middle; font-weight:600; paint-order:stroke; stroke:rgba(255,255,255,.85); stroke-width:3px; stroke-linejoin:round; }
 .item text.dim { font-weight:500; fill:#2a2f3a; }
+.turner { touch-action:none; cursor:grab; }
+.turner line { stroke:#ff7b2f; stroke-width:2; vector-effect:non-scaling-stroke; pointer-events:none; }
+.turner .hit { fill:transparent; }
+.turner .knob { fill:#fff; stroke:#ff7b2f; stroke-width:3; vector-effect:non-scaling-stroke; }
+.turner.on .knob { fill:#ff7b2f; }
 .cal line { stroke:var(--no); stroke-width:2; vector-effect:non-scaling-stroke; }
 .cal circle { fill:var(--no); }
 .empty { padding:40px 16px; text-align:center; color:var(--muted); }
@@ -105,6 +110,22 @@ input[type=file] { padding:6px; }
 .calbox label { font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:3px; }
 .calbox input { width:76px; }
 .save { font-family:ui-monospace, Menlo, monospace; font-size:11px; color:rgba(255,255,255,.8); }
+.saves .plan { border-top:1px solid var(--line); padding:10px 0 2px; }
+.saves .plan:first-child { border-top:0; }
+.saves .plan-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.saves .thumb { flex:0 0 auto; width:44px; height:44px; border-radius:8px; background:#fff; object-fit:contain; }
+.saves .plan-name { flex:1 1 120px; min-width:0; font-weight:600; font-size:13px; }
+.saves .plan-name small, .saves .meta { display:block; font:500 11px/1.4 ui-monospace, Menlo, monospace; color:var(--muted); }
+.saves .plan.hid .thumb, .saves .plan.hid .plan-name { opacity:.55; }
+.saves .lay { display:flex; align-items:center; gap:6px; padding:5px 0 5px 54px; }
+.saves .lay.on .nm b { color:var(--accent-soft); }
+.saves .nm { flex:1; min-width:0; text-align:left; background:none; border:0; padding:3px 0; color:var(--ink); font:inherit; font-size:13px; cursor:pointer; }
+.saves .nm b { display:block; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.saves .ic { flex:0 0 auto; width:32px; height:32px; padding:0; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--muted); font-size:14px; cursor:pointer; }
+.saves .ic:hover { color:var(--ink); border-color:rgba(255,162,74,.5); }
+.saves .lay.naming { flex-wrap:wrap; }
+.saves .lay input { flex:1 1 100%; min-width:0; }
+.saves .confirm { margin:4px 0 6px; }
 .banner[hidden] { display:none; }
 .confirm[hidden] { display:none; }
 .confirm { margin-top:8px; padding:10px 12px; border-radius:12px; background:rgba(224,86,76,.12); border:1px solid rgba(224,86,76,.45); display:flex; gap:8px; align-items:center; flex-wrap:wrap; font-size:13px; }
@@ -127,6 +148,7 @@ input[type=file] { padding:6px; }
   <div class="tool-buttons">
     <select id="aptSel" class="action-button" aria-label="Apartment"></select>
     <button id="newApt" class="action-button secondary-button" type="button"><i class="bi bi-plus-lg"></i> New</button>
+    <button id="manage" class="action-button secondary-button" type="button" title="Your saved layouts: open, rename, delete"><i class="bi bi-folder2-open"></i> Saved</button>
     <button id="share" class="action-button primary-button" type="button"><i class="bi bi-link-45deg"></i> Share link</button>
   </div>
 </header>
@@ -150,7 +172,7 @@ input[type=file] { padding:6px; }
       <button id="calCancel" type="button">Cancel</button>
     </div>
     <div id="selbar" class="selbar"><span class="who" id="selWho"></span><span class="nudge" role="group" aria-label="Nudge one inch"><button type="button" data-nudge="-1,0" title="Left 1 inch (hold to keep going)" aria-label="Left 1 inch">◀</button><button type="button" data-nudge="0,-1" title="Up 1 inch (hold to keep going)" aria-label="Up 1 inch">▲</button><button type="button" data-nudge="0,1" title="Down 1 inch (hold to keep going)" aria-label="Down 1 inch">▼</button><button type="button" data-nudge="1,0" title="Right 1 inch (hold to keep going)" aria-label="Right 1 inch">▶</button></span><span class="nudge turn" role="group" aria-label="Turn a little"><button type="button" data-turn="-5" title="Turn 5° left (hold to keep going)" aria-label="Turn 5 degrees left">↺</button><button type="button" data-turn="5" title="Turn 5° right (hold to keep going)" aria-label="Turn 5 degrees right">↻</button></span><button id="rotate" type="button" title="Quarter turn">⟳ 90°</button><button id="dup" type="button">⧉ Duplicate</button><button id="remove" type="button">✕ Delete</button></div>
-    <p class="hint">Drag a piece to move it; double-tap it for a quarter turn; ↺ and ↻ turn it 5° for a diagonal (hold to keep going, or type an exact angle under Add a piece); the arrows nudge it an inch. Drag the plan itself to pan, pinch to zoom. Edges snap together when close; red means two pieces overlap. Undo takes back the last change. <span class="keys">Arrow keys nudge 1", Shift+arrow 1', R rotates, [ and ] turn 5°, Delete removes, Ctrl+scroll zooms.</span> The tool knows the scale, not the walls, so check those by eye.</p>
+    <p class="hint">Drag a piece to move it; double-tap it for a quarter turn; drag the round handle on a selected piece to turn it any amount (it catches every 15°); ↺ and ↻ turn it 5° (hold to keep going, or type an exact angle under Add a piece); the arrows nudge it an inch. Drag the plan itself to pan, pinch to zoom. Edges snap together when close; red means two pieces overlap. Undo takes back the last change. <span class="keys">Arrow keys nudge 1", Shift+arrow 1', R rotates, [ and ] turn 5°, Delete removes, Ctrl+scroll zooms.</span> The tool knows the scale, not the walls, so check those by eye.</p>
     <div id="status" class="status"></div>
   </div>
 
@@ -192,6 +214,13 @@ input[type=file] { padding:6px; }
       </form>
       <div id="delConfirm" class="confirm" hidden></div>
       <p class="hint" id="aptHint"></p>
+    </div>
+
+    <div class="card" id="savesCard">
+      <h2>Saved layouts</h2>
+      <div class="toolbar" style="margin-top:0"><button type="button" id="saveAs" class="go">＋ Save this as a new layout</button></div>
+      <div id="saves" class="saves"></div>
+      <p class="hint">Every layout kept in this browser, under the floor plan it is drawn on. Tap one to open it; ✎ renames it; 🗑 deletes it. A plan the site keeps cannot be deleted, but Hide takes it off your list.</p>
     </div>
   </div>
 </div>
@@ -352,6 +381,7 @@ function persist(a, options) {
   if (!(options && options.silent)) {
     const now = stateOf(a), before = lastState[a.id];
     if (before !== undefined && before !== now) { (history[a.id] = history[a.id] || []).push(before); if (history[a.id].length > 50) history[a.id].shift(); }
+    if (before !== now) a.t = Date.now(); // when it last changed, for the saved-layouts list
     lastState[a.id] = now;
     renderUndo();
   }
@@ -364,7 +394,7 @@ function persist(a, options) {
     const saved = ls('fitcheck-apts') || {};
     if (a.shared) { $('saveState').textContent = 'shared view — change anything to keep it here'; return; }
     saved[a.id] = a;
-    try { localStorage.setItem('fitcheck-apts', JSON.stringify(saved)); $('saveState').textContent = 'saved in this browser'; }
+    try { localStorage.setItem('fitcheck-apts', JSON.stringify(saved)); $('saveState').textContent = 'saved in this browser'; refreshSaveMeta(a); }
     catch (e) { $('saveState').textContent = 'could not save (storage full?)'; }
   }, 300);
   ls('fitcheck-active', a.id);
@@ -380,7 +410,7 @@ function adoptShared(a) {
   window.history.replaceState(null, '', location.pathname); renderAll();
 }
 function removeApt(a) {
-  delete apts[a.id];
+  clearTimeout(pending[a.id]); delete apts[a.id];
   const saved = ls('fitcheck-apts') || {}; delete saved[a.id]; ls('fitcheck-apts', saved);
 }
 
@@ -418,11 +448,20 @@ async function decodeShare(hash) {
 async function boot() {
   for (const b of BUILT_IN) apts[b.id] = { ...b, builtIn: true, furniture: withIds(b.furniture) };
   const saved = ls('fitcheck-apts') || {};
-  for (const id in saved) { if (saved[id] && saved[id].img) apts[id] = { ...saved[id], builtIn: !!apts[id] }; }
+  // A layout saved on one of the site's plans follows that plan: when the site's picture is redrawn
+  // at a new size, the save takes the new size and scale, instead of stretching the new picture
+  // over the old numbers.
+  const sitePlan = new Map(BUILT_IN.map(b => [b.img.src, b]));
+  for (const id in saved) {
+    const one = saved[id]; if (!one || !one.img) continue;
+    const site = one.img.src && sitePlan.get(one.img.src);
+    if (site && (one.img.w !== site.img.w || one.img.h !== site.img.h)) { one.img = { ...site.img }; one.ppi = site.ppi; }
+    apts[id] = { ...one, builtIn: !!apts[id] };
+  }
   let shared = null;
   try { shared = await decodeShare(location.hash); } catch (e) { toast('This link could not be read — ask for a new one.'); }
   if (shared) { apts.shared = shared; activeId = 'shared'; }
-  else { const want = ls('fitcheck-active'); activeId = (want && apts[want]) ? want : Object.keys(apts)[0] || null; }
+  else { const want = ls('fitcheck-active'); activeId = (want && apts[want]) ? want : firstShown(); }
   renderAll();
 }
 
@@ -444,7 +483,7 @@ const overlaps = (a, b) => {
 const problems = it => apt().furniture.some(o => o !== it && overlaps(it, o)) ? ['overlap'] : [];
 
 // ---------- Render ----------
-function renderAll() { const a = apt(); if (a && lastState[a.id] === undefined) rememberState(a); renderSelect(); renderStage(); renderPanel(); renderBanner(); renderUndo(); }
+function renderAll() { const a = apt(); if (a && lastState[a.id] === undefined) rememberState(a); renderSelect(); renderStage(); renderPanel(); renderBanner(); renderUndo(); renderSaves(); }
 function renderBanner() {
   const a = apt(), b = $('shareBanner');
   if (!a || !a.shared) { b.hidden = true; b.innerHTML = ''; return; }
@@ -457,7 +496,7 @@ function renderSelect() {
   if (!ids.length) { const o = document.createElement('option'); o.textContent = 'No apartments yet'; s.appendChild(o); s.disabled = true; return; }
   s.disabled = false;
   // Three kinds, three groups: the site's plans, yours, a link someone sent.
-  const groups = [['Shared with you', ids.filter(id => apts[id].shared)], ['Yours', ids.filter(id => !apts[id].shared && !apts[id].builtIn)], ['On the site', ids.filter(id => apts[id].builtIn)]];
+  const groups = [['Shared with you', ids.filter(id => apts[id].shared)], ['Yours', ids.filter(id => !apts[id].shared && !apts[id].builtIn)], ['On the site', ids.filter(id => apts[id].builtIn && (!hiddenPlans.has(id) || id === activeId))]];
   for (const [label, members] of groups) {
     if (!members.length) continue;
     const g = document.createElement('optgroup'); g.label = label;
@@ -465,59 +504,147 @@ function renderSelect() {
     s.appendChild(g);
   }
 }
+// The stage, the svg and the plan picture are built once per plan and then kept: a zoom, a nudge, a
+// turn or a drop redraws only the pieces. (2026-11-20: rebuilding the picture on every one of those
+// made the plan blink while the picture loaded again.)
 function renderStage() {
   const W = $('stageWrap');
   const a = apt();
   if (!a) { W.innerHTML = '<div class="empty"><b>No apartment loaded.</b><br>Tap “New”, give it a name and upload the floor plan image.</div>'; $('scaleInfo').textContent = ''; $('status').textContent = ''; return; }
   if (!a.img) { W.innerHTML = '<div class="empty"><b>New apartment.</b><br>Name it and upload the floor plan image below, then Save.</div>'; $('scaleInfo').textContent = ''; $('status').textContent = ''; return; }
-  // A re-render keeps the view where it was (zoom and nudges rebuild the stage).
-  const was = W.querySelector('.stage'), keep = was ? { left: was.scrollLeft, top: was.scrollTop } : null;
-  W.innerHTML = '';
-  const stage = document.createElement('div'); stage.className = 'stage'; W.appendChild(stage);
-  const avail = Math.max(240, stage.clientWidth - 2);
-  fitScale = Math.min(avail / a.img.w, (window.innerHeight * 0.76) / a.img.h);
-  const svg = el('svg', { id: 'plan', viewBox: `0 0 ${a.img.w} ${a.img.h}`, xmlns: NS }, stage);
-  sizeSvg(svg, a);
-  if (keep) { stage.scrollLeft = keep.left; stage.scrollTop = keep.top; }
-  // Everything drawn on the plan sits in one group so the loupe can show a live copy of it.
-  const content = el('g', { id: 'planContent' }, svg);
-  el('image', { href: imgSrc(a), x: 0, y: 0, width: a.img.w, height: a.img.h }, content);
-  attachPlanGestures(stage, svg, a);
+  const key = `${a.id}\n${a.img.w}x${a.img.h}\n${imgSrc(a)}`;
+  let stage = W.querySelector('.stage'), svg = stage && stage.querySelector('#plan');
+  if (!svg || stage._key !== key) {
+    const keep = stage ? { left: stage.scrollLeft, top: stage.scrollTop } : null;
+    W.innerHTML = '';
+    stage = document.createElement('div'); stage.className = 'stage'; stage._key = key; W.appendChild(stage);
+    measureFit(stage, a);
+    svg = el('svg', { id: 'plan', viewBox: `0 0 ${a.img.w} ${a.img.h}`, xmlns: NS }, stage);
+    sizeSvg(svg, a);
+    if (keep) { stage.scrollLeft = keep.left; stage.scrollTop = keep.top; }
+    // Everything drawn on the plan sits in one group so the loupe can show a live copy of it.
+    const content = el('g', { id: 'planContent' }, svg);
+    el('image', { href: imgSrc(a), x: 0, y: 0, width: a.img.w, height: a.img.h }, content);
+    el('g', { id: 'pieces' }, content);
+    attachPlanGestures(stage, svg);
+    attachPieceGestures(svg);
+  } else { measureFit(stage, a); sizeSvg(svg, a); }
+  drawPieces(svg, a);
+  // A freshly selected piece is brought into view; a zoom or nudge re-render leaves the view alone.
+  if (selected && !cal && !keepView) { requestAnimationFrame(() => { const g = [...svg.querySelectorAll('.item')].find(x => x._item === selected); if (g && typeof g.scrollIntoView === 'function' && !isVisibleIn(g, stage)) g.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }); }
+  keepView = false;
   const ppi = a.ppi;
-  if (ppi) {
-    const layer = el('g', {}, content);
-    // Labels are sized for the screen (11 CSS px), not the plan: a piece
-    // too small to hold its name on screen shows nothing, and the size
-    // line only when there is room for both.
-    const screen = fitScale * zoom;
-    const fs = 11 / screen;
-    for (const it of a.furniture) {
-      const D = dims(it), bad = problems(it).length > 0;
-      const g = el('g', { class: 'item' + (bad ? ' bad' : '') + (it === selected ? ' sel' : ''), transform: `translate(${it.x * ppi} ${it.y * ppi})` }, layer);
-      g._item = it;
-      // A diagonal piece is drawn at its own size, turned about the middle of its box; its name turns with it, never upside down.
-      const square = isSquare(it), cx = D.w / 2 * ppi, cy = D.h / 2 * ppi;
-      const wPx = (square ? D.w : it.w) * ppi, hPx = (square ? D.h : it.d) * ppi;
-      const lean = normAngle(it.r) % 180 > 90 ? normAngle(it.r) % 180 - 180 : normAngle(it.r) % 180;
-      const turned = square ? {} : { transform: `rotate(${normAngle(it.r)} ${cx} ${cy})` }, leaning = square ? {} : { transform: `rotate(${lean} ${cx} ${cy})` };
-      const hitW = Math.max(wPx, 44 / screen), hitH = Math.max(hPx, 44 / screen);
-      el('rect', { class: 'hit', x: cx - hitW / 2, y: cy - hitH / 2, width: hitW, height: hitH, ...turned }, g);
-      el('rect', square ? { x: 0, y: 0, width: wPx, height: hPx } : { x: cx - wPx / 2, y: cy - hPx / 2, width: wPx, height: hPx, ...turned }, g);
-      const nameFits = wPx >= fs * 0.6 * Math.min(it.name.length, 12) + fs * 0.4 && hPx >= fs * 1.2;
-      const bothFit = nameFits && hPx >= fs * 2.6 && wPx >= fs * 3.2;
-      if (nameFits) {
-        const t = el('text', { x: cx, y: bothFit ? cy - fs * 0.15 : cy + fs * 0.35, 'font-size': fs, ...leaning }, g);
-        t.textContent = it.name.length > 14 && wPx < fs * 0.55 * it.name.length ? it.name.slice(0, 12) + '…' : it.name;
-      }
-      if (bothFit) { const s = el('text', { class: 'dim', x: cx, y: cy + fs * 1.05, 'font-size': fs * 0.85, ...leaning }, g); s.textContent = square ? `${fmt(D.w)} × ${fmt(D.h)}` : `${fmt(it.w)} × ${fmt(it.d)}`; }
-      g.addEventListener('pointerdown', e => startDrag(e, it, svg, g));
-    }
+  $('scaleInfo').textContent = ppi ? `${ppi.toFixed(2)} px per inch` : 'Scale not set';
+  renderStatus(a);
+}
+function renderStatus(a) {
+  const n = a.furniture.filter(i => problems(i).length).length;
+  const st = $('status');
+  if (!a.ppi) { st.className = 'status warn'; st.textContent = 'Set the scale before placing furniture.'; }
+  else { st.className = 'status ' + (n ? 'bad' : 'ok'); st.textContent = a.furniture.length ? (n ? `${n} piece${n > 1 ? 's' : ''} overlapping` : 'No overlaps') : 'No furniture on the plan'; }
+}
+// The plan fills the stage's width, or 76% of the screen's height if that is the tighter fit. The
+// height is read once per stage (and again on a real resize): a phone's own height changes every
+// time its address bar slides away, and the plan must not change size under a scrolling thumb.
+function measureFit(stage, a) {
+  if (!stage._tall) stage._tall = window.innerHeight * 0.76;
+  fitScale = Math.min(Math.max(240, stage.offsetWidth - 4) / a.img.w, stage._tall / a.img.h);
+}
+function drawPiece(it, a, layer) {
+  const ppi = a.ppi;
+  // Labels are sized for the screen (11 CSS px), not the plan: a piece
+  // too small to hold its name on screen shows nothing, and the size
+  // line only when there is room for both.
+  const screen = fitScale * zoom, fs = 11 / screen;
+  const D = dims(it), bad = problems(it).length > 0;
+  const g = el('g', { class: 'item' + (bad ? ' bad' : '') + (it === selected ? ' sel' : ''), transform: `translate(${it.x * ppi} ${it.y * ppi})` }, layer);
+  g._item = it;
+  // A diagonal piece is drawn at its own size, turned about the middle of its box; its name turns with it, never upside down.
+  const square = isSquare(it), cx = D.w / 2 * ppi, cy = D.h / 2 * ppi;
+  const wPx = (square ? D.w : it.w) * ppi, hPx = (square ? D.h : it.d) * ppi;
+  const lean = normAngle(it.r) % 180 > 90 ? normAngle(it.r) % 180 - 180 : normAngle(it.r) % 180;
+  const turned = square ? {} : { transform: `rotate(${normAngle(it.r)} ${cx} ${cy})` }, leaning = square ? {} : { transform: `rotate(${lean} ${cx} ${cy})` };
+  const hitW = Math.max(wPx, 44 / screen), hitH = Math.max(hPx, 44 / screen);
+  el('rect', { class: 'hit', x: cx - hitW / 2, y: cy - hitH / 2, width: hitW, height: hitH, ...turned }, g);
+  el('rect', square ? { x: 0, y: 0, width: wPx, height: hPx } : { x: cx - wPx / 2, y: cy - hPx / 2, width: wPx, height: hPx, ...turned }, g);
+  const nameFits = wPx >= fs * 0.6 * Math.min(it.name.length, 12) + fs * 0.4 && hPx >= fs * 1.2;
+  const bothFit = nameFits && hPx >= fs * 2.6 && wPx >= fs * 3.2;
+  if (nameFits) {
+    const t = el('text', { x: cx, y: bothFit ? cy - fs * 0.15 : cy + fs * 0.35, 'font-size': fs, ...leaning }, g);
+    t.textContent = it.name.length > 14 && wPx < fs * 0.55 * it.name.length ? it.name.slice(0, 12) + '…' : it.name;
   }
+  if (bothFit) { const s = el('text', { class: 'dim', x: cx, y: cy + fs * 1.05, 'font-size': fs * 0.85, ...leaning }, g); s.textContent = square ? `${fmt(D.w)} × ${fmt(D.h)}` : `${fmt(it.w)} × ${fmt(it.d)}`; }
+  g.addEventListener('pointerdown', e => startDrag(e, it, layer.ownerSVGElement, g));
+  return g;
+}
+function drawPieces(svg, a) {
+  const content = svg.querySelector('#planContent'), layer = svg.querySelector('#pieces');
+  layer.replaceChildren();
+  content.querySelectorAll('.cal').forEach(n => n.remove());
+  if (a.ppi) for (const it of a.furniture) drawPiece(it, a, layer);
+  drawTurner(svg, a);
   if (cal) {
     const g = el('g', { class: 'cal' }, content);
     cal.pts.forEach(p => el('circle', { cx: p.x, cy: p.y, r: Math.max(4, a.img.w / 200) }, g));
     if (cal.pts.length === 2) el('line', { x1: cal.pts[0].x, y1: cal.pts[0].y, x2: cal.pts[1].x, y2: cal.pts[1].y }, g);
   }
+}
+const markOverlaps = svg => svg.querySelectorAll('.item').forEach(g => g.classList.toggle('bad', problems(g._item).length > 0));
+// The round handle on the selected piece: drag it around the piece to turn it. It stands off the
+// piece's far edge, or the near one when the far side would fall off the plan.
+function drawTurner(svg, a) {
+  const content = svg.querySelector('#planContent');
+  content.querySelectorAll('.turner').forEach(n => n.remove());
+  const it = selected;
+  if (!it || cal || !a.ppi || !a.furniture.includes(it)) return;
+  const ppi = a.ppi, screen = fitScale * zoom, D = dims(it), cx = (it.x + D.w / 2) * ppi, cy = (it.y + D.h / 2) * ppi;
+  const t = normAngle(it.r) * Math.PI / 180, edge = it.d / 2 * ppi, reach = edge + 30 / screen, pad = 12 / screen;
+  let ux = Math.sin(t), uy = -Math.cos(t);
+  const inside = (x, y) => x >= pad && y >= pad && x <= a.img.w - pad && y <= a.img.h - pad;
+  if (!inside(cx + ux * reach, cy + uy * reach) && inside(cx - ux * reach, cy - uy * reach)) { ux = -ux; uy = -uy; }
+  const kx = cx + ux * reach, ky = cy + uy * reach;
+  const g = el('g', { class: 'turner' + (turning ? ' on' : '') }, content);
+  el('line', { x1: cx + ux * edge, y1: cy + uy * edge, x2: kx, y2: ky }, g);
+  el('circle', { class: 'hit', cx: kx, cy: ky, r: 22 / screen }, g);
+  el('circle', { class: 'knob', cx: kx, cy: ky, r: 9 / screen }, g);
+  g.addEventListener('pointerdown', e => startTurn(e, it, svg));
+}
+// Dragging the handle: the piece follows the finger around its own middle, a degree at a time, and
+// catches on every 15° (so 0, 45 and 90 are easy to land on). Only the one piece is redrawn.
+let turning = null;
+const CATCH = 15, CATCH_WITHIN = 2;
+function startTurn(e, it, svg) {
+  if (cal) return; e.preventDefault(); e.stopPropagation();
+  if (fingers.size > 1) return; // a second finger is a pinch
+  const a = apt(), D = dims(it), mx = it.x + D.w / 2, my = it.y + D.h / 2, p = pt(e, svg);
+  turning = { it, mx, my, from: Math.atan2(p.y - my * a.ppi, p.x - mx * a.ppi) * 180 / Math.PI, r0: normAngle(it.r) };
+  try { svg.setPointerCapture(e.pointerId); } catch (_) { /* a pointer already gone */ }
+  drawTurner(svg, a);
+}
+function setAngleAbout(it, r, mx, my) {
+  it.r = +normAngle(r).toFixed(2);
+  const N = dims(it); it.x = Math.round((mx - N.w / 2) * 100) / 100; it.y = Math.round((my - N.h / 2) * 100) / 100;
+}
+function turnTo(e, svg) {
+  const a = apt(), T = turning, p = pt(e, svg);
+  let r = Math.round(normAngle(T.r0 + Math.atan2(p.y - T.my * a.ppi, p.x - T.mx * a.ppi) * 180 / Math.PI - T.from));
+  const near = Math.round(r / CATCH) * CATCH; if (Math.abs(r - near) <= CATCH_WITHIN) r = near;
+  if (normAngle(r) === normAngle(T.it.r)) return;
+  setAngleAbout(T.it, r, T.mx, T.my);
+  redrawPiece(svg, a, T.it);
+}
+// One piece changed where it stands: swap its drawing, move the handle, refresh the red marks and the bar.
+function redrawPiece(svg, a, it) {
+  const layer = svg.querySelector('#pieces'), old = [...layer.children].find(g => g._item === it);
+  const g = drawPiece(it, a, layer); if (old) layer.replaceChild(g, old);
+  markOverlaps(svg); drawTurner(svg, a); renderSelection(); renderStatus(a);
+}
+function endTurn(keep) {
+  if (!turning) return; turning = null;
+  const a = apt(); if (keep !== false) persist(a); renderStage(); renderPanel();
+}
+// Tapping to calibrate, dragging a piece, turning one: listeners live on the svg, which is kept.
+function attachPieceGestures(svg) {
   svg.addEventListener('pointerdown', e => {
     if (!cal) return;
     const p = pt(e, svg); if (cal.pts.length < 2) cal.pts.push(p); else cal.pts = [p];
@@ -525,35 +652,28 @@ function renderStage() {
     $('calApply').disabled = cal.pts.length < 2; renderStage();
   });
   svg.addEventListener('pointermove', e => {
-    if (!drag) return; const p = pt(e, svg);
+    if (turning) { turnTo(e, svg); return; }
+    if (!drag) return; const p = pt(e, svg), ppi = apt().ppi;
     let x = Math.round(p.x / ppi - drag.dx), y = Math.round(p.y / ppi - drag.dy);
     ({ x, y } = snap(drag.it, x, y));
     drag.it.x = x; drag.it.y = y;
     drag.g.setAttribute('transform', `translate(${x * ppi} ${y * ppi})`);
-    svg.querySelectorAll('.item').forEach(g => g.classList.toggle('bad', problems(g._item).length > 0));
+    markOverlaps(svg);
     showLoupe(e, svg);
   });
-  svg.addEventListener('pointerup', () => { hideLoupe(); if (drag) { drag = null; persist(a); renderStage(); renderPanel(); } });
-  // A freshly selected piece is brought into view; a zoom or nudge re-render leaves the view alone.
-  if (selected && !cal && !keepView) { requestAnimationFrame(() => { const g = [...svg.querySelectorAll('.item')].find(x => x._item === selected); if (g && typeof g.scrollIntoView === 'function' && !isVisibleIn(g, stage)) g.scrollIntoView({ block: 'nearest', inline: 'nearest' }); }); }
-  keepView = false;
-  svg.addEventListener('pointercancel', () => { hideLoupe(); if (drag) { drag = null; renderStage(); } });
-  $('scaleInfo').textContent = ppi ? `${ppi.toFixed(2)} px per inch` : 'Scale not set';
-  const n = a.furniture.filter(i => problems(i).length).length;
-  const st = $('status');
-  if (!ppi) { st.className = 'status warn'; st.textContent = 'Set the scale before placing furniture.'; }
-  else { st.className = 'status ' + (n ? 'bad' : 'ok'); st.textContent = a.furniture.length ? (n ? `${n} piece${n > 1 ? 's' : ''} overlapping` : 'No overlaps') : 'No furniture on the plan'; }
+  svg.addEventListener('pointerup', () => { hideLoupe(); endTurn(); if (drag) { drag = null; persist(apt()); renderStage(); renderPanel(); } });
+  svg.addEventListener('pointercancel', () => { hideLoupe(); endTurn(); if (drag) { drag = null; renderStage(); } });
 }
 let keepView = false;
 // Zoom to z keeping the plan point under `at` (a client point; default the middle of the stage) where it is.
 function setZoom(z, at) {
   z = Math.min(6, Math.max(0.5, z));
   const stage = document.querySelector('.stage'), a = apt();
-  if (!stage || !a) { zoom = z; $('zoom').value = String(z); renderStage(); return; }
+  if (!stage || !a || !a.img) { zoom = z; $('zoom').value = String(z); renderStage(); return; }
   const r = stage.getBoundingClientRect(); at = at || { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   const s0 = fitScale * zoom, px = (stage.scrollLeft + at.x - r.left) / s0, py = (stage.scrollTop + at.y - r.top) / s0;
   zoom = z; $('zoom').value = String(z);
-  keepView = true; renderStage();
+  keepView = true; renderStage(); // the stage is kept, so only the pieces are redrawn at the new size
   scrollPlanPointTo(document.querySelector('.stage'), px, py, at);
 }
 function scrollPlanPointTo(stage, px, py, at) {
@@ -564,8 +684,9 @@ function scrollPlanPointTo(stage, px, py, at) {
 // page, once the stage has no more to give), two zoom the plan around their midpoint; a tap on the
 // plan deselects. A trackpad pinch arrives as Ctrl+wheel. Pointer events throughout, so a second
 // finger landing mid-drag turns into a pinch instead of a second drag.
-function attachPlanGestures(stage, svg, a) {
-  const fingers = new Map(); let pan = null, pinch = null;
+const fingers = new Map();
+function attachPlanGestures(stage, svg) {
+  let pan = null, pinch = null;
   svg._fingers = fingers;
   const pair = () => [...fingers.values()];
   const dist = t => Math.hypot(t[0].x - t[1].x, t[0].y - t[1].y);
@@ -575,9 +696,12 @@ function attachPlanGestures(stage, svg, a) {
   // Every finger is counted here first (capture phase), before a piece's own handler sees it.
   svg.addEventListener('pointerdown', e => {
     if (cal) return;
+    // A first finger means no other is down: anything still counted is a lift that never arrived.
+    if (e.isPrimary) { fingers.clear(); pinch = null; pan = null; }
     fingers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (fingers.size !== 2) return;
-    if (drag) { drag = null; hideLoupe(); persist(a); }
+    if (drag) { drag = null; hideLoupe(); persist(apt()); }
+    if (turning) { turning = null; persist(apt()); }
     pan = null; const t = pair(); pinch = { d0: dist(t), z0: zoom, ...planPoint(mid(t)) };
     capture(e.pointerId);
   }, true);
@@ -592,7 +716,7 @@ function attachPlanGestures(stage, svg, a) {
     const f = fingers.get(e.pointerId); if (f) { f.x = e.clientX; f.y = e.clientY; }
     if (pinch && fingers.size === 2) {
       const t = pair(); zoom = Math.min(6, Math.max(0.5, pinch.z0 * dist(t) / pinch.d0));
-      sizeSvg(svg, a); $('zoom').value = String(zoom); scrollPlanPointTo(stage, pinch.px, pinch.py, mid(t));
+      sizeSvg(svg, apt()); $('zoom').value = String(zoom); scrollPlanPointTo(stage, pinch.px, pinch.py, mid(t));
     } else if (pan && e.pointerId === pan.id) {
       const dx = e.clientX - pan.x, dy = e.clientY - pan.y; pan.x = e.clientX; pan.y = e.clientY;
       pan.moved = pan.moved || Math.hypot(e.clientX - pan.x0, e.clientY - pan.y0) > 6;
@@ -688,6 +812,7 @@ function startDrag(e, it, svg, g) {
   svg.setPointerCapture(e.pointerId);
   g.parentNode.appendChild(g);
   svg.querySelectorAll('.item').forEach(x => x.classList.toggle('sel', x === g));
+  svg.querySelectorAll('.turner').forEach(n => n.remove());
   renderPanel();
 }
 // Magnetic edges: within 3" of another piece's edge, line up with it.
@@ -705,18 +830,44 @@ function snap(it, x, y) {
 $('aptSel').onchange = e => { activeId = e.target.value; selected = null; if (activeId !== 'shared') ls('fitcheck-active', activeId); renderAll(); };
 $('zoom').oninput = e => setZoom(+e.target.value);
 $('fit').onclick = () => { setZoom(1); const st = document.querySelector('.stage'); if (st) { st.scrollLeft = 0; st.scrollTop = 0; } };
-// Nudge buttons: an inch per tap, held = keeps going; one undo step per press.
+// Nudge and turn buttons: one step per tap, held = keeps going; one undo step per press.
+// One hold runs at a time and it always ends (2026-11-20: a piece was left spinning). A second
+// press, a finger that slides away, a lift that lands anywhere, a call or a tab switch all stop it,
+// and so does a count that no real hold reaches.
 let nudging = null;
+function stopNudge() {
+  if (!nudging) return;
+  clearTimeout(nudging.t); clearInterval(nudging.i); nudging = null;
+  persist(apt()); renderStage(); renderPanel();
+}
 for (const b of document.querySelectorAll('.selbar .nudge button')) {
   const [dx, dy] = (b.dataset.nudge || '0,0').split(',').map(Number), deg = Number(b.dataset.turn) || 0;
-  const step = () => { if (!selected) return; if (deg) turnPiece(selected, deg); else { selected.x += dx; selected.y += dy; } keepView = true; renderStage(); renderPanel(); };
-  const stop = () => { if (!nudging) return; clearTimeout(nudging.t); clearInterval(nudging.i); nudging = null; persist(apt()); renderStage(); };
-  b.addEventListener('pointerdown', e => { e.preventDefault(); if (!selected) return; step(); nudging = { t: setTimeout(() => { nudging.i = setInterval(step, 70); }, 400) }; });
-  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, stop);
+  const step = () => {
+    const a = apt(), svg = document.querySelector('#plan');
+    if (!selected || !a || !svg || !a.furniture.includes(selected)) return false;
+    if (deg) turnPiece(selected, deg); else { selected.x += dx; selected.y += dy; }
+    redrawPiece(svg, a, selected); return true;
+  };
+  b.addEventListener('pointerdown', e => {
+    e.preventDefault(); stopNudge();
+    if (!step()) return;
+    try { b.setPointerCapture(e.pointerId); } catch (_) { /* not a live pointer */ }
+    const hold = nudging = { n: 0 };
+    hold.t = setTimeout(() => { hold.i = setInterval(() => { if (nudging !== hold) { clearInterval(hold.i); return; } if (++hold.n > 400 || !step()) stopNudge(); }, deg ? 110 : 70); }, 400);
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave', 'lostpointercapture', 'contextmenu']) b.addEventListener(ev, stopNudge);
 }
+for (const ev of ['pointerup', 'pointercancel', 'pagehide']) window.addEventListener(ev, stopNudge, true);
+window.addEventListener('blur', e => { if (e.target === window) stopNudge(); });
+document.addEventListener('visibilitychange', stopNudge);
 $('undo').onclick = undo;
-let resizeTimer = null;
-window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (!drag) renderStage(); }, 150); });
+let resizeTimer = null, lastWidth = window.innerWidth;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => {
+  const sameWidth = window.innerWidth === lastWidth; lastWidth = window.innerWidth;
+  if (drag || turning || (sameWidth && window.matchMedia('(pointer: coarse)').matches)) return;
+  const stage = document.querySelector('.stage'); if (stage) stage._tall = 0;
+  renderStage();
+}, 150); });
 $('rotate').onclick = () => { if (!selected) return; quarterTurn(selected); persist(apt()); renderStage(); renderPanel(); };
 $('remove').onclick = () => { if (!selected) return; const a = apt(); a.furniture = a.furniture.filter(o => o !== selected); selected = null; persist(a); renderStage(); renderPanel(); };
 $('dup').onclick = () => { if (!selected) return; const a = apt(); const c = { ...selected, id: String(uid++), x: selected.x + 6, y: selected.y + 6 }; a.furniture.push(c); selected = c; persist(a); renderStage(); renderPanel(); };
@@ -812,16 +963,18 @@ $('aptForm').addEventListener('submit', async e => {
   $('aptImg').value = ''; persist(a); renderAll();
 });
 // A second layout of the same plan — the only "copy" worth having.
-$('dupApt').onclick = () => {
-  const a = apt(); if (!a || !a.img) return;
+function duplicateCurrent() {
+  const a = apt(); if (!a || !a.img) return null;
   const id = 'apt-' + (uid++).toString(36);
   const base = (a.name || 'Untitled').replace(/ · layout \d+$/, '');
   const n = Object.values(apts).filter(o => (o.name || '').startsWith(base + ' · layout ')).length + 2;
   const copy = { ...a, id, name: `${base} · layout ${n}`, shared: false, builtIn: false, furniture: a.furniture.map(f => ({ ...f, id: String(uid++) })) };
   apts[id] = copy; activeId = id; selected = null;
   if (a.shared) { delete apts.shared; window.history.replaceState(null, '', location.pathname); }
-  persist(copy); renderAll(); toast(`Now on "${copy.name}"`);
-};
+  persist(copy);
+  return copy;
+}
+$('dupApt').onclick = () => { const copy = duplicateCurrent(); if (!copy) return; renderAll(); toast(`Now on "${copy.name}"`); };
 // Delete asks once, in place, with two buttons — not a button that changes its own label.
 let confirmingDelete = null;
 $('delApt').onclick = () => {
@@ -832,9 +985,89 @@ $('delApt').onclick = () => {
   $('delNo').onclick = () => { confirmingDelete = null; box.hidden = true; };
   $('delYes').onclick = () => {
     confirmingDelete = null; box.hidden = true;
-    removeApt(a); activeId = Object.keys(apts)[0] || null; selected = null; if (a.shared) window.history.replaceState(null, '', location.pathname); renderAll(); toast('Deleted');
+    removeApt(a); activeId = firstShown(); selected = null; if (a.shared) window.history.replaceState(null, '', location.pathname); renderAll(); toast('Deleted');
   };
 };
+
+// ---------- Saved layouts ----------
+// Every layout this browser keeps, grouped by the floor plan it is drawn on, so the ones on a plan
+// that is no longer wanted can be found and cleared together. The site's own plans cannot be
+// deleted here; they can be hidden from the list, and shown again.
+const hiddenPlans = new Set(ls('fitcheck-hidden') || []);
+const savesUi = { rename: null, confirm: null, focus: false };
+const planKey = a => a.img.src || `own:${a.img.w}x${a.img.h}:${a.img.data.length}:${a.img.data.slice(-24)}`;
+// An id made here starts from the clock, so an older save still knows the day it was made.
+const madeAt = a => { const n = /^apt-[0-9a-z]+$/.test(a.id) ? parseInt(a.id.slice(4), 36) : 0; return n > 1.6e12 && n < Date.now() + 864e5 ? n : 0; };
+function dayLabel(ms) {
+  const d = new Date(ms), now = new Date(), midnight = x => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((midnight(now) - midnight(d)) / 864e5);
+  if (days <= 0) return 'today'; if (days === 1) return 'yesterday';
+  return d.toLocaleDateString(undefined, d.getFullYear() === now.getFullYear() ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
+}
+const saveMeta = a => { const n = a.furniture.length, when = a.t ? `changed ${dayLabel(a.t)}` : madeAt(a) ? `made ${dayLabel(madeAt(a))}` : ''; return `${n} piece${n === 1 ? '' : 's'}${when ? ' · ' + when : ''}`; };
+function firstShown() { const ids = Object.keys(apts); return ids.find(id => !hiddenPlans.has(id)) || ids[0] || null; }
+function storeNow(a) { clearTimeout(pending[a.id]); const saved = ls('fitcheck-apts') || {}; saved[a.id] = a; ls('fitcheck-apts', saved); }
+function openSave(id) { activeId = id; selected = null; ls('fitcheck-active', id); savesUi.rename = savesUi.confirm = null; renderAll(); $('stageWrap').scrollIntoView({ block: 'start', behavior: 'smooth' }); }
+function refreshSaveMeta(a) { const m = [...document.querySelectorAll('#saves .meta')].find(x => x._id === a.id); if (m) m.textContent = saveMeta(a); }
+function renderSaves() {
+  const box = $('saves'); box.innerHTML = '';
+  $('saveAs').disabled = !(apt() && apt().img);
+  const groups = new Map();
+  for (const a of Object.values(apts)) {
+    if (!a.img || a.shared) continue;
+    const k = planKey(a); if (!groups.has(k)) groups.set(k, { key: k, site: null, own: [] });
+    if (a.builtIn) groups.get(k).site = a; else groups.get(k).own.push(a);
+  }
+  if (!groups.size) { box.innerHTML = '<p class="hint">Nothing saved yet.</p>'; return; }
+  const changed = a => a.t || madeAt(a) || 0, isHidden = g => !!g.site && hiddenPlans.has(g.site.id);
+  const rank = g => (g.site === apt() || g.own.includes(apt())) ? 0 : isHidden(g) ? 2 : 1, newest = g => Math.max(0, ...g.own.map(changed), g.site ? changed(g.site) : 0);
+  const button = (cls, text, title, onclick) => { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = text; if (title) { b.title = title; b.setAttribute('aria-label', title); } b.onclick = onclick; return b; };
+  const confirmBox = (words, yes, onYes) => {
+    const c = document.createElement('div'); c.className = 'confirm'; const sp = document.createElement('span'); sp.innerHTML = words;
+    c.append(sp, button('danger', yes, '', onYes), button('', 'Keep', '', () => { savesUi.confirm = null; renderSaves(); })); return c;
+  };
+  const leave = gone => { if (gone.includes(activeId)) { activeId = firstShown(); selected = null; if (activeId) ls('fitcheck-active', activeId); } savesUi.confirm = savesUi.rename = null; renderAll(); };
+  for (const g of [...groups.values()].sort((x, y) => rank(x) - rank(y) || newest(y) - newest(x))) {
+    const hid = isHidden(g), base = BUILT_IN.find(b => b.img.src === g.key), n = g.own.length;
+    const plan = document.createElement('div'); plan.className = 'plan' + (hid ? ' hid' : ''); box.appendChild(plan);
+    const head = document.createElement('div'); head.className = 'plan-head'; plan.appendChild(head);
+    const thumb = document.createElement('img'); thumb.className = 'thumb'; thumb.alt = ''; thumb.loading = 'lazy'; thumb.src = imgSrc(g.site || g.own[0]);
+    const name = document.createElement('span'); name.className = 'plan-name'; name.textContent = base ? base.name : g.key.startsWith('own:') ? 'A plan you uploaded' : 'A plan the site no longer keeps';
+    const count = document.createElement('small'); count.textContent = `${n ? `${n} layout${n === 1 ? '' : 's'} of yours` : 'no layouts of yours'}${hid ? ' · hidden from your list' : ''}`; name.appendChild(count);
+    head.append(thumb, name);
+    if (g.site) head.appendChild(button('small', hid ? 'Show' : 'Hide', hid ? 'Put this plan back on your list' : 'Take this plan off your list', () => {
+      if (hid) hiddenPlans.delete(g.site.id); else hiddenPlans.add(g.site.id);
+      ls('fitcheck-hidden', [...hiddenPlans]); leave(hid ? [] : [g.site.id]);
+    }));
+    if (n > 1) head.appendChild(button('small', `Delete all ${n}`, 'Delete every layout of yours on this plan', () => { savesUi.confirm = { plan: g.key }; savesUi.rename = null; renderSaves(); }));
+    if (savesUi.confirm && savesUi.confirm.plan === g.key) plan.appendChild(confirmBox(`Delete all <b>${n} layouts</b> of yours on this plan from this browser? They cannot be brought back.`, `Delete ${n}`, () => {
+      const gone = g.own.map(a => a.id); g.own.forEach(removeApt); leave(gone); toast(`${n} layouts deleted`);
+    }));
+    const rows = (g.site && !hid ? [g.site] : []).concat(g.own.slice().sort((x, y) => changed(y) - changed(x)));
+    for (const a of rows) {
+      const row = document.createElement('div'); row.className = 'lay' + (a === apt() ? ' on' : '') + (savesUi.rename === a.id ? ' naming' : ''); row._id = a.id; plan.appendChild(row);
+      if (savesUi.rename === a.id) {
+        const input = document.createElement('input'); input.value = a.name || ''; input.setAttribute('aria-label', 'Layout name');
+        const done = () => { a.name = input.value.trim() || 'Untitled'; storeNow(a); savesUi.rename = null; renderSelect(); renderPanel(); renderSaves(); };
+        input.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); done(); } else if (e.key === 'Escape') { savesUi.rename = null; renderSaves(); } };
+        row.append(input, button('small go', 'Save', '', done), button('small', 'Cancel', '', () => { savesUi.rename = null; renderSaves(); }));
+        if (savesUi.focus) { savesUi.focus = false; requestAnimationFrame(() => { input.focus(); input.select(); }); }
+        continue;
+      }
+      const open = button('nm', '', `Open ${a.name || 'Untitled'}`, () => openSave(a.id));
+      const title = document.createElement('b'); title.textContent = (a.builtIn ? 'The site\'s own layout' : a.name || 'Untitled') + (a === apt() ? ' · open now' : '');
+      const meta = document.createElement('span'); meta.className = 'meta'; meta._id = a.id; meta.textContent = saveMeta(a);
+      open.append(title, meta); row.appendChild(open);
+      if (!a.builtIn) {
+        row.appendChild(button('ic', '✎', `Rename ${a.name || 'Untitled'}`, () => { savesUi.rename = a.id; savesUi.focus = true; savesUi.confirm = null; renderSaves(); }));
+        row.appendChild(button('ic', '🗑', `Delete ${a.name || 'Untitled'}`, () => { savesUi.confirm = { id: a.id }; savesUi.rename = null; renderSaves(); }));
+      }
+      if (savesUi.confirm && savesUi.confirm.id === a.id) plan.appendChild(confirmBox(`Delete <b>${escapeHtml(a.name || 'Untitled')}</b> from this browser? Its layout goes with it.`, 'Delete', () => { removeApt(a); leave([a.id]); toast('Deleted'); }));
+    }
+  }
+}
+$('saveAs').onclick = () => { const copy = duplicateCurrent(); if (!copy) return; savesUi.rename = copy.id; savesUi.focus = true; savesUi.confirm = null; renderAll(); toast(`Saved as "${copy.name}". Give it a name.`); };
+$('manage').onclick = () => $('savesCard').scrollIntoView({ block: 'start', behavior: 'smooth' });
 
 boot();
 </script>
