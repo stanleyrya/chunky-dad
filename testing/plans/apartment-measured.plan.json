@@ -1,0 +1,549 @@
+{
+  "name": "The apartment · as measured",
+  "ppi": 4,
+  "wall": 6,
+  "margin": 12,
+  "rooms": [
+    {
+      "label": "Bedroom",
+      "dims": "7′11″ × 14′1″",
+      "poly": [
+        [
+          30,
+          20
+        ],
+        [
+          125,
+          75
+        ],
+        [
+          125,
+          189
+        ],
+        [
+          30,
+          189
+        ]
+      ],
+      "labelAt": [
+        74,
+        137
+      ]
+    },
+    {
+      "label": "Primary",
+      "dims": "7′6″ × 13′11″",
+      "poly": [
+        [
+          185,
+          20
+        ],
+        [
+          275,
+          72
+        ],
+        [
+          275,
+          187
+        ],
+        [
+          185,
+          187
+        ],
+        [
+          185,
+          176
+        ],
+        [
+          181,
+          176
+        ],
+        [
+          181,
+          31
+        ],
+        [
+          185,
+          31
+        ]
+      ],
+      "labelAt": [
+        233,
+        135
+      ]
+    },
+    {
+      "x": 203.0,
+      "y": 187,
+      "w": 47.5,
+      "h": 59
+    },
+    {
+      "label": "Living room",
+      "poly": [
+        [
+          183.5,
+          305
+        ],
+        [
+          285,
+          305
+        ],
+        [
+          285,
+          476
+        ],
+        [
+          264,
+          476
+        ],
+        [
+          264,
+          511
+        ],
+        [
+          244.25,
+          511
+        ],
+        [
+          244.25,
+          534.5
+        ],
+        [
+          66.75,
+          534.5
+        ],
+        [
+          66.75,
+          408.5
+        ],
+        [
+          30.75,
+          408.5
+        ],
+        [
+          30.75,
+          372.5
+        ],
+        [
+          183.5,
+          372.5
+        ]
+      ],
+      "labelAt": [
+        190,
+        423
+      ]
+    }
+  ],
+  "doors": [
+    {
+      "x": 32,
+      "y": 189,
+      "w": 36,
+      "h": 6
+    },
+    {
+      "x": 212.5,
+      "y": 246,
+      "w": 36,
+      "h": 6
+    },
+    {
+      "x": 197.0,
+      "y": 205,
+      "w": 6,
+      "h": 28
+    },
+    {
+      "x": 285,
+      "y": 440,
+      "w": 6,
+      "h": 36
+    },
+    {
+      "x": 86.5,
+      "y": 366.5,
+      "w": 36,
+      "h": 6
+    },
+    {
+      "x": 24.75,
+      "y": 372.5,
+      "w": 6,
+      "h": 36.0
+    }
+  ],
+  "fixtures": [
+    {
+      "label": "post",
+      "poly": [
+        [
+          113,
+          86
+        ],
+        [
+          125,
+          86
+        ],
+        [
+          125,
+          75
+        ],
+        [
+          113,
+          68.1
+        ]
+      ],
+      "labelAt": [
+        119,
+        77
+      ]
+    },
+    {
+      "x": 181,
+      "y": 31,
+      "w": 4,
+      "h": 145,
+      "fill": "#ececec"
+    },
+    {
+      "label": "post",
+      "x": 274,
+      "y": 305,
+      "w": 11,
+      "h": 19
+    },
+    {
+      "poly": [
+        [
+          66.75,
+          408.5
+        ],
+        [
+          92.25,
+          408.5
+        ],
+        [
+          92.25,
+          506.5
+        ],
+        [
+          186.75,
+          506.5
+        ],
+        [
+          186.75,
+          534.5
+        ],
+        [
+          66.75,
+          534.5
+        ]
+      ]
+    },
+    {
+      "label": "fridge",
+      "x": 150.75,
+      "y": 506.5,
+      "w": 36,
+      "h": 28.0
+    }
+  ],
+  "labels": [
+    {
+      "text": "169″",
+      "x": 35,
+      "y": 104,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "103″ to the post",
+      "x": 122,
+      "y": 137,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "95″",
+      "x": 77.5,
+      "y": 186,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "window wall",
+      "x": 76,
+      "y": 58,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": 30
+    },
+    {
+      "text": "door",
+      "x": 50,
+      "y": 200,
+      "size": 3.4,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "closet?",
+      "x": 19,
+      "y": 161,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "167″ · the X brace sits 4″ behind the posts",
+      "x": 190,
+      "y": 103,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "115″",
+      "x": 272,
+      "y": 129,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "90″",
+      "x": 222.0,
+      "y": 177,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "window wall",
+      "x": 230,
+      "y": 57,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": 30
+    },
+    {
+      "text": "24.5″",
+      "x": 262.75,
+      "y": 184,
+      "size": 3,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "hall 47.5″ × 59″",
+      "x": 226.75,
+      "y": 217,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "door",
+      "x": 232.5,
+      "y": 257,
+      "size": 3.4,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "closet",
+      "x": 186.0,
+      "y": 220,
+      "size": 3.4,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "nook 101.5″",
+      "x": 234.25,
+      "y": 335,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "window wall",
+      "x": 234.25,
+      "y": 311,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "67.5″",
+      "x": 188.5,
+      "y": 339,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "135″ window wall to the door · 116″ from the post",
+      "x": 281,
+      "y": 389,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "front door",
+      "x": 301,
+      "y": 458,
+      "size": 3.4,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "21″",
+      "x": 274.5,
+      "y": 473,
+      "size": 3,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "35″",
+      "x": 261,
+      "y": 486,
+      "size": 3,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "19.75″",
+      "x": 254,
+      "y": 508,
+      "size": 3,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "23.5″",
+      "x": 241,
+      "y": 523,
+      "size": 3,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "57.5″",
+      "x": 215,
+      "y": 530,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "28″",
+      "x": 191.75,
+      "y": 520.5,
+      "size": 3,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "94.5″",
+      "x": 121.5,
+      "y": 502.5,
+      "size": 3.4,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "kitchen",
+      "x": 122.25,
+      "y": 522.5,
+      "size": 3.4,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "sink counter",
+      "x": 81.0,
+      "y": 457.5,
+      "size": 3.4,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle",
+      "rotate": -90
+    },
+    {
+      "text": "to the bedrooms",
+      "x": 48.75,
+      "y": 395,
+      "size": 3,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "61″ to the first door",
+      "x": 153.0,
+      "y": 379,
+      "size": 3,
+      "fill": "#8a8a8a",
+      "weight": "normal",
+      "anchor": "middle"
+    },
+    {
+      "text": "door",
+      "x": 104.5,
+      "y": 362,
+      "size": 3,
+      "fill": "#555",
+      "weight": "normal",
+      "anchor": "middle"
+    }
+  ],
+  "notes": "Measured 2026-11-20. Guessed: where the doors sit, Primary posts, sink counter, hallway width."
+}
