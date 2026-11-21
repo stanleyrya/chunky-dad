@@ -261,6 +261,7 @@ const BUILT_IN = [
     ] },
   // The same apartment from a 3D room scan (magicplan, 2026-11-20): the rooms sit where they really join.
   // Door swings follow photos; the scan read the Primary's window and its X brace as doors.
+  // The bedroom is drawn at the tape's shorter lengths (169 and 103, the scan read 175 and 108); the X brace takes about 4 in of floor.
   // tools/draw-plan.js draws it from testing/plans/apartment-scanned.plan.json.
   { id:'scanned-apartment', name:'The apartment · 3D scan', img:{ src:'plans/apartment-scanned.png', w:1683, h:1423 }, ppi:4,
     furniture:[
@@ -268,7 +269,7 @@ const BUILT_IN = [
       // the bedroom
       {name:'Queen bed',w:60,d:80,x:149.3,y:127.2,r:0},{name:'Hanger Rack',w:28,d:16,x:213.3,y:127.2,r:0},{name:'Ottoman',w:32,d:16,x:231.3,y:144,r:90},{name:'Matteo’s desk',w:48,d:24,x:100.3,y:195.4,r:0},{name:'Desk Chair',w:25,d:27,x:111.3,y:168,r:0},
       // the Primary; the TV leans along the window wall
-      {name:'Queen bed',w:60,d:80,x:89.3,y:255.3,r:90},{name:'Side Table',w:14,d:18,x:169.7,y:292.2,r:0},{name:'Side Table',w:14,d:18,x:74.8,y:271,r:0},{name:'TV',w:60,d:16,x:38.99,y:230.09,r:118.95},{name:'Dresser',w:34,d:16,x:184.2,y:279.5,r:0},{name:'mirror 1',w:31,d:2.5,x:128.3,y:224.9,r:0},{name:'Wood Chair',w:22,d:22,x:93.3,y:225,r:0},
+      {name:'Queen bed',w:60,d:80,x:89.3,y:251.6,r:90},{name:'Side Table',w:14,d:18,x:169.7,y:292.2,r:0},{name:'Side Table',w:14,d:18,x:74.8,y:271,r:0},{name:'TV',w:60,d:16,x:38.99,y:230.09,r:118.95},{name:'Dresser',w:34,d:16,x:184.2,y:279.5,r:0},{name:'mirror 1',w:31,d:2.5,x:128.3,y:224.9,r:0},{name:'Wood Chair',w:22,d:22,x:93.3,y:225,r:0},
       // the living room
       {name:'TV',w:60,d:16,x:207.8,y:20.5,r:0},{name:'Floor lamp',w:19.75,d:19.75,x:186,y:31,r:0},{name:'Couch A',w:40,d:40,x:192.3,y:81.8,r:0},{name:'Couch B',w:40,d:40,x:232.3,y:81.8,r:0},{name:'Coffee table',w:40,d:18,x:212.3,y:57,r:0},{name:'Games',w:28,d:14,x:272.8,y:93.8,r:90},{name:'mirror 2',w:31,d:2.5,x:185.6,y:90.6,r:90},{name:'Couch C',w:40,d:40,x:252.8,y:122.5,r:0},{name:'cubbys',w:30,d:18,x:252.8,y:162.6,r:0},
       // by the front door
